@@ -47,7 +47,7 @@ export function TransferGraphChoice({ id, selected, onSelect }: TransferGraphCho
           {[18, 42, 66, 90].map((y) => <line key={y} x1="20" x2="270" y1={y} y2={y} />)}
           {[20, 103, 186, 270].map((x) => <line key={x} x1={x} x2={x} y1="12" y2="94" />)}
         </g>
-        <polyline className="graph-line" fill="none" stroke="var(--gold)" points={PATHS[id]} />
+        <path className="graph-line" fill="none" stroke="var(--gold)" d={PATHS[id]} />
       </svg>
       <span className="sr-only">{LABELS[id]}</span>
     </label>
