@@ -21,3 +21,9 @@ minimumReleaseAgeExclude:
   - react-dom@19.2.8
   - react@19.2.8
   - postcss@8.5.21
+  - '@supabase/auth-js@2.110.8'
+  - '@supabase/functions-js@2.110.8'
+  - '@supabase/postgrest-js@2.110.8'
+  - '@supabase/realtime-js@2.110.8'
+  - '@supabase/storage-js@2.110.8'
+  - '@supabase/supabase-js@2.110.8'

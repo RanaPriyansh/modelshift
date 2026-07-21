@@ -1293,6 +1293,7 @@
 
 .forge-info-page--paper > .forge-info-hero,
 .forge-info-page--paper > .forge-prototype-notice,
+.forge-info-page--paper > .forge-private-sync,
 .forge-info-page--paper > .forge-evidence-rules,
 .forge-info-page--paper > .forge-info-actions {
   width: min(1080px, calc(100% - 48px));
@@ -1463,6 +1464,96 @@
   line-height: 1.6;
   text-align: right;
   text-transform: uppercase;
+}
+
+.forge-private-sync {
+  width: min(1080px, calc(100% - 48px));
+  margin: 32px auto 0;
+  border: 1px solid var(--forge-line-strong);
+  background: color-mix(in srgb, var(--forge-cyan) 6%, var(--forge-surface));
+  padding: 28px 32px;
+}
+
+.forge-private-sync > header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.forge-private-sync > span,
+.forge-private-sync header span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--forge-cyan);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.forge-private-sync h2 {
+  margin: 0;
+  font-family: var(--forge-serif);
+  font-size: clamp(24px, 3vw, 38px);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+
+.forge-private-sync p {
+  max-width: 760px;
+  color: var(--forge-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.forge-private-sync > header > p {
+  margin: 0;
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.forge-private-sync > a,
+.forge-private-sync-actions > a {
+  color: var(--forge-cyan);
+  font-family: var(--forge-mono);
+  font-size: 11px;
+  font-weight: 800;
+  text-underline-offset: 4px;
+}
+
+.forge-private-sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  margin-top: 18px;
+}
+
+.forge-private-sync button {
+  min-height: 38px;
+  border: 1px solid var(--forge-line-strong);
+  background: transparent;
+  color: var(--forge-ink);
+  padding: 8px 12px;
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.forge-private-sync button:hover:not(:disabled) {
+  border-color: var(--forge-cyan);
+  color: var(--forge-cyan);
+}
+
+.forge-private-sync button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .forge-ledger-empty {
@@ -1843,6 +1934,7 @@
   .forge-world-entry-gate,
   .forge-info-page--paper > .forge-info-hero,
   .forge-info-page--paper > .forge-prototype-notice,
+  .forge-info-page--paper > .forge-private-sync,
   .forge-info-page--paper > .forge-evidence-rules,
   .forge-info-page--paper > .forge-info-actions,
   .forge-live-ledger,

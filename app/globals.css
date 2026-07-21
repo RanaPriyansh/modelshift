@@ -436,3 +436,160 @@ input[type="range"] { width: 100%; accent-color: var(--violet); }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Adult-only authentication and private evidence boundary */
+.forge-auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  gap: 20px;
+  padding: 36px 20px;
+  background: #08151a;
+  color: #f0f4ee;
+}
+
+.forge-auth-back {
+  width: min(100%, 680px);
+  color: #73d9df;
+  font-size: 13px;
+  text-underline-offset: 4px;
+}
+
+.forge-auth-card {
+  width: min(680px, calc(100vw - 40px));
+  border: 1px solid #35515b;
+  background: #0d2027;
+  padding: clamp(28px, 6vw, 56px);
+  box-shadow: 0 24px 90px rgb(0 0 0 / 28%);
+}
+
+.forge-auth-card > span {
+  display: block;
+  margin-bottom: 12px;
+  color: #73d9df;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.forge-auth-card h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(34px, 7vw, 58px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+}
+
+.forge-auth-card > p,
+.forge-auth-boundary p {
+  color: #aec0c5;
+  line-height: 1.7;
+}
+
+.forge-auth-card form {
+  display: grid;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.forge-auth-card form > label:not(.forge-auth-check) {
+  color: #d9e5e4;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.forge-auth-card input[type="email"] {
+  min-height: 48px;
+  border: 1px solid #4f6b74;
+  border-radius: 0;
+  background: #071318;
+  color: #f0f4ee;
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.forge-auth-check {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  align-items: start;
+  color: #c1d0d2;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.forge-auth-check input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: #73d9df;
+}
+
+.forge-auth-card button {
+  min-height: 48px;
+  border: 1px solid #73d9df;
+  border-radius: 0;
+  background: #73d9df;
+  color: #071318;
+  padding: 10px 16px;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.forge-auth-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.forge-auth-notice {
+  border-left: 3px solid #e6b85c;
+  background: rgb(230 184 92 / 8%);
+  padding: 12px 14px;
+}
+
+.forge-auth-boundary {
+  margin-top: 30px;
+  border-top: 1px solid #35515b;
+  padding-top: 20px;
+}
+
+.forge-auth-boundary strong {
+  color: #73d9df;
+}
+
+.forge-auth-details {
+  display: grid;
+  gap: 1px;
+  margin: 28px 0;
+  background: #35515b;
+}
+
+.forge-auth-details div {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 16px;
+  background: #0d2027;
+  padding: 12px 0;
+}
+
+.forge-auth-details dt {
+  color: #73d9df;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.forge-auth-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #c1d0d2;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .forge-auth-details div { grid-template-columns: 1fr; gap: 4px; }
+}

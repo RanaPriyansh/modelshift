@@ -214,14 +214,17 @@ begin
     where namespace.nspname = 'forge'
       and relation.relkind = 'r'
       and (
-        has_table_privilege('authenticated', relation.oid, 'DELETE')
+        (
+          has_table_privilege('authenticated', relation.oid, 'DELETE')
+          and relation.relname <> 'adult_private_evidence_entries'
+        )
         or has_table_privilege('anon', relation.oid, 'SELECT')
         or has_table_privilege('anon', relation.oid, 'INSERT')
         or has_table_privilege('anon', relation.oid, 'UPDATE')
         or has_table_privilege('anon', relation.oid, 'DELETE')
       )
   ) then
-    raise exception 'least-privilege violation: DELETE or anonymous table access found';
+    raise exception 'least-privilege violation: unauthorized DELETE or anonymous table access found';
   end if;
 
   if has_table_privilege('authenticated', 'forge.source_packages', 'INSERT')

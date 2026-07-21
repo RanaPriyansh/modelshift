@@ -111,6 +111,22 @@ export const evidenceEntrySchema = z
   })
   .strict()
   .superRefine((entry, context) => {
+    if (entry.proof.mode !== "supported_practice" && entry.proof.assistanceAccess !== "removed") {
+      context.addIssue({
+        code: "custom",
+        message: "Independent proof requires instructional assistance to be removed",
+        path: ["proof", "assistanceAccess"],
+      });
+    }
+
+    if ((entry.proof.outcome === "practice_completed") !== (entry.proof.mode === "supported_practice")) {
+      context.addIssue({
+        code: "custom",
+        message: "Practice completion is not an independent proof outcome",
+        path: ["proof", "outcome"],
+      });
+    }
+
     const projectEvidence = entry.source.kind === "learner_project";
     if (projectEvidence !== (entry.proof.mode === "project_application")) {
       context.addIssue({ code: "custom", message: "Project sources require project proof conditions" });

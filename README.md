@@ -31,13 +31,19 @@ The earlier physics-specific `POST /api/interpret` route remains for the histori
 
 Completed World outcomes can be written to browser `localStorage` and inspected at [`/evidence`](http://127.0.0.1:3000/evidence) or [`/trail`](http://127.0.0.1:3000/trail). The ledger supports schema validation, bounded assistance provenance, return dates, learner export, learner-selected educator export, per-record deletion, and full local deletion.
 
-The local ledger deliberately excludes identity, raw chat, learner explanations, confidence, personality or emotion inference, and mastery scores. It is browser-local only: there is no account, server sync, background sharing, or recovery across devices.
+The local ledger deliberately excludes identity, raw chat, learner explanations, confidence, personality or emotion inference, and mastery scores. It remains browser-local by default, with no background sharing.
+
+### Optional adult auth and private evidence sync
+
+Self-attested adults 18 and over can use Supabase magic-link authentication, explicitly activate private persistence, and choose when to sync the bounded browser ledger. Under-18 profiles remain device-only. Synced records are isolated by forced owner-only RLS, are insert-only/idempotent apart from learner deletion, and never enter the server-authored canonical `forge.evidence_events` ledger.
+
+The application uses `@supabase/ssr`, a publishable key, verified server identity, and the authenticated user JWT. It does not require or define a service-role environment variable. The slice is implemented but not connected to or verified against a live Supabase project; see [Adult Auth and Private Evidence Contract](docs/FORGE_AUTH_PRIVATE_EVIDENCE.md).
 
 ### A staged database boundary
 
 [`supabase/migrations/202607220001_forge_learning_os.sql`](supabase/migrations/202607220001_forge_learning_os.sql) and [`supabase/tests/forge_schema_contract.sql`](supabase/tests/forge_schema_contract.sql) define a production-oriented Supabase/PostgreSQL foundation for identity, consent, reviewed curriculum, programs, grants, append-only assistance and evidence, scheduled proof, artifacts, reviews, and privacy requests. The migration uses forced row-level security, scoped adult grants, immutable publication/evidence rules, and no raw-chat or surveillance store.
 
-The migration and SQL contract have been exercised in disposable PostgreSQL. They have **not** been applied to a live Supabase project, and the Next.js application is not connected to them. See [FORGE Database Architecture](docs/FORGE_DATABASE.md) for the exact trust and deployment boundary.
+The migrations and SQL contracts have been exercised in disposable PostgreSQL. They have **not** been applied to a live Supabase project. Without the explicit Supabase environment and project configuration, the application fails back to device-only evidence. See [FORGE Database Architecture](docs/FORGE_DATABASE.md) for the exact trust and deployment boundary.
 
 ## Current architecture
 
@@ -48,8 +54,9 @@ flowchart LR
     P -->|"unknown topic"| X["Unverified source-verification plan"]
     W --> R["Deterministic runtime and validator"]
     R --> E["Browser-local bounded evidence ledger"]
+    E -->|"explicit adult sync only"| S["Owner-only Supabase private copy"]
     M["Optional bounded model"] -->|"rephrase or interpretation only"| P
-    DB["Staged Supabase schema"] -.->|"not connected"| R
+    DB["Canonical evidence schema"] -.->|"trusted orchestration remains separate"| R
 ```
 
 The implementation is a modular Next.js monolith with explicit internal boundaries:
@@ -58,7 +65,8 @@ The implementation is a modular Next.js monolith with explicit internal boundari
 - `src/lib/forge-planner/` - deterministic topic classification, planning contracts, safety policy, and optional model governor;
 - `src/worlds/` and `src/components/worlds/` - domain-owned content, reducers, models, validators, and interfaces;
 - `src/lib/forge-evidence/` - privacy-minimal local ledger, export, deletion, scheduling, and evidence-state derivation;
-- `supabase/` - staged durable-data migration and SQL contract tests.
+- `src/lib/forge-auth/`, `src/lib/supabase/`, and `src/lib/forge-private-evidence/` - adult-only SSR auth policy and private-sync boundary;
+- `supabase/` - durable-data migrations, forced RLS, and SQL contract tests.
 
 The broader architecture deliberately remains a modular monolith with a typed event/evidence spine until measured scale or isolation needs justify a split. See [FORGE Architecture](docs/FORGE_ARCHITECTURE.md).
 
@@ -75,6 +83,8 @@ pnpm dev
 Open `http://127.0.0.1:3000`.
 
 No model credential is required for the authored and deterministic paths. External model calls are off by default even when an existing `OPENAI_API_KEY` is present. Keep `OPENAI_INTERPRETATION_ENABLED=false` and `OPENAI_FORGE_PLANNER_ENABLED=false` for public child/teen access; enabling either path requires a separate provider-disclosure, consent, and rate-control release. Credentials remain server-only and must never use a `NEXT_PUBLIC_*` variable. Either corresponding `*_DISABLED=true` switch forces authored fallback.
+
+Supabase is also optional. To enable the adult-only slice, configure `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` exactly as documented in [Adult Auth and Private Evidence Contract](docs/FORGE_AUTH_PRIVATE_EVIDENCE.md). Do not add a service-role key for this flow.
 
 ## Verify
 
@@ -95,6 +105,8 @@ To exercise the staged database contract against a disposable local Supabase sta
 supabase db reset
 psql "$LOCAL_DATABASE_URL" -v ON_ERROR_STOP=1 \
   -f supabase/tests/forge_schema_contract.sql
+psql "$LOCAL_DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f supabase/tests/forge_auth_private_evidence_contract.sql
 ```
 
 To check an already deployed origin with the production browser spec:
@@ -112,7 +124,11 @@ PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
 | `/learn/proportional-reasoning` | Working exact-math Model World |
 | `/learn/ai-and-learning` | Working source/evidence World |
 | `/trail` | Local evidence summary plus the intended question-to-capability trail |
-| `/evidence` | Local evidence controls and the bounded evidence contract |
+| `/evidence` | Device ledger plus explicit adult-only private sync controls |
+| `/login` | Adult-only magic-link request; unchecked/under-18 use remains device-only |
+| `/account/activate` | Second explicit adult and private-persistence confirmation |
+| `/account` | Auth/private-learning-plane boundary and sign-out |
+| `GET/POST/DELETE /api/forge/private-evidence` | Owner-only bounded private evidence API |
 | `POST /api/forge/plan` | Strict same-origin FORGE planner API |
 | `POST /api/interpret` | Historical bounded physics interpretation API |
 
@@ -126,7 +142,7 @@ No public FORGE release is claimed by this README until the exact commit, enviro
 
 - FORGE is not a complete cross-domain curriculum or a replacement for school, teachers, guardians, peers, care, safeguarding, disability services, or public institutions.
 - It is not yet a homeschool solution, accredited pathway, credential, or jurisdiction-specific compliance system.
-- There is no live Supabase project, authentication, guardian onboarding, cloud evidence sync, people network, storage pipeline, or privacy worker connected to this app.
+- There is no live Supabase project, verified production email/rate-limit configuration, guardian onboarding, people network, artifact storage pipeline, or privacy worker connected to this app. The adult auth/private-sync code is staged and locally verified, not deployed.
 - The current three Worlds do not establish breadth across everything someone may want to learn.
 - No representative learner, educator, minor-safety, external accessibility, assessment-validity, delayed-retention, efficacy, equity, workload, or scale result has been established for broad FORGE.
 - One immediate transfer result is bounded evidence from one task, not mastery, intelligence, retention, or a permanent learner label.
@@ -141,6 +157,7 @@ No public FORGE release is claimed by this README until the exact commit, enviro
 - [Design System](docs/FORGE_DESIGN_SYSTEM.md)
 - [Control Room](docs/FORGE_CONTROL_ROOM.md)
 - [Database Architecture](docs/FORGE_DATABASE.md)
+- [Adult Auth and Private Evidence Contract](docs/FORGE_AUTH_PRIVATE_EVIDENCE.md)
 
 ## Historical ModelShift v1 artifacts
 

@@ -113,6 +113,18 @@ Authenticated clients cannot insert or mutate these canonical tables:
 
 The trusted orchestrator writes them only after deterministic validation and policy checks. RLS is still present for read isolation, but the service-role key must never reach a browser, mobile bundle, log, or public environment variable.
 
+### Adult learner-owned private sync
+
+`20260722000200_forge_adult_private_evidence.sql` adds `forge.adult_private_evidence_entries` as a deliberately separate surface from canonical runtime evidence. It is an optional private copy of the bounded browser ledger for active, self-attested adult profiles only. Adult activation records a distinct append-only `private_evidence_persistence` consent purpose.
+
+- The authenticated learner JWT and publishable key are sufficient; this application slice has no service-role environment variable.
+- Forced RLS permits only the active adult owner to select, insert, or delete rows. There is no update privilege and no guardian, educator, institution, or anonymous policy.
+- Client evidence IDs are idempotent per learner. Strict database validation rejects extra/raw fields and rejects independent, return, or project proof when assistance was available during the protected proof attempt.
+- Adults must confirm both age status and private-persistence intent through a hardened activation RPC. The RPC never reads editable `user_metadata`, refuses anonymous Auth users and unconfirmed email, and cannot convert an existing minor profile.
+- Deletion is intentionally available because this is a learner-controlled private copy, not the append-only canonical `evidence_events` ledger.
+
+The browser ledger remains the default for everyone. Under-18 product flows do not create Auth accounts or cloud evidence in this slice. Adult self-attestation is not age verification and does not authorize a minor release.
+
 Evidence integrity is reinforced in three ways:
 
 1. Composite foreign keys bind session, learner, capability contract, artifacts, proof schedules, and reviews to the same owner.

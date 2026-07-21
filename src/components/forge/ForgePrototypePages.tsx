@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { ForgeArrow, ForgeShell } from "./ForgeShell";
+import { AdultPrivateEvidencePanel, type PrivateEvidenceUiStatus } from "./AdultPrivateEvidencePanel";
 import { EvidenceLedgerPanel } from "./EvidenceLedgerPanel";
 
 function PrototypeNotice({ children }: { children: ReactNode }) {
@@ -27,8 +28,8 @@ export function TrailPrototype() {
         </header>
 
         <PrototypeNotice>
-          This foundation has no account or cloud sync. Completed proof outcomes are retained only in this browser, can be
-          exported or deleted below, and deliberately exclude raw explanations and identity.
+          Completed proof outcomes stay in this browser by default, can be exported or deleted below, and deliberately
+          exclude raw explanations and identity. Optional private sync is confined to self-attested adults.
         </PrototypeNotice>
 
         <EvidenceLedgerPanel compact />
@@ -69,7 +70,7 @@ export function TrailPrototype() {
   );
 }
 
-export function EvidencePrototype() {
+export function EvidencePrototype({ privateEvidenceStatus }: { privateEvidenceStatus: PrivateEvidenceUiStatus }) {
   return (
     <ForgeShell active="evidence">
       <main className="forge-info-page forge-info-page--paper" id="forge-main" tabIndex={-1}>
@@ -88,6 +89,8 @@ export function EvidencePrototype() {
         </PrototypeNotice>
 
         <EvidenceLedgerPanel />
+
+        <AdultPrivateEvidencePanel status={privateEvidenceStatus} />
 
         <section className="forge-proof-sheet" aria-labelledby="proof-sheet-title">
           <header>
