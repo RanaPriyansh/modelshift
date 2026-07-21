@@ -82,11 +82,8 @@ function payloadOnly(interpretation: ValidatedInterpretation) {
 function isAuthoredProbeSafe(interpretation: ValidatedInterpretation): boolean {
   const probe = PROBES[interpretation.recommended_probe_id];
   if (!probe || probe.defaultQuestionId !== interpretation.recommended_level_1_question_id) return false;
-
-  const primary = interpretation.hypotheses[0];
-  if (!primary) return false;
-
-  return probe.compatibleHypotheses.includes(primary.id);
+  return interpretation.hypotheses.length > 0
+    && interpretation.hypotheses.every((hypothesis) => probe.compatibleHypotheses.includes(hypothesis.id));
 }
 
 /**

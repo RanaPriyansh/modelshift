@@ -93,6 +93,26 @@ describe("live evaluation metrics", () => {
     });
   });
 
+  it("rejects a probe when any secondary hypothesis is incompatible", () => {
+    const incompatibleSecondary: ValidatedInterpretation = {
+      ...validInterpretation,
+      hypotheses: [
+        validInterpretation.hypotheses[0]!,
+        {
+          id: "scientific_or_near_scientific",
+          support: "medium",
+          evidence_spans: ["the engine is no longer pushing it"],
+          rationale: "A secondary reading treats the engine cutoff as the end of a change.",
+        },
+      ],
+    };
+
+    expect(assessInterpretation(clearFixture, incompatibleSecondary, 100)).toMatchObject({
+      semantic_valid: false,
+      authored_probe_safe: false,
+    });
+  });
+
   it("enforces the 85 percent agreement gate and every safety gate", () => {
     const exactlyAtGate = [...Array.from({ length: 17 }, () => scoredResult(true)), ...Array.from({ length: 3 }, () => scoredResult(false))];
     expect(summarizeLiveResults(exactlyAtGate).gates.overall).toBe(true);
