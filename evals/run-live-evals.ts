@@ -103,7 +103,7 @@ async function main() {
   const finishedAt = new Date();
   const summary = summarizeLiveResults(results);
   const report = {
-    report_schema_version: "1.0",
+    report_schema_version: "1.1",
     evaluator_version: LIVE_EVALUATOR_VERSION,
     dataset_version: INTERPRETATION_FIXTURE_VERSION,
     model,
@@ -127,6 +127,7 @@ async function main() {
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 
   console.log(`clear primary agreement: ${summary.clear_primary_agreement_count}/${summary.clear_fixture_count} (${(summary.clear_primary_agreement_rate * 100).toFixed(1)}%)`);
+  console.log(`ambiguous safe-neutral rate: ${summary.safe_neutral_count}/${summary.ambiguous_fixture_count} (${(summary.safe_neutral_rate * 100).toFixed(1)}%)`);
   console.log(`schema validity: ${summary.schema_valid_count}/${summary.fixture_count}`);
   console.log(`semantic validity: ${summary.semantic_valid_count}/${summary.fixture_count}`);
   console.log(`authored-probe safety: ${summary.authored_probe_safe_count}/${summary.fixture_count}`);

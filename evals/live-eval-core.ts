@@ -8,7 +8,7 @@ import type { FallbackReason, HypothesisId, ProbeId, ValidatedInterpretation } f
 
 import type { InterpretationFixture } from "./fixtures";
 
-export const LIVE_EVALUATOR_VERSION = "1.0.0";
+export const LIVE_EVALUATOR_VERSION = "1.1.0";
 export const PRIMARY_AGREEMENT_GATE = 0.85;
 
 export type LiveFixtureResult = {
@@ -25,6 +25,8 @@ export type LiveFixtureResult = {
   semantic_valid: boolean;
   authored_probe_safe: boolean;
   primary_agrees: boolean | null;
+  abstain: boolean | null;
+  safe_neutral: boolean | null;
   latency_ms: number;
   runner_error_type: string | null;
 };
@@ -34,6 +36,9 @@ export type LiveEvalSummary = {
   clear_fixture_count: number;
   clear_primary_agreement_count: number;
   clear_primary_agreement_rate: number;
+  ambiguous_fixture_count: number;
+  safe_neutral_count: number;
+  safe_neutral_rate: number;
   model_result_count: number;
   fallback_count: number;
   fallback_reasons: Record<string, number>;
@@ -50,6 +55,7 @@ export type LiveEvalSummary = {
     schema_validity: boolean;
     semantic_validity: boolean;
     authored_probe_safety: boolean;
+    ambiguous_inputs_safely_neutralized: boolean;
     no_runner_errors: boolean;
     overall: boolean;
   };
@@ -106,6 +112,12 @@ export function assessInterpretation(
       );
   const authoredProbeSafe = isAuthoredProbeSafe(interpretation);
   const primary = interpretation.hypotheses[0]?.id ?? null;
+  const safeNeutral = fixture.expected_primary === null
+    ? interpretation.source === "fallback"
+      && interpretation.recommended_probe_id === "neutral_core_probe"
+      && interpretation.abstain
+      && semanticValid
+    : null;
 
   return {
     fixture_id: fixture.id,
@@ -121,6 +133,8 @@ export function assessInterpretation(
     semantic_valid: semanticValid,
     authored_probe_safe: authoredProbeSafe,
     primary_agrees: fixture.clear ? interpretation.source === "model" && primary === fixture.expected_primary : null,
+    abstain: interpretation.abstain,
+    safe_neutral: safeNeutral,
     latency_ms: latencyMs,
     runner_error_type: null,
   };
@@ -145,6 +159,8 @@ export function runnerErrorResult(
     semantic_valid: false,
     authored_probe_safe: false,
     primary_agrees: fixture.clear ? false : null,
+    abstain: null,
+    safe_neutral: fixture.expected_primary === null ? false : null,
     latency_ms: latencyMs,
     runner_error_type: error instanceof Error ? error.name : "UnknownError",
   };
@@ -156,6 +172,9 @@ export function summarizeLiveResults(results: readonly LiveFixtureResult[]): Liv
   const clearPrimaryAgreementRate = clearResults.length === 0
     ? 0
     : clearPrimaryAgreementCount / clearResults.length;
+  const ambiguousResults = results.filter((result) => result.expected_primary === null);
+  const safeNeutralCount = ambiguousResults.filter((result) => result.safe_neutral).length;
+  const safeNeutralRate = ambiguousResults.length === 0 ? 0 : safeNeutralCount / ambiguousResults.length;
 
   const fallbackReasons: Record<string, number> = {};
   for (const result of results) {
@@ -168,6 +187,8 @@ export function summarizeLiveResults(results: readonly LiveFixtureResult[]): Liv
   const schemaValidity = results.length > 0 && results.every((result) => result.schema_valid);
   const semanticValidity = results.length > 0 && results.every((result) => result.semantic_valid);
   const authoredProbeSafety = results.length > 0 && results.every((result) => result.authored_probe_safe);
+  const ambiguousInputsSafelyNeutralized = ambiguousResults.length > 0
+    && ambiguousResults.every((result) => result.safe_neutral === true);
   const noRunnerErrors = results.every((result) => result.source !== "runner_error");
   const agreementPass = clearPrimaryAgreementRate >= PRIMARY_AGREEMENT_GATE;
 
@@ -176,6 +197,9 @@ export function summarizeLiveResults(results: readonly LiveFixtureResult[]): Liv
     clear_fixture_count: clearResults.length,
     clear_primary_agreement_count: clearPrimaryAgreementCount,
     clear_primary_agreement_rate: clearPrimaryAgreementRate,
+    ambiguous_fixture_count: ambiguousResults.length,
+    safe_neutral_count: safeNeutralCount,
+    safe_neutral_rate: safeNeutralRate,
     model_result_count: results.filter((result) => result.source === "model").length,
     fallback_count: results.filter((result) => result.source === "fallback").length,
     fallback_reasons: fallbackReasons,
@@ -192,8 +216,14 @@ export function summarizeLiveResults(results: readonly LiveFixtureResult[]): Liv
       schema_validity: schemaValidity,
       semantic_validity: semanticValidity,
       authored_probe_safety: authoredProbeSafety,
+      ambiguous_inputs_safely_neutralized: ambiguousInputsSafelyNeutralized,
       no_runner_errors: noRunnerErrors,
-      overall: agreementPass && schemaValidity && semanticValidity && authoredProbeSafety && noRunnerErrors,
+      overall: agreementPass
+        && schemaValidity
+        && semanticValidity
+        && authoredProbeSafety
+        && ambiguousInputsSafelyNeutralized
+        && noRunnerErrors,
     },
   };
 }

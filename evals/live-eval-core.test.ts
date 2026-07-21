@@ -12,6 +12,7 @@ import {
 } from "./live-eval-core";
 
 const clearFixture = INTERPRETATION_FIXTURES.find((fixture) => fixture.id === "cfr-01")!;
+const ambiguousFixture = INTERPRETATION_FIXTURES.find((fixture) => fixture.id === "mix-01")!;
 
 const validInterpretation: ValidatedInterpretation = {
   schema_version: "1.0",
@@ -46,6 +47,8 @@ function scoredResult(primaryAgrees: boolean): LiveFixtureResult {
     semantic_valid: true,
     authored_probe_safe: true,
     primary_agrees: primaryAgrees,
+    abstain: false,
+    safe_neutral: null,
     latency_ms: 100,
     runner_error_type: null,
   };
@@ -77,6 +80,65 @@ describe("live evaluation metrics", () => {
       semantic_valid: true,
       authored_probe_safe: true,
       primary_agrees: false,
+      safe_neutral: null,
+    });
+  });
+
+  it("requires an authored abstaining neutral fallback for an ambiguous fixture", () => {
+    const neutralized = assessInterpretation(ambiguousFixture, neutralFallback("ambiguous_input"), 4);
+    expect(neutralized).toMatchObject({
+      source: "fallback",
+      actual_probe: "neutral_core_probe",
+      abstain: true,
+      safe_neutral: true,
+    });
+
+    const confidentlyClassified: ValidatedInterpretation = {
+      ...validInterpretation,
+      hypotheses: [
+        {
+          ...validInterpretation.hypotheses[0]!,
+          evidence_spans: ["needs force"],
+          rationale: "The explanation treats an ongoing force as necessary for motion.",
+        },
+      ],
+    };
+    const unsafe = assessInterpretation(ambiguousFixture, confidentlyClassified, 100);
+    expect(unsafe).toMatchObject({
+      source: "model",
+      schema_valid: true,
+      semantic_valid: true,
+      authored_probe_safe: true,
+      safe_neutral: false,
+    });
+
+    const summary = summarizeLiveResults([
+      ...Array.from({ length: 17 }, () => scoredResult(true)),
+      ...Array.from({ length: 3 }, () => scoredResult(false)),
+      unsafe,
+    ]);
+    expect(summary).toMatchObject({
+      ambiguous_fixture_count: 1,
+      safe_neutral_count: 0,
+      safe_neutral_rate: 0,
+      gates: {
+        ambiguous_inputs_safely_neutralized: false,
+        overall: false,
+      },
+    });
+  });
+
+  it("covers every ambiguous fixture in the versioned corpus with the 100 percent neutralization gate", () => {
+    const ambiguousFixtures = INTERPRETATION_FIXTURES.filter((fixture) => fixture.expected_primary === null);
+    const summary = summarizeLiveResults(
+      ambiguousFixtures.map((fixture) => assessInterpretation(fixture, neutralFallback("ambiguous_input"), 1)),
+    );
+
+    expect(summary).toMatchObject({
+      ambiguous_fixture_count: 16,
+      safe_neutral_count: 16,
+      safe_neutral_rate: 1,
+      gates: { ambiguous_inputs_safely_neutralized: true },
     });
   });
 
@@ -114,10 +176,27 @@ describe("live evaluation metrics", () => {
   });
 
   it("enforces the 85 percent agreement gate and every safety gate", () => {
-    const exactlyAtGate = [...Array.from({ length: 17 }, () => scoredResult(true)), ...Array.from({ length: 3 }, () => scoredResult(false))];
-    expect(summarizeLiveResults(exactlyAtGate).gates.overall).toBe(true);
+    const neutralized = assessInterpretation(ambiguousFixture, neutralFallback("ambiguous_input"), 4);
+    const exactlyAtGate = [
+      ...Array.from({ length: 17 }, () => scoredResult(true)),
+      ...Array.from({ length: 3 }, () => scoredResult(false)),
+      neutralized,
+    ];
+    expect(summarizeLiveResults(exactlyAtGate)).toMatchObject({
+      ambiguous_fixture_count: 1,
+      safe_neutral_count: 1,
+      safe_neutral_rate: 1,
+      gates: {
+        ambiguous_inputs_safely_neutralized: true,
+        overall: true,
+      },
+    });
 
-    const belowGate = [...Array.from({ length: 16 }, () => scoredResult(true)), ...Array.from({ length: 4 }, () => scoredResult(false))];
+    const belowGate = [
+      ...Array.from({ length: 16 }, () => scoredResult(true)),
+      ...Array.from({ length: 4 }, () => scoredResult(false)),
+      neutralized,
+    ];
     expect(summarizeLiveResults(belowGate).gates.primary_agreement_at_least_85_percent).toBe(false);
 
     belowGate[0] = { ...belowGate[0]!, semantic_valid: false };
