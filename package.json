@@ -1,8 +1,8 @@
 {
-  "name": "modelshift",
+  "name": "forge-learning-os",
   "version": "0.1.0",
   "private": true,
-  "description": "ModelShift — turn a learner's causal explanation into the experiment that tests it, then remove AI and ask for proof.",
+  "description": "FORGE — a learner-owned system of reviewed learning Worlds, bounded AI support, and proof after help.",
   "license": "MIT",
   "packageManager": "pnpm@11.9.0",
   "engines": {

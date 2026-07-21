@@ -4,16 +4,21 @@ import { interpretExplanation, interpretationRequestSchema, neutralFallback } fr
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const MAX_INTERPRET_REQUEST_BYTES = 4_096;
 
 function sameOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-  if (!origin || !host) return false;
-
+  if (!origin) return false;
   try {
     const originUrl = new URL(origin);
-    const protocol = request.headers.get("x-forwarded-proto") ?? originUrl.protocol.replace(":", "");
-    return originUrl.host === host && originUrl.protocol === `${protocol}:`;
+    const requestUrl = new URL(request.url);
+    const host = (request.headers.get("host") ?? requestUrl.host).trim().toLowerCase();
+    if (!host || host.includes(",") || host.includes("/") || host.includes("\\")) return false;
+    const forwardedProtocol = request.headers.get("x-forwarded-proto")?.split(",", 1)[0]?.trim().toLowerCase();
+    const protocol = forwardedProtocol === "http" || forwardedProtocol === "https"
+      ? `${forwardedProtocol}:`
+      : requestUrl.protocol;
+    return originUrl.protocol === protocol && originUrl.host.toLowerCase() === host;
   } catch {
     return false;
   }
@@ -22,19 +27,60 @@ function sameOrigin(request: Request): boolean {
 function json(payload: ReturnType<typeof neutralFallback>, status = 200) {
   return NextResponse.json(payload, {
     status,
-    headers: { "Cache-Control": "no-store" },
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
   });
 }
 
+async function readBoundedBody(request: Request): Promise<string | null> {
+  const declaredLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_INTERPRET_REQUEST_BYTES) return null;
+  if (!request.body) return null;
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > MAX_INTERPRET_REQUEST_BYTES) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+
+  const body = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(body);
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: Request) {
-  const contentType = request.headers.get("content-type") ?? "";
-  if (!contentType.toLowerCase().startsWith("application/json") || !sameOrigin(request)) {
+  const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+  const mediaType = contentType.split(";", 1)[0]?.trim();
+  if (mediaType !== "application/json" || !sameOrigin(request)) {
     return json(neutralFallback("ambiguous_input"), 400);
   }
 
+  let text: string | null;
+  try {
+    text = await readBoundedBody(request);
+  } catch {
+    return json(neutralFallback("ambiguous_input"), 400);
+  }
+  if (text === null) return json(neutralFallback("ambiguous_input"), 400);
+
   let body: unknown;
   try {
-    body = await request.json();
+    body = JSON.parse(text);
   } catch {
     return json(neutralFallback("ambiguous_input"), 400);
   }

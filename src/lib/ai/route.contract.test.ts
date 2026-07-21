@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { POST } from "../../../app/api/interpret/route";
+import { MAX_INTERPRET_REQUEST_BYTES, POST } from "../../../app/api/interpret/route";
 
 const body = {
   scenario_id: "mystery_force_cutoff",
@@ -29,7 +29,7 @@ describe("POST /api/interpret boundary", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       source: "fallback",
-      fallback_reason: "missing_key",
+      fallback_reason: "disabled",
       recommended_probe_id: "neutral_core_probe",
       recommended_level_1_question_id: "neutral_observation_prompt",
     });
@@ -45,9 +45,22 @@ describe("POST /api/interpret boundary", () => {
     );
     expect(nonJson.status).toBe(400);
 
+    const jsonLookalike = await POST(request(body, { "content-type": "application/jsonp" }));
+    expect(jsonLookalike.status).toBe(400);
+
     const invalidStage = await POST(request({ ...body, stage: "COLD_TRANSFER" }));
     expect(invalidStage.status).toBe(400);
     const oversized = await POST(request({ ...body, explanation: "x".repeat(601) }));
     expect(oversized.status).toBe(400);
+
+    const declaredOversized = await POST(
+      request(body, { "content-length": String(MAX_INTERPRET_REQUEST_BYTES + 1) }),
+    );
+    expect(declaredOversized.status).toBe(400);
+  });
+
+  it("accepts the browser origin matching the actual Host when the framework URL is normalized", async () => {
+    const response = await POST(request(body, { host: "127.0.0.1:3000", origin: "http://127.0.0.1:3000" }));
+    expect(response.status).toBe(200);
   });
 });

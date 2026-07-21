@@ -129,13 +129,13 @@ async function keyboardType(page: Page, locator: Locator, value: string) {
   await page.keyboard.type(value);
 }
 
-test.describe("ModelShift production journey", () => {
+test.describe("FORGE force-and-motion World journey", () => {
   test("completes the no-key fallback loop and records truthful evidence", async ({ page }) => {
     const consoleFailures = captureConsoleFailures(page);
     await installNoKeyFallback(page);
 
-    await page.goto("/");
-    await expect(page).toHaveTitle("ModelShift — Proof after help");
+    await page.goto("/learn/force-and-motion");
+    await expect(page).toHaveTitle("Force & motion — FORGE");
     await expect(page.getByRole("heading", { name: "The engine is off. What happens next?" })).toBeVisible();
 
     await reachProofMode(page, true);
@@ -171,10 +171,11 @@ test.describe("ModelShift production journey", () => {
     test.skip(testInfo.project.name !== "desktop", "Keyboard traversal is covered once; the complete journey runs in both viewports.");
     const consoleFailures = captureConsoleFailures(page);
     await installNoKeyFallback(page);
-    await page.goto("/");
+    await page.goto("/learn/force-and-motion");
 
     await page.keyboard.press("Tab");
-    await expect(page.getByRole("link", { name: "Skip to the experiment" })).toBeFocused();
+    await expect(page.getByRole("link", { name: "Skip to learning world" })).toBeFocused();
+    await tabTo(page, page.getByRole("link", { name: "Skip to the experiment" }));
     await page.keyboard.press("Enter");
     await expect(page.locator("#main-content")).toBeFocused();
 
@@ -225,7 +226,7 @@ test.describe("ModelShift production journey", () => {
         delayedRouteSettled = true;
       }
     });
-    await page.goto("/");
+    await page.goto("/learn/force-and-motion");
 
     await commitInitialPrediction(page);
     await page.getByRole("textbox", { name: "Your explanation" }).fill(EXPLANATION);
@@ -245,7 +246,7 @@ test.describe("ModelShift production journey", () => {
     test.skip(testInfo.project.name !== "desktop", "The full adaptive contract is covered once on desktop.");
     const consoleFailures = captureConsoleFailures(page);
     await installAdaptiveInterpretation(page);
-    await page.goto("/");
+    await page.goto("/learn/force-and-motion");
 
     await commitInitialPrediction(page);
     await page.getByRole("textbox", { name: "Your explanation" }).fill(EXPLANATION);
@@ -292,7 +293,7 @@ test.describe("ModelShift production journey", () => {
   test("honors the reduced-motion preference", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "Reduced-motion CSS is shared across viewports.");
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.goto("/");
+    await page.goto("/learn/force-and-motion");
 
     const preferences = await page.getByTestId("stage-predict").evaluate((stage) => {
       const durationToMilliseconds = (duration: string) => Math.max(

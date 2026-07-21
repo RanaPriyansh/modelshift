@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { EXPLICIT_UNCERTAINTY, LEVEL_1_QUESTIONS, LEVEL_2_CONTRASTS, LEVEL_3_PRINCIPLE, MYSTERY, PROBES, TRANSFER } from "@/src/content";
 import { HYPOTHESES } from "@/src/content/hypotheses";
 import { ExperimentWorld } from "@/src/components/simulation/ExperimentWorld";
@@ -13,6 +13,7 @@ import {
   type EvidenceCard,
   type LearningState,
 } from "@/src/domain/learning";
+import { recordWorldProof } from "@/src/lib/forge-evidence";
 import type {
   FallbackReason,
   LearningStage,
@@ -161,6 +162,10 @@ function ExplanationStage({ prediction, explanation, onExplanation, onSubmit, on
           <textarea id="explanation" value={explanation} maxLength={600} rows={7} onChange={(event) => onExplanation(event.target.value)} placeholder="For example: What happens when the engine is no longer pushing? Is any other force present?" autoFocus />
           <small>{explanation.length} / 600</small>
         </label>
+        <p className="privacy-note">
+          Your explanation goes to the FORGE server. External AI is off by default; if an operator explicitly enables it,
+          this text may be sent to OpenAI with storage disabled. Raw explanations are never added to your evidence ledger.
+        </p>
         <div className="stage-actions">
           <SecondaryButton onClick={onDontKnow}>I genuinely don&apos;t know</SecondaryButton>
           <PrimaryButton disabled={explanation.trim().length < 8} onClick={onSubmit} testId="submit-explanation">Use my explanation</PrimaryButton>
@@ -352,7 +357,7 @@ function ResultStage({ evidence, interpretation, onRestart }: {
         <article><span>Later</span><strong>Not tested yet</strong><p>This immediate task does not establish delayed retention.</p></article>
       </div>
       <aside className="result-boundary"><strong>What this evidence means</strong><p>{correct ? "You applied the force–acceleration–velocity distinction once, without assistance, in a changed context and representation." : "The experiment exposed the distinction, but this new representation still needs another unaided attempt later."} It does not measure intelligence, broad physics mastery, or long-term learning.</p></aside>
-      <div className="stage-actions stage-actions--between"><SecondaryButton onClick={onRestart}>Start a fresh session</SecondaryButton><span className="privacy-note">No account. No learner profile. Session data stays in this page.</span></div>
+      <div className="stage-actions stage-actions--between"><SecondaryButton onClick={onRestart}>Start a fresh session</SecondaryButton><span className="privacy-note">No account or learner profile. Only bounded proof metadata remains in this browser; raw explanations stay out of the ledger.</span></div>
     </section>
   );
 }
@@ -374,6 +379,7 @@ export function ModelShiftExperience() {
   const [reconstruction, setReconstruction] = useState("");
   const [transferChoice, setTransferChoice] = useState<TransferChoiceId | null>(null);
   const [transferExplanation, setTransferExplanation] = useState("");
+  const evidenceRecordedRef = useRef(false);
 
   const stage = learningState.stage === "HOOK" ? "PREDICT" : learningState.stage;
   const probeId = interpretation?.recommended_probe_id ?? "neutral_core_probe";
@@ -385,6 +391,32 @@ export function ModelShiftExperience() {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   }, [stage]);
+
+  useEffect(() => {
+    if (stage !== "PROOF_RESULT" || !interpretation || evidenceRecordedRef.current) return;
+    evidenceRecordedRef.current = true;
+    const evidence = deriveEvidenceCard(learningState);
+    const assistance: Array<{
+      kind: "authored_hint" | "authored_contrast" | "authored_principle" | "model_interpretation";
+      sourceId: string;
+    }> = [];
+    if (interpretation.source === "model") {
+      assistance.push({ kind: "model_interpretation", sourceId: "model.interpretation.force-motion" });
+    }
+    for (const item of learningState.context.consumedSupport) {
+      assistance.push({
+        kind: item.level === 1 ? "authored_hint" : item.level === 2 ? "authored_contrast" : "authored_principle",
+        sourceId: `support.force-motion.level-${item.level}`,
+      });
+    }
+    recordWorldProof({
+      capabilityId: "capability.force-motion.zero-net-force",
+      conditionId: "proof.force-motion.independent-transfer",
+      sourceRefId: "world.force-and-motion",
+      outcome: evidence.alone.correct === true ? "proved" : "not_proved",
+      assistance,
+    });
+  }, [interpretation, learningState, stage]);
 
   async function submitExplanation(nextExplanation = explanation) {
     if (!prediction) return;
@@ -434,6 +466,7 @@ export function ModelShiftExperience() {
     setPrediction(null); setConfidence(70); setExplanation(""); setInterpretation(null); setInterpreting(false);
     setProbePrediction(null); setExperimentRevealed(false); setFrictionStrength(62); setReflection(""); setReconstruction("");
     setTransferChoice(null); setTransferExplanation("");
+    evidenceRecordedRef.current = false;
   }
 
   function requestSupport() {
@@ -496,8 +529,8 @@ export function ModelShiftExperience() {
     <div className={["app-shell", stage === "COLD_TRANSFER" ? "app-shell--proof" : ""].join(" ")}>
       <a className="skip-link" href="#main-content">Skip to the experiment</a>
       <header className="app-header">
-        <a className="wordmark" href="#main-content" aria-label="ModelShift home"><span>M</span><strong>ModelShift</strong><small>Proof after help</small></a>
-        <div className="trust-strip"><span>13+</span><span>AI interprets language</span><span>Tested code owns physics</span></div>
+        <a className="wordmark" href="#main-content" aria-label="Force and motion learning world"><span>M</span><strong>Model World</strong><small>ModelShift protocol</small></a>
+        <div className="trust-strip"><span>13+ World</span><span>AI interprets language</span><span>Tested code owns physics</span></div>
       </header>
       <StageRail stage={stage} />
       <div className="sr-only" aria-live="polite">Current stage: {stageLabel}</div>
@@ -510,7 +543,7 @@ export function ModelShiftExperience() {
         {stage === "COLD_TRANSFER" ? <ProofStage choice={transferChoice} explanation={transferExplanation} submitted={false} onChoice={setTransferChoice} onExplanation={setTransferExplanation} onDontKnow={() => submitTransfer(true)} onSubmit={() => submitTransfer(false)} /> : null}
         {stage === "PROOF_RESULT" && interpretation ? <ResultStage evidence={deriveEvidenceCard(learningState)} interpretation={interpretation} onRestart={resetSession} /> : null}
       </main>
-      <footer className="app-footer"><span>ModelShift is a prototype learning mechanism for ages 13+.</span><span>AI interpretation can be wrong. The physics and primary answer checks are deterministic.</span></footer>
+      <footer className="app-footer"><span>This World is currently reviewed for learners aged 13+.</span><span>AI interpretation can be wrong. The physics and primary answer checks are deterministic.</span></footer>
     </div>
   );
 }

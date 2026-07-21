@@ -65,7 +65,7 @@ describe("interpretation contract", () => {
   });
 
   it("normalizes all local fallback paths to the frozen output shape", async () => {
-    expect(await interpretExplanation(request, { apiKey: undefined, disabled: false })).toEqual(neutralFallback("missing_key"));
+    expect(await interpretExplanation(request, { apiKey: undefined, disabled: false })).toEqual(neutralFallback("disabled"));
     expect(await interpretExplanation(request, { disabled: true })).toEqual(neutralFallback("disabled"));
   });
 

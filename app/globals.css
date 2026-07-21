@@ -398,7 +398,7 @@ input[type="range"] { width: 100%; accent-color: var(--violet); }
   .stage-heading h1 { font-size: clamp(29px, 9vw, 40px); }
   .stage-heading__body { font-size: 14px; }
   .world { border-radius: 18px; }
-  .world > svg { width: 175%; transform: translateX(-25%); }
+  .world > svg { width: 150%; transform: translateX(-17%); }
   .prediction-layout { gap: 15px; }
   .choice-row { grid-template-columns: 22px minmax(0, 1fr) 72px; padding-inline: 13px; }
   .choice-row__label { font-size: 13px; }

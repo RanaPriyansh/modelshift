@@ -1,103 +1,68 @@
-# ModelShift — Proof after help
+# FORGE - learn broadly, prove specifically
 
-ModelShift turns a learner's causal explanation into the smallest authored experiment that can test it, then removes assistance and asks for one independent proof.
+FORGE is a learner-owned learning-system foundation for children learning with a grown-up, teenagers, and adults. Its long-term direction is broad: help someone enter with a question or capability goal, find a rigorous path across subjects, use AI without surrendering the thinking, and keep bounded evidence of what they could do independently.
 
-The prototype is intentionally narrow: one learner aged 13+, one force-and-motion misconception, one deterministic experiment loop, and one immediate near-transfer task. The concept is **zero net force means zero acceleration, not zero velocity**; friction is a force that can cause slowing.
+This repository is currently a **C1 interactive foundation and G1 candidate**, not the finished institution described by the product vision. It demonstrates three authored learning Worlds, a deterministic planning boundary, and a privacy-minimal browser evidence trail. It does not yet constitute a complete curriculum, a homeschool replacement, a child-safety operation, or evidence that FORGE improves learning.
 
-## Release status
+## What is implemented
 
-The public product and source repository are live:
+### Three working learning Worlds
 
-- **App:** [modelshift.vercel.app](https://modelshift.vercel.app)
-- **Source:** [github.com/RanaPriyansh/modelshift](https://github.com/RanaPriyansh/modelshift)
-- **Immutable deployment:** [modelshift-pjs4krelq-ranapriyanshs-projects.vercel.app](https://modelshift-pjs4krelq-ranapriyanshs-projects.vercel.app)
+| World | Route | What the slice demonstrates |
+| --- | --- | --- |
+| Force and motion | [`/learn/force-and-motion`](http://127.0.0.1:3000/learn/force-and-motion) | Prediction, learner model, deterministic comparison, bounded support, AI withdrawal, and unfamiliar graph transfer |
+| Proportional reasoning | [`/learn/proportional-reasoning`](http://127.0.0.1:3000/learn/proportional-reasoning) | Exact-rational proportional models, a separating test, reconstruction, and map-scale transfer; includes child-with-grown-up, teen, and adult presentation modes |
+| Learning with AI | [`/learn/ai-and-learning`](http://127.0.0.1:3000/learn/ai-and-learning) | Source-grounded research comparison, assistance guardrails, and an independent evidence-set transfer |
 
-The deployed runtime is deliberately **fallback-only** because no `OPENAI_API_KEY` was available. The deterministic product is public and fully completable, but the overall Build Week submission is not honestly complete until the credentialed live evaluation, public video, principal `/feedback`, and Devpost submission are finished.
+Each World is authored and versioned. Deterministic code owns state transitions, experiment or scoring logic, proof locks, and evidence conditions. AI is not allowed to manufacture correct answers, unlock proof, or turn one response into a mastery claim.
 
-| Required artifact | Verified state on 2026-07-22 IST |
-| --- | --- |
-| Local implementation | Present |
-| Unit and contract tests | `27/27` application tests plus `9/9` live-evaluator tests passing |
-| Offline interpretation corpus | 54 authored fixtures valid; rule baseline `29/38` on clear fixtures (`76.3%`) |
-| Lint, typecheck, optimized build | Passing |
-| Local browser matrix | Development and optimized `next start`: 6 passed, 4 intentional duplicate-project skips, 0 failed in each run |
-| Public production browser matrix | 6 passed, 4 intentional duplicate-project skips, 0 failed against the canonical URL |
-| Live GPT-5.6 evaluation | **Not run**; `OPENAI_API_KEY` is absent |
-| Public production URL | [modelshift.vercel.app](https://modelshift.vercel.app), no login or deployment protection |
-| Public repository URL | [RanaPriyansh/modelshift](https://github.com/RanaPriyansh/modelshift), public, MIT |
-| Tested source release | `350ed2ca44cc4c9565def562842f19373f637968` |
-| Under-three-minute public video | Not recorded or published |
-| Principal Codex `/feedback` session ID | Not invoked or recorded |
+### A bounded path compiler
 
-No live model accuracy, latency, or 85% agreement claim is made. See [Evaluation](docs/EVALUATION.md) for the exact evidence boundary.
+The home route at [`/`](http://127.0.0.1:3000/) submits a typed request to `POST /api/forge/plan`.
 
-## What the product demonstrates
+- Known topics resolve to registered World and source IDs with authored milestones.
+- Unknown topics receive an explicitly unverified source-verification plan, not an invented course.
+- Age, guardian, source-access, unsafe-topic, adversarial-input, origin, content-type, schema, and request-size boundaries fail closed.
+- An optional model may only contribute a visibly unverified rephrase after the deterministic route and authored IDs are frozen.
 
-A learner:
+The earlier physics-specific `POST /api/interpret` route remains for the historical ModelShift World. Its model path is optional and has a deterministic neutral fallback.
 
-1. commits a prediction and confidence before receiving help;
-2. explains the causal model behind that prediction in free text;
-3. sees a provisional, evidence-grounded interpretation or a neutral fallback;
-4. commits a prediction for an authored discriminating experiment;
-5. observes trajectories computed by deterministic TypeScript;
-6. receives only code-authorized authored support, if requested;
-7. reconstructs the force → acceleration → velocity relationship;
-8. enters a structurally locked proof mode with AI, hints, and replay absent;
-9. submits once in a new graph representation; and
-10. receives a truthful **Before / Test / Support / Alone / Later** evidence trail.
+### A privacy-minimal local evidence ledger
 
-The result is evidence from one immediate task. It is not a mastery score and does not establish retention, broad physics knowledge, diagnosis, intelligence, or population-level learning gains.
+Completed World outcomes can be written to browser `localStorage` and inspected at [`/evidence`](http://127.0.0.1:3000/evidence) or [`/trail`](http://127.0.0.1:3000/trail). The ledger supports schema validation, bounded assistance provenance, return dates, learner export, learner-selected educator export, per-record deletion, and full local deletion.
 
-## Judge path
+The local ledger deliberately excludes identity, raw chat, learner explanations, confidence, personality or emotion inference, and mastery scores. It is browser-local only: there is no account, server sync, background sharing, or recovery across devices.
 
-The complete path is designed to take under five minutes:
+### A staged database boundary
 
-1. Choose **Gradually slows** and leave confidence near 70%.
-2. Explain: `It slows because the engine is no longer pushing it.`
-3. Inspect the quoted evidence, provisional model, selected authored test, and the expandable selection boundary.
-4. Commit a prediction for the probe and run the experiment.
-5. Compare force and velocity after the push. Optionally request one attention cue.
-6. Write a short observation and reconstruct the causal rule.
-7. Confirm that proof mode says **AI assistance is now off** and offers no hint or replay control.
-8. Choose a velocity graph, explain it, and submit once.
-9. Inspect Before, Test, Support, Alone, and `Later: not tested yet`.
+[`supabase/migrations/202607220001_forge_learning_os.sql`](supabase/migrations/202607220001_forge_learning_os.sql) and [`supabase/tests/forge_schema_contract.sql`](supabase/tests/forge_schema_contract.sql) define a production-oriented Supabase/PostgreSQL foundation for identity, consent, reviewed curriculum, programs, grants, append-only assistance and evidence, scheduled proof, artifacts, reviews, and privacy requests. The migration uses forced row-level security, scoped adult grants, immutable publication/evidence rules, and no raw-chat or surveillance store.
 
-Without an API key, step 3 truthfully displays the authored baseline path and the rest of the journey remains available.
+The migration and SQL contract have been exercised in disposable PostgreSQL. They have **not** been applied to a live Supabase project, and the Next.js application is not connected to them. See [FORGE Database Architecture](docs/FORGE_DATABASE.md) for the exact trust and deployment boundary.
 
-## Architecture
+## Current architecture
 
 ```mermaid
 flowchart LR
-    L["Learner input"] --> R["Typed learning reducer"]
-    R -->|"INTERPRET only"| A["Next.js server route"]
-    A --> V["Strict request validation"]
-    V -->|"eligible request"| G["GPT-5.6 Structured Output"]
-    G --> S["Schema + semantic + leakage checks"]
-    V -->|"missing, unsafe, or invalid"| F["Neutral authored fallback"]
-    S -->|"accepted IDs only"| C["Authored probes and support"]
-    S -->|"reject"| F
-    F --> C
-    C --> P["Analytical TypeScript physics"]
-    P --> U["SVG world and graphs"]
-    R --> E["Deterministic evidence card"]
+    Q["Learner question or goal"] --> P["Deterministic path compiler"]
+    P -->|"registered topic"| W["Versioned authored World"]
+    P -->|"unknown topic"| X["Unverified source-verification plan"]
+    W --> R["Deterministic runtime and validator"]
+    R --> E["Browser-local bounded evidence ledger"]
+    M["Optional bounded model"] -->|"rephrase or interpretation only"| P
+    DB["Staged Supabase schema"] -.->|"not connected"| R
 ```
 
-The browser holds the current session in React state. There is no database, account, analytics SDK, or learner profile. The server exposes one same-origin JSON route for interpretation. Detailed rationale is in [Architecture](docs/ARCHITECTURE.md).
+The implementation is a modular Next.js monolith with explicit internal boundaries:
 
-### Correctness ownership
+- `src/forge/` - contracts, policy invariants, world/source registries, and validators;
+- `src/lib/forge-planner/` - deterministic topic classification, planning contracts, safety policy, and optional model governor;
+- `src/worlds/` and `src/components/worlds/` - domain-owned content, reducers, models, validators, and interfaces;
+- `src/lib/forge-evidence/` - privacy-minimal local ledger, export, deletion, scheduling, and evidence-state derivation;
+- `supabase/` - staged durable-data migration and SQL contract tests.
 
-| Deterministic code owns | GPT-5.6 may do |
-| --- | --- |
-| Scenario parameters and correct choices | Interpret one free-form explanation |
-| Force, acceleration, velocity, position, and graph data | Select 1–3 authored hypothesis IDs |
-| Probe compatibility and fallback | Quote short verbatim evidence spans |
-| State transitions and support authorization/accounting | Select authored missing-distinction, probe, and Level-1 question IDs |
-| Proof-mode lock and single submission | Abstain |
-| Transfer checking and evidence-card derivation | Provide a short non-teaching rationale within the strict schema |
+The broader architecture deliberately remains a modular monolith with a typed event/evidence spine until measured scale or isolation needs justify a split. See [FORGE Architecture](docs/FORGE_ARCHITECTURE.md).
 
-GPT-5.6 cannot generate physics, hints, probes, transfer tasks, correct answers, scores, or stage permissions. The optional post-transfer model call described in early planning is not implemented.
-
-## Local setup
+## Run locally
 
 Requirements: Node.js 22 or newer and pnpm 11.9.0 or compatible.
 
@@ -109,101 +74,84 @@ pnpm dev
 
 Open `http://127.0.0.1:3000`.
 
-The full neutral-fallback journey requires no credential. To exercise the live interpretation path, set a paid/eligible server-side OpenAI key in `.env.local`:
+No model credential is required for the authored and deterministic paths. External model calls are off by default even when an existing `OPENAI_API_KEY` is present. Keep `OPENAI_INTERPRETATION_ENABLED=false` and `OPENAI_FORGE_PLANNER_ENABLED=false` for public child/teen access; enabling either path requires a separate provider-disclosure, consent, and rate-control release. Credentials remain server-only and must never use a `NEXT_PUBLIC_*` variable. Either corresponding `*_DISABLED=true` switch forces authored fallback.
 
-```bash
-OPENAI_API_KEY=your_server_side_key
-OPENAI_MODEL=gpt-5.6-sol
-```
-
-The runtime defaults to `gpt-5.6-sol`. Set `OPENAI_INTERPRETATION_DISABLED=true` to force deterministic fallback. Never use a `NEXT_PUBLIC_*` name for the key.
-
-## Commands
+## Verify
 
 ```bash
 pnpm lint
 pnpm typecheck
 pnpm test
 pnpm eval
-pnpm eval:live
 pnpm build
 pnpm test:e2e
+```
+
+`pnpm test` runs the application/unit suite and the legacy live-evaluator contract tests. `pnpm test:e2e` starts a local development server when `PLAYWRIGHT_BASE_URL` is absent and runs the desktop and mobile browser projects.
+
+To exercise the staged database contract against a disposable local Supabase stack:
+
+```bash
+supabase db reset
+psql "$LOCAL_DATABASE_URL" -v ON_ERROR_STOP=1 \
+  -f supabase/tests/forge_schema_contract.sql
+```
+
+To check an already deployed origin with the production browser spec:
+
+```bash
 PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
 ```
 
-`pnpm eval` is the offline corpus and rule-baseline check. `pnpm eval:live` is the separate key-gated GPT-5.6 runner; it exits before any network request when `OPENAI_API_KEY` is absent and writes a report only for a credentialed run.
+## Routes
 
-## Current verified evidence
+| Route | Boundary |
+| --- | --- |
+| `/` | Universal question intake, deterministic learning contract, and World catalog |
+| `/learn/force-and-motion` | Working Model World using the historical ModelShift protocol |
+| `/learn/proportional-reasoning` | Working exact-math Model World |
+| `/learn/ai-and-learning` | Working source/evidence World |
+| `/trail` | Local evidence summary plus the intended question-to-capability trail |
+| `/evidence` | Local evidence controls and the bounded evidence contract |
+| `POST /api/forge/plan` | Strict same-origin FORGE planner API |
+| `POST /api/interpret` | Historical bounded physics interpretation API |
 
-At 01:56 IST on 2026-07-22:
+## Deployment boundary
 
-```text
-application test files: 4 passed
-application tests:      27 passed
-live-evaluator tests:   9 passed
+The complete application requires a Next.js/Node-compatible host because it includes server routes. Vercel is the intended deployment target for this foundation; a static-site host can publish design or research artifacts but cannot replace the planner and interpretation APIs without a separate backend.
 
-fixtures: 54 (version 1.0.0)
-fixture input validity: PASS
-rule baseline primary-category agreement on clear fixtures: 29/38 (76.3%)
-rule baseline always selects an authored probe: PASS
-live model evaluation: NOT RUN (OPENAI_API_KEY is absent)
-```
+No public FORGE release is claimed by this README until the exact commit, environment, browser verification, and allowed claim are recorded. The existing [modelshift.vercel.app](https://modelshift.vercel.app) URL and [RanaPriyansh/modelshift](https://github.com/RanaPriyansh/modelshift) repository are historical ModelShift v1 release references unless a new FORGE deployment is separately verified.
 
-The same local QA cycle also passed `pnpm lint`, `pnpm typecheck`, and `pnpm build`. Playwright passed against development, optimized local production, and the public production origin:
+## What is not yet claimed
 
-```text
-development:       6 passed, 4 intentional duplicate-project skips, 0 failed
-local production:  6 passed, 4 intentional duplicate-project skips, 0 failed
-public production: 6 passed, 4 intentional duplicate-project skips, 0 failed (39.5s)
-```
+- FORGE is not a complete cross-domain curriculum or a replacement for school, teachers, guardians, peers, care, safeguarding, disability services, or public institutions.
+- It is not yet a homeschool solution, accredited pathway, credential, or jurisdiction-specific compliance system.
+- There is no live Supabase project, authentication, guardian onboarding, cloud evidence sync, people network, storage pipeline, or privacy worker connected to this app.
+- The current three Worlds do not establish breadth across everything someone may want to learn.
+- No representative learner, educator, minor-safety, external accessibility, assessment-validity, delayed-retention, efficacy, equity, workload, or scale result has been established for broad FORGE.
+- One immediate transfer result is bounded evidence from one task, not mastery, intelligence, retention, or a permanent learner label.
+- A successful build or browser run demonstrates engineering behavior, not educational effectiveness or child safety.
 
-The public run targeted `https://modelshift.vercel.app` and exercised the complete fallback journey on desktop and mobile plus keyboard completion, a real seven-second client timeout, an adaptive schema-valid fixture, reload reset, reduced motion, proof-control absence, evidence labels, overflow, and console/page errors. It does not verify a real OpenAI response; the live-model path remains unverified.
+## Governing documentation
 
-## Reliability and fallback
+- [FORGE Product Specification](FORGE_PRODUCT_SPEC.md)
+- [FORGE Architecture](docs/FORGE_ARCHITECTURE.md)
+- [Research-to-System Traceability](docs/FORGE_RESEARCH_TO_SYSTEM.md)
+- [Delivery Gates and Honest Claim Protocol](docs/FORGE_DELIVERY_GATES.md)
+- [Design System](docs/FORGE_DESIGN_SYSTEM.md)
+- [Control Room](docs/FORGE_CONTROL_ROOM.md)
+- [Database Architecture](docs/FORGE_DATABASE.md)
 
-The server accepts only the `INTERPRET` stage, strict same-origin JSON, a known scenario and prediction, confidence from 0–100, and 1–600 characters of explanation. A model call uses the Responses API, strict Structured Outputs, `store: false`, no tools, no streaming, a 500-token output cap, and a six-second abort deadline.
+## Historical ModelShift v1 artifacts
 
-Missing credentials, explicit disablement, timeout, API error, refusal, malformed output, invalid enums, unsupported evidence, probe incompatibility, answer leakage, ambiguity, and adversarial input all normalize to `neutral_core_probe`. Fallback is an ordinary path, not an error screen.
+FORGE preserves the narrow ModelShift experiment as one useful World and as build history. These documents remain historical; they do not govern or validate broad FORGE:
 
-## Accessibility, safety, and privacy
+- [ModelShift v1 Final Product Specification](FINAL_PRODUCT_SPEC.md)
+- [ModelShift v1 Architecture](docs/ARCHITECTURE.md)
+- [ModelShift v1 Evaluation](docs/EVALUATION.md)
+- [ModelShift v1 Demo and Submission](DEMO_AND_SUBMISSION.md)
+- [Pre-existing Work Boundary](docs/PREEXISTING_WORK.md)
 
-Implemented affordances include semantic fieldsets and labels, visible focus styles, a skip link, stage announcements, text alternatives for graphs/trajectories, responsive layouts, reduced-motion CSS, and valid “I don't know” paths. Local Playwright verifies keyboard-only completion, reduced-motion CSS, role-addressable controls, no horizontal overflow, and the complete fallback journey at 1440×900 and 390×844. An external screen-reader and fresh-user review has not been completed.
+## License
 
-The app is marked 13+, requires no identity, and adds no database, tracking, camera, microphone, or long-term profile. Session data remains in the current page. A valid live interpretation sends the submitted explanation to OpenAI with `store: false`; application code does not persist or deliberately log the raw explanation. The interface states that AI interpretation can be wrong and deterministic code owns physics and primary answer checks.
-
-## How Codex and GPT-5.6 were used
-
-Codex was the build and orchestration environment: it converted the governing specification into contracts, created the implementation-grade visual concept, split physics/state/model work into bounded worktrees, integrated and reviewed those changes, built the interface, and assembled verification and documentation. Human-authored scope and claim decisions remain in [Final Product Specification](FINAL_PRODUCT_SPEC.md) and [Decisions](docs/DECISIONS.md).
-
-GPT-5.6 has two distinct roles:
-
-- a GPT-5.6 Sol xhigh Codex task served as goal and architecture authority during the build;
-- the product's server route is implemented to use `gpt-5.6-sol` for bounded runtime interpretation.
-
-The runtime model role has **not** been live-verified because no API key is available. See [Codex and GPT usage](docs/CODEX_AND_GPT_USAGE.md).
-
-## Pre-existing work
-
-Before application implementation began, the workspace contained education research, product-planning Markdown, and HTML decision reports. It did not contain a product repository, source application, physics engine, state machine, AI route, tests, deployment, or ModelShift remote. Build-period implementation commits and the exact boundary are recorded in [Pre-existing work](docs/PREEXISTING_WORK.md).
-
-## Known limitations and open release gates
-
-- No live `gpt-5.6-sol` fixture evaluation, latency sample, or validated adaptive production journey yet.
-- No representative learner, educator, child-safety, or external accessibility review.
-- One immediate near-transfer item cannot establish delayed retention; `Later` remains `not tested yet`.
-- The authored corpus and probe library cover one mechanics distinction only.
-- Public video, Devpost submission, and principal `/feedback` ID remain account-owned completion steps.
-
-## Documentation
-
-- [Architecture](docs/ARCHITECTURE.md)
-- [Codex and GPT usage](docs/CODEX_AND_GPT_USAGE.md)
-- [Evaluation](docs/EVALUATION.md)
-- [Pre-existing work](docs/PREEXISTING_WORK.md)
-- [Deployment runbook](docs/DEPLOYMENT.md)
-- [Design fidelity ledger](docs/DESIGN_FIDELITY_LEDGER.md)
-- [Demo and submission package](DEMO_AND_SUBMISSION.md)
-
-## License and assets
-
-Code and repository-authored materials are licensed under the [MIT License](LICENSE). The ModelShift concept image in `docs/design/modelshift-concept.png` was generated during this build through OpenAI ImageGen under Codex direction. The interface uses system fonts, CSS, and repository-authored SVG; no third-party logos, stock imagery, music, or tracking assets are included.
+Code and repository-authored materials are licensed under the [MIT License](LICENSE).

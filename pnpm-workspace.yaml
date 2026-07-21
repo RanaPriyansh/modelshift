@@ -2,6 +2,9 @@ allowBuilds:
   esbuild: true
   sharp: true
   unrs-resolver: true
+overrides:
+  postcss: 8.5.21
+  sharp: 0.35.3
 minimumReleaseAgeExclude:
   - '@next/env@16.2.11'
   - '@next/eslint-plugin-next@16.2.11'
@@ -17,3 +20,4 @@ minimumReleaseAgeExclude:
   - next@16.2.11
   - react-dom@19.2.8
   - react@19.2.8
+  - postcss@8.5.21

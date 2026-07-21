@@ -39,7 +39,10 @@ export async function interpretExplanation(
   request: InterpretRequestInput,
   options: InterpretOptions = {},
 ): Promise<ValidatedInterpretation> {
-  if (options.disabled || process.env.OPENAI_INTERPRETATION_DISABLED === "true") return neutralFallback("disabled");
+  const explicitlyEnabled = Boolean(options.client || options.apiKey || process.env.OPENAI_INTERPRETATION_ENABLED === "true");
+  if (options.disabled || process.env.OPENAI_INTERPRETATION_DISABLED === "true" || !explicitlyEnabled) {
+    return neutralFallback("disabled");
+  }
   if (request.explanation === EXPLICIT_UNCERTAINTY) return neutralFallback("ambiguous_input");
   if (isAdversarialExplanation(request.explanation)) return neutralFallback("ambiguous_input");
 
