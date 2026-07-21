@@ -37,8 +37,16 @@ The initial repository commit was created at 01:03:55 IST on 2026-07-22. The imp
 | `5af0c75fcfa85644b6e43a6c50b482e05b5041bc` | 2026-07-22 01:24:16 | cold-transfer answer-trace rendering correction |
 | `9a46c4db4e46627c58a0027f8d61cce5cb37c292` | 2026-07-22 01:25:59 | desktop/mobile, keyboard, timeout, reduced-motion, proof-lock, overflow, console, and evidence Playwright specification |
 | `5c2844cee86a04dd85ea7b92a29abd667d1263f2` | 2026-07-22 01:26:39 | environment example aligned to the implemented fallback switch |
+| `64b7453d231990c9e8e9eb0e764bc5807be0bf58` | 2026-07-22 01:29:05 | truthful reviewer documentation package |
+| `539b72c61b79a453b89f6d200d2a1efa2f9f36ad` | 2026-07-22 01:33:59 | rendered lesson values bound to deterministic contracts |
+| `4b4753d190f772dda81face934207b89ff1f8f14` | 2026-07-22 01:35:55 | key-gated live interpretation evaluator and report writer |
+| `6e3be64f8a183b4fa122d74672e68c325dea2dfd` | 2026-07-22 01:35:57 | fail-closed interpretation, uncertainty, and graph-boundary corrections |
+| `248eb3eab0c359d3f84d9e6c93ddaea65c5c3bb2` | 2026-07-22 01:36:49 | every-hypothesis probe-safety evaluation gate |
+| `8bd952de17e1107c7631bc90a8cae3d67dded296` | 2026-07-22 01:37:38 | adaptive-fixture and clean-reload browser coverage |
+| `3550d75b917abb5668dd07eff4d5005a6cc28881` | 2026-07-22 01:39:36 | exact neutralization gate for all ambiguous fixtures |
+| `8ae01513b7b9df0b95cca235f826ec54d6f135d3` | 2026-07-22 01:44:16 | strict p95-under-six-seconds live-evaluation gate |
 
-The Playwright specification subsequently passed against local development and optimized local `next start` servers: 5 passed, 3 intentional cross-project skips, and 0 failed in each run. No public-deployment browser run has occurred.
+The expanded Playwright specification subsequently passed against local development, optimized local `next start`, and `https://modelshift.vercel.app`: 6 passed, 4 intentional duplicate-project skips, and 0 failed in each run. The public source was created at `https://github.com/RanaPriyansh/modelshift`; the fallback-only application was deployed to Vercel during this build.
 
 ## Visual asset boundary
 
@@ -57,9 +65,9 @@ This history supports the statement that the implementation in `app/`, `src/`, `
 It does not support claims that:
 
 - the broader education or Forge research was created during these commits;
-- a public deployment, demo video, or Devpost submission already exists;
+- a demo video or Devpost submission already exists;
 - live GPT-5.6 behavior has been evaluated;
 - external learners or educators have validated the mechanism; or
 - ModelShift demonstrates educational efficacy or retention.
 
-Before final submission, update this document with any later QA/documentation/deployment commit SHAs, repository URL, production commit, principal `/feedback` session ID, and any external assets actually used.
+Before final submission, add the final documentation commit, principal `/feedback` session ID, video URL, Devpost URL, and any external assets actually used.

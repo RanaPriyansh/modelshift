@@ -31,7 +31,9 @@ The work was split along low-overlap ownership boundaries, then reviewed and int
 | Learning policy | `src/domain/learning/**` and transition tests | `acbc5ca3d3e9f8d07ee1f3baab43345892c40b62` |
 | GPT contract | `src/lib/ai/**`, `/api/interpret`, fixtures, contract tests | `dba5043f941f90d97cade1f24f7d26f1b487342f` |
 | Experience integration | stage UI, simulation renderers, responsive visual system | `bed5c4b06dfa37745e429a784c4f1e9210652412`, corrected by `5af0c75fcfa85644b6e43a6c50b482e05b5041bc` |
-| Browser specification | desktop/mobile journey, keyboard, timeout, reduced motion, proof lock, overflow, console | `9a46c4db4e46627c58a0027f8d61cce5cb37c292` |
+| Deterministic binding and fail-closed audit | renderer-derived values, nonnegative graphs, explicit uncertainty, every-hypothesis compatibility | `539b72c`, `6e3be64` |
+| Live-evaluation runner | key gate, production semantic revalidation, ambiguity and latency gates | `4b4753d`, `248eb3e`, `3550d75`, `8ae0151` |
+| Browser specification | desktop/mobile journey, keyboard, timeout, adaptive fixture, reload, reduced motion, proof lock, overflow, console | `9a46c4d`, expanded by `8bd952d` |
 | Reviewer documentation | this evidence package | documentation lane |
 
 The isolated implementation worktrees were merged in dependency order: shared contracts → physics → learning policy → GPT boundary → principal UI integration. The principal task retained cross-layer decisions and validation authority.
@@ -49,8 +51,10 @@ Codex work included:
 - implementing and reviewing the analytical physics engine;
 - implementing and reviewing the fail-closed learning reducer and evidence derivation;
 - implementing and reviewing the strict Responses API schema, semantic checks, leakage checks, fallbacks, and 54-fixture corpus;
+- implementing a credentialed, fail-closed live-evaluation runner with exact safety, agreement, ambiguity, and p95 latency gates;
 - integrating the responsive stage experience and SVG renderers;
-- running deterministic unit/contract tests and the offline fixture baseline; and
+- running deterministic unit/contract tests, the offline fixture baseline, local E2E, and public-production E2E;
+- publishing the MIT source repository and fallback-only Vercel release; and
 - documenting architecture, claims, deployment gates, prior work, and visual fidelity.
 
 Human product decisions remain explicit in `FINAL_PRODUCT_SPEC.md` and `docs/DECISIONS.md`. Codex did not broaden the product into accounts, dashboards, open chat, additional concepts, delayed retention infrastructure, or generated teaching content.
@@ -121,18 +125,18 @@ Each returns `mixed_or_unclear`, `neutral_core_probe`, and `neutral_observation_
 
 ## Current evaluation evidence
 
-Verified locally on 2026-07-22 at 01:20 IST:
+Verified locally on 2026-07-22 through 01:49 IST:
 
-- 25/25 unit and contract tests pass;
+- 27/27 application tests and 9/9 live-evaluator tests pass;
 - 54 versioned explanation fixtures pass input-validity checks;
 - the transparent rule baseline agrees on 29 of 38 clear fixtures (`76.3%`);
 - the baseline always returns an authored probe; and
 - lint, typecheck, and optimized build pass;
-- local development Playwright reports 5 passed, 3 intentional project skips, and 0 failed;
-- optimized local `next start` Playwright reports the same 5 passed, 3 intentional skips, and 0 failed; and
+- local development and optimized `next start` Playwright each report 6 passed, 4 intentional duplicate-project skips, and 0 failed;
+- public-production Playwright reports 6 passed, 4 intentional duplicate-project skips, and 0 failed against `https://modelshift.vercel.app`; and
 - live GPT-5.6 evaluation was not run because `OPENAI_API_KEY` is absent.
 
-The browser runs target localhost, not a public deployment. The offline eval runner does not call the model even when a key is present. Consequently there is no current evidence for live parse rate, accepted-output enum/span/probe validity across the corpus, primary-category agreement, abstention quality, leakage rate, latency, or public-deployment behavior. Those are final release gates, documented in `docs/EVALUATION.md`.
+The offline eval runner does not call the model even when a key is present. The separate `pnpm eval:live` runner exits before network access when the key is missing. Consequently there is no current evidence for live parse rate, accepted-output enum/span/probe validity across the corpus, primary-category agreement, abstention quality, leakage rate, or real-model latency. Public fallback behavior is verified; live-model behavior remains a release gate documented in `docs/EVALUATION.md`.
 
 ## Truthful demo rule
 

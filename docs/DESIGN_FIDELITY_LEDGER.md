@@ -50,6 +50,10 @@ Core visual meanings:
 
 The implementation does not include a separate marketing hero, sidebar, dashboard, chat bubbles, badges, celebratory confetti, custom logo illustration, stock photography, external icon library, share card, or second visual skin. Those elements do not strengthen the initial-model → experiment → independent-proof sequence.
 
-## Remaining fidelity verification
+## Deterministic deviations from the concept image
 
-Local Playwright now passes the full fallback journey at 1440×900 and 390×844, plus desktop keyboard-only completion, reduced motion, proof-lock, overflow, and console checks. This ledger still needs a final human side-by-side visual inspection of the concept and release render, including graph readability, hierarchy, focus visibility, and the public production surface. Any fixes should preserve the color semantics, three-act arc, provisional interpretation language, deterministic-world emphasis, and structural quietness of proof mode.
+The generated concept image is a visual reference, not a source of physics truth. Its illustrative `12 m/s` cutoff and decorative graph geometry were intentionally superseded. The implemented mystery derives its displayed `3 m/s` cutoff and `0 N` post-cutoff force from the tested scenario contract; the transfer prompt and answer traces derive their `4 N`, `1 s`, `5 s`, and velocity paths from the analytical engine. Experiment craft endpoints and graph axes likewise derive from sampled trajectories rather than fixed CSS positions or hand-drawn values.
+
+## Final fidelity verification
+
+A side-by-side inspection of `docs/design/modelshift-concept.png` and the public release at `https://modelshift.vercel.app` was completed on 2026-07-22. The visual grammar, hierarchy, three-act arc, provisional interpretation language, graph readability, deterministic-world emphasis, and quiet proof surface are preserved; the exact illustrative physics values are intentionally corrected as described above. Local and public Playwright pass the full fallback journey at 1440×900 and 390×844, plus desktop keyboard-only completion, adaptive fixture, timeout, reload reset, reduced motion, proof-lock, overflow, and console checks. No console warning or error was observed in the final public landing-page inspection.

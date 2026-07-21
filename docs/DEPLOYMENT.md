@@ -1,18 +1,25 @@
 # ModelShift Deployment Runbook
 
-## Current state
+## Current release
 
-As of the 2026-07-22 documentation snapshot:
+As of 2026-07-22 01:49 IST, the fallback-only release is public and the source repository is public.
 
-- no Git remote is configured;
-- no ModelShift Vercel project is linked in `.vercel/project.json`;
-- no public production URL has been deployed or tested;
-- no `OPENAI_API_KEY` is available locally; and
-- the neutral missing-key journey is the only real route mode currently verified.
+| Field | Verified value |
+| --- | --- |
+| Public app | [https://modelshift.vercel.app](https://modelshift.vercel.app) |
+| Immutable deployment | [https://modelshift-pc1226bk4-ranapriyanshs-projects.vercel.app](https://modelshift-pc1226bk4-ranapriyanshs-projects.vercel.app) |
+| Vercel deployment | `dpl_5VP3qbCwVokeCJjRpwp5ywwdumTp` |
+| Vercel project | `modelshift` / `prj_SnTYtzLicYKYlHvXCNwq9J7ehQZB` |
+| Vercel team | `ranapriyanshs-projects` / `team_lr0E9GlEDc3XYJP7xrx8po2W` |
+| Public source | [https://github.com/RanaPriyansh/modelshift](https://github.com/RanaPriyansh/modelshift) |
+| Application runtime commit | `8bd952d` (later evaluator/documentation commits do not change the deployed app runtime) |
+| Runtime mode | missing-key authored fallback; live GPT not run or claimed |
+| Production E2E | 6 passed, 4 intentional duplicate-project skips, 0 failed |
+| Deployment protection | off; canonical URL returns the app without login |
 
-The optimized local production build and Playwright journey pass. That evidence targets `next start` on localhost and must not be described as a public Vercel smoke.
+The project was deployed through authenticated Vercel connector authority. The local folder is intentionally not linked through `.vercel/project.json`; that absence does not describe the remote project state.
 
-The local application may be built and deployed without an OpenAI key, but that deployment will use the authored neutral fallback. It must not be presented as a verified live GPT-5.6 deployment.
+No `OPENAI_API_KEY` was available locally or configured for this release. The public deployment therefore uses the authored neutral fallback and must not be presented as a verified live GPT-5.6 deployment.
 
 ## Release prerequisites
 
@@ -47,6 +54,7 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm eval
+pnpm eval:live  # credentialed gate; exits 2 before network when the key is absent
 pnpm build
 pnpm test:e2e
 ```
@@ -58,11 +66,11 @@ git status --short
 git rev-parse HEAD
 ```
 
-The working tree should contain no unintended changes. Do not claim a live model pass from `pnpm eval`; the current runner is offline.
+The working tree should contain no unintended changes. Do not claim a live model pass from `pnpm eval`; that runner is offline. Only a successful, credentialed `pnpm eval:live` result can close the model-behavior gate.
 
-## Publish the source repository
+## Publishing the source repository
 
-Before creating anything, verify that the intended repository name is available and that no unrelated remote will be overwritten. A typical GitHub CLI path is:
+The public repository was created without overwriting an existing remote. The reproducible GitHub CLI path is:
 
 ```bash
 gh auth status
@@ -72,7 +80,7 @@ gh repo create RanaPriyansh/modelshift --public --source=. --remote=origin --pus
 
 If the repository already exists, inspect it and add the remote explicitly rather than recreating or force-pushing. Confirm that `LICENSE`, `README.md`, and the final commit are visible publicly.
 
-## Create the Vercel project
+## Creating or updating the Vercel project
 
 Use either the authenticated Vercel connector or the Vercel CLI. For the CLI path:
 
@@ -128,19 +136,9 @@ Do not require one particular stochastic output, and do not record a fallback as
 
 If production breaks, promote the last known-good immutable Vercel deployment rather than rewriting history. If the OpenAI path is unstable, set `OPENAI_INTERPRETATION_DISABLED=true`, redeploy, and label the fallback state honestly while the live-model issue is repaired. Never remove the proof lock, deterministic checking, or fallback journey to preserve a demo.
 
-## Release record to add
+## Remaining release gates
 
-Before submission, replace this current-state section with verified values:
-
-| Field | Required evidence |
-| --- | --- |
-| Public app URL | no-login incognito smoke |
-| Immutable deployment URL | Vercel deployment record |
-| Vercel project | project/team identifier |
-| Public repository URL | unauthenticated repository view |
-| Release SHA | same SHA in GitHub and deployment |
-| Runtime model | successful `gpt-5.6-sol` smoke or explicit fallback-only status |
-| Environment | server-only key confirmed without exposing its value |
-| Production E2E | desktop/mobile/fallback/timeout/proof results |
-| Deployment protection | confirmed off |
-| Verification time | timestamp and timezone |
+- Add a server-only eligible `OPENAI_API_KEY`, redeploy, and run `pnpm eval:live` plus one real-model browser smoke before claiming live adaptation.
+- Record and publish the under-three-minute YouTube demo.
+- Invoke `/feedback` from the principal Codex task and record the returned session ID.
+- Complete the account-owned Devpost submission before the official deadline.

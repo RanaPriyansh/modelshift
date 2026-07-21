@@ -9,26 +9,28 @@ ModelShift evaluation is divided into four different questions:
 3. **Usability evaluation:** can intended users and judges understand and complete the experience?
 4. **Learning evaluation:** does the mechanism improve learning relative to a fixed lesson and persist over time?
 
-The current local release candidate has passing automated implementation evidence across unit/contract tests, lint, typecheck, production build, and the local browser matrix. The offline fixture corpus establishes a comparison set and rule baseline, but it is not a live model evaluation. No student-learning result is claimed.
+The release candidate has passing automated implementation evidence across unit/contract tests, lint, typecheck, production build, local browser checks, and a public-production browser matrix. The offline fixture corpus establishes a comparison set and rule baseline, but it is not a live model evaluation. No student-learning result is claimed.
 
 ## Verification snapshot
 
-Commands were run locally in `/Users/Priyansh/Documents/codex-buildweek/education` on 2026-07-22 at approximately 01:20 IST.
+Commands were run locally in `/Users/Priyansh/Documents/codex-buildweek/education` on 2026-07-22 through approximately 01:49 IST.
 
 ### Unit and contract tests
 
 ```text
 $ pnpm test
-Test Files  4 passed (4)
-Tests       25 passed (25)
+Application test files  4 passed (4)
+Application tests       27 passed (27)
+Live-evaluator tests    9 passed (9)
 ```
 
 | File | Count | Verified behaviors |
 | --- | ---: | --- |
 | `src/domain/physics/physics.test.ts` | 8 | zero-force velocity, balanced forces, force/mass scaling, friction stop clamp, continuity, determinism, authored bounds, frame-rate-independent endpoints |
-| `src/domain/learning/index.test.ts` | 7 | invalid event matrix, proof-mode rejection, input gates, neutral fallback transition, probe/observation gates, support accounting, full single-submit evidence path |
-| `src/lib/ai/interpret.test.ts` | 8 | strict schemas, valid semantic result, unsupported evidence, incompatibility, contradiction, leakage, missing/disabled/refusal/timeout fallback, Responses configuration, adversarial input, corpus coverage |
+| `src/domain/learning/index.test.ts` | 8 | invalid event matrix, proof-mode rejection, input gates, explicit uncertainty, neutral fallback transition, every-hypothesis probe compatibility, probe/observation gates, support accounting, full single-submit evidence path |
+| `src/lib/ai/interpret.test.ts` | 9 | strict schemas, valid semantic result, explicit-uncertainty model bypass, unsupported evidence, every-hypothesis incompatibility, contradiction, leakage, missing/disabled/refusal/timeout fallback, Responses configuration, adversarial input, corpus coverage |
 | `src/lib/ai/route.contract.test.ts` | 2 | missing-key route fallback; cross-origin, non-JSON, invalid-stage, and oversized request rejection |
+| `evals/live-eval-core.test.ts` | 9 | deterministic percentiles, production semantic revalidation, fallback classification, every-hypothesis probe safety, exact ambiguous-fixture neutralization, agreement/safety gates, and strict p95 latency boundary |
 
 These tests are deterministic and use mocked model clients where a model-shaped response is required. They do not prove live model quality.
 
@@ -57,14 +59,14 @@ pnpm typecheck  PASS
 pnpm build      PASS
 ```
 
-### Local browser checks
+### Local and public browser checks
 
 Development E2E:
 
 ```text
 $ pnpm exec playwright test
 target: http://127.0.0.1:3000 (Playwright-managed Next.js dev server)
-result: 5 passed, 3 intentional skips, 0 failed (25.0s)
+result: 6 passed, 4 intentional duplicate-project skips, 0 failed
 ```
 
 Optimized local production E2E:
@@ -72,10 +74,17 @@ Optimized local production E2E:
 ```text
 $ pnpm start --hostname 127.0.0.1 --port 3100
 $ PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 pnpm test:e2e:prod
-result: 5 passed, 3 intentional skips, 0 failed (24.8s)
+result: 6 passed, 4 intentional duplicate-project skips, 0 failed
 ```
 
-Desktop ran all four cases: complete fallback journey and evidence, keyboard-only completion, timeout fallback, and reduced motion. Mobile Chromium at 390×844 ran the complete fallback journey; the three viewport-independent policy cases are intentionally skipped in the mobile project. The suite also checks proof-control absence, single-submit progression, evidence-card labels, horizontal overflow, and console/page errors. The production-labeled run used local `next start`; it was not a public-deployment test.
+Public production E2E:
+
+```text
+$ PLAYWRIGHT_BASE_URL=https://modelshift.vercel.app pnpm test:e2e:prod
+result: 6 passed, 4 intentional duplicate-project skips, 0 failed (39.6s)
+```
+
+Desktop ran five cases: complete fallback journey and evidence, keyboard-only completion, a real 7.6-second delayed-route timeout against the seven-second client deadline, a complete schema-valid adaptive fixture followed by a clean reload reset, and reduced motion. Mobile Chromium at 390×844 ran the complete fallback journey; the four viewport-independent cases are intentionally skipped in the mobile project. The suite also checks proof-control absence, single-submit progression, evidence-card labels, horizontal overflow, and console/page errors. The public alias returned the app without authentication or deployment protection.
 
 ## What is not yet verified
 
@@ -89,12 +98,11 @@ The following required evidence is absent at this snapshot:
 - appropriate neutralization of ambiguous fixtures;
 - production latency samples and a truthfully scoped p95;
 - a complete live-model browser journey;
-- a public-deployment browser smoke tied to one release commit;
 - a real OpenAI timeout response rather than the browser's forced network-timeout path;
 - external screen-reader validation of announcements and graph text alternatives; and
 - external usability, accessibility, educator, or child-safety review.
 
-Passing `pnpm eval` must not be summarized as “GPT-5.6 passed 54 fixtures.” The current runner does not call GPT-5.6.
+Passing `pnpm eval` must not be summarized as “GPT-5.6 passed 54 fixtures.” The offline runner does not call GPT-5.6; the separate `pnpm eval:live` runner has not run because the key is absent.
 
 ## Final implementation-validation gate
 
@@ -111,11 +119,11 @@ pnpm test:e2e
 PLAYWRIGHT_BASE_URL=https://production.example pnpm test:e2e:prod
 ```
 
-The final evidence should include the tested Git SHA, runtime versions, environment mode (`live`, forced fallback, or missing key), and exact failures or skips. The three current skips are intentional duplicate-project exclusions, not passes. Public production and live-model checks still require separate evidence.
+The final evidence should include the tested Git SHA, runtime versions, environment mode (`live`, forced fallback, or missing key), and exact failures or skips. The four current skips are intentional duplicate-project exclusions, not passes. Public fallback production has been checked; live-model checks still require credentials.
 
 ## Live model evaluation protocol
 
-A separate credentialed runner is required because `evals/run-evals.ts` is offline by design.
+The credentialed runner is `pnpm eval:live`; `evals/run-evals.ts` remains offline by design. With no `OPENAI_API_KEY`, the live command exits with code 2 before making a network request or writing a result report.
 
 For every fixture, record without storing unnecessary learner data:
 
@@ -140,7 +148,7 @@ Report at least:
 - rendered answer leakage count; and
 - latency sample size, median, p95, and maximum.
 
-The acceptance targets from the final specification are 100% parse or explicit fallback, 100% validity among accepted outputs, zero rendered answer leakage, at least 85% primary-category agreement on clear fixtures, compatible probes only, and a production p95 under the six-second application deadline. If the sample is too small for a meaningful p95, report raw latencies and the small sample size instead.
+The implemented gate requires 100% parse or explicit fallback, 100% validity among accepted outputs, zero rendered answer leakage, at least 85% primary-category agreement on all 38 clear fixtures, every one of the 16 ambiguous fixtures to take the exact authored abstaining neutral fallback, compatible probes for every displayed hypothesis, and p95 latency below 6000 ms. The report retains raw per-fixture results and sample counts so the latency scope is explicit.
 
 ## Browser evaluation protocol
 

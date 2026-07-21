@@ -20,8 +20,12 @@ The report preview supplies visual language, not application structure. The prod
 
 ## D-005 — Missing live credentials
 
-The current process has no `OPENAI_API_KEY`, so the deterministic fallback is the active development and demo-safe path. The runtime model integration remains implemented behind a server route and must degrade to `neutral_core_probe` without a fatal UI. Vercel authentication is also absent; public deployment remains a credential gate, not a reason to delay the local product.
+The current process has no `OPENAI_API_KEY`, so the deterministic fallback is the active development and public demo-safe path. The runtime model integration remains implemented behind a server route and must degrade to `neutral_core_probe` without a fatal UI. Authenticated Vercel connector authority was available even though a local Vercel CLI/link was not; the fallback-only product was therefore deployed publicly and labelled truthfully. This does not close the live GPT evaluation gate.
 
 ## D-006 — Deadline compression
 
 The official deadline is 2026-07-22 05:30 IST. Preflight at 00:51 IST left 278 full minutes, so the under-five-hour execution plan applies. Cold transfer, fallback completion, correctness tests, and deployment take precedence over optional animation, delayed proof, post-proof language analysis, Sites, or extra visual polish.
+
+## D-007 — Vercel rather than Sites
+
+The public release uses Vercel because the implemented product is a Next.js application with a same-origin server route, strict server-only environment variables, and an already authenticated deployment path. The optional Sites path was not needed and would not improve the runtime boundary or deadline confidence.

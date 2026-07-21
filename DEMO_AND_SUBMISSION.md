@@ -7,6 +7,22 @@
 **Primary deployment:** Public Vercel URL with no login  
 **Required demo:** Public YouTube video, with audio, shorter than three minutes
 
+## Current execution status — 2026-07-22 01:49 IST
+
+```text
+Live app: https://modelshift.vercel.app
+Immutable deployment: https://modelshift-pc1226bk4-ranapriyanshs-projects.vercel.app
+Repository: https://github.com/RanaPriyansh/modelshift
+Application runtime commit: 8bd952de17e1107c7631bc90a8cae3d67dded296
+Runtime mode: fallback-only; OPENAI_API_KEY absent; live GPT-5.6 evaluation NOT RUN
+Production E2E: 6 passed, 4 intentional duplicate-project skips, 0 failed
+Demo video: NOT RECORDED OR PUBLISHED
+Primary Codex /feedback session ID: NOT INVOKED OR RECORDED
+Devpost submission: NOT COMPLETED
+```
+
+The public product and repository are complete. The remaining items require a live OpenAI API credential and account-owned actions. Do not use the live-path narration below until `pnpm eval:live` passes and a real production response is verified; if credentials remain unavailable, record the fallback path and state that limitation explicitly rather than presenting a fixture or stub as live GPT output.
+
 ## 1. Submission identity
 
 ### Product name
@@ -291,14 +307,14 @@ The public repository README should use this order:
 
 ### Required README links/placeholders
 
-Replace before submission:
+Current values; replace the remaining `NOT COMPLETE` fields before submission:
 
 ```text
-Live app: <PRODUCTION_URL>
-Demo video: <PUBLIC_YOUTUBE_URL>
-Repository: <GITHUB_URL>
-Primary Codex /feedback session ID: <SESSION_ID>
-Build commit: <COMMIT_SHA>
+Live app: https://modelshift.vercel.app
+Demo video: NOT COMPLETE — add public YouTube URL
+Repository: https://github.com/RanaPriyansh/modelshift
+Primary Codex /feedback session ID: NOT COMPLETE — invoke from principal task
+Application runtime commit: 8bd952de17e1107c7631bc90a8cae3d67dded296
 ```
 
 ## 8. Repository evidence package
@@ -327,49 +343,49 @@ evals/explanations.jsonl
 ### Official requirements
 
 - [ ] Education category selected.
-- [ ] Project built with Codex and GPT-5.6.
-- [ ] Product runs consistently as depicted.
+- [x] Project built with Codex and GPT-5.6.
+- [x] Product runs consistently in its documented fallback-only mode.
 - [ ] Text description complete.
 - [ ] Demo is under three minutes.
 - [ ] Demo includes audio.
 - [ ] Demo explicitly covers Codex and GPT-5.6 use.
 - [ ] Demo is publicly visible on YouTube.
-- [ ] Repository is public with an explicit license, or private and shared with both required judging addresses.
-- [ ] README documents Codex collaboration and key human decisions.
+- [x] Repository is public with an explicit license.
+- [x] README documents Codex collaboration and key human decisions.
 - [ ] Primary Codex `/feedback` session ID included.
-- [ ] Working project is free and unrestricted for judges through the judging period.
-- [ ] Pre-existing work and new Build Week work are distinguished.
-- [ ] All external code, APIs, fonts, music, and assets are licensed or original.
-- [ ] Submission language is English.
+- [x] Working project is free and unrestricted for judges through the judging period.
+- [x] Pre-existing work and new Build Week work are distinguished.
+- [x] All external code, APIs, fonts, music, and assets are licensed or original.
+- [x] Submission language is English.
 
 ### Product reliability
 
-- [ ] Public URL works in incognito.
+- [x] Public URL works without authentication or deployment protection.
 - [ ] Public URL works from a second network/device.
-- [ ] No Vercel deployment protection or login wall.
-- [ ] API secret is server-side only.
+- [x] No Vercel deployment protection or login wall.
+- [x] No API secret is exposed client-side; the current deployment has no key.
 - [ ] Normal model path works.
-- [ ] timeout path works.
-- [ ] invalid-structure path works.
-- [ ] explicit abstention path works.
-- [ ] full no-model path works.
-- [ ] simulation invariants pass.
-- [ ] proof mode has no hint event, control, or pre-submission model call.
-- [ ] cold-transfer answer cannot be resubmitted repeatedly.
-- [ ] evidence card never claims retention before a delayed test.
-- [ ] mobile and desktop smoke tests pass.
-- [ ] keyboard and reduced-motion paths pass.
+- [x] timeout path works at the seven-second client boundary.
+- [x] invalid-structure path works.
+- [x] explicit abstention path works.
+- [x] full no-model path works.
+- [x] simulation invariants pass.
+- [x] proof mode has no hint event, control, or pre-submission model call.
+- [x] cold-transfer answer cannot be resubmitted repeatedly.
+- [x] evidence card never claims retention before a delayed test.
+- [x] mobile and desktop smoke tests pass.
+- [x] keyboard and reduced-motion paths pass.
 
 ### Evidence integrity
 
-- [ ] No fabricated student results.
-- [ ] No fabricated delayed outcome.
-- [ ] No “diagnosis” language.
-- [ ] No claim of far transfer.
-- [ ] No claim that all AI tutoring is harmful.
-- [ ] No numeric model confidence shown to the learner as truth.
-- [ ] No competitor straw man.
-- [ ] ModelShift described as a prototype mechanism requiring evaluation.
+- [x] No fabricated student results.
+- [x] No fabricated delayed outcome.
+- [x] No “diagnosis” language.
+- [x] No claim of far transfer.
+- [x] No claim that all AI tutoring is harmful.
+- [x] No numeric model confidence shown to the learner as truth.
+- [x] No competitor straw man.
+- [x] ModelShift described as a prototype mechanism requiring evaluation.
 
 ### Submission freeze
 

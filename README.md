@@ -6,18 +6,25 @@ The prototype is intentionally narrow: one learner aged 13+, one force-and-motio
 
 ## Release status
 
-This repository contains an implemented local product and deterministic fallback path. It is **not yet submission-ready** at this documentation snapshot.
+The public product and source repository are live:
+
+- **App:** [modelshift.vercel.app](https://modelshift.vercel.app)
+- **Source:** [github.com/RanaPriyansh/modelshift](https://github.com/RanaPriyansh/modelshift)
+- **Immutable deployment:** [modelshift-pc1226bk4-ranapriyanshs-projects.vercel.app](https://modelshift-pc1226bk4-ranapriyanshs-projects.vercel.app)
+
+The deployed runtime is deliberately **fallback-only** because no `OPENAI_API_KEY` was available. The deterministic product is public and fully completable, but the overall Build Week submission is not honestly complete until the credentialed live evaluation, public video, principal `/feedback`, and Devpost submission are finished.
 
 | Required artifact | Verified state on 2026-07-22 IST |
 | --- | --- |
 | Local implementation | Present |
-| Unit and contract tests | `25/25` passing across four files |
+| Unit and contract tests | `27/27` application tests plus `9/9` live-evaluator tests passing |
 | Offline interpretation corpus | 54 authored fixtures valid; rule baseline `29/38` on clear fixtures (`76.3%`) |
 | Lint, typecheck, optimized build | Passing |
-| Local browser matrix | Development and optimized `next start`: 5 passed, 3 intentional project skips, 0 failed in each run |
+| Local browser matrix | Development and optimized `next start`: 6 passed, 4 intentional duplicate-project skips, 0 failed in each run |
+| Public production browser matrix | 6 passed, 4 intentional duplicate-project skips, 0 failed against the canonical URL |
 | Live GPT-5.6 evaluation | **Not run**; `OPENAI_API_KEY` is absent |
-| Public production URL | Not deployed or independently verified |
-| Public repository URL | No Git remote configured |
+| Public production URL | [modelshift.vercel.app](https://modelshift.vercel.app), no login or deployment protection |
+| Public repository URL | [RanaPriyansh/modelshift](https://github.com/RanaPriyansh/modelshift), public, MIT |
 | Under-three-minute public video | Not recorded or published |
 | Principal Codex `/feedback` session ID | Not invoked or recorded |
 
@@ -117,20 +124,22 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm eval
+pnpm eval:live
 pnpm build
 pnpm test:e2e
 PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
 ```
 
-`pnpm eval` is currently an offline corpus and rule-baseline check. It does not call GPT-5.6 even when a key is present. Final release requires a separate live fixture run and truthful production latency evidence.
+`pnpm eval` is the offline corpus and rule-baseline check. `pnpm eval:live` is the separate key-gated GPT-5.6 runner; it exits before any network request when `OPENAI_API_KEY` is absent and writes a report only for a credentialed run.
 
 ## Current verified evidence
 
-At 01:20 IST on 2026-07-22:
+At 01:49 IST on 2026-07-22:
 
 ```text
-Test Files  4 passed (4)
-Tests       25 passed (25)
+application test files: 4 passed
+application tests:      27 passed
+live-evaluator tests:   9 passed
 
 fixtures: 54 (version 1.0.0)
 fixture input validity: PASS
@@ -139,14 +148,15 @@ rule baseline always selects an authored probe: PASS
 live model evaluation: NOT RUN (OPENAI_API_KEY is absent)
 ```
 
-The same local QA cycle also passed `pnpm lint`, `pnpm typecheck`, and `pnpm build`. Playwright passed against both the development server and an optimized local `next start` server:
+The same local QA cycle also passed `pnpm lint`, `pnpm typecheck`, and `pnpm build`. Playwright passed against development, optimized local production, and the public production origin:
 
 ```text
-development:       5 passed, 3 intentional project skips, 0 failed (25.0s)
-local production:  5 passed, 3 intentional project skips, 0 failed (24.8s)
+development:       6 passed, 4 intentional duplicate-project skips, 0 failed
+local production:  6 passed, 4 intentional duplicate-project skips, 0 failed
+public production: 6 passed, 4 intentional duplicate-project skips, 0 failed (39.6s)
 ```
 
-The development run targeted `http://127.0.0.1:3000`; the optimized local production run targeted `http://127.0.0.1:3100`. These are not public-deployment results. The live-model path and a public deployed smoke remain unverified.
+The public run targeted `https://modelshift.vercel.app` and exercised the complete fallback journey on desktop and mobile plus keyboard completion, a real seven-second client timeout, an adaptive schema-valid fixture, reload reset, reduced motion, proof-control absence, evidence labels, overflow, and console/page errors. It does not verify a real OpenAI response; the live-model path remains unverified.
 
 ## Reliability and fallback
 
@@ -178,12 +188,10 @@ Before application implementation began, the workspace contained education resea
 ## Known limitations and open release gates
 
 - No live `gpt-5.6-sol` fixture evaluation, latency sample, or validated adaptive production journey yet.
-- No public Vercel deployment or public GitHub remote yet.
-- No Playwright run against a public deployment; the passing browser evidence targets local development and optimized local production servers.
 - No representative learner, educator, child-safety, or external accessibility review.
 - One immediate near-transfer item cannot establish delayed retention; `Later` remains `not tested yet`.
 - The authored corpus and probe library cover one mechanics distinction only.
-- Public demo, Devpost submission, and principal `/feedback` ID remain account-owned completion steps.
+- Public video, Devpost submission, and principal `/feedback` ID remain account-owned completion steps.
 
 ## Documentation
 
