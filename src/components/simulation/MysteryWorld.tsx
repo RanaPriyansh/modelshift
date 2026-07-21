@@ -1,7 +1,14 @@
+import { generateScenarioSeries } from "@/src/domain/physics";
+
+const mysteryTrajectory = generateScenarioSeries("mystery_force_cutoff").trajectories[0];
+const cutoffSample = mysteryTrajectory.samples.find((sample) => sample.timeS === 1);
+const cutoffVelocityMps = cutoffSample?.velocityMps ?? 0;
+const cutoffForceN = cutoffSample?.forceN ?? 0;
+
 export function MysteryWorld() {
   return (
     <figure className="world world--mystery" aria-labelledby="mystery-world-caption">
-      <svg viewBox="0 0 900 370" role="img" aria-label="A cargo craft moving right at twelve metres per second. The engine has just switched off. Net horizontal force is zero.">
+      <svg viewBox="0 0 900 370" role="img" aria-label={`A cargo craft moving right at ${cutoffVelocityMps} metres per second. The engine has just switched off. Net horizontal force is ${cutoffForceN} newtons.`}>
         <defs>
           <linearGradient id="space-backdrop" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stopColor="#08101b" />
@@ -30,14 +37,14 @@ export function MysteryWorld() {
           <path d="M18 28 L-13 18 L-13 58 L18 48 Z" fill="#677587" stroke="#a9b4c1" />
           <circle cx="155" cy="38" r="5" fill="#233246" />
         </g>
-        <g className="vector vector--velocity" aria-label="Velocity vector points right at twelve metres per second">
+        <g className="vector vector--velocity" aria-label={`Velocity vector points right at ${cutoffVelocityMps} metres per second`}>
           <line x1="548" x2="730" y1="170" y2="170" />
           <path d="M730 170 L710 158 L710 182 Z" />
-          <text x="570" y="150">velocity = 12 m/s</text>
+          <text x="570" y="150">velocity = {cutoffVelocityMps} m/s</text>
         </g>
-        <g className="zero-force" aria-label="Net force equals zero newtons">
+        <g className="zero-force" aria-label={`Net force equals ${cutoffForceN} newtons`}>
           <circle cx="625" cy="236" r="9" />
-          <text x="650" y="243">net force = 0 N</text>
+          <text x="650" y="243">net force = {cutoffForceN} N</text>
         </g>
         <g className="cutoff-label" aria-hidden="true">
           <rect x="422" y="64" width="96" height="34" rx="8" />

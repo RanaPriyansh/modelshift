@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 import { generateTrajectory, getScenario } from "@/src/domain/physics";
 import type { Trajectory, TrajectoryConfig } from "@/src/domain/physics";
 import type { ProbeId } from "@/src/types/modelshift";
@@ -48,15 +48,16 @@ function asGraphPoints(trajectory: Trajectory): GraphPoint[] {
   return trajectory.samples.map((sample) => ({ t: sample.timeS, value: sample.velocityMps }));
 }
 
-function Track({ title, copy, index, probeId, revealed }: { title: string; copy: TrackCopy; index: number; probeId: ProbeId; revealed: boolean }) {
+function Track({ title, copy, revealed, endProgress }: { title: string; copy: TrackCopy; revealed: boolean; endProgress: number }) {
+  const puckStyle = { "--puck-end-left": `${14 + 62 * endProgress}%` } as CSSProperties;
   return (
-    <div className="track" data-index={index} data-probe={probeId}>
+    <div className="track">
       <div className="track__labels">
         <strong>{title}</strong>
         <span>{copy.force}</span>
       </div>
       <div className="track__world" aria-label={`${title}: ${copy.outcome}. ${copy.force}. ${copy.velocity}.`}>
-        <span className={["puck", revealed ? "puck--revealed" : ""].join(" ")} />
+        <span className={["puck", revealed ? "puck--revealed" : ""].join(" ")} style={puckStyle} />
         <span className={copy.force.includes("←") ? "track__friction-arrow" : "track__zero-force"}>{copy.force}</span>
         <span className="track__velocity-arrow">{copy.velocity}</span>
         <span className="track__rail" />
@@ -71,6 +72,12 @@ export function ExperimentWorld({ revealed, frictionStrength, probeId }: Experim
     return scenario.trajectories.map((config) => generateTrajectory(withFrictionStrength(config, frictionStrength)));
   }, [frictionStrength, probeId]);
   const copy = TRACK_COPY[probeId];
+  const displacements = trajectories.map((trajectory) => {
+    const first = trajectory.samples[0]?.positionM ?? 0;
+    const last = trajectory.samples[trajectory.samples.length - 1]?.positionM ?? first;
+    return Math.max(0, last - first);
+  });
+  const maximumDisplacement = Math.max(...displacements, 0);
   const observation = probeId === "brief_vs_continuous_force"
     ? "The brief-push puck keeps the velocity it had when force became zero. The continuing force keeps changing the other puck's velocity."
     : probeId === "zero_force_velocity_contrast"
@@ -81,7 +88,13 @@ export function ExperimentWorld({ revealed, frictionStrength, probeId }: Experim
     <section className="experiment-world" aria-label="Side-by-side deterministic experiment">
       <div className="experiment-world__tracks">
         {trajectories.map((trajectory, index) => (
-          <Track key={trajectory.config.id} title={trajectory.config.title} copy={copy[index] ?? copy[0]} index={index} probeId={probeId} revealed={revealed} />
+          <Track
+            key={trajectory.config.id}
+            title={trajectory.config.title}
+            copy={copy[index] ?? copy[0]}
+            revealed={revealed}
+            endProgress={maximumDisplacement > 0 ? displacements[index] / maximumDisplacement : 0}
+          />
         ))}
       </div>
       <div className="experiment-world__graphs">

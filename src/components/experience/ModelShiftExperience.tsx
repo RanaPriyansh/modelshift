@@ -40,6 +40,7 @@ const STAGE_STEPS: Array<{ id: ActiveStage; label: string }> = [
 const VISIBLE_STEPS = ["PREDICT", "EXPLAIN", "INTERPRET", "EXPERIMENT", "RECONSTRUCT", "COLD_TRANSFER", "PROOF_RESULT"] as const;
 
 const FALLBACK_COPY = "There are a few ways to read that explanation, so we'll run the baseline test.";
+const INTERPRETATION_CLIENT_TIMEOUT_MS = 7_000;
 
 function fallbackInterpretation(reason: FallbackReason): ValidatedInterpretation {
   return {
@@ -274,7 +275,7 @@ function ExperimentStage({ probeId, revealed, frictionStrength, reflection, supp
   );
 }
 
-function ReconstructionStage({ value, supportLevel, probeId, questionId, onChange, onRequestSupport, onContinue }: {
+function ReconstructionStage({ value, supportLevel, probeId, questionId, onChange, onRequestSupport, onContinue, onDontKnow }: {
   value: string;
   supportLevel: SupportLevel;
   probeId: ProbeId;
@@ -282,6 +283,7 @@ function ReconstructionStage({ value, supportLevel, probeId, questionId, onChang
   onChange: (value: string) => void;
   onRequestSupport: () => void;
   onContinue: () => void;
+  onDontKnow: () => void;
 }) {
   const nextLabel = supportLevel === 0 ? "Use one attention cue" : supportLevel === 1 ? "Show one contrast" : supportLevel === 2 ? "Show the principle" : null;
   const supportText = supportLevel === 1 ? LEVEL_1_QUESTIONS[questionId] : supportLevel === 2 ? LEVEL_2_CONTRASTS[probeId].text : supportLevel === 3 ? LEVEL_3_PRINCIPLE.text : null;
@@ -296,6 +298,7 @@ function ReconstructionStage({ value, supportLevel, probeId, questionId, onChang
         <label className="textarea-field" htmlFor="reconstruction"><span>Your causal rule</span><textarea id="reconstruction" rows={5} maxLength={400} value={value} onChange={(event) => onChange(event.target.value)} placeholder="When net force is zero…" /><small>{value.length} / 400</small></label>
         <div className="stage-actions">
           {nextLabel ? <SecondaryButton onClick={onRequestSupport}>{nextLabel}</SecondaryButton> : <span className="support-ceiling">Maximum authored support reached</span>}
+          <SecondaryButton onClick={onDontKnow}>I genuinely don&apos;t know</SecondaryButton>
           <PrimaryButton disabled={value.trim().length < 12} onClick={onContinue} testId="enter-proof">Enter proof mode</PrimaryButton>
         </div>
       </div>
@@ -393,18 +396,23 @@ export function ModelShiftExperience() {
     if (!committed.accepted) return;
     setLearningState(committed.state);
     setInterpreting(true);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), INTERPRETATION_CLIENT_TIMEOUT_MS);
     let nextInterpretation: ValidatedInterpretation;
     try {
       const response = await fetch("/api/interpret", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({ scenario_id: MYSTERY.id, prediction_id: prediction, confidence, explanation: nextExplanation, stage: "INTERPRET" }),
       });
       if (!response.ok) throw new Error("interpretation unavailable");
       nextInterpretation = (await response.json()) as ValidatedInterpretation;
-    } catch {
-      nextInterpretation = fallbackInterpretation("api_error");
+    } catch (error) {
+      const reason = typeof error === "object" && error !== null && "name" in error && error.name === "AbortError" ? "timeout" : "api_error";
+      nextInterpretation = fallbackInterpretation(reason);
     } finally {
+      window.clearTimeout(timeout);
       setInterpreting(false);
     }
     setInterpretation(nextInterpretation);
@@ -459,8 +467,8 @@ export function ModelShiftExperience() {
     if (result.accepted) setLearningState(result.state);
   }
 
-  function enterProof() {
-    const submitted = transitionLearningState(learningState, { type: "SUBMIT_RECONSTRUCTION", reconstruction });
+  function enterProof(dontKnow = false, nextReconstruction = reconstruction) {
+    const submitted = transitionLearningState(learningState, { type: "SUBMIT_RECONSTRUCTION", reconstruction: nextReconstruction, dontKnow });
     if (!submitted.accepted) return;
     const continued = transitionLearningState(submitted.state, { type: "CONTINUE_TO_COLD_TRANSFER" });
     if (continued.accepted) setLearningState(continued.state);
@@ -490,7 +498,7 @@ export function ModelShiftExperience() {
         {stage === "EXPLAIN" && prediction ? <ExplanationStage prediction={prediction} explanation={explanation} onExplanation={setExplanation} onSubmit={() => void submitExplanation()} onDontKnow={() => { const text = "I genuinely don't know."; setExplanation(text); void submitExplanation(text); }} /> : null}
         {stage === "INTERPRET" || stage === "PROBE_PREDICT" ? <InterpretationStage interpretation={interpretation} explanation={explanation} loading={interpreting} probePrediction={probePrediction} onProbePrediction={setProbePrediction} onContinue={commitProbePrediction} /> : null}
         {stage === "EXPERIMENT" || stage === "REFLECT" ? <ExperimentStage probeId={probeId} revealed={experimentRevealed} frictionStrength={frictionStrength} reflection={reflection} supportLevel={supportLevel} questionId={questionId} onRun={runExperiment} onFriction={setFrictionStrength} onReflection={setReflection} onRequestSupport={requestSupport} onDontKnow={() => setReflection("I genuinely don't know yet.")} onContinue={submitReflection} /> : null}
-        {stage === "RECONSTRUCT" ? <ReconstructionStage value={reconstruction} supportLevel={supportLevel} probeId={probeId} questionId={questionId} onChange={setReconstruction} onRequestSupport={requestSupport} onContinue={enterProof} /> : null}
+        {stage === "RECONSTRUCT" ? <ReconstructionStage value={reconstruction} supportLevel={supportLevel} probeId={probeId} questionId={questionId} onChange={setReconstruction} onRequestSupport={requestSupport} onContinue={() => enterProof()} onDontKnow={() => { const text = "I genuinely don't know."; setReconstruction(text); enterProof(true, text); }} /> : null}
         {stage === "COLD_TRANSFER" ? <ProofStage choice={transferChoice} explanation={transferExplanation} submitted={false} onChoice={setTransferChoice} onExplanation={setTransferExplanation} onDontKnow={() => submitTransfer(true)} onSubmit={() => submitTransfer(false)} /> : null}
         {stage === "PROOF_RESULT" && interpretation ? <ResultStage evidence={deriveEvidenceCard(learningState)} interpretation={interpretation} onRestart={resetSession} /> : null}
       </main>
