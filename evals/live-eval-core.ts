@@ -8,8 +8,9 @@ import type { FallbackReason, HypothesisId, ProbeId, ValidatedInterpretation } f
 
 import type { InterpretationFixture } from "./fixtures";
 
-export const LIVE_EVALUATOR_VERSION = "1.1.0";
+export const LIVE_EVALUATOR_VERSION = "1.2.0";
 export const PRIMARY_AGREEMENT_GATE = 0.85;
+export const P95_LATENCY_GATE_MS = 6_000;
 
 export type LiveFixtureResult = {
   fixture_id: string;
@@ -56,6 +57,7 @@ export type LiveEvalSummary = {
     semantic_validity: boolean;
     authored_probe_safety: boolean;
     ambiguous_inputs_safely_neutralized: boolean;
+    p95_latency_under_6_seconds: boolean;
     no_runner_errors: boolean;
     overall: boolean;
   };
@@ -191,6 +193,11 @@ export function summarizeLiveResults(results: readonly LiveFixtureResult[]): Liv
     && ambiguousResults.every((result) => result.safe_neutral === true);
   const noRunnerErrors = results.every((result) => result.source !== "runner_error");
   const agreementPass = clearPrimaryAgreementRate >= PRIMARY_AGREEMENT_GATE;
+  const contractLatency = {
+    p50: percentile(results.map((result) => result.latency_ms), 0.5),
+    p95: percentile(results.map((result) => result.latency_ms), 0.95),
+  };
+  const p95LatencyPass = results.length > 0 && contractLatency.p95 < P95_LATENCY_GATE_MS;
 
   return {
     fixture_count: results.length,
@@ -207,22 +214,21 @@ export function summarizeLiveResults(results: readonly LiveFixtureResult[]): Liv
     schema_valid_count: results.filter((result) => result.schema_valid).length,
     semantic_valid_count: results.filter((result) => result.semantic_valid).length,
     authored_probe_safe_count: results.filter((result) => result.authored_probe_safe).length,
-    contract_latency_ms: {
-      p50: percentile(results.map((result) => result.latency_ms), 0.5),
-      p95: percentile(results.map((result) => result.latency_ms), 0.95),
-    },
+    contract_latency_ms: contractLatency,
     gates: {
       primary_agreement_at_least_85_percent: agreementPass,
       schema_validity: schemaValidity,
       semantic_validity: semanticValidity,
       authored_probe_safety: authoredProbeSafety,
       ambiguous_inputs_safely_neutralized: ambiguousInputsSafelyNeutralized,
+      p95_latency_under_6_seconds: p95LatencyPass,
       no_runner_errors: noRunnerErrors,
       overall: agreementPass
         && schemaValidity
         && semanticValidity
         && authoredProbeSafety
         && ambiguousInputsSafelyNeutralized
+        && p95LatencyPass
         && noRunnerErrors,
     },
   };

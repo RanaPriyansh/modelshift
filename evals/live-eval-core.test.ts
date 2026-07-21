@@ -32,7 +32,7 @@ const validInterpretation: ValidatedInterpretation = {
   source: "model",
 };
 
-function scoredResult(primaryAgrees: boolean): LiveFixtureResult {
+function scoredResult(primaryAgrees: boolean, latencyMs = 100): LiveFixtureResult {
   return {
     fixture_id: "fixture",
     category: "test",
@@ -49,7 +49,7 @@ function scoredResult(primaryAgrees: boolean): LiveFixtureResult {
     primary_agrees: primaryAgrees,
     abstain: false,
     safe_neutral: null,
-    latency_ms: 100,
+    latency_ms: latencyMs,
     runner_error_type: null,
   };
 }
@@ -202,5 +202,24 @@ describe("live evaluation metrics", () => {
     belowGate[0] = { ...belowGate[0]!, semantic_valid: false };
     expect(summarizeLiveResults(belowGate).gates.semantic_validity).toBe(false);
     expect(summarizeLiveResults(belowGate).gates.overall).toBe(false);
+  });
+
+  it("requires nearest-rank p95 latency to be strictly under six seconds", () => {
+    const passingLatencyResults = [
+      ...Array.from({ length: 17 }, () => scoredResult(true, 5_999)),
+      ...Array.from({ length: 3 }, () => scoredResult(false, 5_999)),
+      assessInterpretation(ambiguousFixture, neutralFallback("ambiguous_input"), 5_999),
+    ];
+    const passingSummary = summarizeLiveResults(passingLatencyResults);
+    expect(passingSummary.contract_latency_ms.p95).toBe(5_999);
+    expect(passingSummary.gates.p95_latency_under_6_seconds).toBe(true);
+    expect(passingSummary.gates.overall).toBe(true);
+
+    const boundarySummary = summarizeLiveResults(
+      passingLatencyResults.map((result) => ({ ...result, latency_ms: 6_000 })),
+    );
+    expect(boundarySummary.contract_latency_ms.p95).toBe(6_000);
+    expect(boundarySummary.gates.p95_latency_under_6_seconds).toBe(false);
+    expect(boundarySummary.gates.overall).toBe(false);
   });
 });

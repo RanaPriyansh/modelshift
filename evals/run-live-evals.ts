@@ -103,7 +103,7 @@ async function main() {
   const finishedAt = new Date();
   const summary = summarizeLiveResults(results);
   const report = {
-    report_schema_version: "1.1",
+    report_schema_version: "1.2",
     evaluator_version: LIVE_EVALUATOR_VERSION,
     dataset_version: INTERPRETATION_FIXTURE_VERSION,
     model,
@@ -133,6 +133,7 @@ async function main() {
   console.log(`authored-probe safety: ${summary.authored_probe_safe_count}/${summary.fixture_count}`);
   console.log(`fallbacks: ${summary.fallback_count}; runner errors: ${summary.runner_error_count}`);
   console.log(`contract latency: p50=${summary.contract_latency_ms.p50.toFixed(1)}ms p95=${summary.contract_latency_ms.p95.toFixed(1)}ms`);
+  console.log(`p95_latency_under_6_seconds: ${summary.gates.p95_latency_under_6_seconds ? "PASS" : "FAIL"}`);
   console.log(`gate: ${summary.gates.overall ? "PASS" : "FAIL"}`);
   console.log(`report: ${reportPath}`);
 
