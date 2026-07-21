@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+z.config({ jitless: true });
+
 export const lessonProviderSchema = z.enum(["openai", "anthropic", "gemini", "openrouter"]);
 export type LessonProvider = z.infer<typeof lessonProviderSchema>;
 

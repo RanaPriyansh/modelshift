@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+// These schemas also run in strict-CSP browser surfaces. Disable Zod's
+// optional Function-constructor fast path so CSP reports remain clean.
+z.config({ jitless: true });
+
 export const EVIDENCE_LEDGER_SCHEMA_VERSION = 1 as const;
 export const EVIDENCE_LEDGER_EXPORT_FORMAT = "forge-evidence-ledger" as const;
 
