@@ -7,13 +7,13 @@
 **Primary deployment:** Public Vercel URL with no login  
 **Required demo:** Public YouTube video, with audio, shorter than three minutes
 
-## Current execution status — 2026-07-22 01:49 IST
+## Current execution status — 2026-07-22 01:56 IST
 
 ```text
 Live app: https://modelshift.vercel.app
-Immutable deployment: https://modelshift-pc1226bk4-ranapriyanshs-projects.vercel.app
+Immutable deployment: https://modelshift-pjs4krelq-ranapriyanshs-projects.vercel.app
 Repository: https://github.com/RanaPriyansh/modelshift
-Application runtime commit: 8bd952de17e1107c7631bc90a8cae3d67dded296
+Tested source release: 350ed2ca44cc4c9565def562842f19373f637968
 Runtime mode: fallback-only; OPENAI_API_KEY absent; live GPT-5.6 evaluation NOT RUN
 Production E2E: 6 passed, 4 intentional duplicate-project skips, 0 failed
 Demo video: NOT RECORDED OR PUBLISHED
@@ -314,7 +314,7 @@ Live app: https://modelshift.vercel.app
 Demo video: NOT COMPLETE — add public YouTube URL
 Repository: https://github.com/RanaPriyansh/modelshift
 Primary Codex /feedback session ID: NOT COMPLETE — invoke from principal task
-Application runtime commit: 8bd952de17e1107c7631bc90a8cae3d67dded296
+Tested source release: 350ed2ca44cc4c9565def562842f19373f637968
 ```
 
 ## 8. Repository evidence package

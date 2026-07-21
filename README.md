@@ -10,7 +10,7 @@ The public product and source repository are live:
 
 - **App:** [modelshift.vercel.app](https://modelshift.vercel.app)
 - **Source:** [github.com/RanaPriyansh/modelshift](https://github.com/RanaPriyansh/modelshift)
-- **Immutable deployment:** [modelshift-pc1226bk4-ranapriyanshs-projects.vercel.app](https://modelshift-pc1226bk4-ranapriyanshs-projects.vercel.app)
+- **Immutable deployment:** [modelshift-pjs4krelq-ranapriyanshs-projects.vercel.app](https://modelshift-pjs4krelq-ranapriyanshs-projects.vercel.app)
 
 The deployed runtime is deliberately **fallback-only** because no `OPENAI_API_KEY` was available. The deterministic product is public and fully completable, but the overall Build Week submission is not honestly complete until the credentialed live evaluation, public video, principal `/feedback`, and Devpost submission are finished.
 
@@ -25,6 +25,7 @@ The deployed runtime is deliberately **fallback-only** because no `OPENAI_API_KE
 | Live GPT-5.6 evaluation | **Not run**; `OPENAI_API_KEY` is absent |
 | Public production URL | [modelshift.vercel.app](https://modelshift.vercel.app), no login or deployment protection |
 | Public repository URL | [RanaPriyansh/modelshift](https://github.com/RanaPriyansh/modelshift), public, MIT |
+| Tested source release | `350ed2ca44cc4c9565def562842f19373f637968` |
 | Under-three-minute public video | Not recorded or published |
 | Principal Codex `/feedback` session ID | Not invoked or recorded |
 
@@ -134,7 +135,7 @@ PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
 
 ## Current verified evidence
 
-At 01:49 IST on 2026-07-22:
+At 01:56 IST on 2026-07-22:
 
 ```text
 application test files: 4 passed
@@ -153,7 +154,7 @@ The same local QA cycle also passed `pnpm lint`, `pnpm typecheck`, and `pnpm bui
 ```text
 development:       6 passed, 4 intentional duplicate-project skips, 0 failed
 local production:  6 passed, 4 intentional duplicate-project skips, 0 failed
-public production: 6 passed, 4 intentional duplicate-project skips, 0 failed (39.6s)
+public production: 6 passed, 4 intentional duplicate-project skips, 0 failed (39.5s)
 ```
 
 The public run targeted `https://modelshift.vercel.app` and exercised the complete fallback journey on desktop and mobile plus keyboard completion, a real seven-second client timeout, an adaptive schema-valid fixture, reload reset, reduced motion, proof-control absence, evidence labels, overflow, and console/page errors. It does not verify a real OpenAI response; the live-model path remains unverified.

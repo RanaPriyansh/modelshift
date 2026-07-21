@@ -125,7 +125,7 @@ Each returns `mixed_or_unclear`, `neutral_core_probe`, and `neutral_observation_
 
 ## Current evaluation evidence
 
-Verified locally on 2026-07-22 through 01:49 IST:
+Verified locally on 2026-07-22 through 01:56 IST:
 
 - 27/27 application tests and 9/9 live-evaluator tests pass;
 - 54 versioned explanation fixtures pass input-validity checks;

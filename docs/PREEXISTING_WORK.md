@@ -45,6 +45,7 @@ The initial repository commit was created at 01:03:55 IST on 2026-07-22. The imp
 | `8bd952de17e1107c7631bc90a8cae3d67dded296` | 2026-07-22 01:37:38 | adaptive-fixture and clean-reload browser coverage |
 | `3550d75b917abb5668dd07eff4d5005a6cc28881` | 2026-07-22 01:39:36 | exact neutralization gate for all ambiguous fixtures |
 | `8ae01513b7b9df0b95cca235f826ec54d6f135d3` | 2026-07-22 01:44:16 | strict p95-under-six-seconds live-evaluation gate |
+| `350ed2ca44cc4c9565def562842f19373f637968` | 2026-07-22 01:49:43 | public fallback release evidence and canonical reviewer documentation; this is the clean-tested Vercel source release |
 
 The expanded Playwright specification subsequently passed against local development, optimized local `next start`, and `https://modelshift.vercel.app`: 6 passed, 4 intentional duplicate-project skips, and 0 failed in each run. The public source was created at `https://github.com/RanaPriyansh/modelshift`; the fallback-only application was deployed to Vercel during this build.
 
@@ -70,4 +71,4 @@ It does not support claims that:
 - external learners or educators have validated the mechanism; or
 - ModelShift demonstrates educational efficacy or retention.
 
-Before final submission, add the final documentation commit, principal `/feedback` session ID, video URL, Devpost URL, and any external assets actually used.
+Before final submission, add the principal `/feedback` session ID, video URL, Devpost URL, and any external assets actually used. A later documentation-only commit may record the immutable deployment ID without changing the tested application source.

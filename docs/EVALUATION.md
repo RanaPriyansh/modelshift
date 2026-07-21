@@ -13,7 +13,7 @@ The release candidate has passing automated implementation evidence across unit/
 
 ## Verification snapshot
 
-Commands were run locally in `/Users/Priyansh/Documents/codex-buildweek/education` on 2026-07-22 through approximately 01:49 IST.
+Commands were run locally in `/Users/Priyansh/Documents/codex-buildweek/education` on 2026-07-22 through approximately 01:56 IST.
 
 ### Unit and contract tests
 
@@ -81,10 +81,10 @@ Public production E2E:
 
 ```text
 $ PLAYWRIGHT_BASE_URL=https://modelshift.vercel.app pnpm test:e2e:prod
-result: 6 passed, 4 intentional duplicate-project skips, 0 failed (39.6s)
+result: 6 passed, 4 intentional duplicate-project skips, 0 failed (39.5s)
 ```
 
-Desktop ran five cases: complete fallback journey and evidence, keyboard-only completion, a real 7.6-second delayed-route timeout against the seven-second client deadline, a complete schema-valid adaptive fixture followed by a clean reload reset, and reduced motion. Mobile Chromium at 390×844 ran the complete fallback journey; the four viewport-independent cases are intentionally skipped in the mobile project. The suite also checks proof-control absence, single-submit progression, evidence-card labels, horizontal overflow, and console/page errors. The public alias returned the app without authentication or deployment protection.
+Desktop ran five cases: complete fallback journey and evidence, keyboard-only completion, a real 7.6-second delayed-route timeout against the seven-second client deadline, a complete schema-valid adaptive fixture followed by a clean reload reset, and reduced motion. Mobile Chromium at 390×844 ran the complete fallback journey; the four viewport-independent cases are intentionally skipped in the mobile project. The suite also checks proof-control absence, single-submit progression, evidence-card labels, horizontal overflow, and console/page errors. This final public run targeted the deployment built from source commit `350ed2c`; the alias returned the app without authentication or deployment protection.
 
 ## What is not yet verified
 

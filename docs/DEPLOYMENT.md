@@ -2,17 +2,17 @@
 
 ## Current release
 
-As of 2026-07-22 01:49 IST, the fallback-only release is public and the source repository is public.
+As of 2026-07-22 01:56 IST, the fallback-only release is public and the source repository is public.
 
 | Field | Verified value |
 | --- | --- |
 | Public app | [https://modelshift.vercel.app](https://modelshift.vercel.app) |
-| Immutable deployment | [https://modelshift-pc1226bk4-ranapriyanshs-projects.vercel.app](https://modelshift-pc1226bk4-ranapriyanshs-projects.vercel.app) |
-| Vercel deployment | `dpl_5VP3qbCwVokeCJjRpwp5ywwdumTp` |
+| Immutable deployment | [https://modelshift-pjs4krelq-ranapriyanshs-projects.vercel.app](https://modelshift-pjs4krelq-ranapriyanshs-projects.vercel.app) |
+| Vercel deployment | `dpl_6dP9Mr2yqs4XXjU2mqPvyH9wSaqx` |
 | Vercel project | `modelshift` / `prj_SnTYtzLicYKYlHvXCNwq9J7ehQZB` |
 | Vercel team | `ranapriyanshs-projects` / `team_lr0E9GlEDc3XYJP7xrx8po2W` |
 | Public source | [https://github.com/RanaPriyansh/modelshift](https://github.com/RanaPriyansh/modelshift) |
-| Application runtime commit | `8bd952d` (later evaluator/documentation commits do not change the deployed app runtime) |
+| Tested source release | `350ed2ca44cc4c9565def562842f19373f637968` (the subsequent release-record commit is documentation-only) |
 | Runtime mode | missing-key authored fallback; live GPT not run or claimed |
 | Production E2E | 6 passed, 4 intentional duplicate-project skips, 0 failed |
 | Deployment protection | off; canonical URL returns the app without login |
