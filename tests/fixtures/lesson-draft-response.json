@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "1.0",
+  "draft": {
+    "schemaVersion": "1.0",
+    "title": "What a photograph can prove",
+    "learnerGoal": "Separate visible observations from interpretations and catalog facts.",
+    "phenomenon": {
+      "opening": "Two viewers study the same city photograph but reach different conclusions about daily life.",
+      "question": "Which conclusions are supported by the image itself?"
+    },
+    "commitmentPrompt": "Choose one claim and record how confident you are before inspecting the evidence.",
+    "plausibleReadings": [
+      {
+        "label": "The image proves the whole pattern",
+        "prediction": "A single visible example is enough to establish how most people lived."
+      },
+      {
+        "label": "The image supports a bounded observation",
+        "prediction": "The image establishes only what is visible at this place and moment."
+      }
+    ],
+    "separatingTest": {
+      "setup": "Compare a visible-detail claim, a catalog fact, and a broad historical inference against the image record.",
+      "whyItSeparates": "The categories require different evidence and expose which claims the image alone can support."
+    },
+    "explanationSections": [
+      {
+        "heading": "Observe",
+        "explanation": "Describe only details that another viewer could point to in the image without adding a cause.",
+        "checkQuestion": "Could another viewer locate every detail you named?"
+      },
+      {
+        "heading": "Infer",
+        "explanation": "Treat explanations and broad patterns as interpretations that need comparison with other records.",
+        "checkQuestion": "What additional record would make this inference stronger?"
+      }
+    ],
+    "reconstructionPrompt": "Write a rule for deciding when an image supports a claim and when another source is needed.",
+    "coldTransfer": {
+      "prompt": "Classify four claims about an unfamiliar photograph without hints, then justify one classification.",
+      "successEvidence": "The learner independently distinguishes four evidence categories on this task.",
+      "remainsUntested": "Delayed retention, other source types, and transfer across historical periods remain untested."
+    },
+    "sourceNeeds": [
+      {
+        "claim": "The historical context and catalog description for each photograph",
+        "sourceType": "Original archive catalog record and item rights statement"
+      }
+    ],
+    "safetyNotes": [
+      "Use public archival images and avoid asking learners to identify private people."
+    ],
+    "draftLimitations": [
+      "No source has been checked by the model.",
+      "One cold transfer cannot establish mastery or delayed retention."
+    ]
+  },
+  "provenance": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-5",
+    "generatedAt": "2026-07-22T00:00:00.000Z",
+    "sourceStatus": "unverified_draft",
+    "keyHandling": "request_only"
+  },
+  "claimBoundary": "AI-generated draft. Not a reviewed World, verified source record, grade, or proof of learning."
+}

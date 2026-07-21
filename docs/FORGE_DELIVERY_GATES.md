@@ -12,18 +12,20 @@
 As of 22 July 2026:
 
 - the four FORGE governing documents exist, and the two local research reports have been translated into product and architecture decisions;
-- three authored learning Worlds are interactive: force and motion, proportional reasoning, and learning with AI;
+- four authored learning Worlds are interactive: force and motion, proportional reasoning, learning with AI, and primary-source reasoning;
 - a strict same-origin planner API deterministically resolves registered topics to authored World/source IDs, keeps unknown topics in an explicitly unverified source-planning state, and fails closed at its age, guardian, source, safety, schema, and request boundaries;
 - a privacy-minimal browser evidence ledger can retain bounded World outcomes, assistance provenance, return dates, learner exports, learner-selected educator exports, and deletions without retaining identity, raw chat, learner explanations, confidence, personality inference, or mastery scores;
-- a Supabase/PostgreSQL migration and SQL contract test exist and have been exercised in a disposable database, but they are staged only: no live Supabase project, authentication flow, cloud evidence sync, or production privacy operation is connected;
-- these slices support a C1 interactive-foundation claim, but G1 remains a candidate because the complete gate packet, typed durable event spine, replay/idempotency evidence, independent review, and formal PASS decision have not been recorded;
+- Supabase/PostgreSQL migrations and SQL contract tests exist for the learning data model and typed event spine and have been exercised in a disposable database, but they are staged only: no live Supabase project, cloud evidence sync, or production privacy operation is connected;
+- a privacy-minimal device profile and optional cloud-auth adapter exist, but cloud identity is not provisioned on the public deployment and grants no guardian, sharing, evidence, or verified-age authority;
+- a provider-neutral Lesson Studio compiles strict unverified drafts through fixed OpenAI, Anthropic, Gemini, and OpenRouter adapters; provider calls are not live-credential verified and drafts cannot publish or grade proof;
+- these slices support a C1 interactive-foundation claim, but G1 remains a candidate because the complete gate packet, end-to-end durable replay/idempotency evidence, independent review, and formal PASS decision have not been recorded;
 - no identity/guardian operation, people network, comprehensive source service, complete curriculum, homeschool pathway, or rights workflow has passed a FORGE gate;
 - no representative usability, child-safety, privacy-operation, accessibility, source-accuracy, assessment-validity, delayed-retention, efficacy, workload, equity, or scale result exists for broad FORGE;
 - the historical ModelShift code and artifacts remain a narrow prior prototype and one FORGE World; they cannot be promoted into evidence for the broader system.
 
 The strongest currently permitted claim is:
 
-> **FORGE is a C1 interactive foundation and G1 candidate. Three authored learning Worlds demonstrate bounded planner-to-World, proof-after-help, and browser-local evidence flows. The broader architecture, trust core, homeschool use, educational effects, child-safety operation, and production deployment remain unproven.**
+> **FORGE is a C1 interactive foundation and G1 candidate. Four authored learning Worlds demonstrate bounded planner-to-World, proof-after-help, browser-local evidence, and an unverified AI lesson-draft compiler. The broader curriculum, trust core, homeschool use, educational effects, child-safety operation, live provider behavior, and production identity/persistence remain unproven.**
 
 No word such as *works*, *safe for children*, *validated*, *effective*, *personalized*, *mastery*, *credential*, *school replacement*, *homeschool solution*, or *production-ready* may be used without the specific scope and gate evidence defined below.
 

@@ -2,17 +2,18 @@
 
 FORGE is a learner-owned learning-system foundation for children learning with a grown-up, teenagers, and adults. Its long-term direction is broad: help someone enter with a question or capability goal, find a rigorous path across subjects, use AI without surrendering the thinking, and keep bounded evidence of what they could do independently.
 
-This repository is currently a **C1 interactive foundation and G1 candidate**, not the finished institution described by the product vision. It demonstrates three authored learning Worlds, a deterministic planning boundary, and a privacy-minimal browser evidence trail. It does not yet constitute a complete curriculum, a homeschool replacement, a child-safety operation, or evidence that FORGE improves learning.
+This repository is currently a **C1 interactive foundation and G1 candidate**, not the finished institution described by the product vision. It demonstrates four authored learning Worlds, a deterministic planning boundary, a typed event spine, a privacy-minimal browser evidence trail, optional device/cloud access surfaces, and a provider-neutral AI lesson-draft compiler. It does not yet constitute a complete curriculum, a homeschool replacement, a child-safety operation, or evidence that FORGE improves learning.
 
 ## What is implemented
 
-### Three working learning Worlds
+### Four working learning Worlds
 
 | World | Route | What the slice demonstrates |
 | --- | --- | --- |
 | Force and motion | [`/learn/force-and-motion`](http://127.0.0.1:3000/learn/force-and-motion) | Prediction, learner model, deterministic comparison, bounded support, AI withdrawal, and unfamiliar graph transfer |
 | Proportional reasoning | [`/learn/proportional-reasoning`](http://127.0.0.1:3000/learn/proportional-reasoning) | Exact-rational proportional models, a separating test, reconstruction, and map-scale transfer; includes child-with-grown-up, teen, and adult presentation modes |
 | Learning with AI | [`/learn/ai-and-learning`](http://127.0.0.1:3000/learn/ai-and-learning) | Source-grounded research comparison, assistance guardrails, and an independent evidence-set transfer |
+| Primary-source reasoning | [`/learn/primary-source-reasoning`](http://127.0.0.1:3000/learn/primary-source-reasoning) | Authentic Library of Congress photographs, observation/inference separation, governed support, and unfamiliar-source transfer |
 
 Each World is authored and versioned. Deterministic code owns state transitions, experiment or scoring logic, proof locks, and evidence conditions. AI is not allowed to manufacture correct answers, unlock proof, or turn one response into a mastery claim.
 
@@ -27,11 +28,23 @@ The home route at [`/`](http://127.0.0.1:3000/) submits a typed request to `POST
 
 The earlier physics-specific `POST /api/interpret` route remains for the historical ModelShift World. Its model path is optional and has a deterministic neutral fallback.
 
+### A provider-neutral Lesson Studio
+
+[`/studio`](http://127.0.0.1:3000/studio) can send one bounded lesson-draft request to OpenAI, Anthropic, Google Gemini, or OpenRouter. A key supplied by the user is held only in the current form and request, cleared after the response, sent through a fixed server adapter, and never returned in the draft. A managed OpenAI adapter is an explicit server-side opt-in and is off by default.
+
+Every provider must return the same strict schema: opening phenomenon, exactly two plausible readings, a separating test, reconstruction, unfamiliar cold transfer, source-review needs, safety notes, and explicit limitations. Model output is always an **unverified editable draft**. It cannot publish a World, verify its own claims, select a correct proof answer, grade cold transfer, or create mastery evidence. Adapter tests are mocked; no live provider call has been verified in this release because no provider credential is available in the workspace.
+
 ### A privacy-minimal local evidence ledger
 
 Completed World outcomes can be written to browser `localStorage` and inspected at [`/evidence`](http://127.0.0.1:3000/evidence) or [`/trail`](http://127.0.0.1:3000/trail). The ledger supports schema validation, bounded assistance provenance, return dates, learner export, learner-selected educator export, per-record deletion, and full local deletion.
 
-The local ledger deliberately excludes identity, raw chat, learner explanations, confidence, personality or emotion inference, and mastery scores. It is browser-local only: there is no account, server sync, background sharing, or recovery across devices.
+The local ledger deliberately excludes identity, raw chat, learner explanations, confidence, personality or emotion inference, and mastery scores. It is browser-local only: there is no evidence sync, background sharing, or recovery across devices.
+
+[`/login`](http://127.0.0.1:3000/login) and [`/account`](http://127.0.0.1:3000/account) provide a working privacy-minimal device profile and an optional adult-entry cloud-auth adapter. Device profiles store only a random ID, learner mode, guardian-present confirmation, schema version, and timestamp. Cloud auth is code-complete for a separately provisioned Supabase project, but intentionally unavailable when the three server variables are absent. Cloud identity grants no adult, guardian, sharing, or evidence privileges, and no live project is connected in this release.
+
+### A typed event spine
+
+`src/forge/events.ts` and `src/forge/event-journal.ts` define the canonical, append-only event vocabulary and replay rules for journey, assistance, proof, access, and rights operations. `supabase/migrations/202607220002_forge_event_spine.sql` stages the durable counterpart with SQL contract tests. The browser UI does not yet replay every screen from this durable journal, so G1 remains a candidate rather than a pass.
 
 ### A staged database boundary
 
@@ -47,8 +60,10 @@ flowchart LR
     P -->|"registered topic"| W["Versioned authored World"]
     P -->|"unknown topic"| X["Unverified source-verification plan"]
     W --> R["Deterministic runtime and validator"]
-    R --> E["Browser-local bounded evidence ledger"]
+    R --> E["Typed event and bounded evidence spine"]
+    E --> L["Browser-local learner ledger"]
     M["Optional bounded model"] -->|"rephrase or interpretation only"| P
+    S["Provider-neutral Lesson Studio"] -->|"unverified draft only"| D["Human source and lesson review"]
     DB["Staged Supabase schema"] -.->|"not connected"| R
 ```
 
@@ -58,6 +73,8 @@ The implementation is a modular Next.js monolith with explicit internal boundari
 - `src/lib/forge-planner/` - deterministic topic classification, planning contracts, safety policy, and optional model governor;
 - `src/worlds/` and `src/components/worlds/` - domain-owned content, reducers, models, validators, and interfaces;
 - `src/lib/forge-evidence/` - privacy-minimal local ledger, export, deletion, scheduling, and evidence-state derivation;
+- `src/lib/lesson-studio/` - provider adapters, strict lesson-draft schema, source/safety boundaries, and fail-closed parsing;
+- `src/lib/forge-auth/` and `src/lib/forge-profile/` - hardened optional cloud session boundary and privacy-minimal device profile;
 - `supabase/` - staged durable-data migration and SQL contract tests.
 
 The broader architecture deliberately remains a modular monolith with a typed event/evidence spine until measured scale or isolation needs justify a split. See [FORGE Architecture](docs/FORGE_ARCHITECTURE.md).
@@ -74,7 +91,7 @@ pnpm dev
 
 Open `http://127.0.0.1:3000`.
 
-No model credential is required for the authored and deterministic paths. External model calls are off by default even when an existing `OPENAI_API_KEY` is present. Keep `OPENAI_INTERPRETATION_ENABLED=false` and `OPENAI_FORGE_PLANNER_ENABLED=false` for public child/teen access; enabling either path requires a separate provider-disclosure, consent, and rate-control release. Credentials remain server-only and must never use a `NEXT_PUBLIC_*` variable. Either corresponding `*_DISABLED=true` switch forces authored fallback.
+No model credential is required for the authored and deterministic paths. External model calls are off by default even when an existing `OPENAI_API_KEY` is present. Keep `OPENAI_INTERPRETATION_ENABLED=false`, `OPENAI_FORGE_PLANNER_ENABLED=false`, and `FORGE_LESSON_STUDIO_OPENAI_ENABLED=false` for public operation unless the corresponding disclosure, consent, budget, and abuse controls have been approved. Studio BYOK keys are request-only; deployment-managed credentials remain server-only and must never use a `NEXT_PUBLIC_*` variable.
 
 ## Verify
 
@@ -111,9 +128,13 @@ PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
 | `/learn/force-and-motion` | Working Model World using the historical ModelShift protocol |
 | `/learn/proportional-reasoning` | Working exact-math Model World |
 | `/learn/ai-and-learning` | Working source/evidence World |
+| `/learn/primary-source-reasoning` | Working historical-literacy World using authentic archival images |
+| `/studio` | Provider-neutral compiler for unverified lesson drafts |
+| `/login` and `/account` | Private device profile plus optional, separately configured cloud identity |
 | `/trail` | Local evidence summary plus the intended question-to-capability trail |
 | `/evidence` | Local evidence controls and the bounded evidence contract |
 | `POST /api/forge/plan` | Strict same-origin FORGE planner API |
+| `POST /api/forge/lesson-draft` | Strict same-origin, fixed-endpoint provider adapter for unverified drafts |
 | `POST /api/interpret` | Historical bounded physics interpretation API |
 
 ## Deployment boundary
@@ -126,8 +147,9 @@ No public FORGE release is claimed by this README until the exact commit, enviro
 
 - FORGE is not a complete cross-domain curriculum or a replacement for school, teachers, guardians, peers, care, safeguarding, disability services, or public institutions.
 - It is not yet a homeschool solution, accredited pathway, credential, or jurisdiction-specific compliance system.
-- There is no live Supabase project, authentication, guardian onboarding, cloud evidence sync, people network, storage pipeline, or privacy worker connected to this app.
-- The current three Worlds do not establish breadth across everything someone may want to learn.
+- There is no live Supabase project, verified-age or guardian onboarding, cloud evidence sync, people network, storage pipeline, privacy worker, or abuse-control service connected to this app.
+- The current four Worlds do not establish breadth across everything someone may want to learn.
+- Provider adapters and structured parsing are tested with mocks, not live provider credentials; generated drafts are not source-reviewed curriculum.
 - No representative learner, educator, minor-safety, external accessibility, assessment-validity, delayed-retention, efficacy, equity, workload, or scale result has been established for broad FORGE.
 - One immediate transfer result is bounded evidence from one task, not mastery, intelligence, retention, or a permanent learner label.
 - A successful build or browser run demonstrates engineering behavior, not educational effectiveness or child safety.

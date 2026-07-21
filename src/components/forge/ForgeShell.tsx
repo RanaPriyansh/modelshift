@@ -3,12 +3,14 @@ import type { ReactNode } from "react";
 
 import "@/app/forge.css";
 
-type ForgeSection = "home" | "learn" | "trail" | "evidence";
+type ForgeSection = "home" | "learn" | "studio" | "trail" | "evidence" | "account";
 
 const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; section: ForgeSection }> = [
   { href: "/#worlds", label: "Learn", section: "learn" },
+  { href: "/studio", label: "Studio", section: "studio" },
   { href: "/trail", label: "Trail", section: "trail" },
   { href: "/evidence", label: "Evidence", section: "evidence" },
+  { href: "/account", label: "Account", section: "account" },
 ];
 
 function ForgeMark() {
@@ -42,6 +44,14 @@ function ArrowIcon() {
 }
 
 function NavIcon({ section }: { section: ForgeSection }) {
+  if (section === "home") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m4 11 8-7 8 7v9h-6v-6h-4v6H4v-9Z" />
+      </svg>
+    );
+  }
+
   if (section === "learn") {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -54,6 +64,22 @@ function NavIcon({ section }: { section: ForgeSection }) {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M5 18.5c2.2-6.8 4.4-2.4 6.2-7.2C13 6.6 16 10.8 19 5.5M5 18.5h4M19 5.5h-4" />
+      </svg>
+    );
+  }
+
+  if (section === "studio") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 19h16M7 16V8l5-4 5 4v8M9.5 12h5M12 9.5v5" />
+      </svg>
+    );
+  }
+
+  if (section === "account") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8c.8-4 3.2-6 7-6s6.2 2 7 6" />
       </svg>
     );
   }

@@ -7,6 +7,7 @@ import {
   type LearnerDepthMode,
   type LearningWorldManifest,
   type LearningWorldPack,
+  type SourceProvenance,
   type WorldKind,
 } from "./contracts";
 import { parseLearningWorldPack } from "./validation";
@@ -16,6 +17,7 @@ export const REGISTRY_ERROR_CODES = [
   "registry.browser-runtime",
   "registry.duplicate-world-id",
   "registry.duplicate-route",
+  "registry.conflicting-source-id",
   "registry.duplicate-validator-id",
   "registry.validator-binding-missing",
   "registry.validator-definition-missing",
@@ -70,6 +72,7 @@ export class TrustedWorldRegistry {
   readonly #packsById = new Map<string, LearningWorldPack>();
   readonly #availableWorldIdByRoute = new Map<string, string>();
   readonly #validatorsById = new Map<string, DeterministicValidator>();
+  readonly #sourcesById = new Map<string, SourceProvenance>();
 
   constructor(input: TrustedWorldRegistryInput) {
     assertServerRuntime();
@@ -101,6 +104,16 @@ export class TrustedWorldRegistry {
       allRoutes.add(route);
       if (availability.status === "available") this.#availableWorldIdByRoute.set(route, id);
       for (const definition of pack.deterministicValidators) declaredValidatorIds.add(definition.id);
+      for (const source of pack.manifest.sources) {
+        const existing = this.#sourcesById.get(source.id);
+        if (existing && JSON.stringify(existing) !== JSON.stringify(source)) {
+          throw new TrustedWorldRegistryError(
+            "registry.conflicting-source-id",
+            `Source ${source.id} has conflicting canonical records.`,
+          );
+        }
+        this.#sourcesById.set(source.id, source);
+      }
 
       const requiredValidatorId = pack.manifest.deterministicValidatorId;
       if (requiredValidatorId && !this.#validatorsById.has(requiredValidatorId)) {
@@ -138,6 +151,14 @@ export class TrustedWorldRegistry {
 
   getPack(worldId: string): LearningWorldPack | undefined {
     return this.#packsById.get(worldId);
+  }
+
+  listSources(): readonly SourceProvenance[] {
+    return Object.freeze([...this.#sourcesById.values()]);
+  }
+
+  getSource(sourceId: string): SourceProvenance | undefined {
+    return this.#sourcesById.get(sourceId);
   }
 
   resolveAvailableRoute(route: string): LearningWorldPack | undefined {

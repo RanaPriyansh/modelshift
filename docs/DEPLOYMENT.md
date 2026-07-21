@@ -1,5 +1,21 @@
 # ModelShift Deployment Runbook
 
+## FORGE expansion candidate
+
+The current local FORGE candidate adds four registered Worlds, `/studio`, `/login`, `/account`, a typed event spine, and staged Supabase auth/data adapters. Until a new immutable deployment and production matrix are recorded below, the existing public alias remains historical ModelShift/FORGE-source state rather than evidence that this worktree is deployed.
+
+Additional server variables:
+
+| Name | Required | Scope | Purpose |
+| --- | --- | --- | --- |
+| `OPENAI_FORGE_PLANNER_ENABLED` | Optional; default `false` | Server only | Allows the planner's bounded rephrase governor |
+| `FORGE_LESSON_STUDIO_OPENAI_ENABLED` | Optional; default `false` | Server only | Allows Studio to use the managed `OPENAI_API_KEY`; BYOK adapters do not require it |
+| `FORGE_CLOUD_ACCOUNTS_ENABLED` | Required for cloud auth | Server only | Explicit cloud-identity enable switch |
+| `FORGE_SUPABASE_URL` | Required for cloud auth | Server only | HTTPS project URL |
+| `FORGE_SUPABASE_PUBLISHABLE_KEY` | Required for cloud auth | Server only | Publishable/anon user-scoped key; secret/service-role keys fail closed |
+
+Do not enable cloud auth until the intended Supabase organization/project is approved and production abuse controls, email policy, redirects, RLS migrations, privacy operations, and smoke tests are in place. Device access remains operational without it. Do not enable the managed Studio key until provider disclosure, cost/rate controls, and adult/guardian release scope are approved.
+
 ## Current release
 
 As of 2026-07-22 01:56 IST, the fallback-only release is public and the source repository is public.

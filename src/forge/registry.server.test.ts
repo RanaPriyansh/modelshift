@@ -8,6 +8,7 @@ import {
 } from "./registry.server";
 import {
   BUILT_IN_DETERMINISTIC_VALIDATORS,
+  BUILT_IN_SOURCE_IDS,
   BUILT_IN_WORLD_PACKS,
   FORCE_AND_MOTION_VALIDATOR_ID,
   FORCE_AND_MOTION_WORLD,
@@ -34,20 +35,31 @@ describe("TrustedWorldRegistry", () => {
       "world.force-and-motion",
       "world.proportional-reasoning",
       "world.source-corroboration",
+      "world.primary-source-reasoning",
     ]);
     expect(trustedWorldRegistry.list({ includeUnavailable: true }).map((manifest) => manifest.id)).toEqual([
       "world.force-and-motion",
       "world.proportional-reasoning",
       "world.source-corroboration",
+      "world.primary-source-reasoning",
     ]);
   });
 
   it("filters manifests by age, depth, tier, and kind", () => {
-    expect(trustedWorldRegistry.list({ includeUnavailable: true, ageMode: "18-plus" })).toHaveLength(3);
-    expect(trustedWorldRegistry.list({ includeUnavailable: true, ageMode: "under-13" })).toHaveLength(1);
+    expect(trustedWorldRegistry.list({ includeUnavailable: true, ageMode: "18-plus" })).toHaveLength(4);
+    expect(trustedWorldRegistry.list({ includeUnavailable: true, ageMode: "under-13" })).toHaveLength(2);
     expect(trustedWorldRegistry.list({ includeUnavailable: true, depthMode: "advanced" })).toHaveLength(1);
     expect(trustedWorldRegistry.list({ evidenceTier: "verified" })).toHaveLength(2);
-    expect(trustedWorldRegistry.list({ includeUnavailable: true, kind: "evidence" })).toHaveLength(1);
+    expect(trustedWorldRegistry.list({ includeUnavailable: true, kind: "evidence" })).toHaveLength(2);
+  });
+
+  it("exposes the reviewed canonical source chain used by every built-in World", () => {
+    expect(trustedWorldRegistry.listSources().map((source) => source.id)).toEqual(BUILT_IN_SOURCE_IDS);
+    for (const manifest of trustedWorldRegistry.list()) {
+      expect(manifest.sources.length).toBeGreaterThan(0);
+      expect(manifest.sources.every((source) => source.review.status === "reviewed")).toBe(true);
+      expect(manifest.sources.every((source) => trustedWorldRegistry.getSource(source.id) === source)).toBe(true);
+    }
   });
 
   it("resolves only released, available routes", () => {
@@ -57,6 +69,9 @@ describe("TrustedWorldRegistry", () => {
     );
     expect(trustedWorldRegistry.resolveAvailableRoute("/learn/proportional-reasoning")?.manifest.id).toBe(
       "world.proportional-reasoning",
+    );
+    expect(trustedWorldRegistry.resolveAvailableRoute("/learn/primary-source-reasoning")?.manifest.id).toBe(
+      "world.primary-source-reasoning",
     );
   });
 
@@ -121,6 +136,20 @@ describe("TrustedWorldRegistry", () => {
     ).toMatchObject({ passed: false, score: 0, code: "transfer.not-demonstrated" });
   });
 
+  it("runs the four-category primary-source validator", () => {
+    expect(
+      trustedWorldRegistry.runDeterministicValidator("world.primary-source-reasoning", {
+        taskId: "loc.washington-street-1937.transfer",
+        assignments: {
+          "washington-visible-detail": "observation",
+          "washington-catalog-fact": "catalog_fact",
+          "washington-relationship-inference": "inference",
+          "washington-open-question": "open_question",
+        },
+      }),
+    ).toMatchObject({ passed: true, score: 1, code: "transfer.demonstrated" });
+  });
+
   it("rejects duplicate world IDs and routes", () => {
     expectRegistryCode(
       () => createTrustedWorldRegistry({ packs: [FORCE_AND_MOTION_WORLD, FORCE_AND_MOTION_WORLD], validators: BUILT_IN_DETERMINISTIC_VALIDATORS }),
@@ -132,6 +161,20 @@ describe("TrustedWorldRegistry", () => {
     expectRegistryCode(
       () => createTrustedWorldRegistry({ packs: [FORCE_AND_MOTION_WORLD, duplicateRoute], validators: BUILT_IN_DETERMINISTIC_VALIDATORS }),
       "registry.duplicate-route",
+    );
+  });
+
+  it("rejects conflicting records for one canonical source ID", () => {
+    const conflictingSource = structuredClone(SOURCE_CORROBORATION_WORLD) as LearningWorldPack;
+    conflictingSource.manifest.sources[0].id = FORCE_AND_MOTION_WORLD.manifest.sources[0].id;
+
+    expectRegistryCode(
+      () =>
+        createTrustedWorldRegistry({
+          packs: [FORCE_AND_MOTION_WORLD, conflictingSource],
+          validators: BUILT_IN_DETERMINISTIC_VALIDATORS,
+        }),
+      "registry.conflicting-source-id",
     );
   });
 

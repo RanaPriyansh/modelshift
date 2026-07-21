@@ -44,7 +44,13 @@ describe("POST /api/forge/plan", () => {
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
     await expect(response.json()).resolves.toMatchObject({
       contractKind: "grounded_learning",
-      route: { topicId: "force_motion", worldId: "modelshift_force_motion_v1" },
+      schemaVersion: "1.1",
+      route: {
+        topicId: "force_motion",
+        worldId: "world.force-and-motion",
+        worldVersion: "1.0.0",
+        worldRoute: "/learn/force-and-motion",
+      },
       model: { fallbackReason: "disabled" },
     });
     expect(log).not.toHaveBeenCalled();

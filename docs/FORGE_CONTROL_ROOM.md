@@ -6,7 +6,7 @@ The root Codex task owns product authority, shared integration, release claims, 
 
 ## Shared outcome
 
-Build the first honest FORGE foundation: a universal learning front door, typed evidence tiers, multiple domain grammars, an inspectable AI boundary, learner-owned evidence, delayed-proof scheduling, a production data model, and three working Learning Worlds. Do not claim a complete curriculum, accreditation, legal homeschool compliance, child-safety certification, or measured learning efficacy.
+Build the first honest FORGE foundation: a universal learning front door, typed evidence tiers, multiple domain grammars, an inspectable AI boundary, learner-owned evidence, delayed-proof scheduling, a production data model, and four working Learning Worlds. Do not claim a complete curriculum, accreditation, legal homeschool compliance, child-safety certification, or measured learning efficacy.
 
 ## Work lanes
 
@@ -65,7 +65,7 @@ No lane may call a partial implementation `production-ready`, `homeschool-ready`
 ## Release gates
 
 - All published World manifests validate.
-- Three structurally different Worlds complete without model access.
+- Four structurally different Worlds complete without model access.
 - No proof mode exposes hints, replay, answers, or instructional AI.
 - Factual claims in source-grounded Worlds trace to reviewed versioned sources.
 - Under-13 planning requires guardian-managed mode and curated retrieval.
@@ -73,4 +73,3 @@ No lane may call a partial implementation `production-ready`, `homeschool-ready`
 - No raw chat, emotion, personality, or hidden ranking enters canonical memory.
 - Desktop, mobile, keyboard, reduced-motion, console, and overflow checks pass.
 - Public copy distinguishes implemented capability from architecture and research hypotheses.
-

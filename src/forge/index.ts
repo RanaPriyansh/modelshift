@@ -51,3 +51,56 @@ export {
 } from "./validation";
 
 export type { WorldInvariantCode, WorldInvariantIssue, WorldPackValidation } from "./validation";
+
+export {
+  FORGE_EVENT_DIGEST_PREFIX,
+  FORGE_EVENT_PAYLOAD_SCHEMAS,
+  FORGE_EVENT_SCHEMA_VERSION,
+  FORGE_EVENT_TYPES,
+  canonicalJson,
+  forgeEventDigestSchema,
+  forgeEventIdSchema,
+  forgeEventReferenceSchema,
+  forgeEventSchema,
+  forgeEventSemverSchema,
+  forgeEventTimestampSchema,
+  forgeIdempotencyKeySchema,
+  parseForgeEvent,
+  parseUnsignedForgeEvent,
+  sealForgeEvent,
+  sha256Digest,
+  unsignedForgeEventSchema,
+  verifyForgeEventIntegrity,
+} from "./events";
+
+export type {
+  ForgeAggregateType,
+  ForgeEvent,
+  ForgeEventMetadata,
+  ForgeEventPayloadMap,
+  ForgeEventType,
+  ForgeUnsignedEvent,
+} from "./events";
+
+export {
+  FORGE_EVENT_JOURNAL_FORMAT,
+  FORGE_EVENT_JOURNAL_VERSION,
+  FORGE_JOURNAL_REJECTION_CODES,
+  MAX_LOCAL_JOURNAL_EVENTS,
+  ForgeEventJournal,
+  decodeForgeEventJournal,
+  encodeForgeEventJournal,
+  replayForgeEvents,
+} from "./event-journal";
+
+export type {
+  ForgeAggregateProjection,
+  ForgeEventJournalDecodeResult,
+  ForgeEventJournalDecodeStatus,
+  ForgeJournalAppendResult,
+  ForgeJournalRejectionCode,
+  ForgeJournalReplayResult,
+  WorldPackageProjection,
+  WorldRunProjection,
+  WorldRunStatus,
+} from "./event-journal";

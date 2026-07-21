@@ -2,12 +2,22 @@ import { z } from "zod";
 
 import { TRANSFER } from "../content/scenarios";
 import { scoreColdTransfer } from "../worlds/ai-learning/validator";
+import {
+  PRIMARY_SOURCE_CAPABILITY_ID,
+  PRIMARY_SOURCE_PROOF_CLAIM_ID,
+  PRIMARY_SOURCE_TRANSFER_TASK_ID,
+  PRIMARY_SOURCE_VALIDATOR_ID,
+  PRIMARY_SOURCE_WORLD_ID,
+  PRIMARY_SOURCE_WORLD_VERSION,
+  validatePrimarySourceTransfer,
+} from "../worlds/primary-source-reasoning";
 import { evaluateTransfer } from "../worlds/proportional-reasoning/validator";
 import {
   deterministicValidationResultSchema,
   type AIActionBoundary,
   type DeterministicValidator,
   type LearningWorldPack,
+  type SourceProvenance,
 } from "./contracts";
 
 const AI_OFF = {
@@ -22,13 +32,122 @@ export const FORCE_AND_MOTION_VALIDATOR_ID = "validator.force-motion-transfer.v1
 export const SOURCE_CORROBORATION_VALIDATOR_ID = "validator.source-corroboration-transfer.v1" as const;
 export const PROPORTIONAL_REASONING_VALIDATOR_ID = "validator.proportional-reasoning-transfer.v1" as const;
 
+export const OPENSTAX_NEWTONS_FIRST_LAW_SOURCE = {
+  id: "source.openstax.newtons-first-law",
+  title: "Newton's First Law of Motion: Inertia",
+  publisher: "OpenStax",
+  kind: "open-educational-resource",
+  url: "https://openstax.org/books/physics/pages/4-2-newtons-first-law-of-motion-inertia",
+  contentVersion: "openstax-physics-4.2",
+  accessedAt: "2026-07-22T00:00:00.000Z",
+  license: "CC BY 4.0",
+  review: {
+    status: "reviewed",
+    reviewedBy: "Forge curriculum source review",
+    reviewedAt: "2026-07-22T00:00:00.000Z",
+  },
+} as const satisfies SourceProvenance;
+
+export const OPENSTAX_RATIOS_AND_RATE_SOURCE = {
+  id: "source.openstax.ratios-and-rate",
+  title: "Ratios and Rate",
+  publisher: "OpenStax",
+  kind: "open-educational-resource",
+  url: "https://openstax.org/books/prealgebra-2e/pages/5-6-ratios-and-rate",
+  contentVersion: "openstax-prealgebra-2e-5.6",
+  accessedAt: "2026-07-22T00:00:00.000Z",
+  license: "CC BY 4.0",
+  review: {
+    status: "reviewed",
+    reviewedBy: "Forge curriculum source review",
+    reviewedAt: "2026-07-22T00:00:00.000Z",
+  },
+} as const satisfies SourceProvenance;
+
+export const BASTANI_PNAS_AI_LEARNING_SOURCE = {
+  id: "source.bastani-pnas.genai-learning-2025",
+  title: "Generative AI without guardrails can harm learning",
+  publisher: "Proceedings of the National Academy of Sciences",
+  kind: "peer-reviewed",
+  url: "https://www.pnas.org/doi/10.1073/pnas.2422633122",
+  contentVersion: "doi-10.1073-pnas.2422633122",
+  accessedAt: "2026-07-22T00:00:00.000Z",
+  review: {
+    status: "reviewed",
+    reviewedBy: "Forge curriculum source review",
+    reviewedAt: "2026-07-22T00:00:00.000Z",
+  },
+} as const satisfies SourceProvenance;
+
+export const TUTOR_COPILOT_SOURCE = {
+  id: "source.tutor-copilot.arxiv-2024",
+  title: "A Human-AI Approach for Scaling Real-Time Expertise",
+  publisher: "arXiv",
+  kind: "primary",
+  url: "https://arxiv.org/abs/2410.03017",
+  contentVersion: "arxiv-2410.03017-v2",
+  accessedAt: "2026-07-22T00:00:00.000Z",
+  review: {
+    status: "reviewed",
+    reviewedBy: "Forge curriculum source review",
+    reviewedAt: "2026-07-22T00:00:00.000Z",
+  },
+} as const satisfies SourceProvenance;
+
+export const LOC_PRIMARY_SOURCE_ANALYSIS_SOURCE = {
+  id: "source.loc.primary-source-analysis",
+  title: "Getting Started with Primary Sources",
+  publisher: "Library of Congress",
+  kind: "institutional",
+  url: "https://www.loc.gov/programs/teachers/getting-started-with-primary-sources/",
+  contentVersion: "loc-teachers-primary-sources-2026-07-22",
+  accessedAt: "2026-07-22T00:00:00.000Z",
+  review: {
+    status: "reviewed",
+    reviewedBy: "Forge curriculum source review",
+    reviewedAt: "2026-07-22T00:00:00.000Z",
+  },
+} as const satisfies SourceProvenance;
+
+export const LOC_PHILADELPHIA_STREET_SOURCE = {
+  id: "source.loc.picture.90706156",
+  title: "Street scene, Philadelphia, Pa.",
+  publisher: "Library of Congress Prints and Photographs Division",
+  kind: "primary",
+  url: "https://www.loc.gov/pictures/item/90706156/",
+  contentVersion: "loc-item-90706156-lc-dig-stereo-1s15239",
+  accessedAt: "2026-07-22T00:00:00.000Z",
+  license: "No known restrictions on publication",
+  review: {
+    status: "reviewed",
+    reviewedBy: "Forge curriculum source review",
+    reviewedAt: "2026-07-22T00:00:00.000Z",
+  },
+} as const satisfies SourceProvenance;
+
+export const LOC_WASHINGTON_STREET_SOURCE = {
+  id: "source.loc.picture.2017716911",
+  title: "Street scene, Washington, D.C.",
+  publisher: "Library of Congress Prints and Photographs Division",
+  kind: "primary",
+  url: "https://www.loc.gov/pictures/item/2017716911/",
+  contentVersion: "loc-item-2017716911-lc-dig-fsa-8a03094",
+  accessedAt: "2026-07-22T00:00:00.000Z",
+  license: "No known restrictions on publication",
+  review: {
+    status: "reviewed",
+    reviewedBy: "Forge curriculum source review",
+    reviewedAt: "2026-07-22T00:00:00.000Z",
+  },
+} as const satisfies SourceProvenance;
+
 export const FORCE_AND_MOTION_WORLD = {
   manifest: {
     schemaVersion: "1.0",
     id: "world.force-and-motion",
     version: "1.0.0",
     route: "/learn/force-and-motion",
-    title: "ModelShift: Force and Motion",
+    title: "Force & motion",
     summary:
       "A deterministic force-and-motion world in which learners commit a model, test it against authored physics, and complete a cold transfer with assistance removed.",
     kind: "model",
@@ -37,7 +156,7 @@ export const FORCE_AND_MOTION_WORLD = {
     depthModes: ["introductory", "core"],
     availability: { status: "available" },
     capabilityIds: ["capability.force-motion.zero-net-force"],
-    sources: [],
+    sources: [OPENSTAX_NEWTONS_FIRST_LAW_SOURCE],
     deterministicValidatorId: FORCE_AND_MOTION_VALIDATOR_ID,
     aiBoundary: {
       mode: "bounded",
@@ -117,7 +236,7 @@ export const SOURCE_CORROBORATION_WORLD = {
     id: "world.source-corroboration",
     version: "1.0.0",
     route: "/learn/ai-and-learning",
-    title: "Corroborate an AI Claim",
+    title: "AI & learning",
     summary:
       "A source-evidence world for tracing a model-generated factual claim to reviewed research sources, comparing support, and stating uncertainty without treating model fluency as proof.",
     kind: "evidence",
@@ -127,36 +246,7 @@ export const SOURCE_CORROBORATION_WORLD = {
     availability: { status: "available" },
     capabilityIds: ["capability.ai-literacy.source-corroboration"],
     deterministicValidatorId: SOURCE_CORROBORATION_VALIDATOR_ID,
-    sources: [
-      {
-        id: "source.bastani-pnas.genai-learning-2025",
-        title: "Generative AI without guardrails can harm learning",
-        publisher: "Proceedings of the National Academy of Sciences",
-        kind: "peer-reviewed",
-        url: "https://www.pnas.org/doi/10.1073/pnas.2422633122",
-        contentVersion: "doi-10.1073-pnas.2422633122",
-        accessedAt: "2026-07-22T00:00:00.000Z",
-        review: {
-          status: "reviewed",
-          reviewedBy: "Forge curriculum source review",
-          reviewedAt: "2026-07-22T00:00:00.000Z",
-        },
-      },
-      {
-        id: "source.tutor-copilot.arxiv-2024",
-        title: "A Human-AI Approach for Scaling Real-Time Expertise",
-        publisher: "arXiv",
-        kind: "primary",
-        url: "https://arxiv.org/abs/2410.03017",
-        contentVersion: "arxiv-2410.03017-v2",
-        accessedAt: "2026-07-22T00:00:00.000Z",
-        review: {
-          status: "reviewed",
-          reviewedBy: "Forge curriculum source review",
-          reviewedAt: "2026-07-22T00:00:00.000Z",
-        },
-      },
-    ],
+    sources: [BASTANI_PNAS_AI_LEARNING_SOURCE, TUTOR_COPILOT_SOURCE],
     aiBoundary: {
       mode: "bounded",
       allowedActions: [
@@ -241,7 +331,7 @@ export const PROPORTIONAL_REASONING_WORLD = {
     id: "world.proportional-reasoning",
     version: "1.0.0",
     route: "/learn/proportional-reasoning",
-    title: "Proportional Reasoning: Compare and Scale",
+    title: "Ratios that stay the same",
     summary:
       "An exact-arithmetic model world in which learners compare two mixture relationships, normalize a shared quantity, reconstruct proportionality, and transfer the relationship to an unfamiliar map scale.",
     kind: "model",
@@ -250,7 +340,7 @@ export const PROPORTIONAL_REASONING_WORLD = {
     depthModes: ["introductory", "core"],
     availability: { status: "available" },
     capabilityIds: ["capability.proportional-reasoning.compare-and-scale"],
-    sources: [],
+    sources: [OPENSTAX_RATIOS_AND_RATE_SOURCE],
     deterministicValidatorId: PROPORTIONAL_REASONING_VALIDATOR_ID,
     aiBoundary: AI_OFF,
     returnProof: {
@@ -312,6 +402,93 @@ export const PROPORTIONAL_REASONING_WORLD = {
       id: PROPORTIONAL_REASONING_VALIDATOR_ID,
       capabilityId: "capability.proportional-reasoning.compare-and-scale",
       description: "Checks the authored map-scale answer with exact rational arithmetic and records explanation signals.",
+      inputContractVersion: "1.0.0",
+      outputContractVersion: "1.0.0",
+    },
+  ],
+} satisfies LearningWorldPack;
+
+export const PRIMARY_SOURCE_REASONING_WORLD = {
+  manifest: {
+    schemaVersion: "1.0",
+    id: PRIMARY_SOURCE_WORLD_ID,
+    version: PRIMARY_SOURCE_WORLD_VERSION,
+    route: "/learn/primary-source-reasoning",
+    title: "What can a photograph prove?",
+    summary:
+      "A primary-source investigation that separates visible observation, catalog metadata, inference, and open questions before an unfamiliar cold transfer.",
+    kind: "evidence",
+    evidenceTier: "grounded",
+    ageModes: ["under-13", "13-17", "18-plus"],
+    depthModes: ["introductory", "core"],
+    availability: { status: "available" },
+    capabilityIds: [PRIMARY_SOURCE_CAPABILITY_ID],
+    sources: [
+      LOC_PRIMARY_SOURCE_ANALYSIS_SOURCE,
+      LOC_PHILADELPHIA_STREET_SOURCE,
+      LOC_WASHINGTON_STREET_SOURCE,
+    ],
+    deterministicValidatorId: PRIMARY_SOURCE_VALIDATOR_ID,
+    aiBoundary: AI_OFF,
+    returnProof: {
+      enabled: false,
+      reason: "Delayed retention is named as untested until a reviewed return task and persisted scheduler exist.",
+      aiBoundary: AI_OFF,
+    },
+    safety: {
+      guardianManaged: true,
+      retrievalMode: "curated-only",
+      inputModeration: false,
+      outputModeration: false,
+      escalationMessage: "Use only the reviewed Library of Congress source set; a child investigates with a grown-up.",
+      data: {
+        collectPreciseLocation: false,
+        trainOnLearnerContent: false,
+        rawMediaRetention: "none",
+      },
+      prohibitedPhysicalRisks: ["chemicals", "flames", "roads", "heights", "weapons", "mains-electricity", "stranger-contact"],
+    },
+  },
+  release: {
+    status: "released",
+    contentVersion: PRIMARY_SOURCE_WORLD_VERSION,
+  },
+  capabilities: [
+    {
+      id: PRIMARY_SOURCE_CAPABILITY_ID,
+      version: "1.0.0",
+      title: "Keep historical claims inside their evidence boundary",
+      description:
+        "Distinguish what an image visibly shows, what its catalog record supplies, what is inferred beyond those sources, and what remains an open question.",
+      domain: "historical and primary-source literacy",
+      learnerCan: [
+        "separate visible evidence from recorded provenance and inference",
+        "preserve unanswered questions instead of filling them with a plausible story",
+      ],
+      prerequisites: [],
+      representations: ["historical photograph", "catalog record", "evidence categories", "claim classification"],
+      proofClaimIds: [PRIMARY_SOURCE_PROOF_CLAIM_ID],
+    },
+  ],
+  proofClaims: [
+    {
+      id: PRIMARY_SOURCE_PROOF_CLAIM_ID,
+      capabilityId: PRIMARY_SOURCE_CAPABILITY_ID,
+      statement:
+        "On an unfamiliar photograph, the learner independently classifies one observation, one catalog fact, one inference, and one open question after support is removed.",
+      successCriteria: [
+        "classifies all four authored transfer statements correctly",
+        "submits once with interpretation and hints absent",
+      ],
+      minimumEvidenceRecords: 1,
+      aiBoundary: AI_OFF,
+    },
+  ],
+  deterministicValidators: [
+    {
+      id: PRIMARY_SOURCE_VALIDATOR_ID,
+      capabilityId: PRIMARY_SOURCE_CAPABILITY_ID,
+      description: "Checks the authored four-category cold transfer without model judgment.",
       inputContractVersion: "1.0.0",
       outputContractVersion: "1.0.0",
     },
@@ -406,13 +583,69 @@ export const proportionalReasoningTransferValidator: DeterministicValidator = Ob
   },
 });
 
+export const primarySourceReasoningTransferValidator: DeterministicValidator = Object.freeze({
+  id: PRIMARY_SOURCE_VALIDATOR_ID,
+  validate(input: unknown) {
+    const result = validatePrimarySourceTransfer(input);
+    return deterministicValidationResultSchema.parse({
+      passed: result.passed,
+      score: result.score,
+      code: result.code,
+      evidence: result.valid
+        ? [
+            `task:${PRIMARY_SOURCE_TRANSFER_TASK_ID}`,
+            `correct-categories:${result.correctCount}/4`,
+          ]
+        : [],
+    });
+  },
+});
+
 export const BUILT_IN_WORLD_PACKS = [
   FORCE_AND_MOTION_WORLD,
   PROPORTIONAL_REASONING_WORLD,
   SOURCE_CORROBORATION_WORLD,
+  PRIMARY_SOURCE_REASONING_WORLD,
 ] as const;
+export const BUILT_IN_WORLD_IDS = [
+  FORCE_AND_MOTION_WORLD.manifest.id,
+  PROPORTIONAL_REASONING_WORLD.manifest.id,
+  SOURCE_CORROBORATION_WORLD.manifest.id,
+  PRIMARY_SOURCE_REASONING_WORLD.manifest.id,
+] as const;
+export const BUILT_IN_WORLD_ROUTES = [
+  FORCE_AND_MOTION_WORLD.manifest.route,
+  PROPORTIONAL_REASONING_WORLD.manifest.route,
+  SOURCE_CORROBORATION_WORLD.manifest.route,
+  PRIMARY_SOURCE_REASONING_WORLD.manifest.route,
+] as const;
+export const BUILT_IN_SOURCE_IDS = [
+  OPENSTAX_NEWTONS_FIRST_LAW_SOURCE.id,
+  OPENSTAX_RATIOS_AND_RATE_SOURCE.id,
+  BASTANI_PNAS_AI_LEARNING_SOURCE.id,
+  TUTOR_COPILOT_SOURCE.id,
+  LOC_PRIMARY_SOURCE_ANALYSIS_SOURCE.id,
+  LOC_PHILADELPHIA_STREET_SOURCE.id,
+  LOC_WASHINGTON_STREET_SOURCE.id,
+] as const;
+
+/** Client-safe, read-only discovery data projected from the canonical manifests. */
+export const PUBLIC_WORLD_CATALOG = Object.freeze(
+  BUILT_IN_WORLD_PACKS.map(({ manifest }) => Object.freeze({
+    id: manifest.id,
+    version: manifest.version,
+    route: manifest.route,
+    title: manifest.title,
+    summary: manifest.summary,
+    kind: manifest.kind,
+    evidenceTier: manifest.evidenceTier,
+    ageModes: Object.freeze([...manifest.ageModes]),
+    depthModes: Object.freeze([...manifest.depthModes]),
+  })),
+);
 export const BUILT_IN_DETERMINISTIC_VALIDATORS = [
   forceAndMotionTransferValidator,
   proportionalReasoningTransferValidator,
   sourceCorroborationTransferValidator,
+  primarySourceReasoningTransferValidator,
 ] as const;

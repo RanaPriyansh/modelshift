@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 
+import { PUBLIC_WORLD_CATALOG } from "@/src/forge/worlds";
 import type { ForgePlanContract } from "@/src/lib/forge-planner";
 
 import { ForgeArrow, ForgeShell } from "./ForgeShell";
@@ -31,40 +32,16 @@ const DEPTH_MODES = [
   { id: "deep", label: "Deep study", note: "Trace assumptions and limits" },
 ] as const;
 
-const PLANNER_WORLD_ROUTES = {
-  modelshift_force_motion_v1: "/learn/force-and-motion",
-  proportional_reasoning_v1: "/learn/proportional-reasoning",
-  ai_learning_guardrails_v1: "/learn/ai-and-learning",
-} as const;
-
 const WORLD_ROWS = [
-  {
-    eyebrow: "Working world · 12–18 min",
-    title: "Force & motion",
-    description: "Predict a moving object, test the model behind your answer, then face a new graph without AI help.",
-    detail: "Deterministic physics · proof after help",
-    href: "/learn/force-and-motion",
+  ...PUBLIC_WORLD_CATALOG.map((world) => ({
+    eyebrow: `Working ${world.kind} World · v${world.version}`,
+    title: world.title,
+    description: world.summary,
+    detail: `${world.evidenceTier} evidence · ${world.ageModes.includes("under-13") ? "child + grown-up, teen, adult" : "teen + adult"}`,
+    href: world.route,
     action: "Open world",
-    tone: "ready",
-  },
-  {
-    eyebrow: "Working world · 10–15 min",
-    title: "Ratios that stay the same",
-    description: "Compare two mixtures, expose the model behind your answer, then carry the relationship into a map scale.",
-    detail: "Exact arithmetic · ages 10+ with guidance",
-    href: "/learn/proportional-reasoning",
-    action: "Open world",
-    tone: "ready",
-  },
-  {
-    eyebrow: "Working evidence world · 10–15 min",
-    title: "AI & learning",
-    description: "Investigate when assistance expands understanding—and when fluent help quietly takes ownership away.",
-    detail: "Reviewed research · authored scoring",
-    href: "/learn/ai-and-learning",
-    action: "Open world",
-    tone: "ready",
-  },
+    tone: "ready" as const,
+  })),
   {
     eyebrow: "Planned world",
     title: "How money compounds",
@@ -74,8 +51,8 @@ const WORLD_ROWS = [
   },
   {
     eyebrow: "Planned world",
-    title: "How stories shape belief",
-    description: "Trace claims, framing, evidence, and persuasion across texts without outsourcing judgment.",
+    title: "How language carries meaning",
+    description: "Trace voice, structure, ambiguity, and interpretation across literature without outsourcing judgment.",
     detail: "Not built yet",
     tone: "planned",
   },
@@ -267,10 +244,9 @@ function LearningPlanResult({ plan }: { plan: ForgePlanContract }) {
     );
   }
 
-  const baseRoute = PLANNER_WORLD_ROUTES[plan.route.worldId];
-  const route = plan.route.worldId === "proportional_reasoning_v1"
-    ? `${baseRoute}?audience=${plan.request.ageMode === "child" ? "child_with_grown_up" : plan.request.ageMode}`
-    : baseRoute;
+  const route = plan.route.worldId === "world.proportional-reasoning"
+    ? `${plan.route.worldRoute}?audience=${plan.request.ageMode === "child" ? "child_with_grown_up" : plan.request.ageMode}`
+    : plan.route.worldRoute;
   return (
     <div className="forge-plan-result forge-plan-result--grounded" data-testid="forge-plan-grounded">
       <span>Reviewed Learning Contract</span>
@@ -304,7 +280,7 @@ function WorldCatalog() {
           <h2 id="worlds-title">Enter through a world, not a course list.</h2>
         </div>
         <p>
-          Three Worlds work end to end across simulation, exact mathematics, and source reasoning. The rest name the intended
+          Four Worlds work end to end across simulation, exact mathematics, AI literacy, and primary-source reasoning. The rest name the intended
           breadth without pretending the curriculum already exists.
         </p>
       </header>

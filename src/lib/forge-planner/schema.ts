@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { SOURCE_IDS, TOPIC_IDS, WORLD_IDS } from "./catalog";
+import { SOURCE_IDS, TOPIC_IDS, WORLD_IDS, WORLD_ROUTES } from "./catalog";
 
 export const ageModeSchema = z.enum(["child", "teen", "adult"]);
 export const depthSchema = z.enum(["quick", "standard", "deep"]);
@@ -26,9 +26,11 @@ export const modelRouteIds = [...TOPIC_IDS, "exploratory"] as const;
  * IDs are the exact deterministic route's IDs.
  */
 export const modelPlannerOutputSchema = z.strictObject({
-  schemaVersion: z.literal("1.0"),
+  schemaVersion: z.literal("1.1"),
   route: z.enum(modelRouteIds),
   worldId: z.enum(WORLD_IDS).nullable(),
+  worldVersion: z.string().regex(/^\d+\.\d+\.\d+$/).nullable(),
+  worldRoute: z.enum(WORLD_ROUTES).nullable(),
   sourceIds: z.array(z.enum(SOURCE_IDS)).max(SOURCE_IDS.length),
   rephrasedQuestion: z.string().trim().min(3).max(320),
 });
@@ -55,7 +57,8 @@ export type RefusalReason =
   | "unsafe_topic"
   | "guardian_required"
   | "child_source_mode_disallowed"
-  | "world_not_reviewed_for_age";
+  | "world_not_reviewed_for_age"
+  | "world_not_reviewed_for_depth";
 
 export type RequestSummary = Pick<
   ForgePlanRequest,
@@ -63,12 +66,14 @@ export type RequestSummary = Pick<
 >;
 
 export type GroundedLearningContract = {
-  schemaVersion: "1.0";
+  schemaVersion: "1.1";
   contractKind: "grounded_learning";
   request: RequestSummary;
   route: {
     topicId: (typeof TOPIC_IDS)[number];
     worldId: (typeof WORLD_IDS)[number];
+    worldVersion: string;
+    worldRoute: (typeof WORLD_ROUTES)[number];
     confidence: "authored_match";
   };
   grounding: {
@@ -77,8 +82,12 @@ export type GroundedLearningContract = {
     sources: Array<{
       id: (typeof SOURCE_IDS)[number];
       title: string;
+      publisher: string;
       locator: string;
-      kind: "authoritative_educational" | "peer_reviewed_research" | "policy_guidance";
+      contentVersion: string;
+      kind: "authoritative_educational" | "peer_reviewed_research" | "primary_research" | "policy_guidance";
+      reviewStatus: "reviewed";
+      reviewedAt: string;
     }>;
     claimBoundary: string;
   };
@@ -94,7 +103,7 @@ export type GroundedLearningContract = {
 };
 
 export type ExploratorySourcePlanContract = {
-  schemaVersion: "1.0";
+  schemaVersion: "1.1";
   contractKind: "exploratory_source_plan";
   request: RequestSummary;
   route: { topicId: null; worldId: null; confidence: "no_authored_match" };
@@ -113,7 +122,7 @@ export type ExploratorySourcePlanContract = {
 };
 
 export type RefusalContract = {
-  schemaVersion: "1.0";
+  schemaVersion: "1.1";
   contractKind: "refusal";
   reason: RefusalReason;
   message: string;

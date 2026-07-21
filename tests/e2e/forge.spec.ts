@@ -260,10 +260,10 @@ test.describe("FORGE cross-route release contract", () => {
     const grounded = await groundedResponse.json();
     expect(grounded).toMatchObject({
       contractKind: "grounded_learning",
-      route: { topicId: "force_motion", worldId: "modelshift_force_motion_v1" },
+      route: { topicId: "force_motion", worldId: "world.force-and-motion" },
       grounding: { status: "grounded_in_authored_sources" },
     });
-    expect(grounded.grounding.sourceIds).toEqual(["openstax_newtons_first_law"]);
+    expect(grounded.grounding.sourceIds).toEqual(["source.openstax.newtons-first-law"]);
 
     const exploratoryResponse = await post({ ...base, question: "How do fungi trade nutrients with tree roots?" });
     expect(exploratoryResponse.status()).toBe(200);

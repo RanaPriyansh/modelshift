@@ -28,6 +28,8 @@ const REFUSAL_MESSAGES: Readonly<Record<RefusalReason, string>> = {
     "Child mode does not permit unrestricted or open-web planning. Choose authored-only or guardian-curated sources.",
   world_not_reviewed_for_age:
     "The reviewed World for this topic is not released for this age mode. Choose another reviewed World or keep the question open.",
+  world_not_reviewed_for_depth:
+    "The reviewed World for this topic is not released at the requested depth. Choose a supported depth or keep the deeper question open.",
 };
 
 function summarizeRequest(request: ForgePlanRequest): RequestSummary {
@@ -43,7 +45,7 @@ function summarizeRequest(request: ForgePlanRequest): RequestSummary {
 
 function refusal(reason: RefusalReason): RefusalContract {
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "1.1",
     contractKind: "refusal",
     reason,
     message: REFUSAL_MESSAGES[reason],
@@ -65,10 +67,16 @@ function groundedContract(
   model: PlannerModelMetadata,
 ): GroundedLearningContract {
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "1.1",
     contractKind: "grounded_learning",
     request: summarizeRequest(request),
-    route: { topicId: topic.id, worldId: topic.worldId, confidence: "authored_match" },
+    route: {
+      topicId: topic.id,
+      worldId: topic.worldId,
+      worldVersion: topic.worldVersion,
+      worldRoute: topic.route,
+      confidence: "authored_match",
+    },
     grounding: {
       status: "grounded_in_authored_sources",
       sourceIds: [...topic.sourceIds],
@@ -103,7 +111,7 @@ function exploratoryContract(
 ): ExploratorySourcePlanContract {
   const effectiveSourceMode = effectiveExplorationMode(request);
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "1.1",
     contractKind: "exploratory_source_plan",
     request: summarizeRequest(request),
     route: { topicId: null, worldId: null, confidence: "no_authored_match" },
@@ -160,6 +168,7 @@ export async function planForgeLearning(
 
   const topic = classifyAuthoredTopic(request.question);
   if (topic && !topic.ageModes.includes(request.ageMode)) return refusal("world_not_reviewed_for_age");
+  if (topic && !topic.depthModes.includes(request.depth)) return refusal("world_not_reviewed_for_depth");
   const model = await runOptionalModelGovernor(request, topic, modelOptions);
   return topic ? groundedContract(request, topic, model) : exploratoryContract(request, model);
 }

@@ -1,0 +1,236 @@
+.forge-account-page {
+  --account-bg: #071019;
+  --account-surface: #0d1821;
+  --account-line: #2d404c;
+  --account-ink: #f2eee6;
+  --account-muted: #9eabb3;
+  --account-amber: #e4aa4f;
+  --account-cyan: #62d0e6;
+  min-height: calc(100svh - 72px);
+  background: var(--account-bg);
+  color: var(--account-ink);
+  padding: 84px max(24px, calc((100vw - 1160px) / 2)) 100px;
+}
+
+.forge-account-heading {
+  max-width: 820px;
+}
+
+.forge-account-heading > span,
+.forge-device-access > span,
+.forge-cloud-access > span {
+  display: block;
+  color: var(--account-cyan);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.forge-account-heading h1 {
+  max-width: 760px;
+  margin: 16px 0 20px;
+  font-family: Georgia, Cambria, serif;
+  font-size: clamp(42px, 6.5vw, 82px);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+}
+
+.forge-account-heading p,
+.forge-device-access p,
+.forge-cloud-access p,
+.forge-account-boundary {
+  color: var(--account-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.forge-account-heading p { max-width: 700px; }
+
+.forge-account-banner {
+  margin: 32px 0 -26px;
+  border-left: 3px solid var(--account-amber);
+  background: #151b1d;
+  padding: 14px 17px;
+  color: var(--account-ink);
+  font-size: 13px;
+}
+
+.forge-account-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 58px;
+}
+
+.forge-device-access,
+.forge-cloud-access {
+  min-height: 470px;
+  border: 1px solid var(--account-line);
+  background: var(--account-surface);
+  padding: clamp(26px, 4vw, 44px);
+}
+
+.forge-cloud-access { border-top-color: var(--account-cyan); }
+.forge-device-access { border-top-color: var(--account-amber); }
+.forge-device-access > span { color: var(--account-amber); }
+
+.forge-device-access h2,
+.forge-cloud-access h2 {
+  margin: 14px 0 12px;
+  font-family: Georgia, Cambria, serif;
+  font-size: clamp(28px, 3vw, 42px);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+.forge-device-access fieldset {
+  display: grid;
+  gap: 9px;
+  margin: 26px 0 20px;
+  border: 0;
+  padding: 0;
+}
+
+.forge-device-access legend {
+  margin-bottom: 9px;
+  color: var(--account-muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.forge-device-access fieldset label {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 2px 8px;
+  border: 1px solid var(--account-line);
+  padding: 12px;
+  cursor: pointer;
+}
+
+.forge-device-access fieldset label:has(input:checked) { border-color: var(--account-amber); }
+.forge-device-access fieldset input { grid-row: 1 / 3; align-self: center; accent-color: var(--account-amber); }
+.forge-device-access fieldset small { color: var(--account-muted); }
+
+.forge-cloud-form {
+  display: grid;
+  gap: 9px;
+  margin-top: 24px;
+}
+
+.forge-cloud-form > label:not(.forge-account-confirmation) {
+  margin-top: 6px;
+  color: var(--account-muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.forge-cloud-form > input {
+  min-height: 46px;
+  border: 1px solid var(--account-line);
+  border-radius: 0;
+  background: #08121a;
+  color: var(--account-ink);
+  padding: 10px 12px;
+}
+
+.forge-account-confirmation {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 14px 0;
+  color: var(--account-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.forge-account-confirmation input { margin-top: 2px; accent-color: var(--account-cyan); }
+
+.forge-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 22px;
+}
+
+.forge-account-page button,
+.forge-account-primary {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--account-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--account-ink);
+  padding: 10px 15px;
+  font: 800 11px/1 "SFMono-Regular", Consolas, monospace;
+  text-decoration: none;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.forge-account-page .forge-account-primary {
+  border-color: var(--account-cyan);
+  background: var(--account-cyan);
+  color: #041016;
+}
+
+.forge-account-page button:focus-visible,
+.forge-account-page a:focus-visible,
+.forge-account-page input:focus-visible {
+  outline: 3px solid var(--account-cyan);
+  outline-offset: 3px;
+}
+
+.forge-cloud-state {
+  display: inline-flex;
+  margin-top: 22px;
+  border: 1px solid var(--account-line);
+  padding: 10px 12px;
+  color: var(--account-muted);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.forge-account-boundary {
+  max-width: 850px;
+  margin: 34px 0 0;
+}
+
+.forge-account-boundary a { color: var(--account-cyan); }
+
+.forge-account-contract {
+  margin: 30px 0 0;
+  border-top: 1px solid var(--account-line);
+}
+
+.forge-account-contract div {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.3fr) 1fr;
+  gap: 20px;
+  border-bottom: 1px solid var(--account-line);
+  padding: 17px 0;
+}
+
+.forge-account-contract dt { color: var(--account-cyan); font: 800 10px/1.5 "SFMono-Regular", Consolas, monospace; text-transform: uppercase; }
+.forge-account-contract dd { margin: 0; color: var(--account-muted); font-size: 13px; }
+
+@media (max-width: 760px) {
+  .forge-account-page { min-height: calc(100svh - 130px); padding: 54px 16px 96px; }
+  .forge-account-grid { grid-template-columns: 1fr; margin-top: 38px; }
+  .forge-device-access,
+  .forge-cloud-access { min-height: 0; padding: 26px 20px; }
+  .forge-account-contract div { grid-template-columns: 1fr; gap: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forge-account-page *,
+  .forge-account-page *::before,
+  .forge-account-page *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+}

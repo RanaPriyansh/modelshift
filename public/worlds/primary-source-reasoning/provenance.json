@@ -1,0 +1,32 @@
+{
+  "verifiedAt": "2026-07-22",
+  "policy": "These are unmodified Library of Congress service JPEGs. The interface uses CSS framing only; no binary derivative was created. Rights advisories are transcribed from the linked item records and are not represented as licenses.",
+  "assets": [
+    {
+      "file": "philadelphia-street-scene-1897.jpg",
+      "sha256": "783ab397a182144c556015230e3ed70d02d4f202f024d21cb1e59d7d0c26f5b4",
+      "bytes": 323479,
+      "dimensions": "1024x546",
+      "sourceItemUrl": "https://www.loc.gov/pictures/item/90706156/",
+      "sourceJpegUrl": "https://tile.loc.gov/storage-services/service/pnp/stereo/1s10000/1s15000/1s15200/1s15239v.jpg",
+      "title": "Street scene, Philadelphia, Pa.",
+      "creator": "B.W. Kilburn Company.",
+      "date": "Littleton, N.H. : Photographed and published by B.W. Kilburn, c1897.",
+      "reproductionNumber": "LC-DIG-stereo-1s15239",
+      "rightsAdvisory": "No known restrictions on publication."
+    },
+    {
+      "file": "washington-street-scene-1937.jpg",
+      "sha256": "97037166287beadf58e25db8bf8846d6404277d657b4f1e275bf5e21bc541d2c",
+      "bytes": 252410,
+      "dimensions": "1024x750",
+      "sourceItemUrl": "https://www.loc.gov/pictures/item/2017716911/",
+      "sourceJpegUrl": "https://cdn.loc.gov/service/pnp/fsa/8a03000/8a03000/8a03094v.jpg",
+      "title": "Street scene, Washington, D.C.",
+      "creator": "Vachon, John, 1914-1975, photographer",
+      "date": "1937 Nov.",
+      "reproductionNumber": "LC-DIG-fsa-8a03094",
+      "rightsAdvisory": "No known restrictions. For information, see U.S. Farm Security Administration/Office of War Information Black & White Photographs"
+    }
+  ]
+}

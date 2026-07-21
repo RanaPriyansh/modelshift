@@ -16,10 +16,12 @@ const baseRequest: ForgePlanRequest = {
 };
 
 const validPhysicsModelOutput = {
-  schemaVersion: "1.0" as const,
+  schemaVersion: "1.1" as const,
   route: "force_motion" as const,
-  worldId: "modelshift_force_motion_v1" as const,
-  sourceIds: ["openstax_newtons_first_law" as const],
+  worldId: "world.force-and-motion" as const,
+  worldVersion: "1.0.0",
+  worldRoute: "/learn/force-and-motion" as const,
+  sourceIds: ["source.openstax.newtons-first-law" as const],
   rephrasedQuestion: "How can I explain what motion does after a brief push ends?",
 };
 
@@ -31,12 +33,14 @@ describe("deterministic Forge path compiler", () => {
       contractKind: "grounded_learning",
       route: {
         topicId: "force_motion",
-        worldId: "modelshift_force_motion_v1",
+        worldId: "world.force-and-motion",
+        worldVersion: "1.0.0",
+        worldRoute: "/learn/force-and-motion",
         confidence: "authored_match",
       },
       grounding: {
         status: "grounded_in_authored_sources",
-        sourceIds: ["openstax_newtons_first_law"],
+        sourceIds: ["source.openstax.newtons-first-law"],
       },
       sourcePolicy: "authored_only",
       model: { contribution: "not_used", fallbackReason: "disabled" },
@@ -55,7 +59,7 @@ describe("deterministic Forge path compiler", () => {
 
     expect(result).toMatchObject({
       contractKind: "grounded_learning",
-      route: { topicId: "force_motion", worldId: "modelshift_force_motion_v1" },
+      route: { topicId: "force_motion", worldId: "world.force-and-motion" },
     });
   });
 
@@ -71,28 +75,59 @@ describe("deterministic Forge path compiler", () => {
 
     expect(contract).toMatchObject({
       contractKind: "grounded_learning",
-      route: { topicId: "ai_learning", worldId: "ai_learning_guardrails_v1" },
+      route: { topicId: "ai_learning", worldId: "world.source-corroboration" },
       grounding: {
         status: "grounded_in_authored_sources",
-        sourceIds: ["pnas_guardrailed_ai_learning", "unesco_genai_education_guidance"],
+        sourceIds: ["source.bastani-pnas.genai-learning-2025", "source.tutor-copilot.arxiv-2024"],
       },
     });
     if (contract.contractKind !== "grounded_learning") throw new Error("Expected grounded contract");
     expect(contract.learning.milestones).toHaveLength(4);
   });
 
-  it("routes ratios and proportions into the exact authored mathematics World", async () => {
+  it("routes singular and plural ratio wording into the exact authored mathematics World", async () => {
     const result = await planForgeLearning({
       ...baseRequest,
-      question: "How do equivalent ratios and map scale work?",
+      question: "How do ratios work?",
     });
 
     expect(result).toMatchObject({
       contractKind: "grounded_learning",
-      route: { topicId: "proportional_reasoning", worldId: "proportional_reasoning_v1" },
+      route: {
+        topicId: "proportional_reasoning",
+        worldId: "world.proportional-reasoning",
+        worldVersion: "1.0.0",
+        worldRoute: "/learn/proportional-reasoning",
+      },
       grounding: {
         status: "grounded_in_authored_sources",
-        sourceIds: ["openstax_ratios_and_rate"],
+        sourceIds: ["source.openstax.ratios-and-rate"],
+      },
+    });
+  });
+
+  it("routes primary-source questions into the reviewed historical evidence World", async () => {
+    const result = await planForgeLearning({
+      ...baseRequest,
+      question: "What can a historical photograph prove, and how do I separate observation from inference?",
+      ageMode: "adult",
+    });
+
+    expect(result).toMatchObject({
+      contractKind: "grounded_learning",
+      route: {
+        topicId: "primary_source_reasoning",
+        worldId: "world.primary-source-reasoning",
+        worldVersion: "1.0.0",
+        worldRoute: "/learn/primary-source-reasoning",
+      },
+      grounding: {
+        status: "grounded_in_authored_sources",
+        sourceIds: [
+          "source.loc.primary-source-analysis",
+          "source.loc.picture.90706156",
+          "source.loc.picture.2017716911",
+        ],
       },
     });
   });
@@ -113,6 +148,21 @@ describe("deterministic Forge path compiler", () => {
     });
   });
 
+  it("fails closed when a canonical World does not declare the requested depth", async () => {
+    const result = await planForgeLearning({
+      ...baseRequest,
+      question: "How do ratios work?",
+      depth: "deep",
+    });
+
+    expect(result).toMatchObject({
+      contractKind: "refusal",
+      reason: "world_not_reviewed_for_depth",
+      worldId: null,
+      sourceIds: [],
+    });
+  });
+
   it("allows the reviewed under-13 proportional World only with guardian management", async () => {
     const result = await planForgeLearning({
       ...baseRequest,
@@ -123,7 +173,7 @@ describe("deterministic Forge path compiler", () => {
 
     expect(result).toMatchObject({
       contractKind: "grounded_learning",
-      route: { topicId: "proportional_reasoning", worldId: "proportional_reasoning_v1" },
+      route: { topicId: "proportional_reasoning", worldId: "world.proportional-reasoning" },
     });
   });
 
@@ -219,7 +269,7 @@ describe("optional AI governor", () => {
 
     expect(contract).toMatchObject({
       contractKind: "grounded_learning",
-      route: { topicId: "force_motion", worldId: "modelshift_force_motion_v1" },
+      route: { topicId: "force_motion", worldId: "world.force-and-motion" },
       model: {
         contribution: "accepted_rephrase",
         fallbackReason: null,
@@ -279,8 +329,10 @@ describe("optional AI governor", () => {
     );
     const timeout = await runOptionalModelGovernor(baseRequest, {
       id: "force_motion",
-      worldId: "modelshift_force_motion_v1",
-      sourceIds: ["openstax_newtons_first_law"],
+      worldId: "world.force-and-motion",
+      worldVersion: "1.0.0",
+      route: "/learn/force-and-motion",
+      sourceIds: ["source.openstax.newtons-first-law"],
     }, {
       apiKey: "test",
       client: { responses: { parse: timeoutParse } } as never,
@@ -307,8 +359,8 @@ describe("optional AI governor", () => {
 
     expect(invented).toMatchObject({
       contractKind: "grounded_learning",
-      route: { topicId: "force_motion", worldId: "modelshift_force_motion_v1" },
-      grounding: { sourceIds: ["openstax_newtons_first_law"] },
+      route: { topicId: "force_motion", worldId: "world.force-and-motion" },
+      grounding: { sourceIds: ["source.openstax.newtons-first-law"] },
       model: { contribution: "not_used", fallbackReason: "invented_or_mismatched_id" },
     });
   });
