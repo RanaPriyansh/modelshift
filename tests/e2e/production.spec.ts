@@ -19,6 +19,27 @@ const FALLBACK_INTERPRETATION = {
   fallback_reason: "missing_key",
 };
 
+const ADAPTIVE_INTERPRETATION = {
+  schema_version: "1.0",
+  hypotheses: [
+    {
+      id: "continuous_force_required",
+      support: "high",
+      evidence_spans: ["motion needs a continuing push"],
+      rationale: "The learner connects continued motion to a continuing push.",
+    },
+  ],
+  missing_distinctions: [
+    "force_changes_velocity_not_velocity_itself",
+    "zero_net_force_means_zero_acceleration",
+  ],
+  recommended_probe_id: "friction_contrast",
+  recommended_level_1_question_id: "what_differs_between_cases",
+  abstain: false,
+  abstain_reason: "none",
+  source: "model",
+};
+
 const EXPLANATION = "The craft may slow because I think motion needs a continuing push.";
 const REFLECTION = "Only the friction track changes velocity after the push ends.";
 const RECONSTRUCTION = "Net force causes acceleration, and acceleration changes velocity; zero net force keeps velocity constant.";
@@ -39,6 +60,16 @@ async function installNoKeyFallback(page: Page) {
       status: 200,
       contentType: "application/json",
       body: JSON.stringify(FALLBACK_INTERPRETATION),
+    });
+  });
+}
+
+async function installAdaptiveInterpretation(page: Page) {
+  await page.route("**/api/interpret", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(ADAPTIVE_INTERPRETATION),
     });
   });
 }
@@ -179,7 +210,41 @@ test.describe("ModelShift production journey", () => {
   test("uses the authored fallback when the interpretation request times out", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "The network failure contract is viewport-independent.");
     const consoleFailures = captureConsoleFailures(page);
-    await page.route("**/api/interpret", async (route) => route.abort("timedout"));
+    let delayedRouteSettled = false;
+    await page.route("**/api/interpret", async (route) => {
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 7_600));
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(ADAPTIVE_INTERPRETATION),
+        });
+      } catch {
+        // The client is expected to abort this still-pending request first.
+      } finally {
+        delayedRouteSettled = true;
+      }
+    });
+    await page.goto("/");
+
+    await commitInitialPrediction(page);
+    await page.getByRole("textbox", { name: "Your explanation" }).fill(EXPLANATION);
+    const submittedAt = Date.now();
+    await page.getByRole("button", { name: /Use my explanation/ }).click();
+
+    await expect(page.getByRole("heading", { name: "The test that separates the models" })).toBeVisible({ timeout: 10_000 });
+    expect(Date.now() - submittedAt).toBeGreaterThanOrEqual(6_500);
+    await expect(page.getByRole("status")).toContainText("baseline test");
+    await page.getByText("How this test was chosen").click();
+    await expect(page.getByText(/Deterministic fallback \(timeout\)/)).toBeVisible();
+    await expect.poll(() => delayedRouteSettled, { timeout: 2_000 }).toBe(true);
+    expect(consoleFailures).toEqual([]);
+  });
+
+  test("completes a valid adaptive journey and reloads to a clean Predict stage", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "The full adaptive contract is covered once on desktop.");
+    const consoleFailures = captureConsoleFailures(page);
+    await installAdaptiveInterpretation(page);
     await page.goto("/");
 
     await commitInitialPrediction(page);
@@ -187,11 +252,41 @@ test.describe("ModelShift production journey", () => {
     await page.getByRole("button", { name: /Use my explanation/ }).click();
 
     await expect(page.getByRole("heading", { name: "The test that separates the models" })).toBeVisible();
-    await expect(page.getByRole("status")).toContainText("baseline test");
+    await expect(page.getByText("Friction or no friction?", { exact: true })).toBeVisible();
     await page.getByText("How this test was chosen").click();
-    await expect(page.getByText(/Deterministic fallback \(api_error\)/)).toBeVisible();
-    expect(consoleFailures.some((message) => message.includes("ERR_TIMED_OUT"))).toBe(true);
-    expect(consoleFailures.filter((message) => !message.includes("ERR_TIMED_OUT"))).toEqual([]);
+    await expect(page.getByText(/GPT-5\.6, after schema and semantic validation/)).toBeVisible();
+
+    await page.getByRole("radio", { name: /The no-resistance puck/ }).press("Space");
+    await page.getByRole("button", { name: /Commit and open the test/ }).click();
+    await expect(page.getByRole("heading", { name: "Friction or no friction?" })).toBeVisible();
+    await expect(page.getByRole("slider", { name: "Friction strength" })).toBeVisible();
+    await page.getByRole("button", { name: /Run experiment/ }).click();
+    await expect(page.getByText(/Same short push\. Different force afterward\./)).toBeVisible();
+
+    await page.getByRole("textbox", { name: "What do you notice after the push ends?" }).fill(REFLECTION);
+    await page.getByRole("button", { name: /Rebuild the rule/ }).click();
+    await page.getByRole("textbox", { name: "Your causal rule" }).fill(RECONSTRUCTION);
+    await page.getByRole("button", { name: /Enter proof mode/ }).click();
+    await expect(page.getByText("AI assistance is now off")).toBeVisible();
+
+    await page.getByRole("radio", { name: /stays constant above zero/ }).press("Space");
+    await page.getByRole("textbox", { name: "Explain your choice in one or two sentences." }).fill(TRANSFER_EXPLANATION);
+    await page.getByRole("button", { name: /Submit once/ }).click();
+
+    const evidence = page.getByTestId("stage-result");
+    await expect(evidence.getByText("Friction contrast", { exact: true })).toBeVisible();
+    await expect(evidence.getByText("No conceptual help", { exact: true })).toBeVisible();
+    await expect(evidence.getByText("Matched the new representation", { exact: true })).toBeVisible();
+
+    await page.reload();
+
+    await expect(page.getByTestId("stage-predict")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "The engine is off. What happens next?" })).toBeVisible();
+    await expect(page.getByRole("radio", { name: "Gradually slows" })).not.toBeChecked();
+    await expect(page.getByRole("slider", { name: "How confident are you?" })).toHaveValue("70");
+    await expect(page.getByTestId("stage-experiment")).toHaveCount(0);
+    await expect(page.getByText("Friction or no friction?", { exact: true })).toHaveCount(0);
+    expect(consoleFailures).toEqual([]);
   });
 
   test("honors the reduced-motion preference", async ({ page }, testInfo) => {
