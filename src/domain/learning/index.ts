@@ -398,7 +398,7 @@ function toLearningInterpretation(interpretation: ValidatedInterpretation): Lear
     interpretation.hypotheses.length === 0 ||
     !PROBES[interpretation.recommended_probe_id] ||
     !LEVEL_1_QUESTION_IDS.includes(interpretation.recommended_level_1_question_id) ||
-    !PROBES[interpretation.recommended_probe_id].compatibleHypotheses.some((id) => interpretation.hypotheses.some((hypothesis) => hypothesis.id === id))
+    !interpretation.hypotheses.every((hypothesis) => PROBES[interpretation.recommended_probe_id].compatibleHypotheses.includes(hypothesis.id))
   ) {
     return undefined;
   }

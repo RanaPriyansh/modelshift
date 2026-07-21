@@ -57,7 +57,9 @@ export function validateInterpretation(candidate: unknown, explanation: string):
   }
 
   const probe = PROBES[value.recommended_probe_id];
-  if (!probe.compatibleHypotheses.includes(primary.id)) return invalid("incompatible_probe");
+  if (value.hypotheses.some((hypothesis) => !probe.compatibleHypotheses.includes(hypothesis.id))) {
+    return invalid("incompatible_probe");
+  }
   if (probe.defaultQuestionId !== value.recommended_level_1_question_id) return invalid("incompatible_probe");
 
   return { ok: true, value: { ...value, source: "model" } };

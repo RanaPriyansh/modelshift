@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 
 import type { ValidatedInterpretation } from "../../types/modelshift";
+import { EXPLICIT_UNCERTAINTY } from "../../content/scenarios";
 
 import { neutralFallback } from "./fallback";
 import { buildInterpretationInput, INTERPRETATION_INSTRUCTIONS, isAdversarialExplanation } from "./prompt";
@@ -39,6 +40,7 @@ export async function interpretExplanation(
   options: InterpretOptions = {},
 ): Promise<ValidatedInterpretation> {
   if (options.disabled || process.env.OPENAI_INTERPRETATION_DISABLED === "true") return neutralFallback("disabled");
+  if (request.explanation === EXPLICIT_UNCERTAINTY) return neutralFallback("ambiguous_input");
   if (isAdversarialExplanation(request.explanation)) return neutralFallback("ambiguous_input");
 
   const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY;

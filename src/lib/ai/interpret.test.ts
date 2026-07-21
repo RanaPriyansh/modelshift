@@ -55,11 +55,28 @@ describe("interpretation contract", () => {
     expect(validateInterpretation({ ...validModelOutput, recommended_probe_id: "zero_force_velocity_contrast", recommended_level_1_question_id: "which_quantity_changed" }, request.explanation)).toMatchObject({ ok: false, reason: "incompatible_probe" });
     expect(validateInterpretation({ ...validModelOutput, hypotheses: [validModelOutput.hypotheses[0], { ...validModelOutput.hypotheses[0], id: "scientific_or_near_scientific", evidence_spans: ["the engine is no longer pushing it"] }] }, request.explanation)).toMatchObject({ ok: false, reason: "ambiguous_input" });
     expect(validateInterpretation({ ...validModelOutput, hypotheses: [{ ...validModelOutput.hypotheses[0], rationale: "The correct answer is constant velocity." }] }, request.explanation)).toMatchObject({ ok: false, reason: "answer_leakage" });
+    expect(validateInterpretation({
+      ...validModelOutput,
+      hypotheses: [
+        validModelOutput.hypotheses[0],
+        { ...validModelOutput.hypotheses[0], id: "force_equals_velocity", support: "medium" },
+      ],
+    }, request.explanation)).toMatchObject({ ok: false, reason: "incompatible_probe" });
   });
 
   it("normalizes all local fallback paths to the frozen output shape", async () => {
     expect(await interpretExplanation(request, { apiKey: undefined, disabled: false })).toEqual(neutralFallback("missing_key"));
     expect(await interpretExplanation(request, { disabled: true })).toEqual(neutralFallback("disabled"));
+  });
+
+  it("never sends the authored explicit-uncertainty action to the model", async () => {
+    const parse = vi.fn();
+    const result = await interpretExplanation(
+      { ...request, explanation: "I genuinely don't know." },
+      { client: { responses: { parse } } as never, apiKey: "test" },
+    );
+    expect(result).toEqual(neutralFallback("ambiguous_input"));
+    expect(parse).not.toHaveBeenCalled();
   });
 
   it("uses Responses parse with strict text format, no tools or streaming", async () => {

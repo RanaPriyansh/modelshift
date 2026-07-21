@@ -1,5 +1,7 @@
 import type { PredictionChoice, TransferChoiceId } from "@/src/types/modelshift";
 
+export const EXPLICIT_UNCERTAINTY = "I genuinely don't know." as const;
+
 export const MYSTERY = {
   id: "mystery_force_cutoff" as const,
   title: "The engine is off. What happens next?",

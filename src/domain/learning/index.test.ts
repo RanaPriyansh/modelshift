@@ -130,6 +130,26 @@ describe("learning transitions", () => {
     });
   });
 
+  it("rejects a probe unless it is compatible with every interpreted hypothesis", () => {
+    const interpretation = {
+      ...validModelInterpretation,
+      recommended_probe_id: "friction_contrast" as const,
+      recommended_level_1_question_id: "what_differs_between_cases" as const,
+      hypotheses: [
+        validModelInterpretation.hypotheses[0],
+        {
+          ...validModelInterpretation.hypotheses[0],
+          id: "force_equals_velocity" as const,
+          support: "medium" as const,
+        },
+      ],
+    };
+    expect(transitionLearningState(stateAt("INTERPRET"), { type: "RESOLVE_INTERPRETATION", interpretation })).toMatchObject({
+      accepted: false,
+      reason: "invalid_model_interpretation",
+    });
+  });
+
   it("requires a probe prediction before the experiment and observation/reflection before reconstruction", () => {
     const experiment = stateAt("EXPERIMENT");
     expect(transitionLearningState(experiment, { type: "SUBMIT_RECONSTRUCTION", reconstruction: "zero force means flat velocity" })).toMatchObject({

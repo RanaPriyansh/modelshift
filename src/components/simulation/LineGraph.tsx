@@ -47,7 +47,7 @@ export function LineGraph({ title, description, series, xLabel = "time", yLabel 
   const rawMin = Math.min(...points.map((point) => point.value), 0);
   const rawMax = Math.max(...points.map((point) => point.value), 1);
   const valuePadding = Math.max((rawMax - rawMin) * 0.12, 0.5);
-  const minValue = rawMin - valuePadding;
+  const minValue = rawMin >= 0 ? 0 : rawMin - valuePadding;
   const maxValue = rawMax + valuePadding;
 
   return (

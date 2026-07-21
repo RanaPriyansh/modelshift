@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { LEVEL_1_QUESTIONS, LEVEL_2_CONTRASTS, LEVEL_3_PRINCIPLE, MYSTERY, PROBES, TRANSFER } from "@/src/content";
+import { EXPLICIT_UNCERTAINTY, LEVEL_1_QUESTIONS, LEVEL_2_CONTRASTS, LEVEL_3_PRINCIPLE, MYSTERY, PROBES, TRANSFER } from "@/src/content";
 import { HYPOTHESES } from "@/src/content/hypotheses";
 import { ExperimentWorld } from "@/src/components/simulation/ExperimentWorld";
 import { MysteryWorld } from "@/src/components/simulation/MysteryWorld";
@@ -388,13 +388,21 @@ export function ModelShiftExperience() {
 
   async function submitExplanation(nextExplanation = explanation) {
     if (!prediction) return;
+    const explicitUncertainty = nextExplanation === EXPLICIT_UNCERTAINTY;
     const committed = transitionLearningState(learningState, {
       type: "COMMIT_EXPLANATION",
       explanation: nextExplanation,
-      dontKnow: nextExplanation === "I genuinely don't know.",
+      dontKnow: explicitUncertainty,
     });
     if (!committed.accepted) return;
     setLearningState(committed.state);
+    if (explicitUncertainty) {
+      const nextInterpretation = fallbackInterpretation("ambiguous_input");
+      setInterpretation(nextInterpretation);
+      const resolved = transitionLearningState(committed.state, { type: "RESOLVE_INTERPRETATION", interpretation: nextInterpretation });
+      if (resolved.accepted) setLearningState(resolved.state);
+      return;
+    }
     setInterpreting(true);
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), INTERPRETATION_CLIENT_TIMEOUT_MS);
@@ -495,7 +503,7 @@ export function ModelShiftExperience() {
       <div className="sr-only" aria-live="polite">Current stage: {stageLabel}</div>
       <main id="main-content" tabIndex={-1}>
         {stage === "PREDICT" ? <PredictionStage prediction={prediction} confidence={confidence} onPrediction={setPrediction} onConfidence={setConfidence} onCommit={commitPrediction} /> : null}
-        {stage === "EXPLAIN" && prediction ? <ExplanationStage prediction={prediction} explanation={explanation} onExplanation={setExplanation} onSubmit={() => void submitExplanation()} onDontKnow={() => { const text = "I genuinely don't know."; setExplanation(text); void submitExplanation(text); }} /> : null}
+        {stage === "EXPLAIN" && prediction ? <ExplanationStage prediction={prediction} explanation={explanation} onExplanation={setExplanation} onSubmit={() => void submitExplanation()} onDontKnow={() => { setExplanation(EXPLICIT_UNCERTAINTY); void submitExplanation(EXPLICIT_UNCERTAINTY); }} /> : null}
         {stage === "INTERPRET" || stage === "PROBE_PREDICT" ? <InterpretationStage interpretation={interpretation} explanation={explanation} loading={interpreting} probePrediction={probePrediction} onProbePrediction={setProbePrediction} onContinue={commitProbePrediction} /> : null}
         {stage === "EXPERIMENT" || stage === "REFLECT" ? <ExperimentStage probeId={probeId} revealed={experimentRevealed} frictionStrength={frictionStrength} reflection={reflection} supportLevel={supportLevel} questionId={questionId} onRun={runExperiment} onFriction={setFrictionStrength} onReflection={setReflection} onRequestSupport={requestSupport} onDontKnow={() => setReflection("I genuinely don't know yet.")} onContinue={submitReflection} /> : null}
         {stage === "RECONSTRUCT" ? <ReconstructionStage value={reconstruction} supportLevel={supportLevel} probeId={probeId} questionId={questionId} onChange={setReconstruction} onRequestSupport={requestSupport} onContinue={() => enterProof()} onDontKnow={() => { const text = "I genuinely don't know."; setReconstruction(text); enterProof(true, text); }} /> : null}
