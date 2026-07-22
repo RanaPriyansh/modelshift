@@ -61,6 +61,8 @@ Request-only BYOK remains a per-request boundary. A managed provider or cloud-au
 
 The verifier accepts only an absolute HTTPS origin whose hostname is supplied explicitly with `--allowed-host`, plus a full 40-character expected SHA. `--allow-localhost` is required for local HTTP. It issues bounded same-origin `GET` requests with redirects disabled to `/api/health`, all four Worlds, `/studio`, `/login`, `/account`, and same-origin versioned Next.js scripts. It checks exact SHA, source/runtime identity, disabled cloud/provider state, restrictive `script-src`/`script-src-elem`, same-origin `connect-src` and `form-action`, security headers, route markers, and client secret-pattern absence. It never submits forms or calls model/API write paths.
 
+The script scan is a hard initial-HTML contract: it unions the distinct allowed `/_next/static/` script URLs referenced by those nine pages, requires a nonempty set of at most 32, then fetches and scans every admitted asset. Wave 4 measured 25 distinct initial assets; the seven-slot reserve is deliberate bounded headroom, not an unbounded bypass. Hydration-only chunks are outside this read-only initial-HTML check. Increasing the budget requires a new observed-count measurement, boundary-test update, and release-operations review.
+
 Example (read-only; do not run against an unapproved origin):
 
 ```bash
