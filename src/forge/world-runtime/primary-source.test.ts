@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { PRIMARY_SOURCE_REASONING_WORLD } from "../worlds";
 import { primarySourceReasoningTransferValidator } from "../deterministic-validators";
@@ -456,10 +456,69 @@ describe("Primary Source World runtime adapter", () => {
     expect(createWorldRuntimeSession(forgedInitialAdapter).semanticTrace).toEqual(["encounter"]);
   });
 
-  it("rejects model, replay, domain-access, and disabled-return classifications before reduction", () => {
+  it("admits declared domain replay only during learning while wrappers remain non-domain", () => {
+    type State = { readonly phase: "learning" | "proof"; readonly replayCount: number };
+    type Event = { readonly type: "REPLAY" };
+    const reduce = vi.fn((state: State) => ({
+      accepted: true as const,
+      state: { ...state, replayCount: state.replayCount + 1 },
+    }));
+    const replayAdapter: WorldRuntimeAdapter<State, Event, { readonly id: string }> = {
+      pack: primarySourceWorldRuntimeAdapter.pack,
+      createInitialState: () => ({ phase: "learning", replayCount: 0 }),
+      reduce,
+      phase: (state) => state.phase,
+      initialSemanticStage: () => "encounter",
+      semanticStages: () => [],
+      stage: (state) => state.phase === "proof" ? "cold_transfer" : "encounter",
+      classify: () => "experience_replay",
+      supportEvent: () => null,
+      proof: () => null,
+      validatorInput: () => ({}),
+      remainsUntested: () => [],
+    };
+    const learning = createWorldRuntimeSession(replayAdapter, "attempt.domain-replay-learning");
+    const accepted = dispatchWorldRuntimeCommand(replayAdapter, learning, {
+      kind: "domain",
+      event: { type: "REPLAY" },
+    });
+    expect(accepted).toMatchObject({
+      accepted: true,
+      session: { state: { phase: "learning", replayCount: 1 } },
+    });
+    expect(reduce).toHaveBeenCalledOnce();
+
+    reduce.mockClear();
+    const proofSession = Object.freeze({
+      ...learning,
+      state: { phase: "proof" as const, replayCount: 0 },
+      phase: "proof" as const,
+    });
+    const blocked = dispatchWorldRuntimeCommand(replayAdapter, proofSession, {
+      kind: "domain",
+      event: { type: "REPLAY" },
+    });
+    expect(blocked).toMatchObject({
+      accepted: false,
+      reason: "proof_action_blocked",
+      session: { state: proofSession.state, proofBlockedActions: ["experience_replay"] },
+    });
+    expect(reduce).not.toHaveBeenCalled();
+
+    expect(dispatchWorldRuntimeCommand(replayAdapter, learning, {
+      kind: "experience_replay",
+      actionId: "action.primary-source.unknown-replay",
+    })).toMatchObject({ accepted: false, reason: "unknown_runtime_action", session: learning });
+    expect(dispatchWorldRuntimeCommand(replayAdapter, learning, {
+      kind: "experience_replay",
+      actionId: "action.primary-source.replay",
+    })).toMatchObject({ accepted: false, reason: "runtime_action_unavailable", session: learning });
+    expect(reduce).not.toHaveBeenCalled();
+  });
+
+  it("rejects model, domain-access, and disabled-return classifications before reduction", () => {
     const bypasses = [
       ["model_action", "model_action_disallowed"],
-      ["experience_replay", "runtime_action_unavailable"],
       ["access_accommodation", "runtime_action_unavailable"],
       ["return_proof", "runtime_action_unavailable"],
     ] as const;

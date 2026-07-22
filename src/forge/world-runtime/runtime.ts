@@ -395,7 +395,10 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
     return { accepted: false, session, reason: "model_action_disallowed" };
   }
 
-  if (commandKind === "experience_replay") {
+  // A wrapper replay has no domain event to reduce. A domain event classified
+  // as replay continues to the adapter during learning; the proof lock above
+  // still rejects it before reduction once the session enters proof.
+  if (command.kind === "experience_replay") {
     return { accepted: false, session, reason: "runtime_action_unavailable" };
   }
 
