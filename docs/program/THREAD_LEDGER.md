@@ -11,9 +11,9 @@ Workers implement bounded slices in isolated worktrees. They do not edit the pri
 | Experience and design system | `019f8705-865e-7631-a921-ee4b5690b778` | `gpt-5.6-terra` xhigh | `IDLE`; Packet A `ACCEPTED_ON_MAIN` | Worker chain `e84a395` + `eb19eb4`; integrated as `60b947e` + `f7a3bc4` | Hold for cross-lane regression; resume for screen-reader/nonvisual-equivalence work only after Packet E defines the shared runtime |
 | Trust, auth, and private evidence | `019f8705-2825-7cb2-94e1-b30d5aab1447` | `gpt-5.6-terra` xhigh | `IDLE`; Packet B `ACCEPTED_ON_MAIN` | Source chain `9a85524` through `2564234`; current-base integration `30bf5bc` through `9a4068f` | Hold for Packet E canonical persistence runtime and separately authorized abuse-controlled cloud-operation proof |
 | Homeschool pathways and entitlement | `019f8704-dc1c-7381-b71b-c0303987251a` | `gpt-5.6-terra` xhigh | `IDLE`; Packet C `ACCEPTED_ON_MAIN` | Worker chain `570451b` through `c910c2e`; integrated as `9b62ec9` through `033bb9a` | Hold for Packet E trusted-receipt integration; no scheduler, certification, compliance, or homeschool-readiness claims |
-| Release, evaluation, observability | `019f8705-4855-7522-9140-8d45cd93ae60` | `gpt-5.6-luna` high | `IN_PROGRESS` | `a98f8bb` on old base | Reconcile CI/reports/health against current main; diagnose blocked deployment; produce integration packet |
-| Learning Kernel and World Factory | `client-new-thread:81cee98c-352a-4ca6-8b4e-f4901523dcf2` | `gpt-5.6-terra` xhigh | `QUEUED_WORKTREE` | none | Build conformance SDK, migrate one World, define domain plugin boundary |
-| AI Lesson Intelligence | `client-new-thread:17bde2c6-51a1-4f61-8ddc-b9e98cd0f741` | `gpt-5.6-terra` xhigh | `QUEUED_WORKTREE` | current `/studio` baseline | Add reviewed-draft workflow, capability matrix, live-eval harness, budget/privacy gates |
+| Release, evaluation, observability | `019f8705-4855-7522-9140-8d45cd93ae60` | `gpt-5.6-luna` high | `IDLE`; Packet D `ACCEPTED_ON_MAIN` | Source `1db691e`; exact-base replay/integration `1c5dd3a` | Hold for final principal release tuple; resume only for a separately authorized rollback rehearsal or incident/alerting slice |
+| Learning Kernel and World Factory | `019f8973-ef2f-7071-89a3-d5b81781957d` | `gpt-5.6-terra` xhigh | `IDLE`; Packet E `ACCEPTED_ON_MAIN` | Replay `1d9c301` → `1cde10d`; integrated as `c59f7af` → `abf34c2` | Migrate the remaining Worlds and define the reviewed ADR-001 durable projector; the local receipt is not trusted pathway evidence |
+| AI Lesson Intelligence | `019f8973-f2d9-7710-ba01-451d892f767a` | `gpt-5.6-terra` xhigh | `IDLE`; Packet F `ACCEPTED_ON_MAIN` | Replay `b07d577` → `fa634ea`; integrated as `1e95a15` → `15a7531` | Add a durable human-review queue/source service only after identity, quota, abuse, privacy, and publication authority are separately approved |
 
 The principal remains the architecture/integration/red-team lane and uses `ultra` only when the user explicitly returns for review or a worker requests a cross-lane decision.
 
@@ -108,6 +108,8 @@ Required work:
 
 Stop gate: exact diagnosis, exact remediation, one clean commit, no deployment capability in CI without a separate approval environment.
 
+Principal disposition on 2026-07-22: **accepted and integrated**. The stale worker ancestry was not merged. Packet D was replayed linearly onto the exact accepted A/B/C base and held through independent red-team review until state/outcome authority, artifact selection, non-overwrite/symlink/path safety, exact schemas, SSRF/rebinding/redirect defenses, and a 1,260-case malformed-input matrix passed. On replay SHA `1c5dd3a`, 373 application tests, 9 evaluator tests, lint, typecheck, optimized build, 165 local verifier checks, and 55 production Chromium checks passed; 19 project-scoped duplicates were intentionally skipped. This accepts the release machinery, not a provider-quality, database-operation, educational-validity, or public-deployment claim.
+
 ## Packet E — Learning Kernel and World Factory
 
 **North Star:** new subjects plug into one trusted learning protocol while preserving domain-specific truth.
@@ -129,6 +131,8 @@ Required work:
 
 Stop gate: no second source of truth, no model-graded proof, no generic mastery score, and no edits to the other three Worlds in the first slice.
 
+Principal disposition on 2026-07-22: **accepted and integrated as a one-World runtime slice**. Independent review confirmed strict bound-versus-legacy source provenance, domain-owned validator projection, preserved rejected reducer state, real disagreement/test-prediction trace, typed construct-preserving accommodations, declared runtime actions, strict-CSP operation, and an explicitly local/non-durable receipt. Primary Source Reasoning and its retained content/runtime identity are `1.0.1`; protocol, validator, source, and proof-lock changes alter the retained runtime-binding digest while release health continues to use the exact manifest-file SHA-256. Exact replay HEAD `1cde10d` passed 400 tests, lint, typecheck, build, 166 local release checks, and production Chromium/320 px/keyboard/reduced-motion/text-alternative checks. Packet C remains `needs-evidence`: this local receipt is not a trusted or persisted evidence record, and the other three Worlds are not yet migrated to the shared runtime.
+
 ## Packet F — AI Lesson Intelligence
 
 **North Star:** models compete on explanation and lesson-design quality while deterministic policy and human review own truth, publication, and proof.
@@ -149,6 +153,8 @@ Required work:
 6. keep live suites credential-gated, redacted, and provider-specific.
 
 Stop gate: mocked/deterministic test coverage plus a live-eval harness; no managed key enablement, live cost, or publication without separate authority.
+
+Principal disposition on 2026-07-22: **accepted and integrated as a structurally locked draft/review slice**. The handoff was held through two independent review rounds until the mandatory safety stage, scoped reviewer roles, exact immutable refs, complete multi-source ADR-003 receipt, closed/redacted live-eval outcomes, OpenAI refusal/incomplete parsing, adult server-authority-before-body boundary, and retired managed-key surface all passed. A final forged-state repro then required every persisted review projection to equal deterministic replay from its immutable draft seed and ordered decisions; shortened, reordered, fabricated-final, source-ref, publication, grade, and supersession attempts fail closed. Exact replay HEAD `fa634ea` passed 392 application tests, 13 evaluator tests, lint, typecheck, build, and local rendered Studio checks. No live provider call, credential, spend, durable review, source attestation, publication, proof grade, or public connector enablement is claimed.
 
 ## Handoff format required from every lane
 

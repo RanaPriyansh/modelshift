@@ -193,13 +193,16 @@ Exit gate:
 - legal/child-safety/accessibility authorities sign their own scoped decisions;
 - FORGE may then claim only the exact validated pathway/operational scope, never universal education replacement.
 
-## Immediate execution wave
+## Accepted first execution wave and next bounded wave
 
-The next worker wave is deliberately smaller than the full vision:
+The first A-F wave is accepted at bounded scope: the shared experience system, fail-closed trust boundary, pathway review contract, release machinery, one-World runtime slice, and structurally locked AI draft/review slice passed independent review and integrated verification. This does not complete G1-G8 or establish homeschool, efficacy, live-provider, live-database, or publication readiness.
 
-1. reconcile existing design, ops, auth, and pathway commits against `846158a` without blind cherry-picks;
-2. build the World Factory contract and migrate one current World;
-3. harden Lesson Studio into a reviewed-draft pipeline with provider live-eval harnesses but no production key activation;
-4. land CI/release identity and diagnose the blocked Vercel candidate;
-5. principal reviews all six packets together for event, proof, age, source, access, and claim conflicts;
-6. integrate only independently green, non-overlapping slices, then cut a new candidate.
+The next worker wave remains dependency-ordered:
+
+1. define and accept the one ADR-001 projector from runtime attempts into the append-only event/evidence vocabulary; do not treat the Packet E local receipt as trusted persistence;
+2. migrate Force and Motion, Source Corroboration, and Proportional Reasoning onto the accepted runtime with all-World proof/access/evidence conformance;
+3. build durable source snapshot, locator, claim, rights, correction, and named-review services before any generated curriculum publication;
+4. build reviewed broad-foundation capability/package graphs and learner-chosen deep sequences across sciences, mathematics, language, history/civics, arts, health, practical life, and projects;
+5. enable neither cloud identity nor a Studio provider until adult authority, durable quota/rate limits, abuse controls, privacy decisions, incident ownership, and authorized live negative tests pass;
+6. run screen-reader and semantic-alternative audits, then representative learner/access studies without promoting usability evidence to learning efficacy;
+7. pursue people/projects, research validity, and named-jurisdiction homeschool operations only after their G1-G7 prerequisites and external decisions exist.

@@ -52,11 +52,11 @@ FORGE is successful only if it improves all five dimensions without hiding harm 
 
 ## Current truth
 
-The baseline contains four working Learning Worlds, a deterministic path compiler, browser-local evidence, a typed event journal, privacy-minimal device profiles, optional cloud-auth adapters, a provider-neutral Lesson Studio, staged Supabase schemas, and production-grade unit/browser coverage.
+The accepted implementation contains four working Learning Worlds, a deterministic path compiler, browser-local evidence, a typed event journal, privacy-minimal device profiles, a shared bounded runtime on Primary Source Reasoning, a replay-validated provider-neutral Lesson Studio draft pipeline, staged Supabase schemas, and production-grade unit/browser coverage. Cloud identity and the public Studio provider connector remain structurally locked.
 
 It does **not** contain a complete curriculum, verified cloud identity operation, guardian-consent service, live evidence sync, people network, accredited pathway, representative learner study, efficacy evidence, or a live-credential evaluation of the four provider adapters.
 
-The source commit `846158a` is pushed. Its attempted Vercel production deployment `dpl_GwTK18jVR2NmEb4VKa3KGhf6hLzi` is blocked; the last READY production deployment is still `af5f3ca`. Release Operations owns diagnosis. No worker may call the blocked candidate deployed.
+The historical `846158a` Vercel candidate `dpl_GwTK18jVR2NmEb4VKa3KGhf6hLzi` was blocked. Packet D now provides exact source, release-health, CI, verifier, evidence-retention, and rollback-decision contracts; the accepted A-F code-integration tree before this principal evidence update is `15a7531`. A public release is identified only by the final immutable deployment URL, alias, `/api/health` SHA/digests, retained verification artifact, and principal decision—not by this historical paragraph or a worker handoff.
 
 ## Cost-aware operating model
 
