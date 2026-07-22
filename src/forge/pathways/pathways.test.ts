@@ -211,7 +211,19 @@ describe("FORGE Packet C pathway review", () => {
       learnerAssent: "recorded-for-review",
       visibilityToLearner: true,
     };
-    expect(issueCodes(packet)).toContain("consent.child-open-web-prohibited");
+    expect(issueCodes(packet)).toContain("consent.underage-open-web-prohibited");
+  });
+
+  it("does not let a declared boundary enable open-web access for a 13-17 packet", () => {
+    const packet = packetFor("13-17");
+    packet.consentAssent = {
+      externalAction: "open-web",
+      relationshipEvidence: "declared-for-review",
+      guardianConsent: "declared-for-review",
+      learnerAssent: "recorded-for-review",
+      visibilityToLearner: true,
+    };
+    expect(issueCodes(packet)).toContain("consent.underage-open-web-prohibited");
   });
 
   it("rejects an invented capability binding", () => {
