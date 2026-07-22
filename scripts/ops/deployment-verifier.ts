@@ -435,6 +435,7 @@ async function main() {
   if (requestedState && !candidateState) throw new Error("--candidate-state must be a nonterminal worker ADR-006 state");
   const liveEvaluationStatus = arg("--live-evaluation-status");
   if (liveEvaluationStatus && liveEvaluationStatus !== "not_evaluated") throw new Error("worker CLI cannot consume live evaluation proof");
+  if (arg("--decision-outcome")) throw new Error("worker CLI cannot accept a release decision outcome");
   const report = await verifyDeployment({
     baseUrl,
     expectedSha,

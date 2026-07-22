@@ -1,5 +1,5 @@
-import { copyFile, lstat, mkdir, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
-import type { Stats } from "node:fs";
+import { lstat, mkdir, open, readdir, realpath, writeFile } from "node:fs/promises";
+import { constants, type Stats } from "node:fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -10,6 +10,10 @@ const FAILURE_SCREENSHOT = /^test-failed-\d+\.png$/;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
 type Artifact = { path: string; bytes: number };
+type ArtifactStagingHooks = {
+  /** Test-only seam: verifies a pathname replacement after open cannot alter staged bytes. */
+  afterCandidateOpened?: (path: string) => Promise<void> | void;
+};
 export type PlaywrightArtifactManifest = {
   schema_version: "1.0";
   report_kind: "bounded_playwright_failure_artifacts";
@@ -50,6 +54,17 @@ async function lstatIfPresent(path: string): Promise<Stats | null> {
   }
 }
 
+async function readExactly(handle: Awaited<ReturnType<typeof open>>, size: number): Promise<Buffer> {
+  const buffer = Buffer.allocUnsafe(size);
+  let offset = 0;
+  while (offset < size) {
+    const { bytesRead } = await handle.read(buffer, offset, size - offset, offset);
+    if (bytesRead === 0) throw new Error("candidate changed while being read");
+    offset += bytesRead;
+  }
+  return buffer;
+}
+
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && "code" in error;
 }
@@ -81,7 +96,7 @@ async function ensureTrustedDirectory(root: string, target: string): Promise<str
   return current;
 }
 
-/** Validate every destructive/output boundary before touching the stage path. */
+/** Validate every stage/output boundary before creating any evidence path. */
 export async function validateArtifactPaths(rootDirectory: string, outputPath: string, stageDirectory: string): Promise<{ root: string; output: string; stage: string }> {
   const root = await trustedRoot(rootDirectory);
   const lexicalOutput = resolve(outputPath);
@@ -95,16 +110,20 @@ export async function validateArtifactPaths(rootDirectory: string, outputPath: s
   const stage = resolve(root.physical, relative(root.lexical, lexicalStage));
   const output = resolve(root.physical, relative(root.lexical, lexicalOutput));
 
-  const trustedStage = await ensureTrustedDirectory(root.physical, stage);
-  if (trustedStage !== stage) throw new Error("--stage-dir must not resolve through a symlink");
+  const trustedStageParent = await ensureTrustedDirectory(root.physical, dirname(stage));
+  if (trustedStageParent !== dirname(stage)) throw new Error("--stage-dir parent must not resolve through a symlink");
+  const stageStat = await lstatIfPresent(stage);
+  if (stageStat?.isSymbolicLink()) throw new Error("--stage-dir must not be a symlink");
+  if (stageStat) throw new Error("--stage-dir must not exist; staging is exclusive and never clears prior evidence");
   const trustedOutputParent = await ensureTrustedDirectory(root.physical, dirname(output));
   if (trustedOutputParent !== dirname(output)) throw new Error("--output parent must not resolve through a symlink");
   const outputStat = await lstatIfPresent(output);
-  if (outputStat && (outputStat.isSymbolicLink() || !outputStat.isFile())) throw new Error("--output must not be a symlink or non-regular file");
+  if (outputStat?.isSymbolicLink()) throw new Error("--output must not be a symlink");
+  if (outputStat) throw new Error("--output must not exist; manifest creation is exclusive and never overwrites evidence");
   return { root: root.physical, output, stage };
 }
 
-export async function writePlaywrightArtifactManifest(rootDirectory: string, testedSha: string, outputPath: string, retainedArtifactId: string, stageDirectory: string): Promise<PlaywrightArtifactManifest> {
+export async function writePlaywrightArtifactManifest(rootDirectory: string, testedSha: string, outputPath: string, retainedArtifactId: string, stageDirectory: string, hooks: ArtifactStagingHooks = {}): Promise<PlaywrightArtifactManifest> {
   const { root, output, stage } = await validateArtifactPaths(rootDirectory, outputPath, stageDirectory);
   let candidates: string[] = [];
   try { candidates = await files(root, stage); } catch { /* no failures produced */ }
@@ -112,25 +131,38 @@ export async function writePlaywrightArtifactManifest(rootDirectory: string, tes
   let total = 0;
   let truncated = false;
   let excludedCount = 0;
-  await rm(stage, { recursive: true, force: true });
   await mkdir(stage);
   await ensureTrustedDirectory(root, stage);
   for (const path of candidates.sort()) {
-    const sourceStat = await lstat(path);
-    if (!sourceStat.isFile() || sourceStat.isSymbolicLink() || sourceStat.size < PNG_SIGNATURE.byteLength || sourceStat.size > MAX_BYTES) { excludedCount += 1; continue; }
-    const bytes = sourceStat.size;
-    if (artifacts.length >= MAX_FILES || total + bytes > MAX_BYTES) { truncated = true; excludedCount += 1; continue; }
-    const signature = (await readFile(path)).subarray(0, PNG_SIGNATURE.byteLength);
-    if (!signature.equals(PNG_SIGNATURE)) { excludedCount += 1; continue; }
-    const relativePath = relative(root, path);
-    const stagedPath = resolve(stage, relativePath);
-    await ensureTrustedDirectory(root, dirname(stagedPath));
-    await copyFile(path, stagedPath);
-    artifacts.push({ path: relativePath, bytes });
-    total += bytes;
+    // Open once with O_NOFOLLOW. From here onward every fstat/read comes from
+    // this descriptor, so replacing the pathname cannot switch staged bytes.
+    const source = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    try {
+      const sourceStat = await source.stat();
+      if (!sourceStat.isFile() || sourceStat.size < PNG_SIGNATURE.byteLength || sourceStat.size > MAX_BYTES) { excludedCount += 1; continue; }
+      const bytes = sourceStat.size;
+      if (artifacts.length >= MAX_FILES || total + bytes > MAX_BYTES) { truncated = true; excludedCount += 1; continue; }
+      await hooks.afterCandidateOpened?.(path);
+      const contents = await readExactly(source, bytes);
+      const finalStat = await source.stat();
+      if (!finalStat.isFile() || finalStat.size !== bytes || !contents.subarray(0, PNG_SIGNATURE.byteLength).equals(PNG_SIGNATURE)) { excludedCount += 1; continue; }
+      const relativePath = relative(root, path);
+      const stagedPath = resolve(stage, relativePath);
+      await ensureTrustedDirectory(root, dirname(stagedPath));
+      const destination = await open(stagedPath, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
+      try {
+        await destination.writeFile(contents);
+      } finally {
+        await destination.close();
+      }
+      artifacts.push({ path: relativePath, bytes });
+      total += bytes;
+    } finally {
+      await source.close();
+    }
   }
   const manifest: PlaywrightArtifactManifest = { schema_version: "1.0", report_kind: "bounded_playwright_failure_artifacts", tested_sha: testedSha, retained_artifact_ids: [retainedArtifactId], artifacts, excluded_count: excludedCount, truncated };
-  await writeFile(output, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  await writeFile(output, `${JSON.stringify(manifest, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
   return manifest;
 }
 

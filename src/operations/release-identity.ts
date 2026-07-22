@@ -9,6 +9,13 @@ export const RELEASE_CANDIDATE_STATES = [
 
 export type ReleaseCandidateState = (typeof RELEASE_CANDIDATE_STATES)[number];
 
+/**
+ * A release-decision name is deliberately descriptive. Terminal authority is
+ * carried only by this bounded, typed outcome, never inferred from prose.
+ */
+export const RELEASE_DECISION_OUTCOMES = ["not_authorized", "promote", "rollback"] as const;
+export type ReleaseDecisionOutcome = (typeof RELEASE_DECISION_OUTCOMES)[number];
+
 /** The flattened, secret-free projection of `ReleaseHealth` used by ADR-006. */
 export const RELEASE_HEALTH_CLOUD_PROVIDER_FLAG_KEYS = [
   "cloud_accounts_enabled",
@@ -60,6 +67,7 @@ export type ReleaseIdentityTuple = {
   named_release_decision: {
     name: string;
     decided_at: string;
+    outcome: ReleaseDecisionOutcome;
   };
 };
 
@@ -85,6 +93,7 @@ export type ReleaseIdentityOptions = {
   rollbackSha?: string;
   rollbackRehearsal?: "pass" | "fail" | "not_evaluated";
   decisionName?: string;
+  decisionOutcome?: ReleaseDecisionOutcome;
 };
 
 /**
@@ -98,7 +107,7 @@ export type ReleaseIdentityVerificationAuthority = {
   production_verification_artifact_id: string;
   live_evaluation: { status: "pass"; artifact_id: string };
   rollback_rehearsal: { deployment_id: string; sha: string; artifact_id: string };
-  named_release_decision: { name: string; decided_at: string };
+  named_release_decision: { name: string; decided_at: string; outcome: ReleaseDecisionOutcome };
 };
 
 export type ReleaseIdentityValidationOptions = {
@@ -113,22 +122,13 @@ const DATABASE_IDENTITY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 const VERIFICATION_STATUSES = new Set(["pass", "fail", "not_evaluated"]);
 const TERMINAL_STATES = new Set<ReleaseCandidateState>(["PRODUCTION_VERIFIED", "ROLLED_BACK"]);
 const SECRET_LIKE = /(?:api[_-]?key|secret|token|password|authorization|bearer|^sk-[A-Za-z0-9_-]{8,}$)/i;
-// These are worker-only handoff labels, not principal release decisions. Keep
-// this contract small and explicit so normal principal decision names remain valid.
-const RESERVED_TERMINAL_DECISION_NAMES = new Set([
-  "packet d worker handoff; promotion not authorized",
-  "packet d offline regression; promotion not authorized",
-]);
-const RESERVED_TERMINAL_DECISION_PREFIXES = ["packet d worker ", "packet d offline ", "worker ", "offline "] as const;
-const RESERVED_TERMINAL_DECISION_SUFFIXES = ["; promotion not authorized", "; not authorized"] as const;
-
 type RecordValue = Record<string, unknown>;
 type Deployment = { id: string; url: string };
 type Alias = { url: string; resolved_at: string };
 const IDENTITY_KEYS = ["candidate_state", "source_sha", "tested_sha", "retained_artifact_ids", "immutable_deployment", "public_alias", "build_runtime_mode", "cloud_provider_flags", "database", "critical_verification", "rollback", "named_release_decision"] as const;
 const CRITICAL_VERIFICATION_KEYS = ["browser", "csp", "console", "network", "packet_artifact_ids"] as const;
 const ROLLBACK_KEYS = ["deployment_id", "sha", "rehearsal"] as const;
-const DECISION_KEYS = ["name", "decided_at"] as const;
+const DECISION_KEYS = ["name", "decided_at", "outcome"] as const;
 const AUTHORITY_KEYS = ["immutable_deployment", "public_alias", "production_verification_artifact_id", "live_evaluation", "rollback_rehearsal", "named_release_decision"] as const;
 const AUTHORITY_ALIAS_KEYS = ["url", "resolved_at", "resolved_deployment_id"] as const;
 const LIVE_EVALUATION_KEYS = ["status", "artifact_id"] as const;
@@ -176,12 +176,8 @@ function validDecisionName(value: unknown): value is string {
   return typeof value === "string" && DECISION_NAME_PATTERN.test(value) && !SECRET_LIKE.test(value) && !["unknown", "not_evaluated"].includes(value.toLowerCase());
 }
 
-function validTerminalDecisionName(value: unknown): value is string {
-  if (!validDecisionName(value)) return false;
-  const normalized = value.toLowerCase();
-  return !RESERVED_TERMINAL_DECISION_NAMES.has(normalized)
-    && !RESERVED_TERMINAL_DECISION_PREFIXES.some((prefix) => normalized.startsWith(prefix))
-    && !RESERVED_TERMINAL_DECISION_SUFFIXES.some((suffix) => normalized.endsWith(suffix));
+function validDecisionOutcome(value: unknown): value is ReleaseDecisionOutcome {
+  return typeof value === "string" && RELEASE_DECISION_OUTCOMES.includes(value as ReleaseDecisionOutcome);
 }
 
 function validVerificationStatus(value: unknown): value is "pass" | "fail" | "not_evaluated" {
@@ -259,7 +255,7 @@ function terminalAuthorityValid(authority: unknown): authority is ReleaseIdentit
   return Boolean(deployment && alias && validArtifactId(authority.production_verification_artifact_id)
     && live?.status === "pass" && validArtifactId(live.artifact_id)
     && rollback && validDeploymentId(rollback.deployment_id) && typeof rollback.sha === "string" && SHA_PATTERN.test(rollback.sha) && validArtifactId(rollback.artifact_id)
-    && decision && validTerminalDecisionName(decision.name) && isCanonicalTimestamp(decision.decided_at));
+    && decision && validDecisionName(decision.name) && validDecisionOutcome(decision.outcome) && isCanonicalTimestamp(decision.decided_at));
 }
 
 function terminalEvidenceMatches(identity: RecordValue, authority: ReleaseIdentityVerificationAuthority, state: ReleaseCandidateState): boolean {
@@ -271,6 +267,7 @@ function terminalEvidenceMatches(identity: RecordValue, authority: ReleaseIdenti
   const rollback = hasExactKeys(identity.rollback, ROLLBACK_KEYS) ? identity.rollback : null;
   const decision = hasExactKeys(identity.named_release_decision, DECISION_KEYS) ? identity.named_release_decision : null;
   const isRolledBack = state === "ROLLED_BACK";
+  const expectedOutcome: ReleaseDecisionOutcome = isRolledBack ? "rollback" : "promote";
   const aliasTarget = isRolledBack ? rollback?.deployment_id : deployment?.id;
   if (!deployment || !alias || !authorityDeployment || !authorityAlias || !critical || !rollback || !decision || !Array.isArray(critical.packet_artifact_ids) || typeof rollback.sha !== "string") return false;
   return sameDeployment(deployment, authorityDeployment)
@@ -290,9 +287,12 @@ function terminalEvidenceMatches(identity: RecordValue, authority: ReleaseIdenti
     && rollback.deployment_id === authority.rollback_rehearsal.deployment_id
     && rollback.sha.toLowerCase() === authority.rollback_rehearsal.sha.toLowerCase()
     && retained(identity, authority.rollback_rehearsal.artifact_id)
-    && validTerminalDecisionName(decision.name)
+    && validDecisionName(decision.name)
+    && decision.outcome === expectedOutcome
     && decision.name === authority.named_release_decision.name
     && decision.decided_at === authority.named_release_decision.decided_at
+    && decision.outcome === authority.named_release_decision.outcome
+    && authority.named_release_decision.outcome === expectedOutcome
     && (!isRolledBack || (deployment.id === rollback.deployment_id && deployment.url === authorityDeployment.url));
 }
 
@@ -325,7 +325,7 @@ export function validateReleaseIdentity(identity: unknown, options: ReleaseIdent
   const rollback = hasExactKeys(identity.rollback, ROLLBACK_KEYS) ? identity.rollback : null;
   if (!rollback || !validVerificationStatus(rollback.rehearsal) || !((rollback.deployment_id === "not_evaluated") || validDeploymentId(rollback.deployment_id)) || !((rollback.sha === "not_evaluated") || (typeof rollback.sha === "string" && SHA_PATTERN.test(rollback.sha)))) failures.push("rollback");
   const decision = hasExactKeys(identity.named_release_decision, DECISION_KEYS) ? identity.named_release_decision : null;
-  if (!decision || !validDecisionName(decision.name) || !isCanonicalTimestamp(decision.decided_at)) failures.push("named_release_decision");
+  if (!decision || !validDecisionName(decision.name) || !validDecisionOutcome(decision.outcome) || !isCanonicalTimestamp(decision.decided_at)) failures.push("named_release_decision");
 
   if (state === "DEPLOYED_CANDIDATE" && (!hasDeployment || critical?.browser === "not_evaluated" || critical?.csp === "not_evaluated" || critical?.network === "not_evaluated" || !critical)) failures.push("deployed_candidate_evidence");
   if (state && TERMINAL_STATES.has(state)) {
@@ -369,6 +369,7 @@ export function buildReleaseIdentity(options: ReleaseIdentityOptions): ReleaseId
     named_release_decision: {
       name: options.decisionName ?? "Packet D worker handoff; promotion not authorized",
       decided_at: options.generatedAt,
+      outcome: options.decisionOutcome ?? "not_authorized",
     },
   };
 }
