@@ -84,5 +84,6 @@ The current public code SHA is `c7d401101791faa80ac0ba61c73044928a2da7b6`, serve
 8. [Wave 3 Ratio runtime and release record](WAVE_3_ARCHITECTURE.md)
 9. [Wave 4 all-World runtime plan and release record](WAVE_4_PLAN.md)
 10. [Wave 5 trustworthy-continuity and curriculum-expansion plan](WAVE_5_PLAN.md)
+11. [Argument & Evidence World implementation packet](ARGUMENT_EVIDENCE_WORLD_SPEC.md)
 
 These files are principal-owned. Workers may cite them and propose changes in their handoff, but must not edit them unless the principal assigns a documentation-only amendment.
