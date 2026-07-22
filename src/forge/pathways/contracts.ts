@@ -42,8 +42,8 @@ export type PathwaySourcePolicy = (typeof PATHWAY_SOURCE_POLICIES)[number];
 const timestampSchema = z.string().datetime({ offset: true });
 const shortTextSchema = z.string().trim().min(1).max(280);
 
-function uniqueArray<T extends z.ZodTypeAny>(item: T, minimum = 0) {
-  return z.array(item).min(minimum).superRefine((values, context) => {
+function uniqueArray<T extends z.ZodTypeAny>(item: T, minimum = 0, maximum = 64) {
+  return z.array(item).min(minimum).max(maximum).superRefine((values, context) => {
     const seen = new Set<unknown>();
     values.forEach((value, index) => {
       if (seen.has(value)) {
@@ -54,15 +54,51 @@ function uniqueArray<T extends z.ZodTypeAny>(item: T, minimum = 0) {
   });
 }
 
+function uniqueObjectArray<T extends z.ZodTypeAny>(
+  item: T,
+  keyFor: (value: z.infer<T>) => string,
+  minimum = 0,
+  maximum = 64,
+) {
+  return z.array(item).min(minimum).max(maximum).superRefine((values, context) => {
+    const seen = new Set<string>();
+    values.forEach((value, index) => {
+      const key = keyFor(value);
+      if (seen.has(key)) {
+        context.addIssue({ code: "custom", message: `Duplicate key: ${key}`, path: [index] });
+      }
+      seen.add(key);
+    });
+  });
+}
+
+const sourcePoliciesByAgeSchema = z.strictObject({
+  "under-13": z.enum(PATHWAY_SOURCE_POLICIES).optional(),
+  "13-17": z.enum(PATHWAY_SOURCE_POLICIES).optional(),
+  "18-plus": z.enum(PATHWAY_SOURCE_POLICIES).optional(),
+});
+
 export const pathwayCapabilitySchema = z.strictObject({
   capabilityId: identifierSchema,
   worldId: identifierSchema,
-  ageModes: uniqueArray(z.enum(LEARNER_AGE_MODES), 1),
+  entitlementAreas: uniqueArray(z.enum(PATHWAY_ENTITLEMENT_AREAS), 1, PATHWAY_ENTITLEMENT_AREAS.length),
+  ageModes: uniqueArray(z.enum(LEARNER_AGE_MODES), 1, LEARNER_AGE_MODES.length),
   evidenceTier: z.enum(EVIDENCE_TIERS),
-  sourcePolicies: uniqueArray(z.enum(PATHWAY_SOURCE_POLICIES), 1),
-  sourceIds: uniqueArray(identifierSchema),
-  evidenceEventTypes: uniqueArray(z.enum(FORGE_EVENT_TYPES), 1),
+  sourcePoliciesByAge: sourcePoliciesByAgeSchema,
+  sourceIds: uniqueArray(identifierSchema, 0, 64),
+  evidenceEventTypes: uniqueArray(z.enum(FORGE_EVENT_TYPES), 1, FORGE_EVENT_TYPES.length),
   guardianManaged: z.boolean(),
+}).superRefine((capability, context) => {
+  for (const ageMode of LEARNER_AGE_MODES) {
+    const hasAgeMode = capability.ageModes.includes(ageMode);
+    const sourcePolicy = capability.sourcePoliciesByAge[ageMode];
+    if (hasAgeMode && !sourcePolicy) {
+      context.addIssue({ code: "custom", message: `Missing source policy for ${ageMode}.`, path: ["sourcePoliciesByAge", ageMode] });
+    }
+    if (!hasAgeMode && sourcePolicy) {
+      context.addIssue({ code: "custom", message: `Source policy exists for unsupported age mode ${ageMode}.`, path: ["sourcePoliciesByAge", ageMode] });
+    }
+  }
 });
 
 export type PathwayCapability = z.infer<typeof pathwayCapabilitySchema>;
@@ -70,7 +106,7 @@ export type PathwayCapability = z.infer<typeof pathwayCapabilitySchema>;
 export const pathwayCapabilityCatalogSchema = z.strictObject({
   schemaVersion: z.literal("1.0"),
   generatedFrom: z.literal("released-world-packs"),
-  capabilities: uniqueArray(pathwayCapabilitySchema, 1),
+  capabilities: uniqueObjectArray(pathwayCapabilitySchema, (capability) => capability.capabilityId, 1, 256),
 });
 
 export type PathwayCapabilityCatalog = z.infer<typeof pathwayCapabilityCatalogSchema>;
@@ -117,9 +153,14 @@ export const pathwayReviewPacketSchema = z.strictObject({
   id: identifierSchema,
   reviewedAt: timestampSchema,
   ageMode: z.enum(LEARNER_AGE_MODES),
-  sourceRefs: uniqueArray(z.enum(PATHWAY_SOURCE_REFS), 1),
-  entitlements: uniqueArray(pathwayEntitlementSchema, 1),
-  evidenceClaims: uniqueArray(pathwayEvidenceClaimSchema),
+  sourceRefs: uniqueArray(z.enum(PATHWAY_SOURCE_REFS), 1, PATHWAY_SOURCE_REFS.length),
+  entitlements: uniqueObjectArray(
+    pathwayEntitlementSchema,
+    (entitlement) => entitlement.area,
+    1,
+    PATHWAY_ENTITLEMENT_AREAS.length,
+  ),
+  evidenceClaims: uniqueObjectArray(pathwayEvidenceClaimSchema, (claim) => claim.id, 0, 64),
   foundations: z.strictObject({
     status: z.enum(["documented-for-review", "not-documented"]),
     benchmarkPlanRef: identifierSchema.optional(),
@@ -136,7 +177,7 @@ export const pathwayReviewPacketSchema = z.strictObject({
     independentReviewPathRef: identifierSchema.optional(),
   }),
   accessibility: z.strictObject({
-    supportedRequirements: uniqueArray(z.enum(PATHWAY_ACCESS_REQUIREMENTS), 1),
+    supportedRequirements: uniqueArray(z.enum(PATHWAY_ACCESS_REQUIREMENTS), 1, PATHWAY_ACCESS_REQUIREMENTS.length),
     assistanceRecordedSeparately: z.boolean(),
     constructChangesDisclosed: z.boolean(),
   }),
@@ -162,7 +203,7 @@ export const pathwayReviewPacketSchema = z.strictObject({
   portability: z.strictObject({
     status: z.enum(["documented-untested", "not-documented"]),
     exportPlanRef: identifierSchema.optional(),
-    transitionOptionRefs: uniqueArray(identifierSchema),
+    transitionOptionRefs: uniqueArray(identifierSchema, 0, 32),
     limitationRef: identifierSchema,
   }),
   coercion: z.strictObject({

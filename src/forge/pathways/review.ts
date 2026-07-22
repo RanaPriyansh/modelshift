@@ -19,6 +19,8 @@ export const PATHWAY_REVIEW_ISSUE_CODES = [
   "breadth.entitlement-duplicate",
   "capability.unknown",
   "capability.binding-mismatch",
+  "capability.entitlement-area-ineligible",
+  "capability.duplicate-reuse",
   "capability.age-mode-ineligible",
   "capability.source-policy-ineligible",
   "foundations.not-documented",
@@ -53,6 +55,7 @@ export const PATHWAY_REVIEW_ISSUE_CODES = [
   "gamification.hidden-signal",
   "evidence.claim-missing",
   "evidence.event-type-ineligible",
+  "evidence.claim-event-mismatch",
   "evidence.source-mismatch",
   "evidence.claim-overreach",
 ] as const;
@@ -122,6 +125,12 @@ function capabilityFor(
 
 const CLAIM_OVERREACH = /\b(master(?:y|ed)?|certif(?:y|ied|ication)|accredit(?:ed|ation)|legal(?:ly)? compliant|safe(?:ty)? proven|guarantee(?:d)?|ready for enrollment)\b/i;
 
+const CLAIM_KIND_EVENT_TYPES = {
+  "participation-recorded": ["world_run.started", "attempt.committed"],
+  "deterministic-result-recorded": ["evidence.recorded", "world_run.completed"],
+  "open-question-recorded": ["evidence.recorded", "world_run.completed"],
+} as const;
+
 function reviewPacket(packet: PathwayReviewPacket, catalog: PathwayCapabilityCatalog): readonly PathwayReviewIssue[] {
   const issues: PathwayReviewIssue[] = [];
 
@@ -138,6 +147,7 @@ function reviewPacket(packet: PathwayReviewPacket, catalog: PathwayCapabilityCat
   }
 
   const publishedCapabilities = new Map<string, PathwayCapability>();
+  const entitlementAreasByCapability = new Map<string, PathwayReviewPacket["entitlements"][number]["area"][]>();
   for (const entitlement of packet.entitlements) {
     if (entitlement.state !== "published-capability") continue;
     const capability = capabilityFor(entitlement, catalog);
@@ -146,14 +156,26 @@ function reviewPacket(packet: PathwayReviewPacket, catalog: PathwayCapabilityCat
       continue;
     }
     publishedCapabilities.set(capability.capabilityId, capability);
+    const assignedAreas = entitlementAreasByCapability.get(capability.capabilityId) ?? [];
+    assignedAreas.push(entitlement.area);
+    entitlementAreasByCapability.set(capability.capabilityId, assignedAreas);
     if (capability.worldId !== entitlement.worldId || capability.evidenceTier !== entitlement.evidenceTier) {
       add(issues, "capability.binding-mismatch", `entitlements.${entitlement.area}`, "World and evidence tier must match the released capability record.");
+    }
+    if (!capability.entitlementAreas.includes(entitlement.area)) {
+      add(issues, "capability.entitlement-area-ineligible", `entitlements.${entitlement.area}.capabilityId`, "The released capability is not reviewed for this entitlement area.");
     }
     if (!capability.ageModes.includes(packet.ageMode)) {
       add(issues, "capability.age-mode-ineligible", `entitlements.${entitlement.area}.capabilityId`, "The released World does not include this learner age mode.");
     }
-    if (!capability.sourcePolicies.includes(entitlement.sourcePolicy)) {
+    if (capability.sourcePoliciesByAge[packet.ageMode] !== entitlement.sourcePolicy) {
       add(issues, "capability.source-policy-ineligible", `entitlements.${entitlement.area}.sourcePolicy`, "Source policy is not permitted by this released World.");
+    }
+  }
+  for (const [capabilityId, areas] of entitlementAreasByCapability) {
+    const capability = publishedCapabilities.get(capabilityId);
+    if (capability && areas.length > 1 && capability.entitlementAreas.length < 2) {
+      add(issues, "capability.duplicate-reuse", "entitlements", "A capability may cover multiple areas only when its catalog record names each reviewed area.");
     }
   }
 
@@ -213,6 +235,9 @@ function reviewPacket(packet: PathwayReviewPacket, catalog: PathwayCapabilityCat
     const capability = publishedCapabilities.get(claim.capabilityId) ?? catalog.capabilities.find((candidate) => candidate.capabilityId === claim.capabilityId);
     if (!capability) continue;
     if (!capability.evidenceEventTypes.includes(claim.eventType)) add(issues, "evidence.event-type-ineligible", `evidenceClaims.${claim.id}.eventType`, "Use only an event type accepted by the released capability contract.");
+    if (!CLAIM_KIND_EVENT_TYPES[claim.claimKind].some((eventType) => eventType === claim.eventType)) {
+      add(issues, "evidence.claim-event-mismatch", `evidenceClaims.${claim.id}.eventType`, "Claim kind and event type must have a compatible bounded meaning.");
+    }
     if (claim.sourceIds.some((sourceId) => !capability.sourceIds.includes(sourceId))) add(issues, "evidence.source-mismatch", `evidenceClaims.${claim.id}.sourceIds`, "Evidence source IDs must come from the released World manifest.");
     if (CLAIM_OVERREACH.test(claim.statement)) add(issues, "evidence.claim-overreach", `evidenceClaims.${claim.id}.statement`, "Event evidence records a bounded observation, not a broad learner or pathway conclusion.");
   }
