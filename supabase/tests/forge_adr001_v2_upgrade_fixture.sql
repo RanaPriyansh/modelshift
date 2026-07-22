@@ -98,6 +98,13 @@ begin
 end;
 $$;
 
+-- Pre-correction v1 delivery history legally allowed arbitrary error text.
+-- The additive migration must retain this row without validating/remediating
+-- it, while making every later row version obey the bounded code contract.
+update forge.event_outbox
+set last_error_code = 'Legacy Invalid Error Text Retained'
+where event_id = '20000000-0000-4000-8000-000000000002';
+
 insert into forge_adr001_v2_upgrade_migration_ledger values (4, '20260722101500_packet_b_authority_correction.sql');
 \ir ../migrations/20260722101500_packet_b_authority_correction.sql
 insert into forge_adr001_v2_upgrade_migration_ledger values (5, '20260722113000_packet_b_retire_private_evidence_consent.sql');
@@ -118,6 +125,38 @@ begin
       and schema_version = 1
   ) then
     raise exception 'ADR-001 v2 upgrade did not preserve version-1 event history';
+  end if;
+  if (select last_error_code from forge.event_outbox
+      where event_id = '20000000-0000-4000-8000-000000000002')
+     is distinct from 'Legacy Invalid Error Text Retained' then
+    raise exception 'ADR-001 v2 upgrade rewrote retained legacy outbox error history';
+  end if;
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'forge.event_outbox'::regclass
+      and conname = 'event_outbox_last_error_code_shape'
+      and contype = 'c'
+      and not convalidated
+  ) then
+    raise exception 'legacy outbox error-code constraint is missing or was incorrectly validated';
+  end if;
+  begin
+    update forge.event_outbox
+    set attempts = attempts + 1,
+        status = 'pending',
+        available_at = available_at + interval '1 minute',
+        claimed_at = now(),
+        published_at = null,
+        updated_at = now()
+    where event_id = '20000000-0000-4000-8000-000000000002';
+    raise exception 'expected retained invalid legacy error code to block any subsequent row update';
+  exception when check_violation then
+    null;
+  end;
+  if (select attempts from forge.event_outbox
+      where event_id = '20000000-0000-4000-8000-000000000002') <> 0 then
+    raise exception 'failed retained-history update changed the legacy outbox row';
   end if;
   if (select array_agg(migration_name order by position) from forge_adr001_v2_upgrade_migration_ledger) is distinct from array[
     '202607220001_forge_learning_os.sql',

@@ -777,6 +777,35 @@ begin
   exception when object_not_in_prerequisite_state then
     null;
   end;
+  begin
+    truncate table forge.adr001_event_outbox;
+    raise exception 'expected ADR-001 outbox TRUNCATE refusal';
+  exception when object_not_in_prerequisite_state then
+    null;
+  end;
+  begin
+    truncate table forge.event_outbox;
+    raise exception 'expected legacy outbox TRUNCATE refusal';
+  exception when object_not_in_prerequisite_state then
+    null;
+  end;
+
+  -- Every named delivery field is a legal pending retry transition, so the
+  -- table-level error-code constraint is the reason this direct update fails.
+  begin
+    update forge.event_outbox
+    set attempts = attempts + 1,
+        status = 'pending',
+        available_at = available_at + interval '1 minute',
+        claimed_at = now(),
+        published_at = null,
+        last_error_code = 'Raw learner prose is not an error code',
+        updated_at = now()
+    where event_id = '31000000-0000-4000-8000-000000000040';
+    raise exception 'expected persisted legacy outbox error-code constraint refusal';
+  exception when check_violation then
+    null;
+  end;
 end;
 $$;
 
@@ -826,11 +855,55 @@ begin
   exception when invalid_parameter_value then
     null;
   end;
+  begin
+    perform forge.mark_event_outbox_delivery(
+      '31000000-0000-4000-8000-000000000040', 'pending', now() + interval '1 minute', 'ab'
+    );
+    raise exception 'expected two-character legacy outbox error-code refusal';
+  exception when invalid_parameter_value then
+    null;
+  end;
+  begin
+    perform forge.mark_event_outbox_delivery(
+      '31000000-0000-4000-8000-000000000040', 'pending', now() + interval '1 minute',
+      'a' || repeat('b', 80)
+    );
+    raise exception 'expected 81-character legacy outbox error-code refusal';
+  exception when invalid_parameter_value then
+    null;
+  end;
+  begin
+    perform forge.mark_event_outbox_delivery(
+      '31000000-0000-4000-8000-000000000040', 'pending', now() + interval '1 minute', 'Delivery.Retry'
+    );
+    raise exception 'expected uppercase legacy outbox error-code refusal';
+  exception when invalid_parameter_value then
+    null;
+  end;
   v_delivery := forge.mark_event_outbox_delivery(
     '31000000-0000-4000-8000-000000000040', 'pending', now() + interval '1 minute', 'delivery.retry'
   );
   if v_delivery ->> 'status' <> 'pending' or (v_delivery ->> 'attempts')::integer <> 1 then
     raise exception 'legacy delivery function did not perform the legal retry transition';
+  end if;
+  v_delivery := forge.mark_event_outbox_delivery(
+    '31000000-0000-4000-8000-000000000040', 'pending', now() + interval '2 minutes', 'a.b'
+  );
+  if (v_delivery ->> 'attempts')::integer <> 2 then
+    raise exception 'legacy delivery function rejected the three-character error-code boundary';
+  end if;
+  v_delivery := forge.mark_event_outbox_delivery(
+    '31000000-0000-4000-8000-000000000040', 'pending', now() + interval '3 minutes',
+    'a' || repeat('b', 79)
+  );
+  if (v_delivery ->> 'attempts')::integer <> 3 then
+    raise exception 'legacy delivery function rejected the 80-character error-code boundary';
+  end if;
+  v_delivery := forge.mark_event_outbox_delivery(
+    '31000000-0000-4000-8000-000000000040', 'pending', now() + interval '4 minutes', null
+  );
+  if (v_delivery ->> 'attempts')::integer <> 4 then
+    raise exception 'legacy delivery function rejected a null error code';
   end if;
 end;
 $$;
