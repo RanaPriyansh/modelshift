@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "packages": [
+    { "id": "world.force-and-motion", "version": "1.0.0", "route": "/learn/force-and-motion" },
+    { "id": "world.source-corroboration", "version": "1.0.0", "route": "/learn/ai-and-learning" },
+    { "id": "world.proportional-reasoning", "version": "1.0.0", "route": "/learn/proportional-reasoning" },
+    { "id": "world.primary-source-reasoning", "version": "1.0.0", "route": "/learn/primary-source-reasoning" }
+  ]
+}

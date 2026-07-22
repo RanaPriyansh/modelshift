@@ -1,5 +1,7 @@
 const RELEASE_SHA_PATTERN = /^[0-9a-f]{40}$/i;
 const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+const DIGEST_PATTERN = /^[0-9a-f]{64}$/i;
+const MIGRATION_IDENTITY_PATTERN = /^(?:not_configured|[A-Za-z0-9._:-]{1,160})$/;
 
 type ReleaseEnvironment = Readonly<Record<string, string | undefined>>;
 
@@ -15,6 +17,15 @@ export type ReleaseHealth = {
   cloud_auth_configured: boolean;
   device_profiles: "device_only" | "device_plus_optional_cloud";
   learner_evidence_sync: "disabled" | "adult_private_only";
+  dependency_lock_digest: string | "unknown";
+  content_package_manifest_digest: string | "unknown";
+  evaluator_baseline_digest: string | "unknown";
+  database_migration_identity: string | "unknown";
+  managed_surface_flags: {
+    lesson_studio: boolean;
+    interpretation: boolean;
+    planner: boolean;
+  };
   managed_provider_flags: {
     openai: boolean;
     anthropic: false;
@@ -32,6 +43,14 @@ function validBuildTime(value: string | undefined): string | "unknown" {
   return value && ISO_TIMESTAMP_PATTERN.test(value) ? value : "unknown";
 }
 
+function validDigest(value: string | undefined): string | "unknown" {
+  return value && DIGEST_PATTERN.test(value) ? value.toLowerCase() : "unknown";
+}
+
+function validMigrationIdentity(value: string | undefined): string | "unknown" {
+  return value && MIGRATION_IDENTITY_PATTERN.test(value) ? value : "unknown";
+}
+
 export function resolveReleaseSha(environment: ReleaseEnvironment = process.env): string | "unknown" {
   return validSha(environment.FORGE_RELEASE_SHA ?? environment.VERCEL_GIT_COMMIT_SHA);
 }
@@ -41,8 +60,15 @@ export function buildReleaseHealth(environment: ReleaseEnvironment = process.env
   const cloudAuthConfigured = cloudAccountsEnabled
     && /^https:\/\//i.test(environment.FORGE_SUPABASE_URL ?? "")
     && Boolean(environment.FORGE_SUPABASE_PUBLISHABLE_KEY);
-  const managedOpenAI = environment.FORGE_LESSON_STUDIO_OPENAI_ENABLED === "true"
-    && Boolean(environment.OPENAI_API_KEY);
+  const hasManagedKey = Boolean(environment.OPENAI_API_KEY);
+  const managedLessonStudio = environment.FORGE_LESSON_STUDIO_OPENAI_ENABLED === "true" && hasManagedKey;
+  const managedInterpretation = environment.OPENAI_INTERPRETATION_ENABLED === "true"
+    && environment.OPENAI_INTERPRETATION_DISABLED !== "true"
+    && hasManagedKey;
+  const managedPlanner = environment.OPENAI_FORGE_PLANNER_ENABLED === "true"
+    && environment.OPENAI_FORGE_PLANNER_DISABLED !== "true"
+    && hasManagedKey;
+  const managedOpenAI = managedLessonStudio || managedInterpretation || managedPlanner;
 
   return {
     schema_version: "1.0",
@@ -56,6 +82,15 @@ export function buildReleaseHealth(environment: ReleaseEnvironment = process.env
     cloud_auth_configured: cloudAuthConfigured,
     device_profiles: cloudAuthConfigured ? "device_plus_optional_cloud" : "device_only",
     learner_evidence_sync: cloudAuthConfigured ? "adult_private_only" : "disabled",
+    dependency_lock_digest: validDigest(environment.FORGE_LOCKFILE_DIGEST),
+    content_package_manifest_digest: validDigest(environment.FORGE_CONTENT_MANIFEST_DIGEST),
+    evaluator_baseline_digest: validDigest(environment.FORGE_EVALUATOR_BASELINE_DIGEST),
+    database_migration_identity: validMigrationIdentity(environment.FORGE_DATABASE_MIGRATION_IDENTITY ?? "not_configured"),
+    managed_surface_flags: {
+      lesson_studio: managedLessonStudio,
+      interpretation: managedInterpretation,
+      planner: managedPlanner,
+    },
     managed_provider_flags: {
       openai: managedOpenAI,
       anthropic: false,

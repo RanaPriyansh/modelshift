@@ -1,23 +1,30 @@
 # Packet D reconciliation against `a98f8bb`
 
-The old release-ops commit was inspected file by file and was not cherry-picked. Each owned path was manually reimplemented on current `origin/main` (`5b0bceb...`) as follows:
+The old release-ops commit was inspected file by file and was not cherry-picked. `5b0bceb72d6768629dddecf07df07e964e9f6674` was this lane's dispatch baseline, not current `origin/main`. The additive correction consumed ADR-006 and the completion matrix from governance base `2789a66b97fc8250d108f3ac8ab0cc56e1c63fc3`; later main deltas are authority/docs-only for this packet. Each owned path was reconciled as follows:
 
 | Old path | Current disposition |
 | --- | --- |
 | `.github/workflows/quality-gates.yml` | Reworked: current cost-controlled env, immutable permissions/actions, complete eval/build/browser/local gates, 14-day sanitized artifacts, no deploy capability. |
-| `.github/workflows/deployment-verification.yml` | Reworked: explicit origin/host/SHA inputs and bounded read-only verifier only; no target mutation or credentials. |
+| `.github/workflows/deployment-verification.yml` | Reworked: checked-in target ID policy, bounded read-only verifier only; no caller-controlled origin, target mutation, or credentials. |
 | `app/api/health/route.ts` | Reworked: expanded allowlisted source/runtime identity and cloud/provider-off contract; no secrets or learner state. |
 | `docs/operations/RELEASE_OPERATIONS_RUNBOOK.md` | Reworked: current program boundaries, privacy contract, four-World verifier, blocked Vercel evidence/remediation, and rollback boundary. |
 | `scripts/ops/deployment-verifier.ts` | Reworked: four Worlds, Studio, login/account profile routes, nonce continuity, exact disabled state, strict target allowlist, bounded GET-only evidence. |
 | `scripts/ops/evaluation-baseline.json` | Reconciled unchanged thresholds to the checked-in 54-fixture corpus; versioned as the current policy artifact. |
 | `scripts/ops/evaluation-report.ts` | Reworked evaluator version/report wording and retained authored IDs/decisions only, with live evaluation explicitly `not_evaluated`. |
 | `scripts/ops/run-local-production-verification.ts` | Reworked local process isolation and safe build-time identity injection; bounded/redacted logs and no external requests. |
+| `scripts/ops/content-package-manifest.json`, `scripts/ops/release-digests.ts` | Added retained-artifact metadata digests; these are not extra ADR-006 tuple fields. |
+| `scripts/ops/playwright-artifact-manifest.ts`, `scripts/ops/run-production-browser-verification.ts` | Added bounded failure-evidence manifest and unique-port `next start` browser runner with cleanup. |
+| `scripts/ops/deployment-target-policy.ts`, `src/operations/release-identity.ts` | Added exact target allowlist and canonical ADR-006 tuple/state validator. |
 | `src/operations/deployment-verifier.test.ts` | Reworked fixtures to assert all four Worlds, Studio, profile, CSP nonce, disabled cloud/provider state, and no secret retention. |
 | `src/operations/evaluation-report.test.ts` | Reconciled baseline count/metric/privacy assertions on current fixtures. |
 | `src/operations/release-health.test.ts` | Reworked for source/runtime identity and explicit provider/cloud state. |
 | `src/operations/release-health.ts` | Reworked from minimal SHA liveness to sanitized release identity contract. |
 
 No old branch, commit, or user work was rewritten or deleted.
+
+## Cherry-pick order and current-main verification
+
+For principal integration, cherry-pick `044efddca7499a98c0bc4bb07b1484efba20f542` first, then the additive follow-up commit recorded in the THREAD_LEDGER handoff. The resulting tree was checked in a disposable worktree rooted at governance `2789a66b97fc8250d108f3ac8ab0cc56e1c63fc3`; no principal-owned program files were changed.
 
 ## Principal-matrix disposition
 
