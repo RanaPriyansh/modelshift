@@ -43,7 +43,7 @@ test.describe("FORGE expanded learning system", () => {
   });
 
   test("loads the historical primary-source instrument with authentic source images", async ({ page }) => {
-    await page.goto("/learn/primary-source-reasoning");
+    await page.goto("/learn/primary-source-reasoning?audience=teen");
 
     await expect(page.getByTestId("stage-mystery")).toBeVisible();
     await expect(page.getByRole("heading", { name: "What can this photograph prove?" })).toBeVisible();
@@ -53,6 +53,18 @@ test.describe("FORGE expanded learning system", () => {
     await expect(sourceImage).toHaveCount(1);
     await expect.poll(() => sourceImage.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
     expect(await page.locator("html").evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+  });
+
+  test("holds child-capable World routes behind a server-rendered age boundary", async ({ page }) => {
+    for (const route of ["/learn/proportional-reasoning", "/learn/primary-source-reasoning"]) {
+      await page.goto(route);
+      await expect(page.getByTestId("world-age-route-gate")).toBeVisible();
+      await expect(page.getByTestId(/(ratio-stage-mystery|stage-mystery)/)).toHaveCount(0);
+
+      await page.goto(`${route}?audience=child_with_grown_up`);
+      await expect(page.getByTestId("world-guardian-route-gate")).toBeVisible();
+      await expect(page.getByTestId(/(ratio-stage-mystery|stage-mystery)/)).toHaveCount(0);
+    }
   });
 
   test("offers four provider adapters without retaining a BYOK credential", async ({ page }) => {

@@ -59,7 +59,7 @@ export default async function AccountPage() {
 
         <dl className="forge-account-contract">
           <div><dt>Device evidence</dt><dd>Browser-local and removable by the learner.</dd></div>
-          <div><dt>Cloud evidence</dt><dd>Off until an explicit private persistence migration is deployed.</dd></div>
+          <div><dt>Cloud evidence</dt><dd>Off. Device-ledger persistence waits for the approved v2 runtime projector and replay fixtures.</dd></div>
           <div><dt>Children</dt><dd>Device-only with a grown-up confirmation; no child account creation.</dd></div>
           <div><dt>Sharing</dt><dd>Off. No guardian, educator, peer, or public evidence access.</dd></div>
         </dl>
