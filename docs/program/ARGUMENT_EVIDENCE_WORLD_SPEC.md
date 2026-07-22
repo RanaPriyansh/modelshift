@@ -1,6 +1,6 @@
 # FORGE Argument & Evidence World — Implementation Packet
 
-**Status:** principal design contract; implementation and release remain pending
+**Status:** principal design contract; package implementation authorized, curriculum/public release remain pending
 
 **Decision date:** 22 July 2026
 
@@ -54,9 +54,13 @@ Given one bounded claim and a small authored set of candidate evidence items, th
 - evaluation of free-form learner prose by a model;
 - diagnosis, ability grouping, readiness, mastery, retention, or delayed transfer.
 
-## 4. Release identity
+## 4. Package identity and release layers
 
-Proposed identities are reserved for the review candidate and become release identities only after registry review:
+The first implementation uses the shared runtime's existing truthful lifecycle: the package may be retained with `release.status: "released"` and `availability: "unavailable"`. In this contract, **package release** means only that exact checked-in bytes, runtime binding, validator, and retained digest have passed local package review. It does not mean curriculum release, public availability, planner eligibility, source publication authority, efficacy, or deployment.
+
+This decision is required because the accepted runtime, compiler, local ledger, and retained-manifest checks admit only released built-in packages. The package must remain non-routable while unavailable. It must be absent from the public home catalog, planner topic index, pathway entitlement, and static route surface until the separately governed curriculum/public-release gate succeeds.
+
+The following identities are reserved for that package artifact:
 
 ```text
 World                 world.argument-evidence
@@ -72,7 +76,7 @@ Support policy        policy.argument-evidence.authored-support.v1
 Return proof policy   policy.argument-evidence.return-proof.unavailable.v1
 ```
 
-The exact validator code is converted to the shared opaque ADR-001 task ID by the accepted W5-B compiler. It must never fall back to the task-family ID.
+The exact validator code is converted to the shared opaque ADR-001 task ID by the accepted W5-B compiler. It must never fall back to the task-family ID. A retained package identity does not authorize a direct learner route.
 
 Initial age/depth claim:
 
@@ -206,21 +210,23 @@ The validator returns only bounded IDs/codes, booleans, and counts. It does not 
 
 ### Cognitive support catalog
 
-Only one action is instructional support:
+Exactly three catalog actions are instructional support, because the shared runtime binds one fixed tier to each unique action ID:
 
 ```text
-action.argument-evidence.support
+action.argument-evidence.support.attention
+action.argument-evidence.support.cue
+action.argument-evidence.support.representation
 ```
 
 It permits authored support only, before proof, under `policy.argument-evidence.authored-support.v1`:
 
-| Level | Tier | Prompt function |
-| --- | --- | --- |
-| 1 | `attention` | “Which card contains the outcome named in the claim?” |
-| 2 | `cue` | point to claim, outcome, and comparison columns |
-| 3 | `representation` | render the same two cards as a claim/evidence/relation table |
+| Level | Tier | Action ID | Prompt function |
+| --- | --- | --- | --- |
+| 1 | `attention` | `action.argument-evidence.support.attention` | “Which card contains the outcome named in the claim?” |
+| 2 | `cue` | `action.argument-evidence.support.cue` | point to claim, outcome, and comparison columns |
+| 3 | `representation` | `action.argument-evidence.support.representation` | render the same two cards as a claim/evidence/relation table |
 
-No example answer, repair that reveals the selection, solution, human support, provider/model call, fallback model payload, or post-withdrawal support is permitted by this release binding. If a later release permits model interpretation, it needs a distinct action/policy version and cannot inherit authority from this authored catalog.
+Each row is authored-only, `governed_support`, `maxUses: 1`, and `answerExposing: false` under the same policy. The runtime may collapse repeated governed-support semantic trace stages while retaining each exact support fact. No example answer, repair that reveals the selection, solution, human support, provider/model call, fallback model payload, or post-withdrawal support is permitted by this package binding. If a later release permits model interpretation, it needs a distinct action/policy version and cannot inherit authority from this authored catalog.
 
 ### Access accommodations
 
@@ -263,7 +269,9 @@ The fictional task fixture is a checked-in authored snapshot. It needs an ADR-00
 
 The IES/What Works Clearinghouse practice guide *Teaching Secondary Students to Write Effectively* is a pedagogy/construct research candidate only. Before it can be bound, FORGE needs an exact reviewed snapshot, locators, claims, rights record, population limitation, and scoped human decisions. Its presence cannot create publication authority or extend the World to populations it did not study.
 
-If that external source is not accepted, the World may remain a local authored review candidate; the implementation must not invent a reviewed binding.
+If that external source is not accepted, the package may remain a local, unavailable authored-fixture artifact; the implementation must not invent a reviewed binding. Its initial runtime provenance is explicitly incomplete and cannot satisfy the curriculum graph's new-publication gate. A later bound source tuple requires the real immutable source package, locators, rights, all seven scoped review decisions, correction/withdrawal replay, and separate publication authority.
+
+The canonical content bytes live only at `public/worlds/argument-evidence/authored-fixture.json`. Domain code parses and projects those bytes; it must not maintain a second hand-copied truth fixture. Exact byte length and digest are tested.
 
 ## 12. File ownership for the implementation task
 

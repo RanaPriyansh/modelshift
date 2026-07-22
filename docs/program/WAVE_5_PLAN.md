@@ -197,7 +197,8 @@ Owned files:
 - `src/worlds/argument-evidence/**`;
 - `src/components/worlds/argument-evidence/**`;
 - one runtime binding and domain validator under established boundaries;
-- exact pack/route/planner/capability additions after package review;
+- exact retained package/runtime/validator additions after package review, initially with `release.status: "released"` and `availability: "unavailable"`;
+- route/planner/pathway/public-catalog additions only in a separate curriculum/public-release commit;
 - focused component, runtime, planner, browser, accessibility, and conformance tests;
 - retained manifest/digest updates only after the package is accepted.
 
@@ -207,7 +208,9 @@ Product constraints:
 - “correct” means only the authored evidence relation on the exact task, not general critical thinking, media literacy, intelligence, or mastery;
 - no model use is required; optional model interpretation may be considered only after the existing bounded boundary passes unchanged;
 - proof permits keyboard, text scaling, forced colors, reduced motion, and equivalent textual/table representations, but no hints, answer-changing, replay, or repeated proof submission;
-- the World may remain a review candidate rather than public availability if source, access, or independent review evidence is incomplete.
+- package release is distinct from curriculum/public release: the first retained package remains unavailable, non-routable, absent from public catalogs/planner/pathways, and cannot establish source publication authority;
+- the World remains outside public availability while source, access, curriculum, or independent review evidence is incomplete;
+- the governed support catalog uses three unique action IDs (`.support.attention`, `.support.cue`, `.support.representation`) because one runtime action ID cannot carry three fixed tiers.
 
 Research grounding candidate:
 
