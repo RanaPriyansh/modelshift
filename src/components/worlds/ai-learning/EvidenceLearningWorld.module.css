@@ -402,6 +402,18 @@
   pointer-events: none;
 }
 
+.forge-evidence-choice input:focus-visible + .forge-evidence-radio,
+.forge-evidence-transfer-question input:focus-visible + .forge-evidence-radio {
+  outline: 3px solid var(--forge-evidence-gold);
+  outline-offset: 4px;
+}
+
+.forge-evidence-choice:has(input:focus-visible),
+.forge-evidence-transfer-question label:has(input:focus-visible) {
+  border-color: var(--forge-evidence-gold);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--forge-evidence-gold) 45%, transparent);
+}
+
 .forge-evidence-choice > .forge-evidence-radio {
   grid-row: 1 / 3;
   align-self: center;
@@ -1377,5 +1389,58 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .forge-evidence-shell {
+    forced-color-adjust: auto;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .forge-evidence-choice,
+  .forge-evidence-transfer-question label {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .forge-evidence-choice-selected,
+  .forge-evidence-transfer-question .forge-evidence-transfer-selected {
+    border-color: Highlight;
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: inset 3px 0 0 Highlight;
+  }
+
+  .forge-evidence-choice input,
+  .forge-evidence-transfer-question input {
+    position: static;
+    grid-row: 1 / 3;
+    align-self: center;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    appearance: auto;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .forge-evidence-choice > .forge-evidence-radio,
+  .forge-evidence-transfer-question .forge-evidence-radio {
+    display: none;
+  }
+
+  .forge-evidence-choice input:focus-visible,
+  .forge-evidence-transfer-question input:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 3px;
+  }
+
+  .forge-evidence-choice:has(input:focus-visible),
+  .forge-evidence-transfer-question label:has(input:focus-visible) {
+    border-color: Highlight;
+    box-shadow: 0 0 0 2px Highlight;
   }
 }

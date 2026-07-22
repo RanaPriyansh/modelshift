@@ -474,6 +474,51 @@ test.describe("FORGE cross-route release contract", () => {
     await expect(page.getByRole("main", { name: "transfer learning stage" })).toBeFocused();
   });
 
+  test("AI World preserves visible radio focus and native state in forced colors", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "Forced-colors focus styling is shared across viewport projects.");
+    await page.emulateMedia({ forcedColors: "active" });
+    await page.goto("/learn/ai-and-learning");
+    expect(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)).toBe(true);
+
+    const stance = page.getByRole("radio", { name: /Agree The claim fits/i });
+    await tabTo(page, stance, 12);
+    await expect(stance).toBeFocused();
+    const renderedFocus = await stance.evaluate((input) => {
+      const control = input as HTMLInputElement;
+      const indicator = control.nextElementSibling as HTMLElement | null;
+      const label = control.closest("label");
+      if (!indicator || !label) throw new Error("The authored radio control is missing its visible shell.");
+      const controlStyle = getComputedStyle(control);
+      const indicatorStyle = getComputedStyle(indicator);
+      const labelStyle = getComputedStyle(label);
+      return {
+        appearance: controlStyle.appearance,
+        indicatorDisplay: indicatorStyle.display,
+        labelBorderStyle: labelStyle.borderTopStyle,
+        labelBorderWidth: Number.parseFloat(labelStyle.borderTopWidth),
+        opacity: controlStyle.opacity,
+        outlineStyle: controlStyle.outlineStyle,
+        outlineWidth: Number.parseFloat(controlStyle.outlineWidth),
+        pointerEvents: controlStyle.pointerEvents,
+        position: controlStyle.position,
+      };
+    });
+    expect(renderedFocus).toMatchObject({
+      indicatorDisplay: "none",
+      labelBorderStyle: "solid",
+      opacity: "1",
+      outlineStyle: "solid",
+      pointerEvents: "auto",
+      position: "static",
+    });
+    expect(renderedFocus.appearance).not.toBe("none");
+    expect(renderedFocus.labelBorderWidth).toBeGreaterThanOrEqual(1);
+    expect(renderedFocus.outlineWidth).toBeGreaterThanOrEqual(3);
+
+    await stance.press("Space");
+    await expect(stance).toBeChecked();
+  });
+
   test("force world removes assistance and accepts only one proof submission", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "The full force journey already receives cross-viewport smoke coverage.");
     const failures = capturePageFailures(page);
