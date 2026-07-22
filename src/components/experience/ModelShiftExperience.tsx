@@ -21,6 +21,8 @@ import {
   type ForceAndMotionRuntimeProof,
   type WorldRuntimeSession,
 } from "@/src/forge/world-runtime";
+import { interpretationApiResponseSchema } from "@/src/lib/ai/schema";
+import { validateInterpretation } from "@/src/lib/ai/validation";
 import { recordWorldProof, type RecordWorldProofInput } from "@/src/lib/forge-evidence";
 import type {
   FallbackReason,
@@ -51,27 +53,39 @@ const VISIBLE_STEPS = ["PREDICT", "EXPLAIN", "INTERPRET", "EXPERIMENT", "RECONST
 const FALLBACK_COPY = "There are a few ways to read that explanation, so we'll run the baseline test.";
 const INTERPRETATION_CLIENT_TIMEOUT_MS = 7_000;
 
-function fallbackInterpretation(reason: FallbackReason): ValidatedInterpretation {
+type ClientInterpretationValidation =
+  | { readonly ok: true; readonly value: ValidatedInterpretation }
+  | { readonly ok: false; readonly reason: FallbackReason };
+
+function validateApiInterpretation(candidate: unknown, explanation: string): ClientInterpretationValidation {
+  const parsed = interpretationApiResponseSchema.safeParse(candidate);
+  if (!parsed.success) {
+    const enumProblem = parsed.error.issues.some((issue) => issue.code === "invalid_value");
+    return { ok: false, reason: enumProblem ? "invalid_enum" : "malformed_output" };
+  }
+  if (parsed.data.source === "fallback") {
+    return { ok: false, reason: parsed.data.fallback_reason };
+  }
+
+  const value = parsed.data;
+  const validated = validateInterpretation({
+    schema_version: value.schema_version,
+    hypotheses: value.hypotheses,
+    missing_distinctions: value.missing_distinctions,
+    recommended_probe_id: value.recommended_probe_id,
+    recommended_level_1_question_id: value.recommended_level_1_question_id,
+    abstain: value.abstain,
+    abstain_reason: value.abstain_reason,
+  }, explanation);
+  if (!validated.ok) return validated;
   return {
-    schema_version: "1.0",
-    hypotheses: [
-      {
-        id: "mixed_or_unclear",
-        support: "low",
-        evidence_spans: [],
-        rationale: "The explanation does not support a single safe interpretation.",
-      },
-    ],
-    missing_distinctions: ["zero_net_force_means_zero_acceleration", "existing_velocity_can_persist"],
-    recommended_probe_id: "neutral_core_probe",
-    recommended_level_1_question_id: "neutral_observation_prompt",
-    abstain: true,
-    abstain_reason: "model_uncertain",
-    source: "fallback",
-    fallback_reason: reason,
-    providerId: null,
-    modelId: null,
-    policyId: "policy.force-and-motion.interpretation.v1",
+    ok: true,
+    value: {
+      ...validated.value,
+      providerId: value.providerId,
+      modelId: value.modelId,
+      policyId: value.policyId,
+    },
   };
 }
 
@@ -446,9 +460,11 @@ export interface ModelShiftExperienceProps {
 export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceProps) {
   const rawInstanceId = useId();
   const instanceId = rawInstanceId.replaceAll(":", "");
-  const mainId = "main-content";
+  const mainId = `force-motion-main-${instanceId}`;
   const mainRef = useRef<HTMLElement>(null);
   const hasOpenedInitialStage = useRef(false);
+  const interpretationRequestEpochRef = useRef(0);
+  const interpretationControllerRef = useRef<AbortController | null>(null);
   const [runtime, setRuntime] = useState(createStartedRuntimeSession);
   const runtimeRef = useRef(runtime);
   const learningState = runtime.state;
@@ -481,6 +497,12 @@ export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceP
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
     mainRef.current?.focus({ preventScroll: true });
   }, [stage]);
+
+  useEffect(() => () => {
+    interpretationRequestEpochRef.current += 1;
+    interpretationControllerRef.current?.abort();
+    interpretationControllerRef.current = null;
+  }, []);
 
   useEffect(() => {
     const receipt = runtime.receipt;
@@ -516,14 +538,22 @@ export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceP
     });
     if (!committed.accepted) return;
     if (explicitUncertainty) {
-      send({ type: "RESOLVE_INTERPRETATION", interpretation: fallbackInterpretation("ambiguous_input") });
+      send({ type: "INTERPRETATION_FAILED", reason: "ambiguous_input" });
       return;
     }
     if (runtimeRef.current.phase !== "learning" || runtimeRef.current.state.stage !== "INTERPRET") return;
-    setInterpreting(true);
+    const requestEpoch = interpretationRequestEpochRef.current + 1;
+    interpretationRequestEpochRef.current = requestEpoch;
+    interpretationControllerRef.current?.abort();
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), INTERPRETATION_CLIENT_TIMEOUT_MS);
-    let nextInterpretation: ValidatedInterpretation;
+    interpretationControllerRef.current = controller;
+    setInterpreting(true);
+    let timedOut = false;
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, INTERPRETATION_CLIENT_TIMEOUT_MS);
+    let validation: ClientInterpretationValidation = { ok: false, reason: "api_error" };
     try {
       const response = await fetch("/api/interpret", {
         method: "POST",
@@ -531,22 +561,38 @@ export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceP
         signal: controller.signal,
         body: JSON.stringify({ scenario_id: MYSTERY.id, prediction_id: prediction, confidence, explanation: nextExplanation, stage: "INTERPRET" }),
       });
-      if (!response.ok) throw new Error("interpretation unavailable");
-      nextInterpretation = (await response.json()) as ValidatedInterpretation;
+      if (!response.ok) {
+        validation = { ok: false, reason: "api_error" };
+      } else {
+        try {
+          validation = validateApiInterpretation(await response.json(), nextExplanation);
+        } catch {
+          validation = { ok: false, reason: "malformed_output" };
+        }
+      }
     } catch (error) {
-      const reason = typeof error === "object" && error !== null && "name" in error && error.name === "AbortError" ? "timeout" : "api_error";
-      nextInterpretation = fallbackInterpretation(reason);
+      if (interpretationRequestEpochRef.current !== requestEpoch) return;
+      const aborted = typeof error === "object" && error !== null && "name" in error && error.name === "AbortError";
+      validation = { ok: false, reason: timedOut || aborted ? "timeout" : "api_error" };
     } finally {
       window.clearTimeout(timeout);
-      setInterpreting(false);
+      if (interpretationControllerRef.current === controller) interpretationControllerRef.current = null;
+      if (interpretationRequestEpochRef.current === requestEpoch) setInterpreting(false);
     }
+    if (interpretationRequestEpochRef.current !== requestEpoch) return;
     if (runtimeRef.current.phase !== "learning" || runtimeRef.current.state.stage !== "INTERPRET") return;
-    // The runtime owns the accepted transition. A rejected provider payload
-    // leaves the session unchanged rather than widening the model boundary.
-    send({ type: "RESOLVE_INTERPRETATION", interpretation: nextInterpretation });
+    if (!validation.ok) {
+      send({ type: "INTERPRETATION_FAILED", reason: validation.reason });
+      return;
+    }
+    const resolved = send({ type: "RESOLVE_INTERPRETATION", interpretation: validation.value });
+    if (!resolved.accepted) send({ type: "INTERPRETATION_FAILED", reason: "malformed_output" });
   }
 
   function resetSession() {
+    interpretationRequestEpochRef.current += 1;
+    interpretationControllerRef.current?.abort();
+    interpretationControllerRef.current = null;
     const reset = send({ type: "RESET" });
     if (reset.accepted) send({ type: "START" });
     setPrediction(null); setConfidence(70); setExplanation(""); setInterpreting(false);
