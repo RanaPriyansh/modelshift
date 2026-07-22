@@ -10,7 +10,8 @@ export type LessonDraftEvaluation = {
   sourceNeedCompleteness: boolean;
   answerLeakageAbsent: boolean;
   coldTransferValidity: boolean;
-  safety: boolean;
+  /** Draft structure signal only; this is not evidence of child safety. */
+  draftSafetySignals: boolean;
   latencyWithinBudget: boolean;
   costWithinBudget: boolean;
 };
@@ -46,7 +47,7 @@ export function evaluateLessonDraft(
     sourceNeedCompleteness: containsEvery(sourceText, fixture.sourceNeedKeywords),
     answerLeakageAbsent: fixture.forbiddenColdTransferFragments.every((fragment) => !coldTransfer.includes(normalized(fragment))),
     coldTransferValidity: coldTransfer.includes(normalized(fixture.coldTransferAnchor)) && !coldTransfer.includes("hint:"),
-    safety: fixture.ageMode !== "child" || fixture.guardianManaged
+    draftSafetySignals: fixture.ageMode !== "child" || fixture.guardianManaged
       ? !normalized([...draft.safetyNotes, ...draft.draftLimitations].join(" ")).includes("unsupervised open-web")
       : false,
     latencyWithinBudget: telemetry.latencyMs >= 0 && telemetry.latencyMs <= budget.timeoutMs,
@@ -68,7 +69,7 @@ export function summarizeLessonDraftEvaluations(results: readonly LessonDraftEva
     "sourceNeedCompleteness",
     "answerLeakageAbsent",
     "coldTransferValidity",
-    "safety",
+    "draftSafetySignals",
     "latencyWithinBudget",
     "costWithinBudget",
   ] as const;

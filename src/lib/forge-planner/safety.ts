@@ -10,6 +10,15 @@ const UNSAFE_PATTERNS = [
   /\b(explicit sexual content|sexualize)\b.{0,40}\b(child|minor|underage)\b/i,
 ] as const;
 
+// This is a deliberately narrow server-side tripwire, not a claim that text
+// scanning can establish privacy. It keeps obvious personal identifiers out of
+// the forwarded authoring fields while the public connector remains disabled.
+const PRIVATE_DATA_PATTERNS = [
+  /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i,
+  /\b(?:\+?\d{1,3}[ .-]?)?(?:\(?\d{3}\)?[ .-]?)\d{3}[ .-]\d{4}\b/,
+  /\b\d{3}-\d{2}-\d{4}\b/,
+] as const;
+
 export function containsAdversarialText(text: string): boolean {
   return ADVERSARIAL_PATTERN.test(text);
 }
@@ -20,6 +29,10 @@ export function isAdversarialPlannerInput(input: ForgePlanRequest): boolean {
 
 export function isRestrictedTopic(question: string): boolean {
   return UNSAFE_PATTERNS.some((pattern) => pattern.test(question));
+}
+
+export function containsPrivateData(text: string): boolean {
+  return PRIVATE_DATA_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 export function policyRefusal(input: ForgePlanRequest): RefusalReason | null {
