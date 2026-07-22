@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { allowCloudCredentialAttempt } from "@/src/lib/forge-auth/abuse-controls.server";
 import { createForgeSupabaseServerClient } from "@/src/lib/forge-auth/supabase.server";
 
 const credentialsSchema = z.strictObject({
@@ -21,32 +22,47 @@ function readCredentials(formData: FormData) {
 export async function signIn(formData: FormData) {
   const parsed = readCredentials(formData);
   if (!parsed.success) redirect("/login?status=invalid-fields");
+  if (!allowCloudCredentialAttempt(parsed.data.email)) redirect("/login?status=try-again-later");
 
   const supabase = await createForgeSupabaseServerClient();
   if (!supabase) redirect("/login?status=cloud-not-configured");
 
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) redirect("/login?status=sign-in-failed");
+  const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
+  if (error || !data.user) redirect("/login?status=sign-in-failed");
+
+  // Age mode is a server-owned profile property. A browser checkbox, Auth
+  // metadata, or session claim can never qualify a person for cloud access.
+  const { data: learnerProfile, error: profileError } = await supabase
+    .schema("forge")
+    .from("learner_profiles")
+    .select("age_band, onboarding_status")
+    .eq("user_id", data.user.id)
+    .maybeSingle();
+  if (profileError || learnerProfile?.age_band !== "adult" || learnerProfile.onboarding_status !== "active") {
+    await supabase.auth.signOut();
+    redirect("/login?status=adult-account-required");
+  }
+  const { data: accountProfile, error: accountError } = await supabase
+    .schema("forge")
+    .from("profiles")
+    .select("account_status")
+    .eq("user_id", data.user.id)
+    .maybeSingle();
+  if (accountError || accountProfile?.account_status !== "active") {
+    await supabase.auth.signOut();
+    redirect("/login?status=adult-account-required");
+  }
 
   revalidatePath("/", "layout");
   redirect("/account");
 }
 
 export async function signUpAdult(formData: FormData) {
-  const parsed = readCredentials(formData);
-  const adultConfirmation = formData.get("adult-confirmation");
-  if (!parsed.success || adultConfirmation !== "confirmed") redirect("/login?status=adult-required");
-
-  const supabase = await createForgeSupabaseServerClient();
-  if (!supabase) redirect("/login?status=cloud-not-configured");
-
-  // The checkbox is a release-entry self-attestation, not an authorization
-  // role. No user-editable metadata is trusted for adult or guardian access.
-  const { data, error } = await supabase.auth.signUp(parsed.data);
-  if (error) redirect("/login?status=sign-up-failed");
-
-  revalidatePath("/", "layout");
-  redirect(data?.session ? "/account" : "/login?status=check-email");
+  void formData;
+  // There is intentionally no self-service account creation in this packet.
+  // Until a separately reviewed server-owned adult enrollment gate exists,
+  // accepting an age checkbox would let a minor obtain cloud identity.
+  redirect("/login?status=adult-enrollment-unavailable");
 }
 
 export async function signOut() {

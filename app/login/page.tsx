@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 import "../account.css";
 
-import { signIn, signUpAdult } from "@/app/account/actions";
+import { signIn } from "@/app/account/actions";
 import { DeviceProfileAccess } from "@/src/components/forge/DeviceProfileAccess";
 import { ForgeShell } from "@/src/components/forge/ForgeShell";
 import { isForgeCloudAuthConfigured } from "@/src/lib/forge-auth/config";
@@ -17,7 +17,9 @@ export const metadata: Metadata = {
 
 const STATUS_MESSAGES: Readonly<Record<string, string>> = {
   "invalid-fields": "Use a valid email and a password of at least 10 characters.",
-  "adult-required": "Cloud accounts are currently limited to adults who confirm they are signing up for themselves.",
+  "adult-account-required": "This deployment permits only active adult accounts provisioned through a separate reviewed gate. Device-only learning remains available.",
+  "adult-enrollment-unavailable": "Self-service cloud enrollment is unavailable. An age checkbox cannot create a cloud account.",
+  "try-again-later": "Too many credential attempts. Wait before trying again, or continue with private device access.",
   "sign-in-failed": "That sign-in did not work. Check the details or use private device access.",
   "sign-up-failed": "The account could not be created. No learner evidence was uploaded.",
   "check-email": "Check your email to confirm the account, then return here to sign in.",
@@ -58,7 +60,7 @@ export default async function LoginPage({
             {configured ? (
               <>
                 <p>
-                  Account creation is an adult-only release entry point. The checkbox is self-attestation, not verified age or an authorization role; learner evidence is not uploaded by this form.
+                  Only existing, active adult accounts provisioned through a separate reviewed server-owned gate may sign in. This page never creates an account or uploads learner evidence.
                 </p>
                 <form className="forge-cloud-form">
                   <label htmlFor="account-email">Email</label>
@@ -73,13 +75,8 @@ export default async function LoginPage({
                     minLength={10}
                     maxLength={128}
                   />
-                  <label className="forge-account-confirmation">
-                    <input name="adult-confirmation" type="checkbox" value="confirmed" />
-                    <span>I am 18 or older and creating this account for myself.</span>
-                  </label>
                   <div className="forge-account-actions">
                     <button className="forge-account-primary" formAction={signIn}>Sign in</button>
-                    <button formAction={signUpAdult}>Create adult account</button>
                   </div>
                 </form>
               </>

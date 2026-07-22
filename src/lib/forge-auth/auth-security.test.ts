@@ -16,6 +16,8 @@ function configureCloudAuth(key = "sb_publishable_test_key_1234567890") {
   vi.stubEnv("FORGE_CLOUD_ACCOUNTS_ENABLED", "true");
   vi.stubEnv("FORGE_SUPABASE_URL", "https://forge-test.supabase.co");
   vi.stubEnv("FORGE_SUPABASE_PUBLISHABLE_KEY", key);
+  vi.stubEnv("FORGE_CLOUD_AUTH_ABUSE_CONTROLS", "reviewed");
+  vi.stubEnv("FORGE_CLOUD_AUTH_LIVE_INTEGRATION", "two_account_isolation_verified");
 }
 
 afterEach(() => {
@@ -24,6 +26,16 @@ afterEach(() => {
 });
 
 describe("FORGE auth security boundary", () => {
+  it("fails closed until the production abuse and live-isolation gates are recorded", () => {
+    configureCloudAuth();
+    vi.stubEnv("FORGE_CLOUD_AUTH_ABUSE_CONTROLS", "");
+    expect(readForgeCloudAuthConfig()).toBeNull();
+
+    configureCloudAuth();
+    vi.stubEnv("FORGE_CLOUD_AUTH_LIVE_INTEGRATION", "not-a-live-test");
+    expect(readForgeCloudAuthConfig()).toBeNull();
+  });
+
   it("rejects secret and service-role keys from the public client configuration", () => {
     configureCloudAuth("sb_secret_test_key_123456789012345");
     expect(readForgeCloudAuthConfig()).toBeNull();
