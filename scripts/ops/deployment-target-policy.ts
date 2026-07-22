@@ -1,8 +1,8 @@
 /** Checked-in, principal-reviewable deployment origins. Dispatch callers choose an ID, never a URL. */
 export const DEPLOYMENT_TARGETS = {
   forge_learning_os_project: {
-    origin: "https://forge-learning-os-ranapriyanshs-projects.vercel.app",
-    hostname: "forge-learning-os-ranapriyanshs-projects.vercel.app",
+    origin: "https://modelshift.vercel.app",
+    hostname: "modelshift.vercel.app",
   },
 } as const;
 
