@@ -168,6 +168,8 @@
 .forge-ratio-stage-step[data-state="complete"]::before { background: var(--forge-ratio-cyan); }
 
 .forge-ratio-main { min-height: calc(100vh - 170px); }
+.forge-ratio-main:focus-visible { outline: 3px solid var(--forge-ratio-amber); outline-offset: 4px; }
+.forge-ratio-stage-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .forge-ratio-stage {
   width: min(1180px, calc(100% - 48px));
@@ -311,6 +313,7 @@
 }
 
 .forge-ratio-choice input { position: absolute; opacity: 0; pointer-events: none; }
+.forge-ratio-choice:focus-within { outline: 3px solid var(--forge-ratio-amber); outline-offset: 3px; }
 .forge-ratio-choice-control { width: 20px; height: 20px; border: 2px solid var(--forge-ratio-line-strong); border-radius: 50%; box-shadow: inset 0 0 0 4px var(--forge-ratio-surface); }
 .forge-ratio-choice-selected { border-color: var(--forge-ratio-amber); background: var(--forge-ratio-amber-soft); }
 .forge-ratio-choice-selected .forge-ratio-choice-control { border-color: var(--forge-ratio-amber); background: var(--forge-ratio-amber); }
@@ -434,6 +437,7 @@
 .forge-ratio-transfer-choices label { min-height: 65px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--forge-ratio-line); border-radius: 10px; background: var(--forge-ratio-surface); padding: 13px; cursor: pointer; }
 .forge-ratio-transfer-choices label[data-selected="true"] { border-color: var(--forge-ratio-amber); background: var(--forge-ratio-amber-soft); }
 .forge-ratio-transfer-choices input { position: absolute; opacity: 0; pointer-events: none; }
+.forge-ratio-transfer-choices label:focus-within { outline: 3px solid var(--forge-ratio-amber); outline-offset: 3px; }
 .forge-ratio-transfer-choices label > span { width: 19px; height: 19px; border: 2px solid var(--forge-ratio-line-strong); border-radius: 50%; box-shadow: inset 0 0 0 4px var(--forge-ratio-surface); }
 .forge-ratio-transfer-choices label[data-selected="true"] > span { border-color: var(--forge-ratio-amber); background: var(--forge-ratio-amber); }
 .forge-ratio-proof-submit { margin-top: 18px; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end; }

@@ -3,7 +3,9 @@ import { PROPORTIONAL_REASONING_CONTENT } from "./content";
 import type {
   ExperimentView,
   InitialPredictionId,
+  RatioMechanismSignal,
   RatioProof,
+  SeparatingTestPredictionId,
   TransferChoiceId,
 } from "./model";
 
@@ -16,10 +18,11 @@ const INITIAL_PREDICTION_IDS = new Set<InitialPredictionId>([
 const EXPERIMENT_VIEWS = new Set<ExperimentView>(["parts", "common_water", "table"]);
 
 const TRANSFER_CHOICE_IDS = new Set<TransferChoiceId>(["18_km", "24_km", "32_km", "96_km"]);
+const SEPARATING_TEST_PREDICTION_IDS = new Set<SeparatingTestPredictionId>(["same_strength", "jug_b_stronger"]);
 
 const SCALE_FACTOR_PATTERN = /(?:\b4\s*(?:times|x|×)\b|four\s+times|times\s+four|multipl(?:y|ied|ication)|scal(?:e|ed|ing)|3\s*(?:to|→|->)\s*12)/i;
 const RELATIONSHIP_PATTERN = /ratio|proportion|relationship|for\s+each|per\b|same\s+(?:rate|scale)/i;
-const CALCULATION_PATTERN = /(?:12\s*(?:÷|\/|divided by)\s*3|8\s*(?:×|x|\*)\s*4|\b32\b)/i;
+const CALCULATION_PATTERN = /(?:12\s*(?:÷|\/|divided by)\s*3|8\s*(?:×|x|\*)\s*4)/i;
 
 export function isInitialPredictionId(value: string): value is InitialPredictionId {
   return INITIAL_PREDICTION_IDS.has(value as InitialPredictionId);
@@ -27,6 +30,10 @@ export function isInitialPredictionId(value: string): value is InitialPrediction
 
 export function isExperimentView(value: string): value is ExperimentView {
   return EXPERIMENT_VIEWS.has(value as ExperimentView);
+}
+
+export function isSeparatingTestPredictionId(value: string): value is SeparatingTestPredictionId {
+  return SEPARATING_TEST_PREDICTION_IDS.has(value as SeparatingTestPredictionId);
 }
 
 export function isTransferChoiceId(value: string): value is TransferChoiceId {
@@ -95,4 +102,18 @@ export function evaluateTransfer(
     mechanismSignals: Object.freeze(mechanismSignals),
     submittedWithoutSupport: true,
   });
+}
+
+/**
+ * Exact arithmetic alone is not the proof claim. A learner must also name a
+ * relationship-bearing mechanism; a bare calculation remains useful criteria
+ * detail but cannot promote the attempt to demonstrated/`proved`.
+ */
+export function isIndependentProportionalTransferDemonstrated(input: {
+  readonly answerCorrect: boolean;
+  readonly mechanismSignals: readonly RatioMechanismSignal[];
+}): boolean {
+  return input.answerCorrect && input.mechanismSignals.some(
+    (signal) => signal === "scale_factor" || signal === "same_relationship",
+  );
 }
