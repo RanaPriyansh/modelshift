@@ -101,16 +101,17 @@ describe("PrimarySourceReasoningWorld", () => {
     expect(screen.getByText(/does not claim mastery or delayed retention/i)).toBeInTheDocument();
     expect(screen.getByText(/Whether the learner can corroborate conflicting sources/)).toBeInTheDocument();
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
-    expect(onRuntimeReceipt.mock.calls[0]?.[0].receipt).toMatchObject({
+    expect(onRuntimeReceipt.mock.calls[0]?.[0]).toMatchObject({
       kind: "forge.runtime.bounded-local-attempt",
       authority: { proofAuthority: "honour_based", persistence: "not_persisted", isDurable: false },
       validator: { outcome: "pass", disposition: "demonstrated" },
       sourceProvenanceStatus: "incomplete",
     });
-    expect(JSON.stringify(onRuntimeReceipt.mock.calls[0]?.[0].receipt)).not.toContain(
+    expect(onRuntimeReceipt.mock.calls[0]?.[0]).not.toHaveProperty("validatorInput");
+    expect(JSON.stringify(onRuntimeReceipt.mock.calls[0]?.[0])).not.toContain(
       "The visible scene, the source record",
     );
-    expect(JSON.stringify(onRuntimeReceipt.mock.calls[0]?.[0].receipt)).not.toContain("independentTransfer");
+    expect(JSON.stringify(onRuntimeReceipt.mock.calls[0]?.[0])).not.toContain("independentTransfer");
   });
 
   it("keeps classification feedback bounded and permits a retry before proof", () => {

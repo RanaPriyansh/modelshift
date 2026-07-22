@@ -1,11 +1,6 @@
-import {
-  getCanonicalDeterministicValidatorRegistration,
-  validateCanonicalDeterministicResult,
-} from "../../forge/deterministic-validators";
+import { getCanonicalDeterministicValidatorRegistration } from "../../forge/deterministic-validators";
 import type { WorldRuntimeBinding } from "../../forge/contracts";
 import {
-  deriveCanonicalValidatorOutcome,
-  deriveDefaultEvidenceDisposition,
   isBoundedLocalWorldRuntimeReceipt,
   type BoundedLocalWorldRuntimeReceipt,
   type CanonicalSupportEvent,
@@ -13,6 +8,7 @@ import {
   WORLD_RUNTIME_PROTOCOL_VERSION,
   WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION,
 } from "../../forge/world-runtime/protocol";
+import { verifyPublicWorldRuntimeReceiptAttestation } from "../../forge/world-runtime/runtime-core.public";
 import { PUBLIC_WORLD_PACKS } from "../../forge/worlds";
 import { retainedRuntimeIdentityFor } from "../../forge/world-runtime/retained-runtime-binding";
 import { createLocalStorageEvidenceLedgerAdapter } from "./local-storage";
@@ -31,15 +27,6 @@ export type RecordWorldRuntimeReceiptResult =
       reason: "invalid_runtime_receipt";
       readStatus: EvidenceLedgerReadStatus;
     };
-
-/**
- * Transient call envelope. Validator input is used only for canonical
- * revalidation at the local-ledger boundary and is never persisted.
- */
-export interface WorldRuntimeReceiptRecording {
-  readonly receipt: BoundedLocalWorldRuntimeReceipt;
-  readonly validatorInput: unknown;
-}
 
 function boundedOutcome(receipt: BoundedLocalWorldRuntimeReceipt): "proved" | "not_proved" | "open_question" {
   if (receipt.cognitiveSupport.some((support) =>
@@ -197,35 +184,18 @@ function hasReleasedBuiltInRuntimeIdentity(receipt: BoundedLocalWorldRuntimeRece
     receipt.cognitiveSupport.every(supportMatchesCatalog);
 }
 
-function hasExactCanonicalValidatorResult(
-  receipt: BoundedLocalWorldRuntimeReceipt,
-  validatorInput: unknown,
-): boolean {
-  const registration = getCanonicalDeterministicValidatorRegistration(receipt.validator.id);
-  if (!registration) return false;
-  const validation = validateCanonicalDeterministicResult(registration.validator, validatorInput);
-  if (!validation || validation.inputStatus !== "valid") return false;
-  const outcome = deriveCanonicalValidatorOutcome(validation);
-  return receipt.validator.version === registration.outputContractVersion
-    && receipt.validator.code === validation.code
-    && receipt.validator.outcome === outcome
-    && receipt.validator.disposition === deriveDefaultEvidenceDisposition(outcome)
-    && sameStrings(receipt.validator.criteria, validation.evidence);
-}
-
 /**
- * The compatibility ledger sees exactly one bounded runtime receipt. It has
- * no access to a reducer state, raw response, return schedule, or adapter
+ * The compatibility ledger accepts only the exact deeply frozen object emitted
+ * and privately attested by the public runtime core. It has no access to
+ * validator input, reducer state, raw response, return schedule, or an adapter
  * chosen score. `attemptId` makes duplicate rerenders deterministically reject
- * within the same local ledger at the existing duplicate-ID boundary; it is
- * not cross-tab transactionality or durable idempotency.
+ * within the same local ledger; it is not durable idempotency.
  */
-export function recordWorldRuntimeReceipt(recording: WorldRuntimeReceiptRecording): RecordWorldRuntimeReceiptResult {
+export function recordWorldRuntimeReceipt(receipt: BoundedLocalWorldRuntimeReceipt): RecordWorldRuntimeReceiptResult {
   const store = createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter());
-  const receipt = recording?.receipt;
   if (!isBoundedLocalWorldRuntimeReceipt(receipt)
     || !hasReleasedBuiltInRuntimeIdentity(receipt)
-    || !hasExactCanonicalValidatorResult(receipt, recording.validatorInput)) {
+    || !verifyPublicWorldRuntimeReceiptAttestation(receipt)) {
     const current = store.read();
     return {
       ok: false,

@@ -42,7 +42,6 @@ import {
   primarySourceWorldRuntimeAdapter,
   type BoundedLocalWorldRuntimeReceipt,
 } from "../../../forge/world-runtime";
-import type { WorldRuntimeReceiptRecording } from "../../../lib/forge-evidence";
 import styles from "./PrimarySourceReasoningWorld.module.css";
 
 const STAGES: ReadonlyArray<{
@@ -988,7 +987,7 @@ function ResultStage({
 export function PrimarySourceReasoningWorld({
   onRuntimeReceipt,
 }: {
-  onRuntimeReceipt?: (recording: WorldRuntimeReceiptRecording) => void;
+  onRuntimeReceipt?: (receipt: BoundedLocalWorldRuntimeReceipt) => void;
 }) {
   const instanceId = useId();
   const mainRef = useRef<HTMLElement>(null);
@@ -1032,14 +1031,11 @@ export function PrimarySourceReasoningWorld({
   }, [state.stage]);
 
   useEffect(() => {
-    if (runtime.receipt && runtime.proof && emittedReceiptRef.current !== runtime.receipt) {
+    if (runtime.receipt && emittedReceiptRef.current !== runtime.receipt) {
       emittedReceiptRef.current = runtime.receipt;
-      onRuntimeReceipt?.({
-        receipt: runtime.receipt,
-        validatorInput: primarySourceWorldRuntimeAdapter.validatorInput(runtime.proof),
-      });
+      onRuntimeReceipt?.(runtime.receipt);
     }
-  }, [onRuntimeReceipt, runtime.proof, runtime.receipt]);
+  }, [onRuntimeReceipt, runtime.receipt]);
 
   function resetWorld() {
     send({ type: "RESET" });
