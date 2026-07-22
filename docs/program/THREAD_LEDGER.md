@@ -6,14 +6,14 @@ Workers implement bounded slices in isolated worktrees. They do not edit the pri
 
 ## Active lane map
 
-| Lane | Thread | Default model | Existing handoff | Next goal |
-| --- | --- | --- | --- | --- |
-| Experience and design system | `019f8705-865e-7631-a921-ee4b5690b778` | `gpt-5.6-terra` xhigh | `e73dc9d` on old `af5f3ca` base | Create a new branch from current main; selectively port tokens/primitives; unify shell and state/access behavior |
-| Trust, auth, and private evidence | `019f8705-2825-7cb2-94e1-b30d5aab1447` | `gpt-5.6-terra` xhigh | `24edb6f` on old base | Reconcile with current hardened SSR auth/event spine; stage adult sync and abuse-controlled integration only |
-| Homeschool pathways and entitlement | `019f8704-dc1c-7381-b71b-c0303987251a` | `gpt-5.6-terra` xhigh | `dd6fe0e` on old base | Port pure pathway contracts to current main; connect to capability registry; no certification/UI claims |
-| Release, evaluation, observability | `019f8705-4855-7522-9140-8d45cd93ae60` | `gpt-5.6-luna` high | `a98f8bb` on old base | Reconcile CI/reports/health against current main; diagnose blocked deployment; produce integration packet |
-| Learning Kernel and World Factory | created by principal after this ledger lands | `gpt-5.6-terra` xhigh | none | Build conformance SDK, migrate one World, define domain plugin boundary |
-| AI Lesson Intelligence | created by principal after this ledger lands | `gpt-5.6-terra` xhigh | current `/studio` baseline | Add reviewed-draft workflow, capability matrix, live-eval harness, budget/privacy gates |
+| Lane | Task | Default model | Dispatch status | Existing handoff | Next goal |
+| --- | --- | --- | --- | --- | --- |
+| Experience and design system | `019f8705-865e-7631-a921-ee4b5690b778` | `gpt-5.6-terra` xhigh | `IN_PROGRESS` | `e73dc9d` on old `af5f3ca` base | Create a new branch from current main; selectively port tokens/primitives; unify shell and state/access behavior |
+| Trust, auth, and private evidence | `019f8705-2825-7cb2-94e1-b30d5aab1447` | `gpt-5.6-terra` xhigh | `IN_PROGRESS` | `24edb6f` on old base | Reconcile with current hardened SSR auth/event spine; stage adult sync and abuse-controlled integration only |
+| Homeschool pathways and entitlement | `019f8704-dc1c-7381-b71b-c0303987251a` | `gpt-5.6-terra` xhigh | `IN_PROGRESS` | `dd6fe0e` on old base | Port pure pathway contracts to current main; connect to capability registry; no certification/UI claims |
+| Release, evaluation, observability | `019f8705-4855-7522-9140-8d45cd93ae60` | `gpt-5.6-luna` high | `IN_PROGRESS` | `a98f8bb` on old base | Reconcile CI/reports/health against current main; diagnose blocked deployment; produce integration packet |
+| Learning Kernel and World Factory | `client-new-thread:81cee98c-352a-4ca6-8b4e-f4901523dcf2` | `gpt-5.6-terra` xhigh | `QUEUED_WORKTREE` | none | Build conformance SDK, migrate one World, define domain plugin boundary |
+| AI Lesson Intelligence | `client-new-thread:17bde2c6-51a1-4f61-8ddc-b9e98cd0f741` | `gpt-5.6-terra` xhigh | `QUEUED_WORKTREE` | current `/studio` baseline | Add reviewed-draft workflow, capability matrix, live-eval harness, budget/privacy gates |
 
 The principal remains the architecture/integration/red-team lane and uses `ultra` only when the user explicitly returns for review or a worker requests a cross-lane decision.
 

@@ -2,7 +2,8 @@
 
 **Authority:** principal architecture/review task  
 **Canonical repository:** `/Users/Priyansh/Documents/codex-buildweek/education`  
-**Planning baseline:** `846158a492039b14381eae3c2fbb1f309d049ea5`  
+**Product baseline before program control:** `846158a492039b14381eae3c2fbb1f309d049ea5`
+**Initial control-room commit:** `5b0bceb`
 **Program posture:** C1 interactive foundation; G1 candidate; broad product vision, narrow claims
 
 ## North Star
