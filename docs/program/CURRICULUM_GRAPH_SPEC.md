@@ -176,7 +176,7 @@ Node validation rejects:
 - empty construct statements, purposes, exclusions, or limitation codes;
 - duplicate entitlement areas or unsupported area strings;
 - a gap with a World binding;
-- a review candidate without the exact proposed World, source, validator, and policy references needed for review;
+- a review candidate without the exact proposed World, source-provenance, validator, and policy references needed for review;
 - any raw learner response, provider output, prompt, key, score, inferred trait, or recommendation weight field.
 
 ## 7. Prerequisite edges
@@ -259,20 +259,30 @@ type EvidenceRequirementV1 = {
 
 It must match the exact retained World binding before release. The graph cannot weaken proof isolation, convert `not_demonstrated` to partial capability, or remove remains-untested claims.
 
-## 11. Source requirement
+## 11. Source requirement and legacy truth
 
 ```ts
-type SourceRequirementV1 = {
-  sourcePackageRef: { id: string; version: string; digest: string };
-  requiredItemIds: readonly string[];
-  requiredClaimIds: readonly string[];
-  requiredRightsIds: readonly string[];
-  requiredProductUses: readonly string[];
-  requiredReviewScopes: readonly string[];
-};
+type SourceRequirementV1 =
+  | {
+      mode: "bound-source-authority";
+      sourcePackageRef: { id: string; version: string; digest: string };
+      requiredItemIds: readonly string[];
+      requiredClaimIds: readonly string[];
+      requiredRightsIds: readonly string[];
+      requiredProductUses: readonly string[];
+      requiredReviewScopes: readonly string[];
+    }
+  | {
+      mode: "legacy-metadata-only";
+      sourceItemIds: readonly string[];
+      limitationCode: "source-authority.not-established";
+      permittedForNewPublication: false;
+    };
 ```
 
-The source-authority replay result supplied to graph validation must match this exact package reference and evaluation time. A complete source review candidate still establishes no external authenticity, durable storage, accountable human identity, rights clearance, or publication. Release requires a separate accepted publication authority input; the graph must not infer that authority from source completeness.
+For `bound-source-authority`, the source-authority replay result supplied to graph validation must match the exact package reference and evaluation time. A complete source review candidate still establishes no external authenticity, durable storage, accountable human identity, rights clearance, or publication. Release requires a separate accepted publication authority input; the graph must not infer that authority from source completeness.
+
+`legacy-metadata-only` exists to report the current released system truth. The four current Worlds are already released and available, but their runtime source bindings explicitly say that ADR-007 authority is incomplete. The graph must not retroactively call those routes unavailable without a package lifecycle decision, and it must not call their source metadata reviewed authority. Their derived node may therefore be `released` while separately projecting `sourceAuthorityStatus: "legacy-incomplete"` and the fixed limitation. A new publication candidate cannot use this mode to satisfy an ADR-007 publication gate.
 
 ## 12. World binding and release authority port
 
@@ -287,6 +297,7 @@ type WorldBindingV1 = {
   capabilityId: string;
   taskFamilyIds: readonly string[];
   sourceIds: readonly string[];
+  sourceProvenanceStatus: "bound" | "legacy-metadata-only" | "mixed";
   route: string;
 };
 
@@ -298,7 +309,9 @@ type ReleasedWorldAuthorityV1 = WorldBindingV1 & {
 };
 ```
 
-The adapter from the built-in registry creates `ReleasedWorldAuthorityV1`; graph fixtures cannot. A node derives `released` only when every scalar and semantic-set binding equals one released authority record and its source/publication references are current. Package, runtime, validator, capability, task-family, source, route, policy, release, or availability mismatch derives `review-candidate` with exact issue codes. No nearest match or title fallback is permitted.
+The adapter from the built-in registry creates `ReleasedWorldAuthorityV1`; graph fixtures cannot. A node derives `released` only when every scalar and semantic-set World binding equals one released authority record. Package, runtime, validator, capability, task-family, source ID, source-provenance status, route, policy, release, or availability mismatch derives `review-candidate` with exact issue codes. No nearest match or title fallback is permitted.
+
+Release availability and source-authority quality are separate projection fields. An exact current released record with legacy source metadata derives `{ availability: "released", sourceAuthorityStatus: "legacy-incomplete" }`. An exact bound record still derives only `{ availability: "released", sourceAuthorityStatus: "bound-review-candidate" }` until a separate publication authority input establishes the publication act. The graph never turns structural source completeness into publication authority.
 
 An `identified-gap` can never be upgraded merely because a registry World has a matching capability title.
 
@@ -348,10 +361,10 @@ The canonical test fixture spans all nine areas without manufacturing breadth:
 | Area | Exact first state |
 | --- | --- |
 | Language & literacy | `identified-gap`; Argument & Evidence may appear as `review-candidate` only after its package exists |
-| Mathematics | derive `released` only for `capability.proportional-reasoning.compare-and-scale` from the exact current Ratio World binding |
-| Science | derive `released` only for `capability.force-motion.zero-net-force` from the exact current Force & Motion binding |
-| History & source reasoning | derive `released` only for `capability.historical-literacy.observation-inference` from the exact current Primary Source binding |
-| Computing & AI | derive `released` only for `capability.ai-literacy.source-corroboration` from the exact current AI & Learning binding |
+| Mathematics | derive `released` only for `capability.proportional-reasoning.compare-and-scale` from the exact current Ratio World binding; expose legacy-incomplete source authority |
+| Science | derive `released` only for `capability.force-motion.zero-net-force` from the exact current Force & Motion binding; expose legacy-incomplete source authority |
+| History & source reasoning | derive `released` only for `capability.historical-literacy.observation-inference` from the exact current Primary Source binding; expose legacy-incomplete source authority |
+| Computing & AI | derive `released` only for `capability.ai-literacy.source-corroboration` from the exact current AI & Learning binding; expose legacy-incomplete source authority |
 | Arts & design | `identified-gap` |
 | Practical life | `identified-gap` |
 | Civic & media | `identified-gap`; do not double-count Source Corroboration without a separately reviewed entitlement mapping |
@@ -369,7 +382,7 @@ At minimum, focused tests must prove:
 4. duplicate IDs, current capability versions, edges, alternatives, access routes, and gaps fail;
 5. missing/self/two-node/long/disconnected cycles fail with stable paths;
 6. alternative-equivalence cycles fail;
-7. a missing exact node, source, policy, World, validator, task family, route, package hash, or runtime digest never derives release;
+7. a missing exact node, source ID/provenance status, policy, World, validator, task family, route, package hash, or runtime digest never derives release;
 8. `review-candidate` and `identified-gap` never produce a routable route;
 9. a release with unavailable status is not released in the graph;
 10. a capability cannot silently satisfy an unreviewed entitlement area;
@@ -379,10 +392,12 @@ At minimum, focused tests must prove:
 14. construct-changing access emits a distinct evidence condition;
 15. graph input rejects learner text, model output, scores, rankings, grade level, seat time, and hidden-weight fields;
 16. explanation output contains only authored deterministic reasons and no recommendation language;
-17. all four current released bindings derive release only at their exact retained identities;
+17. all four current released bindings derive release only at their exact retained identities while retaining `legacy-incomplete` source authority;
 18. the proposed Argument & Evidence binding remains non-routable until separately released;
 19. source correction/expiry/withdrawal invalidates the dependent node without rewriting the graph package;
 20. all invalid outputs retain the curriculum-sufficiency and homeschool-readiness non-claims.
+21. source review-candidate completeness alone cannot derive publication or release;
+22. `legacy-metadata-only` cannot satisfy a new publication candidate even though an already released registry record remains truthfully visible.
 
 ## 17. Acceptance and handoff
 
