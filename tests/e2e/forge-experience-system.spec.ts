@@ -13,6 +13,11 @@ const ROUTES = [
   { path: "/trail", heading: "A map of questions and evidence—not a level.", main: "#forge-main" },
 ] as const;
 
+const CHILD_CAPABLE_WORLD_PATHS = new Set([
+  "/learn/proportional-reasoning",
+  "/learn/primary-source-reasoning",
+]);
+
 const CONTRAST_SAMPLES = [
   { route: "/", name: "Home paper heading", selector: ".forge-hero-heading h1" },
   { route: "/", name: "Home muted body text", selector: ".forge-hero-heading > p:last-child" },
@@ -43,6 +48,22 @@ async function tabTo(page: Page, selector: string, maximumTabs = 6) {
     if (await page.locator(selector).evaluate((element) => element === document.activeElement)) return;
   }
   throw new Error(`Keyboard focus did not reach ${selector}.`);
+}
+
+async function visitOwnedRoute(page: Page, route: (typeof ROUTES)[number]) {
+  if (CHILD_CAPABLE_WORLD_PATHS.has(route.path)) {
+    await page.addInitScript(() => {
+      localStorage.setItem("forge.device-profile:v1", JSON.stringify({
+        schemaVersion: 1,
+        profileId: "9be711de-d7a6-4911-b903-f2d829da83d5",
+        ageMode: "teen",
+        guardianPresent: false,
+        createdAt: "2026-07-22T00:00:00.000Z",
+      }));
+    });
+  }
+
+  await page.goto(route.path);
 }
 
 async function mobileContract(page: Page) {
@@ -170,7 +191,7 @@ test.describe("FORGE Packet A experience system", () => {
 
   test("all owned routes reflow at 320px with named controls and mobile input floors", async ({ page }) => {
     for (const route of ROUTES) {
-      await page.goto(route.path);
+      await visitOwnedRoute(page, route);
       await expect(page.getByRole("heading", { name: route.heading })).toBeVisible();
       await expect(page.locator(route.main)).toBeVisible();
 
@@ -196,7 +217,7 @@ test.describe("FORGE Packet A experience system", () => {
 
   test("keyboard skip links, home controls, and unique visible action names remain operable", async ({ page }) => {
     for (const route of ROUTES) {
-      await page.goto(route.path);
+      await visitOwnedRoute(page, route);
       const skip = page.locator(".forge-skip-link");
       await expect(skip).toHaveCount(1);
       await tabTo(page, ".forge-skip-link");
