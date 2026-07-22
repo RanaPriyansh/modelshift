@@ -76,5 +76,6 @@ The historical `846158a` Vercel candidate `dpl_GwTK18jVR2NmEb4VKa3KGhf6hLzi` was
 4. [Worker thread ledger and work packets](THREAD_LEDGER.md)
 5. [Principal review and integration protocol](REVIEW_PROTOCOL.md)
 6. [Requirement-by-requirement completion and evidence matrix](COMPLETION_MATRIX.md)
+7. [Wave 2 architecture and claim boundary](WAVE_2_ARCHITECTURE.md)
 
 These files are principal-owned. Workers may cite them and propose changes in their handoff, but must not edit them unless the principal assigns a documentation-only amendment.
