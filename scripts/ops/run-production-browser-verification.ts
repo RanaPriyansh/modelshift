@@ -1,4 +1,5 @@
 import { spawn, type ChildProcessByStdio } from "node:child_process";
+import { createRequire } from "node:module";
 import { createServer } from "node:net";
 import { resolve } from "node:path";
 import type { Readable } from "node:stream";
@@ -8,6 +9,15 @@ type ServerProcess = ChildProcessByStdio<null, Readable, Readable>;
 const STARTUP_TIMEOUT_MS = 90_000;
 export const MAX_SERVER_LOG_BYTES = 16_000;
 const arg = (name: string): string | undefined => { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : undefined; };
+const require = createRequire(import.meta.url);
+
+/** Start the actual Next CLI process so shutdown cannot orphan a pnpm child. */
+export function productionServerInvocation(port: number): { command: string; args: string[] } {
+  return {
+    command: process.execPath,
+    args: [require.resolve("next/dist/bin/next"), "start", "--hostname", "127.0.0.1", "--port", String(port)],
+  };
+}
 
 /** Keep only a rolling tail; never concatenate an unbounded server-log buffer. */
 export function appendBoundedServerLog(current: Buffer, chunk: Buffer, maximumBytes = MAX_SERVER_LOG_BYTES): Buffer {
@@ -23,7 +33,23 @@ async function availablePort(): Promise<number> {
   });
 }
 async function waitForServer(baseUrl: string, child: ServerProcess): Promise<void> { const deadline = Date.now() + STARTUP_TIMEOUT_MS; while (Date.now() < deadline) { if (child.exitCode !== null) throw new Error(`production server exited during startup with code ${child.exitCode}`); try { const response = await fetch(new URL("/api/health", baseUrl), { signal: AbortSignal.timeout(1_000), redirect: "manual" }); if (response.status === 200) return; } catch { /* bounded startup poll */ } await new Promise((done) => setTimeout(done, 250)); } throw new Error("production browser server did not become ready within 90 seconds"); }
-async function stop(child: ServerProcess): Promise<void> { if (child.exitCode !== null) return; child.kill("SIGTERM"); await Promise.race([new Promise<void>((done) => child.once("exit", () => done())), new Promise<void>((done) => setTimeout(done, 5_000))]); if (child.exitCode === null) child.kill("SIGKILL"); }
+function hasExited(child: ServerProcess): boolean { return child.exitCode !== null || child.signalCode !== null; }
+async function waitForExit(child: ServerProcess, timeoutMs: number): Promise<boolean> {
+  if (hasExited(child)) return true;
+  return new Promise((resolveExit) => {
+    const finish = () => { clearTimeout(timer); child.off("exit", finish); resolveExit(true); };
+    const timer = setTimeout(() => { child.off("exit", finish); resolveExit(hasExited(child)); }, timeoutMs);
+    child.once("exit", finish);
+    if (hasExited(child)) finish();
+  });
+}
+async function stop(child: ServerProcess): Promise<void> {
+  if (hasExited(child)) return;
+  child.kill("SIGTERM");
+  if (await waitForExit(child, 5_000)) return;
+  child.kill("SIGKILL");
+  if (!(await waitForExit(child, 5_000))) throw new Error("production browser server did not exit after SIGKILL");
+}
 function browserEnvironment(baseUrl: string): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     CI: "true",
@@ -49,7 +75,8 @@ async function main() {
   const port = await availablePort(); const baseUrl = `http://127.0.0.1:${port}`; const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
   const serverEnv: NodeJS.ProcessEnv = { NODE_ENV: "production", NEXT_TELEMETRY_DISABLED: "1", OPENAI_API_KEY: "", OPENAI_INTERPRETATION_ENABLED: "false", OPENAI_FORGE_PLANNER_ENABLED: "false", FORGE_CLOUD_ACCOUNTS_ENABLED: "false", FORGE_RELEASE_SHA: expectedSha.toLowerCase(), FORGE_BUILD_TIME: process.env.FORGE_BUILD_TIME ?? "unknown", FORGE_LOCKFILE_DIGEST: process.env.FORGE_LOCKFILE_DIGEST, FORGE_CONTENT_MANIFEST_DIGEST: process.env.FORGE_CONTENT_MANIFEST_DIGEST, FORGE_EVALUATOR_BASELINE_DIGEST: process.env.FORGE_EVALUATOR_BASELINE_DIGEST, FORGE_DATABASE_MIGRATION_IDENTITY: process.env.FORGE_DATABASE_MIGRATION_IDENTITY ?? "not_configured" };
   for (const key of ["PATH", "HOME", "TMPDIR", "PNPM_HOME", "COREPACK_HOME", "CI"]) if (process.env[key]) serverEnv[key] = process.env[key];
-  const child = spawn(command, ["start", "--hostname", "127.0.0.1", "--port", String(port)], { cwd: process.cwd(), env: serverEnv, stdio: ["ignore", "pipe", "pipe"] });
+  const server = productionServerInvocation(port);
+  const child = spawn(server.command, server.args, { cwd: process.cwd(), env: serverEnv, stdio: ["ignore", "pipe", "pipe"] });
   let logs: Buffer<ArrayBufferLike> = Buffer.alloc(0);
   const appendLog = (chunk: Buffer) => { logs = appendBoundedServerLog(logs, chunk); };
   child.stdout.on("data", appendLog); child.stderr.on("data", appendLog);

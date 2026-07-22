@@ -215,6 +215,19 @@ test.describe("FORGE Packet A experience system", () => {
     expect(populatedContract.inlineCitationExceptions.every((citation) => citation.display === "inline" && citation.inProse), "a populated plan can exempt only explicit inline-prose citations").toBe(true);
   });
 
+  test("the home question stays inside its gutters with wide fallback font metrics", async ({ page }) => {
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto("/");
+      await page.addStyleTag({ content: ".forge-hero-heading h1 { font-family: monospace !important; }" });
+
+      const contract = await mobileContract(page);
+      expect(contract.overflow, `${width}px document overflow`).toBeLessThanOrEqual(1);
+      const headingFits = await page.locator(".forge-hero-heading h1").evaluate((heading) => heading.scrollWidth <= heading.clientWidth);
+      expect(headingFits, `${width}px heading overflow`).toBe(true);
+    }
+  });
+
   test("keyboard skip links, home controls, and unique visible action names remain operable", async ({ page }) => {
     for (const route of ROUTES) {
       await visitOwnedRoute(page, route);
