@@ -12,7 +12,10 @@ import {
   type WorldKind,
 } from "./contracts";
 import { parseLearningWorldPack } from "./validation";
-import { BUILT_IN_DETERMINISTIC_VALIDATORS, BUILT_IN_WORLD_PACKS } from "./worlds";
+import {
+  INTERNAL_BUILT_IN_DETERMINISTIC_VALIDATORS,
+  INTERNAL_BUILT_IN_WORLD_PACKS,
+} from "./worlds.internal";
 
 export const REGISTRY_ERROR_CODES = [
   "registry.browser-runtime",
@@ -219,6 +222,6 @@ export function createTrustedWorldRegistry(input: TrustedWorldRegistryInput): Tr
 }
 
 export const trustedWorldRegistry = createTrustedWorldRegistry({
-  packs: BUILT_IN_WORLD_PACKS,
-  validators: BUILT_IN_DETERMINISTIC_VALIDATORS,
+  packs: INTERNAL_BUILT_IN_WORLD_PACKS,
+  validators: INTERNAL_BUILT_IN_DETERMINISTIC_VALIDATORS,
 });

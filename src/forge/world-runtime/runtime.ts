@@ -1,4 +1,5 @@
 import type { WorldRuntimeActionKind, WorldRuntimeBinding, WorldRuntimeStage } from "../contracts";
+import type { CanonicalDeterministicValidatorRegistration } from "../deterministic-validators";
 import {
   getCanonicalDeterministicValidator,
   getCanonicalDeterministicValidatorRegistration,
@@ -22,6 +23,20 @@ import {
   WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION,
 } from "./protocol";
 import { retainedRuntimeIdentityFor } from "./retained-runtime-binding";
+import type { RetainedRuntimeIdentity } from "./retained-runtime-binding";
+
+/** @internal Authority resolver used only by explicitly internal runtime entrypoints. */
+export interface InternalWorldRuntimeAuthority {
+  canonicalValidatorRegistration(id: string): CanonicalDeterministicValidatorRegistration | null;
+  retainedRuntimeIdentity(
+    pack: Parameters<typeof retainedRuntimeIdentityFor>[0],
+  ): RetainedRuntimeIdentity | null;
+}
+
+const PUBLIC_WORLD_RUNTIME_AUTHORITY: InternalWorldRuntimeAuthority = Object.freeze({
+  canonicalValidatorRegistration: getCanonicalDeterministicValidatorRegistration,
+  retainedRuntimeIdentity: retainedRuntimeIdentityFor,
+});
 
 export interface WorldRuntimeSession<State, DomainProof> {
   /** Local idempotency key only; never identity or authentication. */
@@ -172,11 +187,14 @@ function receiptFor<State, DomainEvent, DomainProof>(
   adapter: WorldRuntimeAdapter<State, DomainEvent, DomainProof>,
   session: WorldRuntimeSession<State, DomainProof>,
   proof: DomainProof,
+  authority: InternalWorldRuntimeAuthority,
 ): ReceiptCreation {
   const runtime = adapter.pack.runtime;
   const validatorDefinition = adapter.pack.deterministicValidators.find((candidate) => candidate.id === runtime.proof.validatorId);
   if (!validatorDefinition) throw new Error(`Runtime validator ${runtime.proof.validatorId} is absent from its package.`);
-  const canonicalValidator = getCanonicalDeterministicValidator(runtime.proof.validatorId);
+  const canonicalRegistration = authority.canonicalValidatorRegistration(runtime.proof.validatorId);
+  const canonicalValidator = canonicalRegistration?.validator
+    ?? getCanonicalDeterministicValidator(runtime.proof.validatorId);
   if (!canonicalValidator) throw new WorldRuntimeConfigurationError(
     "unknown_canonical_validator",
     `Runtime validator ${runtime.proof.validatorId} is not in the canonical deterministic registry.`,
@@ -193,7 +211,7 @@ function receiptFor<State, DomainEvent, DomainProof>(
   // The receipt commits the exact released validator result. Adapter criteria
   // are deliberately not an authority surface for compiler evidence.
   const criteria = validation.evidence;
-  const retainedIdentity = retainedRuntimeIdentityFor(adapter.pack);
+  const retainedIdentity = authority.retainedRuntimeIdentity(adapter.pack);
   if (!retainedIdentity) throw new WorldRuntimeConfigurationError(
     "retained_runtime_binding_missing",
     `Released runtime ${adapter.pack.manifest.id} has no retained runtime binding digest.`,
@@ -261,7 +279,7 @@ function receiptFor<State, DomainEvent, DomainProof>(
     },
     validator: {
       id: validatorDefinition.id,
-      version: getCanonicalDeterministicValidatorRegistration(runtime.proof.validatorId)?.outputContractVersion
+      version: canonicalRegistration?.outputContractVersion
         ?? validatorDefinition.outputContractVersion,
       code: validation.code,
       outcome,
@@ -290,6 +308,7 @@ function createRuntimeAttemptId(): string {
 
 function assertWorldRuntimeConfiguration<State, DomainEvent, DomainProof>(
   adapter: WorldRuntimeAdapter<State, DomainEvent, DomainProof>,
+  authority: InternalWorldRuntimeAuthority,
 ): void {
   const lint = lintWorldRuntimePack(adapter.pack);
   if (!lint.ok) {
@@ -311,13 +330,13 @@ function assertWorldRuntimeConfiguration<State, DomainEvent, DomainProof>(
       `World runtime receipt schema ${runtime.evidence.receiptSchemaVersion} must be ${WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION}.`,
     );
   }
-  if (!retainedRuntimeIdentityFor(adapter.pack)) {
+  if (!authority.retainedRuntimeIdentity(adapter.pack)) {
     throw new WorldRuntimeConfigurationError(
       "retained_runtime_binding_missing",
       `Released runtime ${adapter.pack.manifest.id} has no retained runtime binding digest.`,
     );
   }
-  const canonicalRegistration = getCanonicalDeterministicValidatorRegistration(runtime.proof.validatorId);
+  const canonicalRegistration = authority.canonicalValidatorRegistration(runtime.proof.validatorId);
   const declaredValidator = adapter.pack.deterministicValidators.find(
     (validator) => validator.id === runtime.proof.validatorId,
   );
@@ -332,11 +351,12 @@ function assertWorldRuntimeConfiguration<State, DomainEvent, DomainProof>(
   }
 }
 
-export function createWorldRuntimeSession<State, DomainEvent, DomainProof>(
+export function createWorldRuntimeSessionWithAuthority<State, DomainEvent, DomainProof>(
   adapter: WorldRuntimeAdapter<State, DomainEvent, DomainProof>,
+  authority: InternalWorldRuntimeAuthority,
   attemptId = createRuntimeAttemptId(),
 ): WorldRuntimeSession<State, DomainProof> {
-  assertWorldRuntimeConfiguration(adapter);
+  assertWorldRuntimeConfiguration(adapter, authority);
   if (!isWorldRuntimeAttemptId(attemptId)) {
     throw new WorldRuntimeConfigurationError(
       "pack_invalid",
@@ -358,6 +378,13 @@ export function createWorldRuntimeSession<State, DomainEvent, DomainProof>(
     receipt: null,
     proof: null,
   });
+}
+
+export function createWorldRuntimeSession<State, DomainEvent, DomainProof>(
+  adapter: WorldRuntimeAdapter<State, DomainEvent, DomainProof>,
+  attemptId?: string,
+): WorldRuntimeSession<State, DomainProof> {
+  return createWorldRuntimeSessionWithAuthority(adapter, PUBLIC_WORLD_RUNTIME_AUTHORITY, attemptId);
 }
 
 function isDeclaredRuntimeAction<State, DomainEvent, DomainProof>(
@@ -403,8 +430,9 @@ function canonicalSupportFromCatalog(
     : null;
 }
 
-export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
+export function dispatchWorldRuntimeCommandWithAuthority<State, DomainEvent, DomainProof>(
   adapter: WorldRuntimeAdapter<State, DomainEvent, DomainProof>,
+  authority: InternalWorldRuntimeAuthority,
   session: WorldRuntimeSession<State, DomainProof>,
   command: RuntimeCommand<DomainEvent>,
 ): RuntimeDispatchResult<State, DomainProof> {
@@ -507,7 +535,7 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
   }
   const phase = adapter.phase(transition.state);
   if (commandKind === "reset") {
-    return { accepted: true, session: createWorldRuntimeSession(adapter), effects: [] };
+    return { accepted: true, session: createWorldRuntimeSessionWithAuthority(adapter, authority), effects: [] };
   }
   const reportedSupport = adapter.supportEvent(command.event, transition.state);
   const isInstructionalSupport = commandKind === "instructional_support";
@@ -563,7 +591,7 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
   if (support) effects.push("support_recorded");
   if (session.phase !== "proof" && phase === "proof") effects.push("proof_opened");
   if (proof && !session.receipt) {
-    const receiptCreation = receiptFor(adapter, nextSession, proof);
+    const receiptCreation = receiptFor(adapter, nextSession, proof, authority);
     if (!receiptCreation.ok) {
       return { accepted: false, session, reason: receiptCreation.reason };
     }
@@ -571,4 +599,17 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
     effects.push("receipt_emitted");
   }
   return { accepted: true, session: nextSession, effects };
+}
+
+export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
+  adapter: WorldRuntimeAdapter<State, DomainEvent, DomainProof>,
+  session: WorldRuntimeSession<State, DomainProof>,
+  command: RuntimeCommand<DomainEvent>,
+): RuntimeDispatchResult<State, DomainProof> {
+  return dispatchWorldRuntimeCommandWithAuthority(
+    adapter,
+    PUBLIC_WORLD_RUNTIME_AUTHORITY,
+    session,
+    command,
+  );
 }

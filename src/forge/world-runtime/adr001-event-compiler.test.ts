@@ -7,7 +7,7 @@ import type { PrimarySourceWorldEvent } from "../../worlds/primary-source-reason
 import type { RatioWorldEvent } from "../../worlds/proportional-reasoning";
 import { ForgeEventJournal } from "../event-journal";
 import { canonicalJson, sealForgeEvent, sha256Digest } from "../events";
-import { BUILT_IN_WORLD_PACKS } from "../worlds";
+import { INTERNAL_BUILT_IN_WORLD_PACKS as BUILT_IN_WORLD_PACKS } from "../worlds.internal";
 import type { WorldRuntimeAdapter } from "./protocol";
 import { compileWorldRuntimeReceiptToAdr001 } from "./adr001-event-compiler";
 import { forceAndMotionWorldRuntimeAdapter } from "./force-and-motion";

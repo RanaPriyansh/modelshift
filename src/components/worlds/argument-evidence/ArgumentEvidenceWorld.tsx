@@ -17,11 +17,11 @@ import {
   type WorkedRelationId,
 } from "../../../worlds/argument-evidence";
 import {
-  argumentEvidenceWorldRuntimeAdapter,
-  createWorldRuntimeSession,
-  dispatchWorldRuntimeCommand,
-  type BoundedLocalWorldRuntimeReceipt,
-} from "../../../forge/world-runtime";
+  createInternalWorldRuntimeSession as createWorldRuntimeSession,
+  dispatchInternalWorldRuntimeCommand as dispatchWorldRuntimeCommand,
+} from "../../../forge/world-runtime/runtime.internal";
+import { argumentEvidenceWorldRuntimeAdapter } from "../../../forge/world-runtime/argument-evidence";
+import type { BoundedLocalWorldRuntimeReceipt } from "../../../forge/world-runtime/protocol";
 
 import styles from "./ArgumentEvidenceWorld.module.css";
 

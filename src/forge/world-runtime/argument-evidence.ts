@@ -1,4 +1,4 @@
-import { ARGUMENT_EVIDENCE_WORLD } from "../worlds";
+import { ARGUMENT_EVIDENCE_WORLD } from "../worlds.internal";
 import type { DeterministicValidationResult, WorldRuntimeActionKind, WorldRuntimeStage } from "../contracts";
 import {
   createInitialArgumentEvidenceState,

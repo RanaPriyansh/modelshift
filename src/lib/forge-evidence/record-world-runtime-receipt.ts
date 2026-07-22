@@ -10,7 +10,7 @@ import {
   WORLD_RUNTIME_PROTOCOL_VERSION,
   WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION,
 } from "../../forge/world-runtime/protocol";
-import { BUILT_IN_WORLD_PACKS } from "../../forge/worlds";
+import { PUBLIC_WORLD_PACKS } from "../../forge/worlds";
 import { retainedRuntimeIdentityFor } from "../../forge/world-runtime/retained-runtime-binding";
 import { createLocalStorageEvidenceLedgerAdapter } from "./local-storage";
 import type { AssistanceProvenance, EvidenceLedger } from "./schema";
@@ -97,7 +97,7 @@ function sameSourceBinding(
  * runtime identity so an unknown or mixed World tuple is never projected.
  */
 function hasReleasedBuiltInRuntimeIdentity(receipt: BoundedLocalWorldRuntimeReceipt): boolean {
-  const pack = BUILT_IN_WORLD_PACKS.find((candidate) => candidate.manifest.id === receipt.world.id);
+  const pack = PUBLIC_WORLD_PACKS.find((candidate) => candidate.manifest.id === receipt.world.id);
   if (!pack || pack.release.status !== "released" || !("runtime" in pack)) return false;
   const runtime = pack.runtime as WorldRuntimeBinding;
 
