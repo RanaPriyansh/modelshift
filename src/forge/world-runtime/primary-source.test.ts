@@ -199,7 +199,12 @@ describe("Primary Source World runtime adapter", () => {
     const submitted = { accepted: true as const, session: runtime };
     expect(submitted).toMatchObject({
       accepted: true,
-      session: { receipt: { validator: { outcome: "fail", disposition: "not_demonstrated" } } },
+      session: {
+        receipt: {
+          validator: { outcome: "fail", disposition: "not_demonstrated" },
+          remainsUntested: primarySourceWorldRuntimeAdapter.pack.runtime.evidence.remainsUntested,
+        },
+      },
     });
   });
 

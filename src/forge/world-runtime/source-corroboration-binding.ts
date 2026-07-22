@@ -47,6 +47,13 @@ export const SOURCE_CORROBORATION_RUNTIME_BINDING = {
     receiptSchemaVersion: "1.1.0",
     proofAuthority: "honour_based",
     persistence: "not_persisted",
+    remainsUntested: [
+      "Delayed retention and repeat reliability are untested.",
+      "Other subjects, populations, contexts, delivery roles, models, and tool designs are untested.",
+      "Causal isolation across the study differences is untested.",
+      "Open-web source quality and adversarial misinformation are untested.",
+      "Representative learner and accessibility validity are untested.",
+    ],
   },
   returnProof: {
     enabled: false,

@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0",
   "packages": [
-    { "id": "world.force-and-motion", "version": "1.0.1", "route": "/learn/force-and-motion", "runtime_binding_digest": "sha256:ddfcd178172013a83066fea4d582e2879d3eab2b44998626baad6b956dc2d10e", "package_integrity_hash": "sha256:a11acc406e7e72614d72784e6505c97acd524422329fb80ae776a23aa70a8936" },
-    { "id": "world.proportional-reasoning", "version": "1.0.2", "route": "/learn/proportional-reasoning", "runtime_binding_digest": "sha256:1506f83fbdd33fb12c8109c62383387a4f237c538463b5b37f87dbec68480c3c", "package_integrity_hash": "sha256:d266b2cb72e3abdf9915ad68cfd08823a7bdc8364c09d5849b9abd2a4184e1c2" },
-    { "id": "world.source-corroboration", "version": "1.0.1", "route": "/learn/ai-and-learning", "runtime_binding_digest": "sha256:da1ee5d20f85dddb7b6414c0f27da02063b4b89df2eb9009487a4d7879edb6e0", "package_integrity_hash": "sha256:8de710030e7a42728c030422ce2d8c3b55f05e09883a728bb74b77ead07f23d6" },
-    { "id": "world.primary-source-reasoning", "version": "1.0.2", "route": "/learn/primary-source-reasoning", "runtime_binding_digest": "sha256:5b49129f030c223e47b76fe1a8853b42cee72d3b7c154c69530a642065cb997c", "package_integrity_hash": "sha256:340d5cdbcf34c659fe848c4daacef2597a84a900dcfc9356ee324f2cf4bc16b2" }
+    { "id": "world.force-and-motion", "version": "1.0.1", "route": "/learn/force-and-motion", "runtime_binding_digest": "sha256:9ac8b15244c5839abc4e0644564699a8b0b5fff9d7fc8603d6181fd739d85c54", "package_integrity_hash": "sha256:975d00b8f7b7b25f2323a0ba2fe7712bcf6d5221212c86e67f0520021e76b783" },
+    { "id": "world.proportional-reasoning", "version": "1.0.2", "route": "/learn/proportional-reasoning", "runtime_binding_digest": "sha256:b2f134f91ee9cd71750e19c8b440751bcf93415aec10a254e1b0ac491e8840c1", "package_integrity_hash": "sha256:b8430668c5b061415aa5ec24bb8e62ae4a4e4c95a808c7a65b04e3ff78a8a353" },
+    { "id": "world.source-corroboration", "version": "1.0.1", "route": "/learn/ai-and-learning", "runtime_binding_digest": "sha256:a172f067f6135bdcec13c66053ef250ef92692db734b60ddf8e396fb8b0dc4b5", "package_integrity_hash": "sha256:2f7900a0c3e7cfe5c993ec27b8071cc14d84dc605eef28cca041dc60b870f690" },
+    { "id": "world.primary-source-reasoning", "version": "1.0.2", "route": "/learn/primary-source-reasoning", "runtime_binding_digest": "sha256:b3401c71f330d82fdd31958af836683742c9e37f2f3d8cd6cf8f2a887f782029", "package_integrity_hash": "sha256:f8c42959595156cf84ff300cfd523bc37824aceec38165bf875bab19e4b17419" }
   ]
 }

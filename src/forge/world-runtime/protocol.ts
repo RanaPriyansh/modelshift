@@ -171,7 +171,11 @@ export interface WorldRuntimeAdapter<State, DomainEvent, DomainProof> {
    * receipt: criteria and code come directly from the released validator.
    */
   validatorCriteria?(result: DeterministicValidationResult, proof: DomainProof): readonly string[];
-  remainsUntested(proof: DomainProof): readonly string[];
+  /**
+   * Compatibility-only hook retained for older adapters. The shared runtime
+   * never reads it: receipt limitations come only from pack.runtime.evidence.
+   */
+  remainsUntested?(proof: DomainProof): readonly string[];
 }
 
 /**
@@ -219,8 +223,8 @@ function isIsoTimestamp(value: unknown): value is string {
   return Number.isFinite(parsed.valueOf()) && parsed.toISOString() === value;
 }
 
-function isStringArray(value: unknown, maximum = 64): value is readonly string[] {
-  return Array.isArray(value) && value.length <= maximum && value.every((item) => typeof item === "string" && item.length > 0 && item.length <= 240);
+function isStringArray(value: unknown, maximum = 64, minimum = 0): value is readonly string[] {
+  return Array.isArray(value) && value.length >= minimum && value.length <= maximum && value.every((item) => typeof item === "string" && item.length > 0 && item.length <= 240);
 }
 
 const runtimeStages = new Set<WorldRuntimeStage>([
@@ -370,5 +374,5 @@ export function isBoundedLocalWorldRuntimeReceipt(value: unknown): value is Boun
   return Array.isArray(value.cognitiveSupport) && value.cognitiveSupport.length <= 8 && value.cognitiveSupport.every(isCanonicalSupportEvent) &&
     Array.isArray(value.accessAccommodations) && value.accessAccommodations.length <= 16 && value.accessAccommodations.every(isAccessAccommodationEvent) &&
     Array.isArray(value.sourceBindings) && value.sourceBindings.length > 0 && value.sourceBindings.length <= 16 && value.sourceBindings.every(isRuntimeSourceBindingReceipt) &&
-    value.sourceProvenanceStatus === sourceProvenanceStatus && isStringArray(value.remainsUntested, 16);
+    value.sourceProvenanceStatus === sourceProvenanceStatus && isStringArray(value.remainsUntested, 16, 1);
 }

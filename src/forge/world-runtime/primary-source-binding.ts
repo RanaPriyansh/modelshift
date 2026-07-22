@@ -56,6 +56,11 @@ export const PRIMARY_SOURCE_RUNTIME_BINDING = {
     receiptSchemaVersion: "1.1.0",
     proofAuthority: "honour_based",
     persistence: "not_persisted",
+    remainsUntested: [
+      "Whether the learner can corroborate conflicting sources.",
+      "Whether the learner can investigate broader context, creator purpose, or bias.",
+      "Whether this distinction is retained after time has passed.",
+    ],
   },
   returnProof: {
     enabled: false,

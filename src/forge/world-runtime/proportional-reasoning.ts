@@ -2,7 +2,6 @@ import { PROPORTIONAL_REASONING_WORLD } from "../worlds";
 import type { DeterministicValidationResult, WorldRuntimeActionKind, WorldRuntimeStage } from "../contracts";
 import {
   createInitialRatioWorldState,
-  deriveRatioEvidence,
   transitionRatioWorld,
   type RatioProof,
   type RatioWorldEvent,
@@ -105,18 +104,5 @@ export const proportionalReasoningWorldRuntimeAdapter: WorldRuntimeAdapter<
   },
   validatorCriteria(result: DeterministicValidationResult) {
     return result.evidence;
-  },
-  remainsUntested(proof: RatioProof): readonly string[] {
-    const state = {
-      ...createInitialRatioWorldState(),
-      stage: "EVIDENCE" as const,
-      initialPredictionId: "same_strength" as const,
-      initialConfidence: 0,
-      testPredictionId: "same_strength" as const,
-      experimentRun: true,
-      proof,
-      transferSubmitted: true,
-    };
-    return deriveRatioEvidence(state)?.notYetTested ?? [];
   },
 });

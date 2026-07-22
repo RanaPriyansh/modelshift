@@ -103,13 +103,4 @@ export const sourceCorroborationWorldRuntimeAdapter: WorldRuntimeAdapter<
   validatorCriteria(result: DeterministicValidationResult) {
     return result.evidence;
   },
-  remainsUntested() {
-    return [
-      "Delayed retention and repeat reliability are untested.",
-      "Other subjects, populations, contexts, delivery roles, models, and tool designs are untested.",
-      "Causal isolation across the study differences is untested.",
-      "Open-web source quality and adversarial misinformation are untested.",
-      "Representative learner and accessibility validity are untested.",
-    ];
-  },
 });

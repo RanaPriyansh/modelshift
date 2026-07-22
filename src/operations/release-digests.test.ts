@@ -11,6 +11,7 @@ import { BUILT_IN_WORLD_PACKS } from "../forge/worlds";
 import {
   assertPrimarySourceContentPackageManifest,
   assertRetainedContentPackageManifest,
+  packageIntegrityHash,
   primarySourceRuntimeBindingDigest,
   readReleaseDigests,
   runtimeBindingDigest,
@@ -24,6 +25,7 @@ type Manifest = {
     version: string;
     route: string;
     runtime_binding_digest?: string;
+    package_integrity_hash?: string;
   }>;
 };
 
@@ -78,7 +80,7 @@ describe("retained content package identity", () => {
     assertPrimarySourceContentPackageManifest(retained);
 
     const byId = <Entry extends { id: string }>(left: Entry, right: Entry) => left.id.localeCompare(right.id);
-    expect(retained.packages.map(({ id, version, route, runtime_binding_digest }) => ({ id, version, route, runtime_binding_digest })).sort(byId)).toEqual(
+    expect(retained.packages.map(({ id, version, route, runtime_binding_digest, package_integrity_hash }) => ({ id, version, route, runtime_binding_digest, package_integrity_hash })).sort(byId)).toEqual(
       BUILT_IN_WORLD_PACKS
         .filter((pack) => pack.release.status === "released")
         .map((pack) => ({
@@ -86,6 +88,7 @@ describe("retained content package identity", () => {
           version: pack.manifest.version,
           route: pack.manifest.route,
           runtime_binding_digest: "runtime" in pack ? runtimeBindingDigest(pack.runtime) : undefined,
+          package_integrity_hash: "runtime" in pack ? packageIntegrityHash(pack) : undefined,
         }))
         .sort(byId),
     );
@@ -103,6 +106,7 @@ describe("retained content package identity", () => {
     ["stale version", (candidate: Manifest) => { packageById(candidate, "world.primary-source-reasoning").version = "1.0.0"; }],
     ["stale route", (candidate: Manifest) => { packageById(candidate, "world.primary-source-reasoning").route = "/learn/stale"; }],
     ["stale runtime digest", (candidate: Manifest) => { packageById(candidate, "world.primary-source-reasoning").runtime_binding_digest = "sha256:stale"; }],
+    ["stale package digest", (candidate: Manifest) => { packageById(candidate, "world.primary-source-reasoning").package_integrity_hash = "sha256:stale"; }],
     ["invented legacy runtime digest", (candidate: Manifest) => { packageById(candidate, "world.proportional-reasoning").runtime_binding_digest = primarySourceRuntimeBindingDigest(); }],
   ])("rejects a %s attack", (_name, mutate) => {
     const candidate = structuredClone(manifest());
@@ -128,6 +132,7 @@ describe("retained content package identity", () => {
     ["source", (binding: Record<string, unknown>) => { ((binding.sourceBindings as Array<Record<string, unknown>>)[0]!).sourceItemId = "source.loc.changed"; }],
     ["proof lock", (binding: Record<string, unknown>) => { (binding.proof as Record<string, unknown>).blockedActionKinds = ["instructional_support", "model_action"]; }],
     ["access", (binding: Record<string, unknown>) => { ((binding.access as Record<string, unknown>).accommodations as Array<Record<string, unknown>>)[0]!.nonvisualAlternative = false; }],
+    ["remains untested", (binding: Record<string, unknown>) => { (binding.evidence as Record<string, unknown>).remainsUntested = ["Forged release limitation."]; }],
   ])("changes the runtime binding digest when %s changes", (_name, mutate) => {
     const candidate = clonedBinding();
     mutate(candidate);
@@ -139,6 +144,17 @@ describe("retained content package identity", () => {
     );
     expect(() => assertRetainedContentPackageManifest(manifest(), packsWithMutatedBinding)).toThrow(
       /stale runtime binding digest for world.primary-source-reasoning/,
+    );
+  });
+
+  it("rejects an unchanged runtime digest paired with a stale package identity", () => {
+    const packsWithMutatedPackage = BUILT_IN_WORLD_PACKS.map((pack) =>
+      pack.manifest.id === "world.primary-source-reasoning"
+        ? { ...pack, release: { ...pack.release, contentVersion: "9.9.9" } }
+        : pack,
+    );
+    expect(() => assertRetainedContentPackageManifest(manifest(), packsWithMutatedPackage)).toThrow(
+      /stale package integrity hash for world.primary-source-reasoning/,
     );
   });
 

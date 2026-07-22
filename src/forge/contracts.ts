@@ -390,6 +390,17 @@ export const worldRuntimeAccessAccommodationSchema = z.strictObject({
   nonvisualAlternative: z.boolean(),
 });
 
+/**
+ * Released package-owned boundary statements. These are authored metadata,
+ * never learner, provider, or validator output, and the nonempty ordered list
+ * is committed by both retained release identities.
+ */
+const worldRuntimeRemainsUntestedSchema = z
+  .array(z.string().trim().min(1).max(240))
+  .min(1)
+  .max(16)
+  .refine((items) => new Set(items).size === items.length, "Limitations must be unique and ordered.");
+
 export const worldRuntimeBindingSchema = z
   .strictObject({
     protocolVersion: semverSchema,
@@ -426,6 +437,7 @@ export const worldRuntimeBindingSchema = z
       // authority. A future durable projection needs its own reviewed adapter.
       proofAuthority: z.literal("honour_based"),
       persistence: z.literal("not_persisted"),
+      remainsUntested: worldRuntimeRemainsUntestedSchema,
     }),
     returnProof: z.strictObject({
       enabled: z.boolean(),

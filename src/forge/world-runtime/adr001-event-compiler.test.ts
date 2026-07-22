@@ -7,6 +7,7 @@ import type { PrimarySourceWorldEvent } from "../../worlds/primary-source-reason
 import type { RatioWorldEvent } from "../../worlds/proportional-reasoning";
 import { ForgeEventJournal } from "../event-journal";
 import { canonicalJson, sealForgeEvent, sha256Digest } from "../events";
+import { BUILT_IN_WORLD_PACKS } from "../worlds";
 import type { WorldRuntimeAdapter } from "./protocol";
 import { compileWorldRuntimeReceiptToAdr001 } from "./adr001-event-compiler";
 import { forceAndMotionWorldRuntimeAdapter } from "./force-and-motion";
@@ -335,6 +336,56 @@ describe.each(fixtures)("$name ADR-001 event compiler", (fixture) => {
       validatorInput: failed.validatorInput,
     })).resolves.toMatchObject({ ok: false, code: "validator_result_mismatch" });
 
+    const releasedRuntime = BUILT_IN_WORLD_PACKS.find((pack) => pack.manifest.id === passed.receipt.world.id)?.runtime;
+    if (!releasedRuntime) throw new Error(`${fixture.name} released runtime binding missing.`);
+    expect(passed.receipt.remainsUntested).toEqual(releasedRuntime.evidence.remainsUntested);
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: { ...passed.receipt, remainsUntested: [fixture.rawLearnerProse] },
+      validatorInput: passed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "remains_untested_mismatch" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: { ...passed.receipt, remainsUntested: ["provider.raw-output: model response asserted a learner result"] },
+      validatorInput: passed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "remains_untested_mismatch" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: { ...passed.receipt, remainsUntested: [] },
+      validatorInput: passed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "malformed_receipt" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: { ...passed.receipt, remainsUntested: Array.from({ length: 17 }, (_value, index) => `bounded-limit-${index + 1}`) },
+      validatorInput: passed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "malformed_receipt" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: { ...passed.receipt, remainsUntested: ["x".repeat(241)] },
+      validatorInput: passed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "malformed_receipt" });
+    const withoutLimitation = Object.fromEntries(
+      Object.entries(passed.receipt).filter(([key]) => key !== "remainsUntested"),
+    );
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: withoutLimitation,
+      validatorInput: passed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "malformed_receipt" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: {
+        ...passed.receipt,
+        remainsUntested: [...passed.receipt.remainsUntested, "Trust asserted by a provider."],
+      },
+      validatorInput: passed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "remains_untested_mismatch" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: { ...passed.receipt, remainsUntested: [...passed.receipt.remainsUntested].reverse() },
+      validatorInput: passed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "remains_untested_mismatch" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: { ...passed.receipt, runtimeBindingDigest: `sha256:${"0".repeat(64)}` },
+      validatorInput: passed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "runtime_binding_digest_mismatch" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: { ...passed.receipt, packageIntegrityHash: `sha256:${"0".repeat(64)}` },
+      validatorInput: passed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "package_integrity_hash_mismatch" });
+
     const reset = fixture.reset();
     expect(reset.resetAttemptId).not.toBe(reset.completedAttemptId);
     const afterReset = fixture.complete("pass", `attempt.compiler-${fixture.name.toLowerCase().replaceAll(" ", "-")}-after-reset`);
@@ -407,6 +458,50 @@ describe("ADR-001 compiler receipt commitments", () => {
     expect(taskIdFor(passed.events)).toBe(expectedTaskId);
     expect(taskIdFor(failed.events)).toBe(expectedTaskId);
     expect(taskIdFor(passed.events)).not.toBe("task-family.force-motion.cargo-pod-cold-transfer.v1");
+  });
+
+  it("keeps one released local attempt identity stable across contradictory canonical outcomes", async () => {
+    const force = fixtures.find((fixture) => fixture.name === "Force and Motion");
+    if (!force) throw new Error("Force fixture missing.");
+    const attemptId = "attempt.compiler-stable-identity";
+    const passed = await compileWorldRuntimeReceiptToAdr001(force.complete("pass", attemptId));
+    const failed = await compileWorldRuntimeReceiptToAdr001(force.complete("fail", attemptId));
+    const anotherAttempt = await compileWorldRuntimeReceiptToAdr001(force.complete("pass", "attempt.compiler-stable-identity-other"));
+    if (!passed.ok || !failed.ok || !anotherAttempt.ok) throw new Error("Expected canonical Force receipts to compile.");
+
+    const taskIdFor = (events: readonly { readonly event_type: string; readonly payload: unknown }[]) => {
+      const started = events.find((event) => event.event_type === "world_run.started");
+      if (!started || typeof started.payload !== "object" || started.payload === null || !("task_id" in started.payload)) {
+        throw new Error("Compiler start event missing task ID.");
+      }
+      return (started.payload as { readonly task_id: string }).task_id;
+    };
+    expect(passed.events[0]?.aggregate.id).toBe(failed.events[0]?.aggregate.id);
+    expect(passed.events[0]?.correlation_id).toBe(failed.events[0]?.correlation_id);
+    expect(taskIdFor(passed.events)).toBe(taskIdFor(failed.events));
+    expect(passed.events.map((event) => event.event_id)).toEqual(failed.events.map((event) => event.event_id));
+    expect(passed.events.map((event) => event.idempotency_key)).toEqual(failed.events.map((event) => event.idempotency_key));
+    const supportIds = (events: readonly { readonly event_type: string; readonly payload: unknown }[]) => events
+      .filter((event) => event.event_type === "assistance.recorded")
+      .map((event) => (event.payload as { readonly support_id: string }).support_id);
+    const evidenceIds = (events: readonly { readonly event_type: string; readonly payload: unknown }[]) => events
+      .filter((event) => event.event_type === "evidence.recorded")
+      .map((event) => (event.payload as { readonly evidence_id: string }).evidence_id);
+    expect(supportIds(passed.events)).toEqual(supportIds(failed.events));
+    expect(evidenceIds(passed.events)).toEqual(evidenceIds(failed.events));
+    expect(passed.events).not.toEqual(failed.events);
+    expect(passed.events.map((event) => event.integrity_hash)).not.toEqual(failed.events.map((event) => event.integrity_hash));
+    expect(anotherAttempt.events[0]?.aggregate.id).not.toBe(passed.events[0]?.aggregate.id);
+    expect(anotherAttempt.events[0]?.correlation_id).not.toBe(passed.events[0]?.correlation_id);
+
+    const journal = new ForgeEventJournal();
+    for (const event of passed.events) await expect(journal.append(event)).resolves.toMatchObject({ accepted: true, disposition: "appended" });
+    const contradictoryAppend = [];
+    for (const event of failed.events) contradictoryAppend.push(await journal.append(event));
+    expect(contradictoryAppend).toEqual(expect.arrayContaining([
+      expect.objectContaining({ accepted: false }),
+    ]));
+    expect(journal.size).toBe(passed.events.length);
   });
 
   it("accepts catalog-valid pre-proof model provenance without strengthening a forged support or result", async () => {

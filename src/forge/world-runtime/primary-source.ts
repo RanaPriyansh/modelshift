@@ -140,7 +140,4 @@ export const primarySourceWorldRuntimeAdapter: WorldRuntimeAdapter<
   validatorCriteria(result: DeterministicValidationResult) {
     return result.evidence;
   },
-  remainsUntested(proof: PrimarySourceRuntimeProof) {
-    return proof.record.notYetTested;
-  },
 });
