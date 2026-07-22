@@ -4,13 +4,12 @@ import { z } from "zod";
 
 import { buildLessonStudioInput, LESSON_STUDIO_INSTRUCTIONS } from "./prompt";
 import {
-  LESSON_PROVIDER_DEFAULTS,
+  estimateLessonRequestCostMicros,
+  LESSON_STUDIO_BUDGETS,
   lessonDraftSchema,
   type LessonDraft,
   type LessonStudioRequest,
 } from "./schema";
-
-export const LESSON_STUDIO_TIMEOUT_MS = 30_000;
 
 type FetchLike = typeof fetch;
 
@@ -19,7 +18,7 @@ export type LessonStudioOpenAIClient = {
     parse: (
       body: Parameters<OpenAI["responses"]["parse"]>[0],
       options?: { signal?: AbortSignal },
-    ) => Promise<{ output_parsed?: unknown; output_text?: string }>;
+    ) => Promise<{ output_parsed?: unknown; output_text?: string; output?: unknown[] }>;
   };
 };
 
@@ -32,25 +31,25 @@ export type GenerateLessonOptions = {
 export type GeneratedLessonDraft = {
   draft: LessonDraft;
   model: string;
-  keyHandling: "request_only" | "deployment_managed";
+  keyHandling: "request_only";
+  estimatedCostMicros: number;
+  outputTokenBudget: number;
 };
 
 export type LessonStudioErrorCode =
   | "missing_key"
-  | "provider_rejected"
-  | "provider_unavailable"
-  | "invalid_provider_output"
-  | "timeout";
+  | "request_budget_exceeded"
+  | "provider_refusal"
+  | "rate_limited"
+  | "timeout"
+  | "malformed_provider_output"
+  | "provider_error";
 
 export class LessonStudioError extends Error {
   constructor(public readonly code: LessonStudioErrorCode) {
     super(code);
     this.name = "LessonStudioError";
   }
-}
-
-function modelFor(request: LessonStudioRequest): string {
-  return request.model || LESSON_PROVIDER_DEFAULTS[request.provider];
 }
 
 function structuredJsonSchema(): Record<string, unknown> {
@@ -61,80 +60,78 @@ function structuredJsonSchema(): Record<string, unknown> {
 
 function parseDraft(value: unknown): LessonDraft {
   const parsed = lessonDraftSchema.safeParse(value);
-  if (!parsed.success) throw new LessonStudioError("invalid_provider_output");
+  if (!parsed.success) throw new LessonStudioError("malformed_provider_output");
   return parsed.data;
 }
 
 function parseJsonText(value: unknown): LessonDraft {
-  if (typeof value !== "string") throw new LessonStudioError("invalid_provider_output");
+  if (typeof value !== "string") throw new LessonStudioError("malformed_provider_output");
   try {
     return parseDraft(JSON.parse(value));
   } catch (error) {
     if (error instanceof LessonStudioError) throw error;
-    throw new LessonStudioError("invalid_provider_output");
+    throw new LessonStudioError("malformed_provider_output");
   }
+}
+
+function errorForHttpStatus(status: number): LessonStudioError {
+  if (status === 429) return new LessonStudioError("rate_limited");
+  if (status === 408 || status === 504) return new LessonStudioError("timeout");
+  return new LessonStudioError("provider_error");
 }
 
 async function readProviderJson(response: Response): Promise<unknown> {
-  if (!response.ok) {
-    if ([400, 401, 403, 404, 422].includes(response.status)) {
-      throw new LessonStudioError("provider_rejected");
-    }
-    throw new LessonStudioError("provider_unavailable");
-  }
+  if (!response.ok) throw errorForHttpStatus(response.status);
   try {
     return await response.json();
   } catch {
-    throw new LessonStudioError("invalid_provider_output");
+    throw new LessonStudioError("malformed_provider_output");
   }
 }
 
-function requestKey(request: LessonStudioRequest): {
-  apiKey: string;
-  keyHandling: "request_only" | "deployment_managed";
-} {
-  if (request.apiKey) return { apiKey: request.apiKey, keyHandling: "request_only" };
-  if (
-    request.provider === "openai" &&
-    process.env.FORGE_LESSON_STUDIO_OPENAI_ENABLED === "true" &&
-    process.env.OPENAI_API_KEY
-  ) {
-    return { apiKey: process.env.OPENAI_API_KEY, keyHandling: "deployment_managed" };
-  }
-  throw new LessonStudioError("missing_key");
+function hasOpenAIRefusal(response: { output?: unknown[] }): boolean {
+  return response.output?.some((item) => (
+    typeof item === "object"
+    && item !== null
+    && (("type" in item && item.type === "refusal") || ("refusal" in item && Boolean(item.refusal)))
+  )) ?? false;
+}
+
+function classifyThrownProviderError(error: unknown): LessonStudioError | null {
+  if (error instanceof LessonStudioError) return error;
+  if (error instanceof Error && error.name === "AbortError") return new LessonStudioError("timeout");
+  const status = typeof error === "object" && error !== null && "status" in error ? Number(error.status) : Number.NaN;
+  if (Number.isInteger(status)) return errorForHttpStatus(status);
+  return null;
 }
 
 async function generateWithOpenAI(
   request: LessonStudioRequest,
   apiKey: string,
   signal: AbortSignal,
+  maxOutputTokens: number,
   clientOverride?: LessonStudioOpenAIClient,
 ): Promise<LessonDraft> {
   const client = clientOverride ?? new OpenAI({ apiKey });
   try {
     const response = await client.responses.parse(
       {
-        model: modelFor(request),
+        model: request.model,
         instructions: LESSON_STUDIO_INSTRUCTIONS,
         input: buildLessonStudioInput(request),
         text: { format: zodTextFormat(lessonDraftSchema, "forge_lesson_draft") },
-        max_output_tokens: 4_500,
+        max_output_tokens: maxOutputTokens,
         store: false,
-        ...(request.safetyIdentifier ? { safety_identifier: request.safetyIdentifier } : {}),
       },
       { signal },
     );
+    if (hasOpenAIRefusal(response)) throw new LessonStudioError("provider_refusal");
     if (response.output_parsed === undefined || response.output_parsed === null) {
-      throw new LessonStudioError("invalid_provider_output");
+      throw new LessonStudioError("malformed_provider_output");
     }
     return parseDraft(response.output_parsed);
   } catch (error) {
-    if (error instanceof LessonStudioError) throw error;
-    const status = typeof error === "object" && error !== null && "status" in error ? error.status : null;
-    if ([400, 401, 403, 404, 422].includes(Number(status))) {
-      throw new LessonStudioError("provider_rejected");
-    }
-    throw error;
+    throw classifyThrownProviderError(error) ?? new LessonStudioError("provider_error");
   }
 }
 
@@ -143,6 +140,7 @@ async function generateWithAnthropic(
   apiKey: string,
   signal: AbortSignal,
   fetchImpl: FetchLike,
+  maxOutputTokens: number,
 ): Promise<LessonDraft> {
   const response = await fetchImpl("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -152,13 +150,11 @@ async function generateWithAnthropic(
       "x-api-key": apiKey,
     },
     body: JSON.stringify({
-      model: modelFor(request),
-      max_tokens: 4_500,
+      model: request.model,
+      max_tokens: maxOutputTokens,
       system: LESSON_STUDIO_INSTRUCTIONS,
       messages: [{ role: "user", content: buildLessonStudioInput(request) }],
-      output_config: {
-        format: { type: "json_schema", schema: structuredJsonSchema() },
-      },
+      output_config: { format: { type: "json_schema", schema: structuredJsonSchema() } },
     }),
     cache: "no-store",
     signal,
@@ -168,9 +164,9 @@ async function generateWithAnthropic(
     stop_reason: z.string().nullable(),
     content: z.array(z.object({ type: z.string(), text: z.string().optional() })),
   }).safeParse(payload);
-  if (!envelope.success || ["refusal", "max_tokens"].includes(envelope.data.stop_reason ?? "")) {
-    throw new LessonStudioError("invalid_provider_output");
-  }
+  if (!envelope.success) throw new LessonStudioError("malformed_provider_output");
+  if (envelope.data.stop_reason === "refusal") throw new LessonStudioError("provider_refusal");
+  if (envelope.data.stop_reason === "max_tokens") throw new LessonStudioError("request_budget_exceeded");
   return parseJsonText(envelope.data.content.find((part) => part.type === "text")?.text);
 }
 
@@ -179,8 +175,9 @@ async function generateWithGemini(
   apiKey: string,
   signal: AbortSignal,
   fetchImpl: FetchLike,
+  maxOutputTokens: number,
 ): Promise<LessonDraft> {
-  const model = encodeURIComponent(modelFor(request));
+  const model = encodeURIComponent(request.model);
   const response = await fetchImpl(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
@@ -192,7 +189,7 @@ async function generateWithGemini(
         generationConfig: {
           responseMimeType: "application/json",
           responseJsonSchema: structuredJsonSchema(),
-          maxOutputTokens: 4_500,
+          maxOutputTokens: maxOutputTokens,
         },
       }),
       cache: "no-store",
@@ -206,11 +203,12 @@ async function generateWithGemini(
       content: z.object({ parts: z.array(z.object({ text: z.string().optional() })) }),
     })).min(1),
   }).safeParse(payload);
-  if (!envelope.success) throw new LessonStudioError("invalid_provider_output");
+  if (!envelope.success) throw new LessonStudioError("malformed_provider_output");
   const candidate = envelope.data.candidates[0];
   if (["SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT"].includes(candidate.finishReason ?? "")) {
-    throw new LessonStudioError("provider_rejected");
+    throw new LessonStudioError("provider_refusal");
   }
+  if (candidate.finishReason === "MAX_TOKENS") throw new LessonStudioError("request_budget_exceeded");
   return parseJsonText(candidate.content.parts.map((part) => part.text ?? "").join(""));
 }
 
@@ -219,6 +217,7 @@ async function generateWithOpenRouter(
   apiKey: string,
   signal: AbortSignal,
   fetchImpl: FetchLike,
+  maxOutputTokens: number,
 ): Promise<LessonDraft> {
   const response = await fetchImpl("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
@@ -229,7 +228,7 @@ async function generateWithOpenRouter(
       "X-Title": "FORGE Lesson Studio",
     },
     body: JSON.stringify({
-      model: modelFor(request),
+      model: request.model,
       messages: [
         { role: "system", content: LESSON_STUDIO_INSTRUCTIONS },
         { role: "user", content: buildLessonStudioInput(request) },
@@ -238,49 +237,64 @@ async function generateWithOpenRouter(
         type: "json_schema",
         json_schema: { name: "forge_lesson_draft", strict: true, schema: structuredJsonSchema() },
       },
-      max_tokens: 4_500,
+      max_tokens: maxOutputTokens,
     }),
     cache: "no-store",
     signal,
   });
   const payload = await readProviderJson(response);
   const envelope = z.object({
-    choices: z.array(z.object({ message: z.object({ content: z.string() }) })).min(1),
+    choices: z.array(z.object({ message: z.object({ content: z.string().nullable().optional(), refusal: z.string().optional() }), finish_reason: z.string().optional() })).min(1),
   }).safeParse(payload);
-  if (!envelope.success) throw new LessonStudioError("invalid_provider_output");
-  return parseJsonText(envelope.data.choices[0].message.content);
+  if (!envelope.success) throw new LessonStudioError("malformed_provider_output");
+  const choice = envelope.data.choices[0];
+  if (choice.message.refusal || choice.finish_reason === "content_filter") throw new LessonStudioError("provider_refusal");
+  if (choice.finish_reason === "length") throw new LessonStudioError("request_budget_exceeded");
+  return parseJsonText(choice.message.content);
 }
 
 export async function generateLessonDraft(
   request: LessonStudioRequest,
   options: GenerateLessonOptions = {},
 ): Promise<GeneratedLessonDraft> {
-  const { apiKey, keyHandling } = requestKey(request);
+  const estimatedCostMicros = estimateLessonRequestCostMicros(request);
+  const budget = LESSON_STUDIO_BUDGETS[request.depth];
+  if (estimatedCostMicros > budget.maxEstimatedCostMicros) {
+    throw new LessonStudioError("request_budget_exceeded");
+  }
+
+  const apiKey = request.apiKey;
+  if (!apiKey) throw new LessonStudioError("missing_key");
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? LESSON_STUDIO_TIMEOUT_MS);
+  const timeoutMs = Math.min(options.timeoutMs ?? budget.timeoutMs, budget.timeoutMs);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const fetchImpl = options.fetchImpl ?? fetch;
 
   try {
     let draft: LessonDraft;
     switch (request.provider) {
       case "openai":
-        draft = await generateWithOpenAI(request, apiKey, controller.signal, options.openAIClient);
+        draft = await generateWithOpenAI(request, apiKey, controller.signal, budget.maxOutputTokens, options.openAIClient);
         break;
       case "anthropic":
-        draft = await generateWithAnthropic(request, apiKey, controller.signal, fetchImpl);
+        draft = await generateWithAnthropic(request, apiKey, controller.signal, fetchImpl, budget.maxOutputTokens);
         break;
       case "gemini":
-        draft = await generateWithGemini(request, apiKey, controller.signal, fetchImpl);
+        draft = await generateWithGemini(request, apiKey, controller.signal, fetchImpl, budget.maxOutputTokens);
         break;
       case "openrouter":
-        draft = await generateWithOpenRouter(request, apiKey, controller.signal, fetchImpl);
+        draft = await generateWithOpenRouter(request, apiKey, controller.signal, fetchImpl, budget.maxOutputTokens);
         break;
     }
-    return { draft, model: modelFor(request), keyHandling };
+    return {
+      draft,
+      model: request.model,
+      keyHandling: "request_only",
+      estimatedCostMicros,
+      outputTokenBudget: budget.maxOutputTokens,
+    };
   } catch (error) {
-    if (error instanceof LessonStudioError) throw error;
-    if (error instanceof Error && error.name === "AbortError") throw new LessonStudioError("timeout");
-    throw new LessonStudioError("provider_unavailable");
+    throw classifyThrownProviderError(error) ?? new LessonStudioError("provider_error");
   } finally {
     clearTimeout(timeout);
   }

@@ -1,6 +1,26 @@
 import { expect, test } from "@playwright/test";
 
 import lessonDraftResponse from "../fixtures/lesson-draft-response.json";
+import { compileLessonDraftPipeline } from "../../src/lib/lesson-studio/pipeline.server";
+import { lessonDraftSchema } from "../../src/lib/lesson-studio/schema";
+
+const lessonDraft = lessonDraftSchema.parse(lessonDraftResponse.draft);
+const lessonDraftResponseWithPipeline = {
+  ...lessonDraftResponse,
+  draft: lessonDraft,
+  pipeline: compileLessonDraftPipeline(lessonDraft),
+  provenance: {
+    ...lessonDraftResponse.provenance,
+    correlationId: "86fe2328-56f8-4f49-8532-b71066170df2",
+    keyHandling: "request_only",
+    budget: {
+      timeoutMs: 25_000,
+      maxOutputTokens: 2_400,
+      maxEstimatedCostMicros: 140_000,
+      estimatedCostMicros: 80_000,
+    },
+  },
+};
 
 const DEVICE_PROFILE_KEY = "forge.device-profile:v1";
 
@@ -157,14 +177,14 @@ test.describe("FORGE expanded learning system", () => {
 
   test("renders a provider draft as two readings, a separating test, and bounded cold proof", async ({ page }) => {
     await page.route("**/api/forge/lesson-draft", async (route) => {
-      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(lessonDraftResponse) });
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(lessonDraftResponseWithPipeline) });
     });
     await page.goto("/studio");
     await page.getByLabel("Provider").selectOption("anthropic");
     await page.getByLabel(/API key/).fill("temporary-provider-key-123");
     await page.getByRole("button", { name: "Generate unverified lesson draft" }).click();
 
-    await expect(page.getByText("Unverified lesson draft", { exact: true })).toBeVisible();
+    await expect(page.getByText(/Unverified lesson draft/)).toBeVisible();
     await expect(page.getByText("Reading 1", { exact: true })).toBeVisible();
     await expect(page.getByText("Reading 2", { exact: true })).toBeVisible();
     await expect(page.getByText("Separating test", { exact: true })).toBeVisible();
