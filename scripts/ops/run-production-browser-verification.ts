@@ -43,7 +43,7 @@ async function waitForExit(child: ServerProcess, timeoutMs: number): Promise<boo
     if (hasExited(child)) finish();
   });
 }
-async function stop(child: ServerProcess): Promise<void> {
+export async function stopProductionServer(child: ServerProcess): Promise<void> {
   if (hasExited(child)) return;
   child.kill("SIGTERM");
   if (await waitForExit(child, 5_000)) return;
@@ -82,7 +82,7 @@ async function main() {
   child.stdout.on("data", appendLog); child.stderr.on("data", appendLog);
   try { await waitForServer(baseUrl, child); const result = await new Promise<number>((resolveExit) => { const browser = spawn(command, ["exec", "playwright", "test"], { cwd: process.cwd(), env: browserEnvironment(baseUrl), stdio: "inherit" }); browser.once("exit", (code) => resolveExit(code ?? 1)); }); if (result !== 0) process.exitCode = result; }
   catch (error) { const bounded = logs.toString("utf8").replace(/\bsk-[A-Za-z0-9_-]{12,}\b/g, "[REDACTED_TOKEN]"); if (bounded) console.error(`bounded production server log:\n${bounded}`); throw error; }
-  finally { await stop(child); }
+  finally { await stopProductionServer(child); }
 }
 const entryUrl = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : "";
 if (import.meta.url === entryUrl) void main().catch((error: unknown) => { console.error(`production browser verification failed: ${error instanceof Error ? error.message : "unknown error"}`); process.exitCode = 1; });
