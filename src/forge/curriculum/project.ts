@@ -1,13 +1,18 @@
 import { PATHWAY_ENTITLEMENT_AREAS, type PathwayEntitlementArea } from "../pathways/contracts";
 
-import { CURRICULUM_NON_CLAIMS, type CurriculumAvailability, type CurriculumSourceAuthorityStatus } from "./contracts";
+import { CURRICULUM_NON_CLAIMS, type CurriculumAuthorityProjection, type CurriculumSourceAuthorityStatus } from "./contracts";
 import { curriculumCodeUnitCompare } from "./canonical";
 import type { ValidatedCurriculumGraph } from "./validate";
 
 export interface NineAreaCoverageEntry {
   readonly area: PathwayEntitlementArea;
-  readonly availability: Extract<CurriculumAvailability, "released" | "identified-gap">;
-  readonly released: readonly { readonly capabilityId: string; readonly route: string }[];
+  readonly availability: Extract<CurriculumAuthorityProjection, "caller-asserted-release" | "identified-gap">;
+  readonly authorityTrust: "caller-asserted-unverified";
+  readonly callerAssertedReleaseMatches: readonly {
+    readonly capabilityId: string;
+    readonly proposedRoute: string;
+    readonly routableRoute: null;
+  }[];
   /** These are capability identities, never routes, learner selections, or rankings. */
   readonly reviewCandidateCapabilityIds: readonly string[];
   readonly gaps: readonly { readonly id: string; readonly nextReviewGateCodes: readonly string[] }[];
@@ -17,8 +22,9 @@ export interface NineAreaCoverageEntry {
 export interface CapabilityAvailabilityExplanation {
   readonly capabilityId: string;
   readonly capabilityVersion: string | null;
-  readonly availability: CurriculumAvailability | null;
+  readonly availability: CurriculumAuthorityProjection | null;
   readonly route: string | null;
+  readonly authorityTrust: "caller-asserted-unverified";
   readonly sourceAuthorityStatus: CurriculumSourceAuthorityStatus | null;
   readonly sourceBinding: {
     readonly mode: "bound-source-authority" | "legacy-metadata-only";
@@ -35,7 +41,10 @@ export interface CapabilityAvailabilityExplanation {
     readonly proposedRoute: string;
   } | null;
   readonly policyBinding: { readonly id: string; readonly version: string; readonly digest: string } | null;
-  readonly releaseBinding: { readonly availability: CurriculumAvailability; readonly route: string | null } | null;
+  readonly callerAssertedReleaseBinding: {
+    readonly availability: CurriculumAuthorityProjection;
+    readonly routableRoute: null;
+  } | null;
   readonly prerequisiteReasons: readonly { readonly id: string; readonly rationaleCode: string; readonly explanation: string }[];
   readonly alternatives: readonly { readonly id: string; readonly equivalence: string; readonly limitationCodes: readonly string[] }[];
   readonly accessEvidenceConditions: readonly { readonly routeId: string; readonly effect: string; readonly evidenceConditionCode: string }[];
@@ -49,12 +58,20 @@ export function projectNineAreaCoverage(validated: ValidatedCurriculumGraph): re
   return PATHWAY_ENTITLEMENT_AREAS.map((area) => {
     const authoredNodes = graph?.nodes.filter((node) => node.entitlementAreas.includes(area)) ?? [];
     const available = validated.nodes.filter((node) => authoredNodes.some((authored) => authored.id === node.nodeId));
-    const released = available
-      .filter((node) => node.availability === "released" && node.route !== null)
-      .map((node) => ({ capabilityId: node.capabilityId, route: node.route! }))
+    const proposedRouteByNodeId = new Map(authoredNodes.flatMap((node) =>
+      node.worldBinding !== null && node.worldBinding.route.trim().length > 0
+        ? [[node.id, node.worldBinding.route] as const]
+        : []));
+    const callerAssertedReleaseMatches = available
+      .filter((node) => node.availability === "caller-asserted-release")
+      .flatMap((node) => {
+        const proposedRoute = proposedRouteByNodeId.get(node.nodeId);
+        return proposedRoute === undefined ? [] : [{ capabilityId: node.capabilityId, proposedRoute, routableRoute: null }];
+      })
       .sort((left, right) => curriculumCodeUnitCompare(left.capabilityId, right.capabilityId));
     const reviewCandidateCapabilityIds = available
-      .filter((node) => node.availability === "review-candidate")
+      .filter((node) => node.availability === "review-candidate" ||
+        (node.availability === "caller-asserted-release" && !proposedRouteByNodeId.has(node.nodeId)))
       .map((node) => node.capabilityId)
       .sort(curriculumCodeUnitCompare);
     const gaps = (graph?.gaps.filter((gap) => gap.entitlementArea === area) ?? [])
@@ -62,8 +79,9 @@ export function projectNineAreaCoverage(validated: ValidatedCurriculumGraph): re
       .sort((left, right) => curriculumCodeUnitCompare(left.id, right.id));
     return {
       area,
-      availability: released.length > 0 ? "released" : "identified-gap",
-      released,
+      availability: callerAssertedReleaseMatches.length > 0 ? "caller-asserted-release" : "identified-gap",
+      authorityTrust: "caller-asserted-unverified",
+      callerAssertedReleaseMatches,
       reviewCandidateCapabilityIds,
       gaps,
       nonClaims: CURRICULUM_NON_CLAIMS,
@@ -81,11 +99,12 @@ export function explainCapabilityAvailability(validated: ValidatedCurriculumGrap
       capabilityVersion: null,
       availability: null,
       route: null,
+      authorityTrust: "caller-asserted-unverified",
       sourceAuthorityStatus: null,
       sourceBinding: null,
       worldBinding: null,
       policyBinding: null,
-      releaseBinding: null,
+      callerAssertedReleaseBinding: null,
       prerequisiteReasons: [],
       alternatives: [],
       accessEvidenceConditions: [],
@@ -98,6 +117,7 @@ export function explainCapabilityAvailability(validated: ValidatedCurriculumGrap
     capabilityVersion: node.capabilityVersion,
     availability: derived.availability,
     route: derived.route,
+    authorityTrust: "caller-asserted-unverified",
     sourceAuthorityStatus: derived.sourceAuthorityStatus,
     sourceBinding: {
       mode: node.sourceRequirement.mode,
@@ -113,7 +133,7 @@ export function explainCapabilityAvailability(validated: ValidatedCurriculumGrap
       proposedRoute: node.worldBinding.route,
     },
     policyBinding: validated.graph?.policyRef ?? null,
-    releaseBinding: { availability: derived.availability, route: derived.route },
+    callerAssertedReleaseBinding: { availability: derived.availability, routableRoute: null },
     prerequisiteReasons: [...node.prerequisites]
       .sort((left, right) => curriculumCodeUnitCompare(left.id, right.id))
       .map((edge) => ({ id: edge.id, rationaleCode: edge.rationaleCode, explanation: edge.explanation })),

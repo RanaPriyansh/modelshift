@@ -2,17 +2,17 @@ import { PATHWAY_ENTITLEMENT_AREAS } from "../pathways/contracts";
 
 import {
   CURRICULUM_NON_CLAIMS,
+  callerAssertedReleasedWorldAuthoritiesSchema,
   curriculumGraphPackageSchema,
   curriculumGraphPolicySchema,
   curriculumValidationInputSchema,
-  releasedWorldAuthoritiesSchema,
   sourceAuthorityEvaluationsSchema,
-  type CurriculumAvailability,
+  type CallerAssertedReleasedWorldAuthorityV1,
+  type CurriculumAuthorityProjection,
   type CurriculumGraphPackageV1,
   type CurriculumGraphPolicyV1,
   type CurriculumNodeV1,
   type CurriculumSourceAuthorityStatus,
-  type ReleasedWorldAuthorityV1,
   type SourceAuthorityEvaluationV1,
 } from "./contracts";
 import { curriculumCodeUnitCompare, curriculumGraphDigest, curriculumGraphPolicyDigest } from "./canonical";
@@ -27,13 +27,17 @@ export interface CurriculumNodeAvailability {
   readonly nodeId: string;
   readonly capabilityId: string;
   readonly capabilityVersion: string;
-  readonly availability: CurriculumAvailability;
+  readonly availability: CurriculumAuthorityProjection;
   readonly sourceAuthorityStatus: CurriculumSourceAuthorityStatus;
+  readonly authorityTrust: "caller-asserted-unverified";
+  readonly callerAssertedReleaseMatch: "exact-match" | "none";
+  /** Always null in this pure module; a future trusted adapter owns routability. */
   readonly route: string | null;
   readonly reasons: readonly string[];
 }
 
 export interface ValidatedCurriculumGraph {
+  readonly authorityTrust: "caller-asserted-unverified";
   readonly graph: CurriculumGraphPackageV1 | null;
   readonly graphDigest: string | null;
   readonly policy: CurriculumGraphPolicyV1 | null;
@@ -72,6 +76,38 @@ function refEqual(
   return left.id === right.id && left.version === right.version;
 }
 
+function boundReviewClaimReasons(node: CurriculumNodeV1, evaluation: SourceAuthorityEvaluationV1): readonly string[] {
+  const source = node.sourceRequirement;
+  if (source.mode !== "bound-source-authority") return [];
+  const reasons: string[] = [];
+  const bindingsByItemId = new Map(evaluation.reviewedSourceBindings.map((binding) => [binding.sourceItemId, binding]));
+  for (const route of node.accessRoutes) {
+    if (route.reviewClaimIds.length === 0) reasons.push("source.access-review-claims-missing");
+    for (const claimId of route.reviewClaimIds) {
+      const matchingBindings = evaluation.reviewedSourceBindings.filter((binding) => binding.claimIds.includes(claimId));
+      if (!source.requiredClaimIds.includes(claimId)) reasons.push("source.access-review-claim-not-required");
+      if (matchingBindings.length !== 1) reasons.push("source.access-review-claim-not-evaluated");
+    }
+  }
+  for (const alternative of node.alternatives) {
+    for (const reference of alternative.alternativeSourceRefs) {
+      if (reference.sourcePackageRef.id !== source.sourcePackageRef.id ||
+        reference.sourcePackageRef.version !== source.sourcePackageRef.version ||
+        reference.sourcePackageRef.digest !== source.sourcePackageRef.digest) {
+        reasons.push("source.alternative-package-mismatch");
+        continue;
+      }
+      const binding = bindingsByItemId.get(reference.sourceItemId);
+      if (!source.requiredItemIds.includes(reference.sourceItemId) || !binding) reasons.push("source.alternative-item-not-evaluated");
+      for (const claimId of reference.claimIds) {
+        if (!source.requiredClaimIds.includes(claimId)) reasons.push("source.alternative-claim-not-required");
+        if (!binding?.claimIds.includes(claimId)) reasons.push("source.alternative-claim-not-evaluated");
+      }
+    }
+  }
+  return [...new Set(reasons)].sort(curriculumCodeUnitCompare);
+}
+
 function sourceStatus(node: CurriculumNodeV1, sourceAuthorities: readonly SourceAuthorityEvaluationV1[]): CurriculumSourceAuthorityStatus {
   const source = node.sourceRequirement;
   if (source.mode === "legacy-metadata-only") return "legacy-incomplete";
@@ -88,7 +124,8 @@ function sourceStatus(node: CurriculumNodeV1, sourceAuthorities: readonly Source
   if (source.requiredClaimIds.some((claimId) => !bindings.some((binding) => binding.claimIds.includes(claimId))) ||
     source.requiredRightsIds.some((rightsId) => !bindings.some((binding) => binding.rightsRecordId === rightsId)) ||
     source.requiredProductUses.some((productUse) => !bindings.some((binding) => binding.permittedProductUses.includes(productUse))) ||
-    source.requiredReviewScopes.some((scope) => !bindings.some((binding) => binding.acceptedReviewScopes.includes(scope)))) return "bound-incomplete";
+    source.requiredReviewScopes.some((scope) => !bindings.some((binding) => binding.acceptedReviewScopes.includes(scope))) ||
+    boundReviewClaimReasons(node, matches[0]!).length > 0) return "bound-incomplete";
   return "bound-review-candidate";
 }
 
@@ -249,7 +286,7 @@ function validateGraphRelations(graph: CurriculumGraphPackageV1, issues: Mutable
 
 function bindingIssues(
   node: CurriculumNodeV1,
-  authority: ReleasedWorldAuthorityV1,
+  authority: CallerAssertedReleasedWorldAuthorityV1,
   policy: CurriculumGraphPolicyV1,
 ): readonly string[] {
   const binding = node.worldBinding;
@@ -279,7 +316,7 @@ function bindingIssues(
   return reasons;
 }
 
-function authorityForNode(node: CurriculumNodeV1, authorities: readonly ReleasedWorldAuthorityV1[]): ReleasedWorldAuthorityV1 | null {
+function authorityForNode(node: CurriculumNodeV1, authorities: readonly CallerAssertedReleasedWorldAuthorityV1[]): CallerAssertedReleasedWorldAuthorityV1 | null {
   if (!node.worldBinding) return null;
   return authorities.find((authority) => authority.worldId === node.worldBinding!.worldId) ?? null;
 }
@@ -287,13 +324,16 @@ function authorityForNode(node: CurriculumNodeV1, authorities: readonly Released
 function sourceReasons(
   node: CurriculumNodeV1,
   sourceAuthorities: readonly SourceAuthorityEvaluationV1[],
-  authority: ReleasedWorldAuthorityV1 | null,
+  authority: CallerAssertedReleasedWorldAuthorityV1 | null,
 ): readonly string[] {
   if (node.sourceRequirement.mode === "legacy-metadata-only") {
     const reasons: string[] = [];
     if (!node.worldBinding || !stringsEqual(node.sourceRequirement.sourceItemIds, node.worldBinding.sourceIds)) reasons.push("source.legacy-source-ids-mismatch");
     if (node.worldBinding?.sourceProvenanceStatus !== "legacy-metadata-only") reasons.push("source.legacy-provenance-mismatch");
     if (authority?.lifecycle !== "existing-registry-release") reasons.push("source.legacy-not-permitted-for-new-publication");
+    if (node.accessRoutes.some((route) => route.reviewClaimIds.length > 0) || node.alternatives.some((alternative) => alternative.alternativeSourceRefs.length > 0)) {
+      reasons.push("source.legacy-review-claims-not-established");
+    }
     return reasons;
   }
   const reasons: string[] = [];
@@ -316,6 +356,7 @@ function sourceReasons(
     if (source.requiredRightsIds.some((rightsId) => !boundRightsIds.includes(rightsId))) reasons.push("source.required-rights-mismatch");
     if (source.requiredProductUses.some((use) => !boundProductUses.includes(use))) reasons.push("source.required-product-uses-mismatch");
     if (source.requiredReviewScopes.some((scope) => !boundReviewScopes.includes(scope))) reasons.push("source.required-review-scopes-mismatch");
+    reasons.push(...boundReviewClaimReasons(node, sourceAuthority));
   }
   if (sourceAuthority?.invalidatedNodeIds.includes(node.id)) {
     const reasonsForNode = sourceAuthority.invalidationReasonsByNodeId.find((entry) => entry.nodeId === node.id)?.reasons ?? ["source-authority-invalid"];
@@ -335,6 +376,7 @@ export async function validateCurriculumGraph(input: unknown): Promise<Validated
   if (!outer.success) {
     addSchemaIssues(issues, "input.schema-invalid", "input", outer);
     return {
+      authorityTrust: "caller-asserted-unverified",
       graph: null,
       graphDigest: null,
       policy: null,
@@ -350,12 +392,12 @@ export async function validateCurriculumGraph(input: unknown): Promise<Validated
   const graphResult = curriculumGraphPackageSchema.safeParse(outer.data.graph);
   const policyResult = curriculumGraphPolicySchema.safeParse(outer.data.policy);
   const sourceAuthoritiesResult = sourceAuthorityEvaluationsSchema.safeParse(outer.data.sourceAuthorities);
-  const authoritiesResult = releasedWorldAuthoritiesSchema.safeParse(outer.data.releasedWorldAuthorities);
+  const authoritiesResult = callerAssertedReleasedWorldAuthoritiesSchema.safeParse(outer.data.callerAssertedReleasedWorldAuthorities);
 
   if (!graphResult.success) addSchemaIssues(issues, "graph.schema-invalid", "graph", graphResult);
   if (!policyResult.success) addSchemaIssues(issues, "policy.schema-invalid", "policy", policyResult);
   if (!sourceAuthoritiesResult.success) addSchemaIssues(issues, "source.schema-invalid", "sourceAuthorities", sourceAuthoritiesResult);
-  if (!authoritiesResult.success) addSchemaIssues(issues, "world.authority-schema-invalid", "releasedWorldAuthorities", authoritiesResult);
+  if (!authoritiesResult.success) addSchemaIssues(issues, "world.authority-schema-invalid", "callerAssertedReleasedWorldAuthorities", authoritiesResult);
   const graph = graphResult.success ? graphResult.data : null;
   const policy = policyResult.success ? policyResult.data : null;
   const sourceAuthorities = sourceAuthoritiesResult.success ? sourceAuthoritiesResult.data : [];
@@ -440,19 +482,17 @@ export async function validateCurriculumGraph(input: unknown): Promise<Validated
       if (node.proposedAvailability !== "review-candidate") continue;
       const authority = authorityForNode(node, parsedAuthorities);
       if (!authority) {
-        issue(issues, "world.authority-missing", `nodes.${node.id}.worldBinding`, "No exact released World authority was supplied for this binding.");
+        issue(issues, "world.authority-missing", `nodes.${node.id}.worldBinding`, "No exact caller-asserted World authority was supplied for this binding.");
         invalid.add(node.id);
       } else {
         for (const reason of bindingIssues(node, authority, policy)) {
-          issue(issues, reason, `nodes.${node.id}.worldBinding`, "World release authority does not exactly match the authored binding.");
+          issue(issues, reason, `nodes.${node.id}.worldBinding`, "Caller-asserted World authority does not exactly match the authored binding.");
           invalid.add(node.id);
         }
       }
-      const bindingReasons = authority ? bindingIssues(node, authority, policy) : ["world.authority-missing"];
-      const preservesExistingRelease = authority?.lifecycle === "existing-registry-release" && bindingReasons.length === 0;
       for (const reason of sourceReasons(node, sourceAuthorities, authority)) {
         issue(issues, reason, `nodes.${node.id}.sourceRequirement`, "Source authority does not establish this release binding.");
-        if (!preservesExistingRelease) invalid.add(node.id);
+        invalid.add(node.id);
       }
     }
   }
@@ -467,8 +507,8 @@ export async function validateCurriculumGraph(input: unknown): Promise<Validated
       if (cycles.some((path) => path.slice(0, -1).includes(node.id))) nodeIssues.push("graph.cycle");
       if (rootInvalid) nodeIssues.push("graph.root-invalid");
       if (invalid.has(node.id) && nodeIssues.length === 0) nodeIssues.push("graph.node-invalidated");
-      const availability: CurriculumAvailability = !rootInvalid && !invalid.has(node.id) && node.proposedAvailability === "review-candidate"
-        ? "released"
+      const availability: CurriculumAuthorityProjection = !rootInvalid && !invalid.has(node.id) && node.proposedAvailability === "review-candidate"
+        ? "caller-asserted-release"
         : node.proposedAvailability;
       return {
         nodeId: node.id,
@@ -476,19 +516,22 @@ export async function validateCurriculumGraph(input: unknown): Promise<Validated
         capabilityVersion: node.capabilityVersion,
         availability,
         sourceAuthorityStatus: sourceStatus(node, sourceAuthorities),
-        route: availability === "released" ? node.worldBinding?.route ?? null : null,
+        authorityTrust: "caller-asserted-unverified",
+        callerAssertedReleaseMatch: availability === "caller-asserted-release" ? "exact-match" : "none",
+        route: null,
         reasons: [...new Set(nodeIssues)].sort(curriculumCodeUnitCompare),
       };
     }) : [];
 
   if (graph) {
     for (const area of PATHWAY_ENTITLEMENT_AREAS) {
-      const hasReleased = nodes.some((node) => node.availability === "released" && graph.nodes.find((candidate) => candidate.id === node.nodeId)?.entitlementAreas.includes(area));
+      const hasCallerAssertedRelease = nodes.some((node) => node.availability === "caller-asserted-release" && graph.nodes.find((candidate) => candidate.id === node.nodeId)?.entitlementAreas.includes(area));
       const hasGap = graph.gaps.some((gap) => gap.entitlementArea === area);
-      if (!hasReleased && !hasGap) issue(issues, "coverage.gap-missing", `areas.${area}`, "Areas without a released capability require an explicit gap.");
+      if (!hasCallerAssertedRelease && !hasGap) issue(issues, "coverage.gap-missing", `areas.${area}`, "Areas without a caller-asserted release match require an explicit gap.");
     }
   }
   return {
+    authorityTrust: "caller-asserted-unverified",
     graph,
     graphDigest: computedGraphDigest,
     policy,
