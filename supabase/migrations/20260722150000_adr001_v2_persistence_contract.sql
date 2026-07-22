@@ -859,7 +859,7 @@ language plpgsql
 set search_path = ''
 as $$
 begin
-  if tg_op = 'DELETE' then
+  if tg_op in ('DELETE', 'TRUNCATE') then
     raise exception 'forge.adr001_event_outbox is immutable' using errcode = '55000';
   end if;
   if new.event_id is distinct from old.event_id
@@ -882,6 +882,10 @@ $$;
 create trigger adr001_event_outbox_delivery_only
 before update or delete on forge.adr001_event_outbox
 for each row execute function forge_private.reject_adr001_event_outbox_mutation();
+
+create trigger adr001_event_outbox_reject_truncate
+before truncate on forge.adr001_event_outbox
+for each statement execute function forge_private.reject_adr001_event_outbox_mutation();
 
 create or replace function forge.mark_adr001_event_outbox_delivery(
   p_event_id uuid,
@@ -927,7 +931,7 @@ language plpgsql
 set search_path = ''
 as $$
 begin
-  if tg_op = 'DELETE' then
+  if tg_op in ('DELETE', 'TRUNCATE') then
     raise exception 'forge.event_outbox is immutable' using errcode = '55000';
   end if;
   if new.event_id is distinct from old.event_id
@@ -952,6 +956,22 @@ $$;
 create trigger event_outbox_delivery_only
 before update or delete on forge.event_outbox
 for each row execute function forge_private.reject_event_outbox_mutation();
+
+create trigger event_outbox_reject_truncate
+before truncate on forge.event_outbox
+for each statement execute function forge_private.reject_event_outbox_mutation();
+
+-- Historical v1 rows may contain delivery errors authored before this bounded
+-- contract. NOT VALID preserves those rows during upgrade, while PostgreSQL
+-- still enforces the check for every new or subsequently updated row.
+alter table forge.event_outbox
+add constraint event_outbox_last_error_code_shape check (
+  last_error_code is null
+  or (
+    char_length(last_error_code) between 3 and 80
+    and last_error_code ~ '^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$'
+  )
+) not valid;
 
 create or replace function forge.mark_event_outbox_delivery(
   p_event_id uuid,
