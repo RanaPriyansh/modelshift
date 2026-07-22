@@ -90,22 +90,76 @@ export type VerifyDeploymentOptions = {
   resolveHostname?: (hostname: string) => Promise<readonly string[]>;
 };
 
-function isPrivateAddress(address: string): boolean {
-  const normalized = address.toLowerCase().replace(/^\[|\]$/g, "");
-  if (normalized.startsWith("::ffff:")) {
-    const mapped = normalized.slice("::ffff:".length);
-    if (mapped.includes(".")) return isPrivateAddress(mapped);
-    const words = mapped.split(":");
-    if (words.length === 2) {
-      const high = Number.parseInt(words[0] ?? "", 16); const low = Number.parseInt(words[1] ?? "", 16);
-      if (Number.isInteger(high) && Number.isInteger(low)) return isPrivateAddress(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`);
+function isBlockedIPv4(parts: readonly number[]): boolean {
+  const [first, second, third] = parts;
+  if ([first, second, third].some((part) => part === undefined || part < 0 || part > 255 || !Number.isInteger(part))) return true;
+  return first === 0
+    || first === 10
+    || first === 127
+    || (first === 100 && second >= 64 && second <= 127)
+    || (first === 169 && second === 254)
+    || (first === 172 && second >= 16 && second <= 31)
+    || (first === 192 && second === 0)
+    || (first === 192 && second === 88 && third === 99)
+    || (first === 192 && second === 168)
+    || (first === 198 && (second === 18 || second === 19))
+    || (first === 192 && second === 0 && third === 2)
+    || (first === 198 && second === 51 && third === 100)
+    || (first === 203 && second === 0 && third === 113)
+    || first >= 224;
+}
+
+function parseIPv6Words(value: string): number[] | null {
+  if (value.includes("%") || value.split("::").length > 2) return null;
+  const [left = "", right = ""] = value.split("::");
+  const parseSide = (side: string): string[] => side ? side.split(":") : [];
+  const pieces = [...parseSide(left), ...parseSide(right)];
+  const words: number[] = [];
+  for (let index = 0; index < pieces.length; index += 1) {
+    const piece = pieces[index] ?? "";
+    if (piece.includes(".")) {
+      if (index !== pieces.length - 1 || isIP(piece) !== 4) return null;
+      const ipv4 = piece.split(".").map(Number);
+      if (ipv4.length !== 4 || ipv4.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return null;
+      words.push((ipv4[0]! << 8) | ipv4[1]!, (ipv4[2]! << 8) | ipv4[3]!);
+      continue;
     }
+    if (!/^[0-9a-f]{1,4}$/i.test(piece)) return null;
+    words.push(Number.parseInt(piece, 16));
   }
-  if (normalized === "::1" || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe8") || normalized.startsWith("fe9") || normalized.startsWith("fea") || normalized.startsWith("feb")) return true;
-  if (isIP(normalized) !== 4) return false;
-  const parts = normalized.split(".").map(Number);
-  const [first, second] = parts;
-  return first === 0 || first === 10 || first === 127 || (first === 100 && second >= 64 && second <= 127) || (first === 169 && second === 254) || (first === 172 && second >= 16 && second <= 31) || (first === 192 && second === 168) || (first === 198 && (second === 18 || second === 19)) || first >= 224;
+  if (value.includes("::")) {
+    if (words.length >= 8) return null;
+    const leftCount = parseSide(left).reduce((count, piece) => count + (piece.includes(".") ? 2 : 1), 0);
+    words.splice(leftCount, 0, ...Array.from({ length: 8 - words.length }, () => 0));
+  }
+  return words.length === 8 ? words : null;
+}
+
+/** Only globally routable DNS answers may reach the pinned transport. */
+function isNonGlobalOrSpecialAddress(address: string): boolean {
+  const normalized = address.toLowerCase().replace(/^\[|\]$/g, "");
+  if (isIP(normalized) === 4) return isBlockedIPv4(normalized.split(".").map(Number));
+  if (isIP(normalized) !== 6) return true;
+  const words = parseIPv6Words(normalized);
+  if (!words) return true;
+  const [first, second, third, fourth, fifth, sixth, , eighth] = words;
+  const mapped = first === 0 && second === 0 && third === 0 && fourth === 0 && fifth === 0 && sixth === 0xffff;
+  // DNS answers never need IPv4-mapped form. Reject the entire special-purpose
+  // range instead of relying on a mapped address's embedded IPv4 classification.
+  if (mapped) return true;
+  const allZero = words.every((word) => word === 0);
+  const loopback = words.slice(0, 7).every((word) => word === 0) && eighth === 1;
+  const ipv4Compatible = words.slice(0, 6).every((word) => word === 0);
+  const multicast = (first! & 0xff00) === 0xff00;
+  const uniqueLocal = (first! & 0xfe00) === 0xfc00;
+  const linkLocal = (first! & 0xffc0) === 0xfe80;
+  const siteLocal = (first! & 0xffc0) === 0xfec0;
+  const discardOnly = first === 0x0100 && second === 0;
+  const documentation = first === 0x2001 && second === 0x0db8;
+  const special2001 = first === 0x2001 && (second === 0 || second === 0x0002 || (second! & 0xfff0) === 0x0010 || (second! & 0xfff0) === 0x0020);
+  const deprecated6to4 = first === 0x2002;
+  const nat64 = first === 0x0064 && second === 0xff9b && ((third === 0 && fourth === 0 && fifth === 0) || (third === 0x0001 && fourth === 0 && fifth === 0));
+  return allZero || loopback || ipv4Compatible || multicast || uniqueLocal || linkLocal || siteLocal || discardOnly || documentation || special2001 || deprecated6to4 || nat64;
 }
 
 async function defaultResolveHostname(hostname: string): Promise<readonly string[]> {
@@ -116,7 +170,7 @@ async function safeResolvedAddresses(hostname: string, resolver: (hostname: stri
   const normalized = hostname.toLowerCase().replace(/\.$/, "");
   if (BLOCKED_HOSTNAMES.has(normalized) || normalized.endsWith(".local") || normalized.endsWith(".internal")) throw new Error("target hostname is reserved or private");
   const addresses = await resolver(hostname);
-  if (addresses.length === 0 || addresses.some((address) => isIP(address) === 0 || isPrivateAddress(address))) throw new Error("target DNS resolves to a private, link-local, metadata, or otherwise blocked address");
+  if (addresses.length === 0 || addresses.some((address) => isNonGlobalOrSpecialAddress(address))) throw new Error("target DNS resolves to a private, special-purpose, link-local, metadata, or otherwise blocked address");
   return [...new Set(addresses)].sort();
 }
 

@@ -19,6 +19,7 @@ describe("release health", () => {
   });
   it("keeps cloud and managed provider state explicit without exposing values", () => {
     const health = buildReleaseHealth({ FORGE_CLOUD_ACCOUNTS_ENABLED: "true", FORGE_SUPABASE_URL: "https://example.supabase.co", FORGE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test_key_1234567890", FORGE_LESSON_STUDIO_OPENAI_ENABLED: "true", OPENAI_API_KEY: "must-not-appear" });
+    expect(health.cloud_accounts_enabled).toBe(false);
     expect(health.cloud_auth_configured).toBe(false);
     expect(health.learner_evidence_sync).toBe("disabled");
     expect(health.device_profiles).toBe("device_only");

@@ -37,12 +37,12 @@ export type OfflineRegressionReport = {
   offline_regression_status: "pass" | "fail";
   pre_release_quality_status: "PRE_RELEASE_QUALITY_PASS" | "PRE_RELEASE_QUALITY_FAIL";
   release_closure_status: "PASS" | "FAIL" | "NOT_EVALUATED";
-  live_model_evaluation: { status: "not_evaluated" | "pass" | "fail"; required_for_release: boolean; reason: string; artifact_id?: string };
+  live_model_evaluation: { status: "not_evaluated"; required_for_release: boolean; reason: string };
   fixture_results: FixtureResult[];
   release_identity: ReleaseIdentityTuple & { candidate_state: ReleaseCandidateState };
 };
 
-type BuildOptions = { fixtures?: readonly InterpretationFixture[]; generatedAt?: string; gitSha?: string; liveEvaluationStatus?: "not_evaluated" | "pass" | "fail"; liveEvaluationArtifactId?: string; releaseClosureMode?: boolean };
+type BuildOptions = { fixtures?: readonly InterpretationFixture[]; generatedAt?: string; gitSha?: string; releaseClosureMode?: boolean };
 const safeSha = (value?: string): string | "unknown" => value && /^[0-9a-f]{40}$/i.test(value) ? value.toLowerCase() : "unknown";
 function currentSha(): string | "unknown" { try { return safeSha(execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim()); } catch { return "unknown"; } }
 const rate = (n: number, d: number): number => d === 0 ? 0 : n / d;
@@ -80,11 +80,9 @@ export function buildOfflineRegressionReport(options: BuildOptions = {}): Offlin
     gate("authored_probe_safety", rate(probeSafe, fixtures.length) >= policy.required_probe_safety_rate, rate(probeSafe, fixtures.length), policy.required_probe_safety_rate),
   ];
   const gitSha = safeSha(options.gitSha) === "unknown" ? currentSha() : safeSha(options.gitSha);
-  const requestedLiveStatus = options.liveEvaluationStatus ?? "not_evaluated";
-  const validLiveArtifact = Boolean(options.liveEvaluationArtifactId && /^[A-Za-z0-9._/-]{1,200}$/.test(options.liveEvaluationArtifactId));
-  const liveStatus = requestedLiveStatus === "pass" && !validLiveArtifact ? "fail" : requestedLiveStatus;
+  const liveStatus = "not_evaluated" as const;
   const offlineStatus = gates.every((item) => item.status === "pass") ? "pass" : "fail";
-  const releaseClosureStatus = offlineStatus === "fail" || liveStatus === "fail" || (options.releaseClosureMode && liveStatus !== "pass") ? "FAIL" : liveStatus === "pass" ? "PASS" : "NOT_EVALUATED";
+  const releaseClosureStatus = offlineStatus === "fail" || options.releaseClosureMode ? "FAIL" : "NOT_EVALUATED";
   const releaseHealth = buildReleaseHealth();
   const generatedAt = options.generatedAt ?? new Date().toISOString();
   return {
@@ -96,7 +94,7 @@ export function buildOfflineRegressionReport(options: BuildOptions = {}): Offlin
     gates, offline_regression_status: offlineStatus,
     pre_release_quality_status: offlineStatus === "pass" ? "PRE_RELEASE_QUALITY_PASS" : "PRE_RELEASE_QUALITY_FAIL",
     release_closure_status: releaseClosureStatus,
-    live_model_evaluation: { status: liveStatus, required_for_release: policy.live_evaluation_required_for_release, reason: liveStatus === "pass" ? "Credentialed live evidence was supplied by an approved external gate; this offline runner did not spend credits." : requestedLiveStatus === "pass" && !validLiveArtifact ? "A live pass was supplied without a bounded retained artifact ID; release closure is blocked." : liveStatus === "fail" ? "The approved live evaluation evidence failed; release closure is blocked." : "Offline by design: no OPENAI_API_KEY read and no model or network call.", ...(options.liveEvaluationArtifactId ? { artifact_id: options.liveEvaluationArtifactId } : {}) },
+    live_model_evaluation: { status: liveStatus, required_for_release: policy.live_evaluation_required_for_release, reason: "Offline by design: no OPENAI_API_KEY read and no model or network call. This worker cannot accept or verify live-evaluation evidence; a separately approved credentialed gate must retain and verify it." },
     fixture_results: results,
     release_identity: buildReleaseIdentity({
       sourceSha: gitSha,
@@ -116,7 +114,7 @@ export function buildOfflineRegressionReport(options: BuildOptions = {}): Offlin
         managed_interpretation: releaseHealth.managed_surface_flags.interpretation,
         managed_planner: releaseHealth.managed_surface_flags.planner,
       },
-      retainedArtifactIds: ["evaluation-regression.json", "evaluation-regression.md", ...(process.env.FORGE_BROWSER_ARTIFACT_ID ? [process.env.FORGE_BROWSER_ARTIFACT_ID] : []), ...(validLiveArtifact && options.liveEvaluationArtifactId ? [options.liveEvaluationArtifactId] : [])],
+      retainedArtifactIds: ["evaluation-regression.json", "evaluation-regression.md", ...(process.env.FORGE_BROWSER_ARTIFACT_ID ? [process.env.FORGE_BROWSER_ARTIFACT_ID] : [])],
       decisionName: "Packet D offline regression; promotion not authorized",
     }),
   };
@@ -139,12 +137,13 @@ const arg = (name: string): string | undefined => { const index = process.argv.i
 async function main() {
   const outputDirectory = resolve(arg("--output-dir") ?? "test-results/release-ops");
   const liveStatus = arg("--live-evaluation-status") as "not_evaluated" | "pass" | "fail" | undefined;
-  if (liveStatus && !["not_evaluated", "pass", "fail"].includes(liveStatus)) throw new Error("--live-evaluation-status must be not_evaluated, pass, or fail");
-  const report = buildOfflineRegressionReport({ gitSha: arg("--git-sha") ?? process.env.GITHUB_SHA, liveEvaluationStatus: liveStatus, liveEvaluationArtifactId: arg("--live-evaluation-artifact-id"), releaseClosureMode: process.argv.includes("--release-closure") });
+  if (liveStatus && liveStatus !== "not_evaluated") throw new Error("offline evaluation report cannot accept self-asserted live evaluation evidence");
+  if (arg("--live-evaluation-artifact-id")) throw new Error("offline evaluation report cannot accept a live evaluation artifact ID");
+  const report = buildOfflineRegressionReport({ gitSha: arg("--git-sha") ?? process.env.GITHUB_SHA, releaseClosureMode: process.argv.includes("--release-closure") });
   await writeEvaluationReport(report, outputDirectory);
   console.log(`offline evaluation regression: ${report.offline_regression_status.toUpperCase()}`);
   console.log(`report: ${resolve(outputDirectory, "evaluation-regression.md")}`);
-  if (report.offline_regression_status === "fail" || report.live_model_evaluation.status === "fail" || (process.argv.includes("--release-closure") && report.release_closure_status !== "PASS")) process.exitCode = 1;
+  if (report.offline_regression_status === "fail" || (process.argv.includes("--release-closure") && report.release_closure_status !== "PASS")) process.exitCode = 1;
 }
 const entryUrl = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : "";
 if (import.meta.url === entryUrl) void main();

@@ -24,33 +24,46 @@ function mockFetch(asset = "self.__next_f=[]") {
     return new Response(`<html><body>${pages[url.pathname] ?? ""}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "content-security-policy": CSP, "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "strict-origin-when-cross-origin", "permissions-policy": "camera=(), microphone=(), geolocation=()" } });
   };
 }
-async function run(fetchImpl = mockFetch()): Promise<DeploymentVerificationReport> { return verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:00.000Z", deploymentId: "dpl-candidate", deploymentUrl: "https://forge.example/deploy", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["203.0.113.10"] }); }
+async function run(fetchImpl = mockFetch()): Promise<DeploymentVerificationReport> { return verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:00.000Z", deploymentId: "dpl-candidate", deploymentUrl: "https://forge.example/deploy", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["8.8.8.8"] }); }
 describe("deployment verifier", () => {
   it("verifies all four Worlds, Studio, device profile, CSP nonce, and disabled state", async () => { const report = await run(); expect(report.status).toBe("pass"); expect(report.observed_release_sha).toBe(SHA); expect(report.request_policy.methods).toEqual(["GET"]); expect(report.release_identity.candidate_state).toBe("DEPLOYED_CANDIDATE"); expect(report.release_identity.source_sha).toBe(SHA); expect(report.release_identity.tested_sha).toBe(SHA); expect(report.release_identity.database).toEqual({ status: "not_configured" }); expect(report.checks.some((item) => item.id === "world_primary_source_reasoning.marker" && item.status === "pass")).toBe(true); });
   it("rejects unsafe remote targets and fails without leaking asset secrets", async () => { expect(() => validateTargetUrl("http://forge.example", ["forge.example"])).toThrow(/HTTPS/); expect(() => validateTargetUrl("https://user:pass@forge.example", ["forge.example"])).toThrow(/credentials/); const secret = `sk-${"x".repeat(32)}`; const report = await run(mockFetch(`window.token=\"${secret}\"`)); expect(report.status).toBe("fail"); expect(JSON.stringify(report)).not.toContain(secret); });
   it("uses only the checked-in deployment target policy", () => { expect(resolveDeploymentTarget("forge_learning_os_project").origin).toMatch(/^https:\/\//); expect(() => resolveDeploymentTarget("caller-controlled-host")).toThrow(/allowlist/); expect(() => validateTargetUrl("https://192.0.2.1", ["192.0.2.1"])).toThrow(/IP-literal/); expect(() => validateTargetUrl("http://localhost")).toThrow(/allow-localhost/); });
   it("defaults remote verification without immutable metadata to blocked, never deployed candidate", async () => {
-    const report = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["203.0.113.10"] });
+    const report = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["8.8.8.8"] });
     expect(report.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
     expect(report.status).toBe("fail");
     expect(report.checks.find((item) => item.id === "release_identity.state_bound")?.status).toBe("fail");
   });
-  it("fails closed for private DNS and rebinding without issuing requests", async () => {
+  it.each([
+    "::",
+    "::1",
+    "ff02::1",
+    "fe80::1",
+    "fc00::1",
+    "2001:db8::1",
+    "::ffff:169.254.169.254",
+    "::ffff:8.8.8.8",
+    "64:ff9b::7f00:1",
+    "192.0.2.10",
+  ])("rejects non-global or special resolver answer %s before any request", async (address) => {
     let calls = 0;
     const fetchImpl = async () => { calls += 1; return new Response("unexpected"); };
-    const privateReport = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, resolveHostname: async () => ["::ffff:169.254.169.254"], expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured" });
-    expect(privateReport.status).toBe("fail");
-    expect(privateReport.checks.find((item) => item.id === "target.dns_policy")?.status).toBe("fail");
+    const report = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, resolveHostname: async () => [address], expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured" });
+    expect(report.status).toBe("fail");
+    expect(report.checks.find((item) => item.id === "target.dns_policy")?.status).toBe("fail");
     expect(calls).toBe(0);
+  });
+  it("fails closed for DNS rebinding and redirect hops without issuing an unpinned request", async () => {
     let resolveCalls = 0;
-    const rebindReport = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, resolveHostname: async () => { resolveCalls += 1; return resolveCalls === 1 ? ["203.0.113.10"] : ["203.0.113.11"]; }, expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured" });
+    const rebindReport = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, resolveHostname: async () => { resolveCalls += 1; return resolveCalls === 1 ? ["8.8.8.8"] : ["8.8.4.4"]; }, expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured" });
     expect(rebindReport.status).toBe("fail");
     expect(rebindReport.checks.some((item) => item.id === "health.request" && item.status === "fail")).toBe(true);
     const redirectFetch = async (input: string | URL | Request) => {
       const response = await mockFetch()(input);
       return Object.assign(response, { url: "https://untrusted.example/redirect" }) as Response;
     };
-    const redirectReport = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: redirectFetch as typeof fetch, resolveHostname: async () => ["203.0.113.10"], expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured" });
+    const redirectReport = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: redirectFetch as typeof fetch, resolveHostname: async () => ["8.8.8.8"], expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured" });
     expect(redirectReport.status).toBe("fail");
     expect(redirectReport.checks.some((item) => item.id === "health.request" && item.status === "fail")).toBe(true);
   });
@@ -92,8 +105,8 @@ describe("deployment verifier", () => {
     expect(redTeam.checks.some((item) => item.id === "home.csp.contract" && item.status === "fail")).toBe(true);
   });
   it("rejects terminal-state and live-proof inputs from the worker verifier", async () => {
-    await expect(verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, candidateState: "PRODUCTION_VERIFIED", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["203.0.113.10"] })).rejects.toThrow(/terminal/);
-    await expect(verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, candidateState: "ROLLED_BACK", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["203.0.113.10"] })).rejects.toThrow(/terminal/);
-    await expect(verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, liveEvaluationStatus: "pass", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["203.0.113.10"] })).rejects.toThrow(/live evaluation proof/);
+    await expect(verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, candidateState: "PRODUCTION_VERIFIED", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["8.8.8.8"] })).rejects.toThrow(/terminal/);
+    await expect(verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, candidateState: "ROLLED_BACK", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["8.8.8.8"] })).rejects.toThrow(/terminal/);
+    await expect(verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, liveEvaluationStatus: "pass", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["8.8.8.8"] })).rejects.toThrow(/live evaluation proof/);
   });
 });
