@@ -21,6 +21,10 @@ const CAPABILITIES: Readonly<Record<string, { title: string; href: string }>> = 
     title: "AI-learning evidence boundaries",
     href: "/learn/ai-and-learning",
   },
+  "capability.proportional-reasoning.compare-and-scale": {
+    title: "Proportional relationships",
+    href: "/learn/proportional-reasoning",
+  },
   "proportional-reasoning.compare-and-scale": {
     title: "Proportional relationships",
     href: "/learn/proportional-reasoning",
