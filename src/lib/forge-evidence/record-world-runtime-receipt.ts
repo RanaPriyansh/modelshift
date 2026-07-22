@@ -1,7 +1,7 @@
 import {
   getCanonicalDeterministicValidatorRegistration,
 } from "../../forge/deterministic-validators";
-import type { WorldRuntimeBinding } from "../../forge/contracts";
+import type { AIActionBoundary, WorldRuntimeBinding } from "../../forge/contracts";
 import {
   isBoundedLocalWorldRuntimeReceipt,
   type BoundedLocalWorldRuntimeReceipt,
@@ -41,7 +41,9 @@ function boundedOutcome(receipt: BoundedLocalWorldRuntimeReceipt): "proved" | "n
   }
 }
 
-function assistanceKind(event: CanonicalSupportEvent): AssistanceProvenance["kind"] {
+export function projectRuntimeSupportAssistanceKind(
+  event: CanonicalSupportEvent,
+): AssistanceProvenance["kind"] {
   if (event.source === "model") return "model_interpretation";
   if (event.source === "human") return "human_guidance";
   if (event.tier === "representation") return "authored_representation";
@@ -54,7 +56,7 @@ function projectAssistance(receipt: BoundedLocalWorldRuntimeReceipt): Assistance
   const seen = new Set<string>();
   const assistance: AssistanceProvenance[] = [];
   for (const event of receipt.cognitiveSupport) {
-    const kind = assistanceKind(event);
+    const kind = projectRuntimeSupportAssistanceKind(event);
     const key = `${kind}:${event.actionId}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -65,6 +67,10 @@ function projectAssistance(receipt: BoundedLocalWorldRuntimeReceipt): Assistance
 
 function sameStrings(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function permitsModelSupport(boundary: AIActionBoundary): boolean {
+  return boundary.mode === "bounded";
 }
 
 function sameSourceBinding(
@@ -157,7 +163,8 @@ function hasReleasedBuiltInRuntimeIdentity(receipt: BoundedLocalWorldRuntimeRece
     receipt.sourceProvenanceStatus === expectedProvenanceStatus &&
     receipt.cognitiveSupport.every((support) =>
       instructionalSupportActionIds.has(support.actionId) &&
-      support.policyId === runtime.support.policyId
+      support.policyId === runtime.support.policyId &&
+      (support.source !== "model" || permitsModelSupport(pack.manifest.aiBoundary))
     );
 }
 

@@ -3,9 +3,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   LOCAL_RUNTIME_RECEIPT_LIMITATION,
   type BoundedLocalWorldRuntimeReceipt,
+  type CanonicalSupportEvent,
 } from "../../forge/world-runtime";
 import { createLocalStorageEvidenceLedgerAdapter } from "./local-storage";
-import { recordWorldRuntimeReceipt } from "./record-world-runtime-receipt";
+import {
+  projectRuntimeSupportAssistanceKind,
+  recordWorldRuntimeReceipt,
+} from "./record-world-runtime-receipt";
 import { createEvidenceLedgerStore } from "./store";
 
 class MemoryStorage {
@@ -72,16 +76,6 @@ function receipt(overrides: Partial<BoundedLocalWorldRuntimeReceipt> = {}): Boun
         modelId: null,
         fallbackReason: null,
       },
-      {
-        actionId: "action.proportional-reasoning.support",
-        stage: "interpret_two_readings",
-        source: "model",
-        tier: "cue",
-        policyId: "policy.proportional-reasoning.authored-support.v1",
-        providerId: "openai",
-        modelId: "gpt-5",
-        fallbackReason: null,
-      },
     ],
     accessAccommodations: [],
     sourceBindings: [
@@ -124,7 +118,6 @@ describe("recordWorldRuntimeReceipt", () => {
         returnSchedule: null,
         assistance: [
           { kind: "authored_representation", sourceId: "action.proportional-reasoning.support" },
-          { kind: "model_interpretation", sourceId: "action.proportional-reasoning.support" },
         ],
       }),
     ]);
@@ -228,6 +221,14 @@ describe("recordWorldRuntimeReceipt", () => {
           policyId: "policy.proportional-reasoning.fabricated-support.v1",
         }],
       }),
+      receipt({
+        cognitiveSupport: [{
+          ...canonicalSupport,
+          source: "model",
+          providerId: "provider.reviewed",
+          modelId: "model.reviewed",
+        }],
+      }),
     ];
 
     for (const substitutedIdentity of substitutedIdentities) {
@@ -237,6 +238,21 @@ describe("recordWorldRuntimeReceipt", () => {
       });
     }
     expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(0);
+  });
+
+  it("maps bounded model support provenance without treating it as an accepted Ratio receipt", () => {
+    const modelSupport: CanonicalSupportEvent = {
+      actionId: "action.future-bounded-world.support",
+      stage: "governed_support",
+      source: "model",
+      tier: "cue",
+      policyId: "policy.future-bounded-world.support.v1",
+      providerId: "provider.reviewed",
+      modelId: "model.reviewed",
+      fallbackReason: null,
+    };
+
+    expect(projectRuntimeSupportAssistanceKind(modelSupport)).toBe("model_interpretation");
   });
 
   it.each([
