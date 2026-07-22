@@ -16,10 +16,11 @@
 
 ## Route and access evidence
 
-- Browser inspection on the production build at `127.0.0.1:3111`: Home at 1440×900 and 320×800, Studio at 1440×900, and Primary Source Reasoning at 1440×900 all had zero horizontal overflow and no console entries. The primary-source image loaded with its existing descriptive accessible name and `naturalWidth` 846.
-- The focused Chromium test covers Home, Studio, Login, Account, all four Worlds, Evidence, and Trail at exactly 320×800. It checks overflow ≤1 px, 44 px operational targets, 16 px input floors, valid roving-tab state when present, one skip link per route, unique visible action names, native controls, reduced motion, forced colors, increased contrast, and retained text status meaning.
+- Browser inspection on the production build at `127.0.0.1:3111`: Home at 1440×900 and 320×800, Studio at 1440×900, and Primary Source Reasoning at 1440×900 had zero horizontal overflow. The primary-source image loaded with its existing descriptive accessible name and `naturalWidth` 846. A pre-existing `/favicon.ico` 404 remains visible in the browser audit; favicon repair is outside this packet.
+- The focused Chromium test covers Home, Studio, Login, Account, all four Worlds, Evidence, and Trail at exactly 320×800. It checks overflow ≤1 px, 44 px actionable targets—including a populated reviewed plan's source/action links—16 px input floors, valid roving-tab state when present, one skip link per route, unique visible action names, native controls, reduced motion, forced colors, increased contrast, and retained text status meaning. The only 44 px exemption is an explicitly marked `data-forge-inline-citation` anchor that remains inline inside prose; none exists in the current routes.
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3111 pnpm test:e2e` completed with **45 passed, 19 intentional cross-project skips, 0 failed** after the image-locator and unique-action-name contract updates.
-- Core computed text/background contrast ratios are asserted at or above 4.5:1: heading 16.53:1, body 5.58:1, dark instrument 16.69:1, and amber action 10.18:1.
+- The contrast contract samples rendered Home paper heading, muted body, dark intake, evidence status, quiet/planned status, and primary action surfaces plus Studio dark-instrument heading/body text. It composites transparent/inherited backgrounds, reads computed foregrounds, and applies WCAG AA 4.5:1 normal-text or 3:1 large-text floors. The quiet semantic token is `#6d726b` so the 10 px planned status clears the normal-text floor on paper.
+- Forced-colors evidence now asserts a visible focused skip-link outline plus text/border distinction for the primary action, status text/indicator, and World-card border; it does not merely assert that the media query is active.
 - Keyboard traversal remains explicit: route skip links move focus to the route main target; the home-to-Force & motion World journey uses the unique accessible action name.
 
 Visual artifacts are retained outside the repository at:
@@ -48,7 +49,7 @@ Visual artifacts are retained outside the repository at:
 - **ADR-005:** device age preference and grown-up-present semantics are unchanged. This packet does not weaken, hide, bypass, or relabel a route gate, and does not imply authority from local controls.
 - Completion-matrix stop-ship 6 is addressed for this candidate by the named primary-source image locator and a complete rerun. The accessible Exit-world icon remains exposed; it was not hidden to satisfy a global image-count assertion.
 - `AGE-01`, `AGE-02`, evidence-vocabulary D-01, and the other release stop-ships remain principal/cross-lane work. Packet A does not claim them solved, strengthen device-local evidence, or authorize deployment.
-- Ownership deviations are limited to `tests/e2e/forge-expansion.spec.ts` (principal-directed figure/named source-image locator) and `tests/e2e/forge.spec.ts` (its keyboard target now uses the intentional unique accessible name). Neither changes product behavior.
+- Principal-approved ownership deviations are `app/layout.tsx` (deterministic global stylesheet order and Next `data-scroll-behavior` marker), `tests/e2e/forge-expansion.spec.ts` (principal-directed figure/named source-image locator), and `tests/e2e/forge.spec.ts` (its keyboard target now uses the intentional unique accessible name). None changes learning, auth, or evidence behavior.
 
 ## Residual risks and intentional cuts
 
