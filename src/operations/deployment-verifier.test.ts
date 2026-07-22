@@ -5,7 +5,7 @@ import { resolveDeploymentTarget } from "../../scripts/ops/deployment-target-pol
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
 const DIGEST = "a".repeat(64);
-const CSP = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'nonce-testnonce' 'strict-dynamic'";
+const CSP = "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'nonce-testnonce' 'strict-dynamic'; connect-src 'self'; media-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests";
 const pages: Record<string, string> = {
   "/": "FORGE<script nonce=\"testnonce\" src=\"/_next/static/app.js\"></script>",
   "/learn/force-and-motion": "Force & motion<script nonce=\"testnonce\" src=\"/_next/static/app.js\"></script>",
@@ -24,15 +24,21 @@ function mockFetch(asset = "self.__next_f=[]") {
     return new Response(`<html><body>${pages[url.pathname] ?? ""}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "content-security-policy": CSP, "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "strict-origin-when-cross-origin", "permissions-policy": "camera=(), microphone=(), geolocation=()" } });
   };
 }
-async function run(fetchImpl = mockFetch()): Promise<DeploymentVerificationReport> { return verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:00.000Z", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["203.0.113.10"] }); }
+async function run(fetchImpl = mockFetch()): Promise<DeploymentVerificationReport> { return verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:00.000Z", deploymentId: "dpl-candidate", deploymentUrl: "https://forge.example/deploy", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["203.0.113.10"] }); }
 describe("deployment verifier", () => {
   it("verifies all four Worlds, Studio, device profile, CSP nonce, and disabled state", async () => { const report = await run(); expect(report.status).toBe("pass"); expect(report.observed_release_sha).toBe(SHA); expect(report.request_policy.methods).toEqual(["GET"]); expect(report.release_identity.candidate_state).toBe("DEPLOYED_CANDIDATE"); expect(report.release_identity.source_sha).toBe(SHA); expect(report.release_identity.tested_sha).toBe(SHA); expect(report.release_identity.database).toEqual({ status: "not_configured" }); expect(report.checks.some((item) => item.id === "world_primary_source_reasoning.marker" && item.status === "pass")).toBe(true); });
   it("rejects unsafe remote targets and fails without leaking asset secrets", async () => { expect(() => validateTargetUrl("http://forge.example", ["forge.example"])).toThrow(/HTTPS/); expect(() => validateTargetUrl("https://user:pass@forge.example", ["forge.example"])).toThrow(/credentials/); const secret = `sk-${"x".repeat(32)}`; const report = await run(mockFetch(`window.token=\"${secret}\"`)); expect(report.status).toBe("fail"); expect(JSON.stringify(report)).not.toContain(secret); });
   it("uses only the checked-in deployment target policy", () => { expect(resolveDeploymentTarget("forge_learning_os_project").origin).toMatch(/^https:\/\//); expect(() => resolveDeploymentTarget("caller-controlled-host")).toThrow(/allowlist/); expect(() => validateTargetUrl("https://192.0.2.1", ["192.0.2.1"])).toThrow(/IP-literal/); expect(() => validateTargetUrl("http://localhost")).toThrow(/allow-localhost/); });
+  it("defaults remote verification without immutable metadata to blocked, never deployed candidate", async () => {
+    const report = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["203.0.113.10"] });
+    expect(report.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
+    expect(report.status).toBe("fail");
+    expect(report.checks.find((item) => item.id === "release_identity.state_bound")?.status).toBe("fail");
+  });
   it("fails closed for private DNS and rebinding without issuing requests", async () => {
     let calls = 0;
     const fetchImpl = async () => { calls += 1; return new Response("unexpected"); };
-    const privateReport = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, resolveHostname: async () => ["169.254.169.254"], expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured" });
+    const privateReport = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, resolveHostname: async () => ["::ffff:169.254.169.254"], expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured" });
     expect(privateReport.status).toBe("fail");
     expect(privateReport.checks.find((item) => item.id === "target.dns_policy")?.status).toBe("fail");
     expect(calls).toBe(0);
@@ -55,19 +61,39 @@ describe("deployment verifier", () => {
       const response = await baseFetch(input);
       if (new URL(input instanceof Request ? input.url : input.toString()).pathname === "/api/health") return response;
       const headers = new Headers(response.headers);
-      headers.set("content-security-policy", "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'nonce-testnonce' 'unsafe-inline'");
+      headers.set("content-security-policy", "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'nonce-testnonce' 'unsafe-inline'; connect-src 'self'; media-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests");
       return new Response(await response.text(), { status: response.status, headers });
     };
     const report = await run(badFetch as typeof fetch);
     expect(report.status).toBe("fail");
     expect(report.checks.some((item) => item.id === "home.csp.script_src_contract" && item.status === "fail")).toBe(true);
     expect(report.checks.some((item) => item.id === "home.csp.script_elements" && item.status === "pass")).toBe(true);
+    const permissiveFetch = async (input: string | URL | Request) => {
+      const response = await baseFetch(input);
+      if (new URL(input instanceof Request ? input.url : input.toString()).pathname === "/api/health") return response;
+      const headers = new Headers(response.headers);
+      headers.set("content-security-policy", `${CSP}; connect-src 'self' https://exfil.example; form-action 'self' https://evil.example; script-src-elem 'self' https://evil.example`);
+      return new Response(await response.text(), { status: response.status, headers });
+    };
+    const permissive = await run(permissiveFetch as typeof fetch);
+    expect(permissive.status).toBe("fail");
+    expect(permissive.checks.some((item) => item.id === "home.csp.connect_src" && item.status === "fail")).toBe(true);
+    expect(permissive.checks.some((item) => item.id === "home.csp.form_action" && item.status === "fail")).toBe(true);
+    expect(permissive.checks.some((item) => item.id === "home.csp.script_src_elem_contract" && item.status === "fail")).toBe(true);
+    const redTeamFetch = async (input: string | URL | Request) => {
+      const response = await baseFetch(input);
+      if (new URL(input instanceof Request ? input.url : input.toString()).pathname === "/api/health") return response;
+      const headers = new Headers(response.headers);
+      headers.set("content-security-policy", "default-src 'self' https://exfil.example; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; img-src *; font-src 'self' https://exfil.example; style-src 'self' 'unsafe-inline' https://exfil.example; script-src 'self' 'nonce-testnonce' 'strict-dynamic'; connect-src 'self' https://exfil.example; form-action 'self' https://exfil.example; media-src https://exfil.example; worker-src https://exfil.example");
+      return new Response(await response.text(), { status: response.status, headers });
+    };
+    const redTeam = await run(redTeamFetch as typeof fetch);
+    expect(redTeam.status).toBe("fail");
+    expect(redTeam.checks.some((item) => item.id === "home.csp.contract" && item.status === "fail")).toBe(true);
   });
-  it("does not allow PRODUCTION_VERIFIED without live evidence and release controls", async () => {
-    const missing = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, candidateState: "PRODUCTION_VERIFIED", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["203.0.113.10"] });
-    expect(missing.status).toBe("fail");
-    expect(missing.checks.find((item) => item.id === "release_identity.production_gate")?.status).toBe("fail");
-    const passed = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, candidateState: "PRODUCTION_VERIFIED", liveEvaluationStatus: "pass", deploymentId: "dpl_1", deploymentUrl: "https://forge.example/deploy", aliasUrl: "https://forge.example", aliasResolvedAt: "2026-07-22T00:00:00.000Z", rollbackDeploymentId: "dpl_0", rollbackSha: SHA, rollbackRehearsal: "pass", decisionName: "approved-by-release-owner", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["203.0.113.10"] });
-    expect(passed.checks.find((item) => item.id === "release_identity.production_gate")?.status).toBe("pass");
+  it("rejects terminal-state and live-proof inputs from the worker verifier", async () => {
+    await expect(verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, candidateState: "PRODUCTION_VERIFIED", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["203.0.113.10"] })).rejects.toThrow(/terminal/);
+    await expect(verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, candidateState: "ROLLED_BACK", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["203.0.113.10"] })).rejects.toThrow(/terminal/);
+    await expect(verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, liveEvaluationStatus: "pass", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["203.0.113.10"] })).rejects.toThrow(/live evaluation proof/);
   });
 });

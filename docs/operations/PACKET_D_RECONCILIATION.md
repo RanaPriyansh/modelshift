@@ -1,6 +1,6 @@
 # Packet D reconciliation against `a98f8bb`
 
-The old release-ops commit was inspected file by file and was not cherry-picked. `5b0bceb72d6768629dddecf07df07e964e9f6674` was this lane's dispatch baseline, not current `origin/main`. The additive correction consumed ADR-006 and the completion matrix from governance base `2789a66b97fc8250d108f3ac8ab0cc56e1c63fc3`; later main deltas are authority/docs-only for this packet. Each owned path was reconciled as follows:
+The old release-ops commit was inspected file by file and was not cherry-picked. `5b0bceb72d6768629dddecf07df07e964e9f6674` was this lane's dispatch baseline, not current `origin/main`. The first additive correction is preserved as `5607fc872e3b2f153967716e02922d747133749e`; this second correction consumes ADR-006 and the completion matrix from governance base `2789a66b97fc8250d108f3ac8ab0cc56e1c63fc3` and was finally checked against current origin/main `c543e657b40f64db16e240583b5817acb77e29a6`. Later main deltas are authority/docs-only for this packet. Each owned path was reconciled as follows:
 
 | Old path | Current disposition |
 | --- | --- |
@@ -8,12 +8,13 @@ The old release-ops commit was inspected file by file and was not cherry-picked.
 | `.github/workflows/deployment-verification.yml` | Reworked: checked-in target ID policy, bounded read-only verifier only; no caller-controlled origin, target mutation, or credentials. |
 | `app/api/health/route.ts` | Reworked: expanded allowlisted source/runtime identity and cloud/provider-off contract; no secrets or learner state. |
 | `docs/operations/RELEASE_OPERATIONS_RUNBOOK.md` | Reworked: current program boundaries, privacy contract, four-World verifier, blocked Vercel evidence/remediation, and rollback boundary. |
-| `scripts/ops/deployment-verifier.ts` | Reworked: four Worlds, Studio, login/account profile routes, nonce continuity, exact disabled state, strict target allowlist, bounded GET-only evidence. |
+| `scripts/ops/deployment-verifier.ts` | Reworked: four Worlds, Studio, login/account profile routes, nonce continuity, script/form/connect CSP boundary, exact disabled state, strict target allowlist, pinned bounded GET-only evidence. |
 | `scripts/ops/evaluation-baseline.json` | Reconciled unchanged thresholds to the checked-in 54-fixture corpus; versioned as the current policy artifact. |
-| `scripts/ops/evaluation-report.ts` | Reworked evaluator version/report wording and retained authored IDs/decisions only, with live evaluation explicitly `not_evaluated`. |
+| `scripts/ops/evaluation-report.ts` | Reworked evaluator version/report wording and shared health surface projection; live pass/fail/closure modes are fail-closed and artifact-bound. |
 | `scripts/ops/run-local-production-verification.ts` | Reworked local process isolation and safe build-time identity injection; bounded/redacted logs and no external requests. |
 | `scripts/ops/content-package-manifest.json`, `scripts/ops/release-digests.ts` | Added retained-artifact metadata digests; these are not extra ADR-006 tuple fields. |
 | `scripts/ops/playwright-artifact-manifest.ts`, `scripts/ops/run-production-browser-verification.ts` | Added bounded failure-evidence manifest and unique-port `next start` browser runner with cleanup. |
+| `src/lib/forge-auth/config.ts` | Reconciled to Packet B's structural null/false cloud boundary with optional environment projection; complete-looking retired Supabase values remain disabled. |
 | `scripts/ops/deployment-target-policy.ts`, `src/operations/release-identity.ts` | Added exact target allowlist and canonical ADR-006 tuple/state validator. |
 | `src/operations/deployment-verifier.test.ts` | Reworked fixtures to assert all four Worlds, Studio, profile, CSP nonce, disabled cloud/provider state, and no secret retention. |
 | `src/operations/evaluation-report.test.ts` | Reconciled baseline count/metric/privacy assertions on current fixtures. |
@@ -24,12 +25,12 @@ No old branch, commit, or user work was rewritten or deleted.
 
 ## Cherry-pick order and current-main verification
 
-For principal integration, cherry-pick `044efddca7499a98c0bc4bb07b1484efba20f542` first, then the additive follow-up commit recorded in the THREAD_LEDGER handoff. The resulting tree was checked in a disposable worktree rooted at governance `2789a66b97fc8250d108f3ac8ab0cc56e1c63fc3`; no principal-owned program files were changed.
+For principal integration, cherry-pick `044efddca7499a98c0bc4bb07b1484efba20f542`, then `5607fc872e3b2f153967716e02922d747133749e`, then `87c941f876cca036c1700de1fe8f9eff18032531`. Because Packet B and this packet overlap in `src/lib/forge-auth/config.ts`, principal integration must use a consolidated/current-base reconciliation after B rather than blindly replaying the intermediate parser version. Applying this chain to `c543e657b40f64db16e240583b5817acb77e29a6` produced disposable integrated SHA `bdc0a3c595d22ab90e70150e1d867ddfcec23a55`, with zero `docs/program/**` overlap and focused operations/auth tests plus typecheck green. No principal-owned program files are changed by this lane.
 
 ## Principal-matrix disposition
 
 - `OPS-01` remains `PARTIAL` on this worker SHA: the exact source/runtime tuple and read-only verifier now exist, but the blocked Vercel candidate is not promoted and no current immutable READY URL is claimed.
 - `OPS-02` is delivered as an implementation slice but remains `IN_PROGRESS` until principal review, integration, and a separately authorized production gate. No deployment, alias mutation, credential enablement, database migration, or paid provider call occurred.
-- `EVAL-01` is `PARTIAL`: lint, typecheck, 26 application test files/189 tests, 1 evaluator file/9 tests, offline evaluation (54 fixtures; 29/38; live not evaluated), build, and local production verification (143/143) pass. The current browser suite remains not green with the known baseline `tests/e2e/forge-expansion.spec.ts:45` image-locator failure on desktop and mobile (40 passed, 2 failed, 16 skipped); this packet does not hide or rewrite that negative evidence.
+- `EVAL-01` is `PARTIAL`: lint, typecheck, 28 application test files/206 tests, 1 evaluator file/9 tests, offline evaluation (54 fixtures; 29/38; live not evaluated), build, and local production verification (167/167) pass. The production-mode browser suite is run against `next start` on a unique port; the last exact-SHA rerun had 42 passed and 16 deterministic mobile skips (58 collected). Earlier dev-server evidence had the known `tests/e2e/forge-expansion.spec.ts:45` image-locator failure on desktop and mobile (40 passed, 2 failed, 16 skipped), which remains historical negative evidence rather than a rewritten claim.
 - Stop-ship 6 (browser locator correction and missing 320px/forced-colors/nonvisual evidence) is an Experience/principal integration decision, not changed here. Stop-ship 7 (D-06 release tuple and current production claim) is addressed only to the boundary of this slice and still requires principal integration plus a separately authorized READY deployment; database migration identity is intentionally `not applicable` because this lane did not mutate or inspect a live database.
 - No D-01–D-05 cross-lane architecture decision was invented or changed. The verifier treats disabled cloud/provider state as an explicit allowlist and fails closed if another lane enables it without a reviewed contract.

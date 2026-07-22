@@ -18,8 +18,10 @@ describe("release health", () => {
     expect(resolveReleaseSha({ VERCEL_GIT_COMMIT_SHA: "preview-latest" })).toBe("unknown");
   });
   it("keeps cloud and managed provider state explicit without exposing values", () => {
-    const health = buildReleaseHealth({ FORGE_CLOUD_ACCOUNTS_ENABLED: "true", FORGE_SUPABASE_URL: "https://example.supabase.co", FORGE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test_key", FORGE_LESSON_STUDIO_OPENAI_ENABLED: "true", OPENAI_API_KEY: "must-not-appear" });
-    expect(health.cloud_auth_configured).toBe(true);
+    const health = buildReleaseHealth({ FORGE_CLOUD_ACCOUNTS_ENABLED: "true", FORGE_SUPABASE_URL: "https://example.supabase.co", FORGE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test_key_1234567890", FORGE_LESSON_STUDIO_OPENAI_ENABLED: "true", OPENAI_API_KEY: "must-not-appear" });
+    expect(health.cloud_auth_configured).toBe(false);
+    expect(health.learner_evidence_sync).toBe("disabled");
+    expect(health.device_profiles).toBe("device_only");
     expect(health.managed_provider_flags).toEqual({ openai: true, anthropic: false, gemini: false, openrouter: false });
     expect(JSON.stringify(health)).not.toContain("must-not-appear");
   });

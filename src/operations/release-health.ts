@@ -1,3 +1,5 @@
+import { readForgeCloudAuthConfig } from "../lib/forge-auth/config";
+
 const RELEASE_SHA_PATTERN = /^[0-9a-f]{40}$/i;
 const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/i;
@@ -57,9 +59,7 @@ export function resolveReleaseSha(environment: ReleaseEnvironment = process.env)
 
 export function buildReleaseHealth(environment: ReleaseEnvironment = process.env): ReleaseHealth {
   const cloudAccountsEnabled = environment.FORGE_CLOUD_ACCOUNTS_ENABLED === "true";
-  const cloudAuthConfigured = cloudAccountsEnabled
-    && /^https:\/\//i.test(environment.FORGE_SUPABASE_URL ?? "")
-    && Boolean(environment.FORGE_SUPABASE_PUBLISHABLE_KEY);
+  const cloudAuthConfigured = readForgeCloudAuthConfig(environment) !== null;
   const hasManagedKey = Boolean(environment.OPENAI_API_KEY);
   const managedLessonStudio = environment.FORGE_LESSON_STUDIO_OPENAI_ENABLED === "true" && hasManagedKey;
   const managedInterpretation = environment.OPENAI_INTERPRETATION_ENABLED === "true"
@@ -81,7 +81,8 @@ export function buildReleaseHealth(environment: ReleaseEnvironment = process.env
     cloud_accounts_enabled: cloudAccountsEnabled,
     cloud_auth_configured: cloudAuthConfigured,
     device_profiles: cloudAuthConfigured ? "device_plus_optional_cloud" : "device_only",
-    learner_evidence_sync: cloudAuthConfigured ? "adult_private_only" : "disabled",
+    // Packet B's private-evidence persistence/sync path is not implemented in this lane.
+    learner_evidence_sync: "disabled",
     dependency_lock_digest: validDigest(environment.FORGE_LOCKFILE_DIGEST),
     content_package_manifest_digest: validDigest(environment.FORGE_CONTENT_MANIFEST_DIGEST),
     evaluator_baseline_digest: validDigest(environment.FORGE_EVALUATOR_BASELINE_DIGEST),

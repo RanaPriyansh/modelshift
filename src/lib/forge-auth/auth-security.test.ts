@@ -7,6 +7,7 @@ vi.mock("@supabase/ssr", () => ({ createServerClient }));
 
 import {
   forgeAuthCookieOptions,
+  isForgeCloudAuthConfigured,
   readForgeCloudAuthConfig,
 } from "./config";
 import { refreshForgeAuth } from "./proxy";
@@ -33,10 +34,8 @@ describe("FORGE auth security boundary", () => {
     expect(readForgeCloudAuthConfig()).toBeNull();
 
     configureCloudAuth();
-    expect(readForgeCloudAuthConfig()).toMatchObject({
-      url: "https://forge-test.supabase.co",
-      publishableKey: "sb_publishable_test_key_1234567890",
-    });
+    expect(readForgeCloudAuthConfig()).toBeNull();
+    expect(isForgeCloudAuthConfigured({ FORGE_CLOUD_ACCOUNTS_ENABLED: "true", FORGE_SUPABASE_URL: "https://forge-test.supabase.co", FORGE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test_key_1234567890" })).toBe(false);
   });
 
   it("uses server-only session-cookie attributes", () => {
@@ -49,7 +48,7 @@ describe("FORGE auth security boundary", () => {
     });
   });
 
-  it("preserves every anti-cache header supplied with refreshed auth cookies", async () => {
+  it("keeps cloud auth structurally disabled even when retired env values look complete", async () => {
     configureCloudAuth();
     createServerClient.mockImplementation((_url, _key, options) => ({
       auth: {
@@ -70,11 +69,9 @@ describe("FORGE auth security boundary", () => {
     const request = new NextRequest("https://forge.example/account");
     const response = await refreshForgeAuth(request, new Headers({ "x-nonce": "testnonce" }));
 
-    expect(response.headers.get("cache-control")).toBe("private, no-cache, no-store, must-revalidate, max-age=0");
-    expect(response.headers.get("expires")).toBe("0");
-    expect(response.headers.get("pragma")).toBe("no-cache");
-    expect(response.headers.get("set-cookie")).toContain("sb-session=opaque-token");
-    expect(createServerClient.mock.calls[0]?.[2]?.cookieOptions).toMatchObject({ httpOnly: true, sameSite: "lax", path: "/" });
+    expect(response.headers.get("cache-control")).toBeNull();
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(createServerClient).not.toHaveBeenCalled();
   });
 
   it("uses a request nonce and never permits arbitrary inline script", () => {

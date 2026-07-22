@@ -7,6 +7,7 @@ import { INTERPRETATION_FIXTURES, INTERPRETATION_FIXTURE_VERSION, type Interpret
 import { ruleBaseline } from "../../evals/rule-baseline";
 import { PROBES } from "../../src/content/probes";
 import { buildReleaseIdentity, type ReleaseCandidateState, type ReleaseIdentityTuple } from "../../src/operations/release-identity";
+import { buildReleaseHealth } from "../../src/operations/release-health";
 import policy from "./evaluation-baseline.json";
 
 export const OFFLINE_EVALUATOR_VERSION = "2.0.0";
@@ -41,7 +42,7 @@ export type OfflineRegressionReport = {
   release_identity: ReleaseIdentityTuple & { candidate_state: ReleaseCandidateState };
 };
 
-type BuildOptions = { fixtures?: readonly InterpretationFixture[]; generatedAt?: string; gitSha?: string; liveEvaluationStatus?: "not_evaluated" | "pass" | "fail"; liveEvaluationArtifactId?: string };
+type BuildOptions = { fixtures?: readonly InterpretationFixture[]; generatedAt?: string; gitSha?: string; liveEvaluationStatus?: "not_evaluated" | "pass" | "fail"; liveEvaluationArtifactId?: string; releaseClosureMode?: boolean };
 const safeSha = (value?: string): string | "unknown" => value && /^[0-9a-f]{40}$/i.test(value) ? value.toLowerCase() : "unknown";
 function currentSha(): string | "unknown" { try { return safeSha(execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim()); } catch { return "unknown"; } }
 const rate = (n: number, d: number): number => d === 0 ? 0 : n / d;
@@ -79,9 +80,12 @@ export function buildOfflineRegressionReport(options: BuildOptions = {}): Offlin
     gate("authored_probe_safety", rate(probeSafe, fixtures.length) >= policy.required_probe_safety_rate, rate(probeSafe, fixtures.length), policy.required_probe_safety_rate),
   ];
   const gitSha = safeSha(options.gitSha) === "unknown" ? currentSha() : safeSha(options.gitSha);
-  const liveStatus = options.liveEvaluationStatus ?? "not_evaluated";
+  const requestedLiveStatus = options.liveEvaluationStatus ?? "not_evaluated";
+  const validLiveArtifact = Boolean(options.liveEvaluationArtifactId && /^[A-Za-z0-9._/-]{1,200}$/.test(options.liveEvaluationArtifactId));
+  const liveStatus = requestedLiveStatus === "pass" && !validLiveArtifact ? "fail" : requestedLiveStatus;
   const offlineStatus = gates.every((item) => item.status === "pass") ? "pass" : "fail";
-  const releaseClosureStatus = offlineStatus === "fail" || liveStatus === "fail" ? "FAIL" : liveStatus === "pass" ? "PASS" : "NOT_EVALUATED";
+  const releaseClosureStatus = offlineStatus === "fail" || liveStatus === "fail" || (options.releaseClosureMode && liveStatus !== "pass") ? "FAIL" : liveStatus === "pass" ? "PASS" : "NOT_EVALUATED";
+  const releaseHealth = buildReleaseHealth();
   const generatedAt = options.generatedAt ?? new Date().toISOString();
   return {
     schema_version: "1.0", report_kind: "offline_deterministic_regression", generated_at: generatedAt,
@@ -92,7 +96,7 @@ export function buildOfflineRegressionReport(options: BuildOptions = {}): Offlin
     gates, offline_regression_status: offlineStatus,
     pre_release_quality_status: offlineStatus === "pass" ? "PRE_RELEASE_QUALITY_PASS" : "PRE_RELEASE_QUALITY_FAIL",
     release_closure_status: releaseClosureStatus,
-    live_model_evaluation: { status: liveStatus, required_for_release: policy.live_evaluation_required_for_release, reason: liveStatus === "pass" ? "Credentialed live evidence was supplied by an approved external gate; this offline runner did not spend credits." : liveStatus === "fail" ? "The approved live evaluation evidence failed; release closure is blocked." : "Offline by design: no OPENAI_API_KEY read and no model or network call.", ...(options.liveEvaluationArtifactId ? { artifact_id: options.liveEvaluationArtifactId } : {}) },
+    live_model_evaluation: { status: liveStatus, required_for_release: policy.live_evaluation_required_for_release, reason: liveStatus === "pass" ? "Credentialed live evidence was supplied by an approved external gate; this offline runner did not spend credits." : requestedLiveStatus === "pass" && !validLiveArtifact ? "A live pass was supplied without a bounded retained artifact ID; release closure is blocked." : liveStatus === "fail" ? "The approved live evaluation evidence failed; release closure is blocked." : "Offline by design: no OPENAI_API_KEY read and no model or network call.", ...(options.liveEvaluationArtifactId ? { artifact_id: options.liveEvaluationArtifactId } : {}) },
     fixture_results: results,
     release_identity: buildReleaseIdentity({
       sourceSha: gitSha,
@@ -101,10 +105,18 @@ export function buildOfflineRegressionReport(options: BuildOptions = {}): Offlin
       candidateState: "BUILT_LOCAL",
       buildRuntimeMode: process.env.NODE_ENV ?? "unknown",
       cloudProviderFlags: {
-        cloud_accounts_enabled: process.env.FORGE_CLOUD_ACCOUNTS_ENABLED === "true",
-        managed_openai: process.env.FORGE_LESSON_STUDIO_OPENAI_ENABLED === "true" && Boolean(process.env.OPENAI_API_KEY),
+        cloud_accounts_enabled: releaseHealth.cloud_accounts_enabled,
+        cloud_auth_configured: releaseHealth.cloud_auth_configured,
+        provider_mode: releaseHealth.provider_mode,
+        managed_openai: releaseHealth.managed_provider_flags.openai,
+        managed_anthropic: releaseHealth.managed_provider_flags.anthropic,
+        managed_gemini: releaseHealth.managed_provider_flags.gemini,
+        managed_openrouter: releaseHealth.managed_provider_flags.openrouter,
+        managed_lesson_studio: releaseHealth.managed_surface_flags.lesson_studio,
+        managed_interpretation: releaseHealth.managed_surface_flags.interpretation,
+        managed_planner: releaseHealth.managed_surface_flags.planner,
       },
-      retainedArtifactIds: ["evaluation-regression.json", "evaluation-regression.md", ...(process.env.FORGE_BROWSER_ARTIFACT_ID ? [process.env.FORGE_BROWSER_ARTIFACT_ID] : [])],
+      retainedArtifactIds: ["evaluation-regression.json", "evaluation-regression.md", ...(process.env.FORGE_BROWSER_ARTIFACT_ID ? [process.env.FORGE_BROWSER_ARTIFACT_ID] : []), ...(validLiveArtifact && options.liveEvaluationArtifactId ? [options.liveEvaluationArtifactId] : [])],
       decisionName: "Packet D offline regression; promotion not authorized",
     }),
   };
@@ -128,11 +140,11 @@ async function main() {
   const outputDirectory = resolve(arg("--output-dir") ?? "test-results/release-ops");
   const liveStatus = arg("--live-evaluation-status") as "not_evaluated" | "pass" | "fail" | undefined;
   if (liveStatus && !["not_evaluated", "pass", "fail"].includes(liveStatus)) throw new Error("--live-evaluation-status must be not_evaluated, pass, or fail");
-  const report = buildOfflineRegressionReport({ gitSha: arg("--git-sha") ?? process.env.GITHUB_SHA, liveEvaluationStatus: liveStatus, liveEvaluationArtifactId: arg("--live-evaluation-artifact-id") });
+  const report = buildOfflineRegressionReport({ gitSha: arg("--git-sha") ?? process.env.GITHUB_SHA, liveEvaluationStatus: liveStatus, liveEvaluationArtifactId: arg("--live-evaluation-artifact-id"), releaseClosureMode: process.argv.includes("--release-closure") });
   await writeEvaluationReport(report, outputDirectory);
   console.log(`offline evaluation regression: ${report.offline_regression_status.toUpperCase()}`);
   console.log(`report: ${resolve(outputDirectory, "evaluation-regression.md")}`);
-  if (report.offline_regression_status === "fail") process.exitCode = 1;
+  if (report.offline_regression_status === "fail" || report.live_model_evaluation.status === "fail" || (process.argv.includes("--release-closure") && report.release_closure_status !== "PASS")) process.exitCode = 1;
 }
 const entryUrl = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : "";
 if (import.meta.url === entryUrl) void main();
