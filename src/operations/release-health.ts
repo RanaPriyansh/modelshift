@@ -67,7 +67,9 @@ export function buildReleaseHealth(environment: ReleaseEnvironment = process.env
   // Presence is intentionally the only credential-side signal exposed here.
   // Health must not parse, normalize, or disclose a provider secret.
   const hasManagedKey = Boolean(environment.OPENAI_API_KEY);
-  const managedLessonStudio = environment.FORGE_LESSON_STUDIO_OPENAI_ENABLED === "true" && hasManagedKey;
+  // Lesson Studio has no managed credential path. This remains false even if a
+  // retired environment variable or an unrelated OpenAI key is present.
+  const managedLessonStudio = false;
   const managedInterpretation = environment.OPENAI_INTERPRETATION_ENABLED === "true"
     && environment.OPENAI_INTERPRETATION_DISABLED !== "true"
     && hasManagedKey;
