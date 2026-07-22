@@ -19,6 +19,7 @@ import {
   type LearningWorldPack,
   type SourceProvenance,
 } from "./contracts";
+import { deepFreeze } from "./deep-freeze";
 import { FORCE_AND_MOTION_RUNTIME_BINDING } from "./world-runtime/force-and-motion-binding";
 import { PRIMARY_SOURCE_RUNTIME_BINDING } from "./world-runtime/primary-source-binding";
 import { PROPORTIONAL_REASONING_RUNTIME_BINDING } from "./world-runtime/proportional-reasoning-binding";
@@ -151,7 +152,7 @@ export const LOC_WASHINGTON_STREET_SOURCE = {
   },
 } as const satisfies SourceProvenance;
 
-export const FORCE_AND_MOTION_WORLD = {
+export const FORCE_AND_MOTION_WORLD = deepFreeze({
   manifest: {
     schemaVersion: "1.0",
     id: "world.force-and-motion",
@@ -239,9 +240,9 @@ export const FORCE_AND_MOTION_WORLD = {
     },
   ],
   runtime: FORCE_AND_MOTION_RUNTIME_BINDING,
-} satisfies LearningWorldPack;
+} satisfies LearningWorldPack);
 
-export const SOURCE_CORROBORATION_WORLD = {
+export const SOURCE_CORROBORATION_WORLD = deepFreeze({
   manifest: {
     schemaVersion: "1.0",
     id: "world.source-corroboration",
@@ -335,9 +336,9 @@ export const SOURCE_CORROBORATION_WORLD = {
     },
   ],
   runtime: SOURCE_CORROBORATION_RUNTIME_BINDING,
-} satisfies LearningWorldPack;
+} satisfies LearningWorldPack);
 
-export const PROPORTIONAL_REASONING_WORLD = {
+export const PROPORTIONAL_REASONING_WORLD = deepFreeze({
   manifest: {
     schemaVersion: "1.0",
     id: "world.proportional-reasoning",
@@ -419,9 +420,9 @@ export const PROPORTIONAL_REASONING_WORLD = {
     },
   ],
   runtime: PROPORTIONAL_REASONING_RUNTIME_BINDING,
-} satisfies LearningWorldPack;
+} satisfies LearningWorldPack);
 
-export const PRIMARY_SOURCE_REASONING_WORLD = {
+export const PRIMARY_SOURCE_REASONING_WORLD = deepFreeze({
   manifest: {
     schemaVersion: "1.0",
     id: PRIMARY_SOURCE_WORLD_ID,
@@ -507,27 +508,27 @@ export const PRIMARY_SOURCE_REASONING_WORLD = {
     },
   ],
   runtime: PRIMARY_SOURCE_RUNTIME_BINDING,
-} satisfies LearningWorldPack;
+} satisfies LearningWorldPack);
 
-export const BUILT_IN_WORLD_PACKS = [
+export const BUILT_IN_WORLD_PACKS = deepFreeze([
   FORCE_AND_MOTION_WORLD,
   PROPORTIONAL_REASONING_WORLD,
   SOURCE_CORROBORATION_WORLD,
   PRIMARY_SOURCE_REASONING_WORLD,
-] as const;
-export const BUILT_IN_WORLD_IDS = [
+] as const);
+export const BUILT_IN_WORLD_IDS = deepFreeze([
   FORCE_AND_MOTION_WORLD.manifest.id,
   PROPORTIONAL_REASONING_WORLD.manifest.id,
   SOURCE_CORROBORATION_WORLD.manifest.id,
   PRIMARY_SOURCE_REASONING_WORLD.manifest.id,
-] as const;
-export const BUILT_IN_WORLD_ROUTES = [
+] as const);
+export const BUILT_IN_WORLD_ROUTES = deepFreeze([
   FORCE_AND_MOTION_WORLD.manifest.route,
   PROPORTIONAL_REASONING_WORLD.manifest.route,
   SOURCE_CORROBORATION_WORLD.manifest.route,
   PRIMARY_SOURCE_REASONING_WORLD.manifest.route,
-] as const;
-export const BUILT_IN_SOURCE_IDS = [
+] as const);
+export const BUILT_IN_SOURCE_IDS = deepFreeze([
   OPENSTAX_NEWTONS_FIRST_LAW_SOURCE.id,
   OPENSTAX_RATIOS_AND_RATE_SOURCE.id,
   BASTANI_PNAS_AI_LEARNING_SOURCE.id,
@@ -535,28 +536,28 @@ export const BUILT_IN_SOURCE_IDS = [
   LOC_PRIMARY_SOURCE_ANALYSIS_SOURCE.id,
   LOC_PHILADELPHIA_STREET_SOURCE.id,
   LOC_WASHINGTON_STREET_SOURCE.id,
-] as const;
+] as const);
 
 /** Explicit public projection: released packages become visible only after availability/publication review. */
-export const PUBLIC_WORLD_PACKS = [
+export const PUBLIC_WORLD_PACKS = deepFreeze([
   FORCE_AND_MOTION_WORLD,
   PROPORTIONAL_REASONING_WORLD,
   SOURCE_CORROBORATION_WORLD,
   PRIMARY_SOURCE_REASONING_WORLD,
-] as const;
-export const PUBLIC_WORLD_IDS = [
+] as const);
+export const PUBLIC_WORLD_IDS = deepFreeze([
   FORCE_AND_MOTION_WORLD.manifest.id,
   PROPORTIONAL_REASONING_WORLD.manifest.id,
   SOURCE_CORROBORATION_WORLD.manifest.id,
   PRIMARY_SOURCE_REASONING_WORLD.manifest.id,
-] as const;
-export const PUBLIC_WORLD_ROUTES = [
+] as const);
+export const PUBLIC_WORLD_ROUTES = deepFreeze([
   FORCE_AND_MOTION_WORLD.manifest.route,
   PROPORTIONAL_REASONING_WORLD.manifest.route,
   SOURCE_CORROBORATION_WORLD.manifest.route,
   PRIMARY_SOURCE_REASONING_WORLD.manifest.route,
-] as const;
-export const PUBLIC_SOURCE_IDS = [
+] as const);
+export const PUBLIC_SOURCE_IDS = deepFreeze([
   OPENSTAX_NEWTONS_FIRST_LAW_SOURCE.id,
   OPENSTAX_RATIOS_AND_RATE_SOURCE.id,
   BASTANI_PNAS_AI_LEARNING_SOURCE.id,
@@ -564,11 +565,11 @@ export const PUBLIC_SOURCE_IDS = [
   LOC_PRIMARY_SOURCE_ANALYSIS_SOURCE.id,
   LOC_PHILADELPHIA_STREET_SOURCE.id,
   LOC_WASHINGTON_STREET_SOURCE.id,
-] as const;
+] as const);
 
 /** Client-safe, read-only discovery data projected from the canonical manifests. */
-export const PUBLIC_WORLD_CATALOG = Object.freeze(
-  PUBLIC_WORLD_PACKS.map(({ manifest }) => Object.freeze({
+export const PUBLIC_WORLD_CATALOG = deepFreeze(
+  PUBLIC_WORLD_PACKS.map(({ manifest }) => ({
     id: manifest.id,
     version: manifest.version,
     route: manifest.route,
@@ -576,13 +577,13 @@ export const PUBLIC_WORLD_CATALOG = Object.freeze(
     summary: manifest.summary,
     kind: manifest.kind,
     evidenceTier: manifest.evidenceTier,
-    ageModes: Object.freeze([...manifest.ageModes]),
-    depthModes: Object.freeze([...manifest.depthModes]),
+    ageModes: [...manifest.ageModes],
+    depthModes: [...manifest.depthModes],
   })),
 );
-export const BUILT_IN_DETERMINISTIC_VALIDATORS = [
+export const BUILT_IN_DETERMINISTIC_VALIDATORS = deepFreeze([
   forceAndMotionTransferValidator,
   proportionalReasoningTransferValidator,
   sourceCorroborationTransferValidator,
   primarySourceReasoningTransferValidator,
-] as const;
+] as const);
