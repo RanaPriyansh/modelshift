@@ -39,7 +39,7 @@ export const PATHWAY_REVIEW_ISSUE_CODES = [
   "consent.guardian-declaration-missing",
   "consent.assent-record-missing",
   "consent.learner-visibility-missing",
-  "consent.child-open-web-prohibited",
+  "consent.underage-open-web-prohibited",
   "relationships.not-documented",
   "relationships.human-review-missing",
   "protection.open-minor-messaging",
@@ -211,7 +211,7 @@ function reviewPacket(packet: PathwayReviewPacket, catalog: PathwayCapabilityCat
   if (consentRequired && packet.ageMode !== "18-plus" && packet.consentAssent.guardianConsent !== "declared-for-review") add(issues, "consent.guardian-declaration-missing", "consentAssent.guardianConsent", "A guardian declaration is required for independent review of this boundary.");
   if (consentRequired && packet.ageMode !== "18-plus" && packet.consentAssent.learnerAssent !== "recorded-for-review") add(issues, "consent.assent-record-missing", "consentAssent.learnerAssent", "Learner assent must be recorded for review.");
   if (consentRequired && !packet.consentAssent.visibilityToLearner) add(issues, "consent.learner-visibility-missing", "consentAssent.visibilityToLearner", "The declared boundary must be visible to the learner.");
-  if (packet.ageMode === "under-13" && packet.consentAssent.externalAction === "open-web") add(issues, "consent.child-open-web-prohibited", "consentAssent.externalAction", "Open-web access is not an under-13 pathway policy.");
+  if (packet.ageMode !== "18-plus" && packet.consentAssent.externalAction === "open-web") add(issues, "consent.underage-open-web-prohibited", "consentAssent.externalAction", "Open-web access remains gated/off for an under-18 pathway; declarations are not verified authority.");
 
   if (packet.relationships.status !== "documented-for-review") add(issues, "relationships.not-documented", "relationships.status", "Relationship evidence is not documented.");
   if (!packet.relationships.humanReviewRef) add(issues, "relationships.human-review-missing", "relationships.humanReviewRef", "A human review reference is required; its adequacy remains for independent review.");
