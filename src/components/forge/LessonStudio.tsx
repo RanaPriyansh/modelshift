@@ -2,8 +2,8 @@
 
 import { FormEvent, useMemo, useState } from "react";
 
-import { readForgeDeviceProfile } from "@/src/lib/forge-profile/device-profile";
 import {
+  LESSON_PROVIDER_CAPABILITIES,
   LESSON_PROVIDER_DEFAULTS,
   lessonProviderSchema,
   lessonStudioResponseSchema,
@@ -22,7 +22,7 @@ const ERROR_FALLBACK = "FORGE could not generate a valid draft. Your key was cle
 
 type ErrorEnvelope = { error?: { message?: unknown } };
 
-export function LessonStudio({ managedOpenAIAvailable }: { managedOpenAIAvailable: boolean }) {
+export function LessonStudio() {
   const [provider, setProvider] = useState<LessonProvider>("openai");
   const [model, setModel] = useState(LESSON_PROVIDER_DEFAULTS.openai);
   const [apiKey, setApiKey] = useState("");
@@ -37,13 +37,9 @@ export function LessonStudio({ managedOpenAIAvailable }: { managedOpenAIAvailabl
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  const needsKey = provider !== "openai" || !managedOpenAIAvailable;
   const providerNote = useMemo(() => {
-    if (provider === "openai" && managedOpenAIAvailable) {
-      return "This deployment can use its managed OpenAI connection. Add your own key only to use your account instead.";
-    }
-    return "Paste a provider key for this one request. FORGE clears the field after the provider responds.";
-  }, [managedOpenAIAvailable, provider]);
+    return `Paste an approved ${PROVIDER_LABELS[provider]} key for this one request. FORGE clears the field after the provider responds and never uses a deployment-managed key.`;
+  }, [provider]);
 
   function changeProvider(value: string) {
     const parsed = lessonProviderSchema.safeParse(value);
@@ -61,7 +57,6 @@ export function LessonStudio({ managedOpenAIAvailable }: { managedOpenAIAvailabl
     setResult(null);
 
     try {
-      const profile = readForgeDeviceProfile(window.localStorage);
       const response = await fetch("/api/forge/lesson-draft", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -69,7 +64,8 @@ export function LessonStudio({ managedOpenAIAvailable }: { managedOpenAIAvailabl
         body: JSON.stringify({
           provider,
           model,
-          ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
+          apiKey: apiKey.trim(),
+          authoringMode: "adult-authoring-no-child-data",
           question,
           ageMode,
           guardianManaged: ageMode === "child" ? guardianManaged : false,
@@ -77,7 +73,6 @@ export function LessonStudio({ managedOpenAIAvailable }: { managedOpenAIAvailabl
           startingPoint,
           successShape,
           sourceContext,
-          ...(profile?.profileId ? { safetyIdentifier: profile.profileId } : {}),
         }),
       });
       const payload: unknown = await response.json().catch(() => null);
@@ -100,7 +95,7 @@ export function LessonStudio({ managedOpenAIAvailable }: { managedOpenAIAvailabl
     <div className="lesson-studio-layout">
       <form className="lesson-studio-form" onSubmit={submit} aria-describedby="lesson-studio-boundary">
         <fieldset className="lesson-studio-connection">
-          <legend>1 · Connect a model for this draft</legend>
+          <legend>1 · Adult author connection</legend>
           <label>
             Provider
             <select value={provider} onChange={(event) => changeProvider(event.target.value)}>
@@ -111,23 +106,27 @@ export function LessonStudio({ managedOpenAIAvailable }: { managedOpenAIAvailabl
           </label>
           <label>
             Model ID
-            <input value={model} onChange={(event) => setModel(event.target.value)} maxLength={120} required />
+            <select value={model} onChange={(event) => setModel(event.target.value)}>
+              {LESSON_PROVIDER_CAPABILITIES[provider].models.map((candidate) => (
+                <option value={candidate.id} key={candidate.id}>{candidate.id}</option>
+              ))}
+            </select>
           </label>
           <label>
-            API key {needsKey ? <span aria-hidden="true">· required</span> : <span>· optional</span>}
+            API key <span aria-hidden="true">· required</span>
             <input
               type="password"
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
               autoComplete="new-password"
-              minLength={needsKey ? 10 : undefined}
+              minLength={10}
               maxLength={512}
-              required={needsKey}
-              placeholder={needsKey ? `Paste ${PROVIDER_LABELS[provider]} key` : "Use managed connection"}
+              required
+              placeholder={`Paste ${PROVIDER_LABELS[provider]} key`}
               aria-describedby="lesson-key-note"
             />
           </label>
-          <p id="lesson-key-note">{providerNote} It reaches FORGE&apos;s fixed provider adapter, is not written to browser storage, and is never returned in the draft.</p>
+          <p id="lesson-key-note">{providerNote} It reaches FORGE&apos;s fixed provider adapter, is not written to browser storage, logs, URLs, or drafts, and is never returned.</p>
         </fieldset>
 
         <fieldset>
@@ -137,7 +136,7 @@ export function LessonStudio({ managedOpenAIAvailable }: { managedOpenAIAvailabl
             <textarea value={question} onChange={(event) => setQuestion(event.target.value)} minLength={3} maxLength={300} required rows={4} />
           </label>
           <label>
-            Learner mode
+            Target lesson audience
             <select value={ageMode} onChange={(event) => setAgeMode(event.target.value as typeof ageMode)}>
               <option value="child">Child + grown-up</option>
               <option value="teen">Teen</option>
@@ -155,16 +154,16 @@ export function LessonStudio({ managedOpenAIAvailable }: { managedOpenAIAvailabl
           {ageMode === "child" ? (
             <label className="lesson-studio-check lesson-studio-wide">
               <input type="checkbox" checked={guardianManaged} onChange={(event) => setGuardianManaged(event.target.checked)} required />
-              A grown-up is here and will manage this lesson session.
+              This child-targeted draft requires grown-up-managed use if it is later reviewed and used.
             </label>
           ) : null}
           <label>
             Starting point <span>· optional</span>
-            <textarea value={startingPoint} onChange={(event) => setStartingPoint(event.target.value)} maxLength={300} rows={3} placeholder="What the learner already thinks or knows" />
+            <textarea value={startingPoint} onChange={(event) => setStartingPoint(event.target.value)} maxLength={300} rows={3} placeholder="The author's initial model of the target audience" />
           </label>
           <label>
             Useful outcome <span>· optional</span>
-            <textarea value={successShape} onChange={(event) => setSuccessShape(event.target.value)} maxLength={300} rows={3} placeholder="What they want to be able to explain, make, decide, or do" />
+            <textarea value={successShape} onChange={(event) => setSuccessShape(event.target.value)} maxLength={300} rows={3} placeholder="What the completed lesson should let someone explain, make, decide, or do" />
           </label>
           <label className="lesson-studio-wide">
             Source context <span>· optional, unverified</span>
@@ -176,7 +175,7 @@ export function LessonStudio({ managedOpenAIAvailable }: { managedOpenAIAvailabl
           {pending ? "Compiling a bounded draft…" : "Generate unverified lesson draft"}
         </button>
         <p className="lesson-studio-boundary" id="lesson-studio-boundary">
-          AI can propose a lesson instrument. It cannot publish a World, verify its own claims, grade cold proof, or call one response mastery.
+          This is an adult authoring surface: do not submit child learner data. AI can propose a lesson instrument, but it cannot publish a World, verify its own claims, grade cold proof, or call one response mastery.
         </p>
         {error ? <p className="lesson-studio-error" role="alert">{error}</p> : null}
       </form>
@@ -205,7 +204,7 @@ function LessonDraftView({ result, onDiscard }: { result: LessonStudioResponse; 
   return (
     <article className="lesson-draft">
       <header>
-        <div><span>Unverified lesson draft</span><span>{PROVIDER_LABELS[result.provenance.provider]} · {result.provenance.model}</span></div>
+        <div><span>Unverified lesson draft · draft state</span><span>{PROVIDER_LABELS[result.provenance.provider]} · {result.provenance.model}</span></div>
         <h2>{draft.title}</h2>
         <p>{draft.learnerGoal}</p>
       </header>
@@ -267,8 +266,22 @@ function LessonDraftView({ result, onDiscard }: { result: LessonStudioResponse; 
         </div>
       </section>
 
+      <section className="lesson-draft-workflow">
+        <span>Review workflow · not publication</span>
+        <h3>Generation → critique → source plan → revision</h3>
+        <p>
+          The generated draft has a deterministic critique and unresolved source plan. Named human factual, pedagogy, access, and proof reviews are still required. Even an approved package is not a published World.
+        </p>
+        <dl>
+          <div><dt>Draft reference</dt><dd>{result.pipeline.generation.versionRef}</dd></div>
+          <div><dt>Source plan</dt><dd>{result.pipeline.sourcePlan.items.length} unresolved source need{result.pipeline.sourcePlan.items.length === 1 ? "" : "s"}</dd></div>
+          <div><dt>Request limits</dt><dd>{result.provenance.budget.timeoutMs / 1000}s · {result.provenance.budget.maxOutputTokens.toLocaleString()} output tokens · ${(result.provenance.budget.maxEstimatedCostMicros / 1_000_000).toFixed(2)} maximum estimate</dd></div>
+        </dl>
+      </section>
+
       <footer>
         <p>{result.claimBoundary}</p>
+        <p>Correlation {result.provenance.correlationId}. This identifier contains no learner text, source text, or key.</p>
         <button type="button" onClick={onDiscard}>Discard draft</button>
       </footer>
     </article>
