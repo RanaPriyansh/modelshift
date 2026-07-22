@@ -114,9 +114,9 @@ describe("ModelShiftExperience runtime migration", () => {
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
     const receipt = onRuntimeReceipt.mock.calls[0]?.[0];
     expect(receipt).toMatchObject({
-      schemaVersion: "1.0.2",
+      schemaVersion: "1.1.0",
       cognitiveSupport: [{
-        actionId: "action.force-and-motion.interpretation",
+        actionId: "action.force-and-motion.interpretation.model",
         source: "model",
         tier: "representation",
         policyId: "policy.force-and-motion.interpretation.v1",
@@ -132,7 +132,7 @@ describe("ModelShiftExperience runtime migration", () => {
     const ledger = JSON.parse(localStorage.getItem(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY) ?? "{}");
     expect(ledger.entries).toHaveLength(1);
     expect(ledger.entries[0].id).toBe(`proof.${receipt.attemptId}`);
-    expect(ledger.entries[0].assistance).toEqual([{ kind: "model_interpretation", sourceId: "action.force-and-motion.interpretation" }]);
+    expect(ledger.entries[0].assistance).toEqual([{ kind: "model_interpretation", sourceId: "action.force-and-motion.interpretation.model" }]);
     expect(JSON.stringify(ledger)).not.toContain("The velocity becomes flat");
     const receiptFacts = screen.getByTestId("force-runtime-receipt").textContent;
     expect(receiptFacts).toContain("honour_based");
@@ -154,7 +154,7 @@ describe("ModelShiftExperience runtime migration", () => {
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
     const firstReceipt = onRuntimeReceipt.mock.calls[0]?.[0];
     expect(firstReceipt.cognitiveSupport).toEqual([{
-      actionId: "action.force-and-motion.interpretation",
+      actionId: "action.force-and-motion.interpretation.fallback.ambiguous-input",
       stage: "interpret_two_readings",
       source: "authored",
       tier: "representation",
@@ -167,7 +167,7 @@ describe("ModelShiftExperience runtime migration", () => {
     let ledger = JSON.parse(localStorage.getItem(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY) ?? "{}");
     expect(ledger.entries).toHaveLength(1);
     expect(ledger.entries[0].assistance).toEqual([
-      { kind: "authored_representation", sourceId: "action.force-and-motion.interpretation" },
+      { kind: "authored_representation", sourceId: "action.force-and-motion.interpretation.fallback.ambiguous-input" },
     ]);
 
     fireEvent.click(screen.getByRole("button", { name: "Start a fresh session" }));

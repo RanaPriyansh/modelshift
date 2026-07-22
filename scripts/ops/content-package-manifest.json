@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0",
   "packages": [
-    { "id": "world.force-and-motion", "version": "1.0.1", "route": "/learn/force-and-motion", "runtime_binding_digest": "sha256:1410ce12a8a49a05b9cc16c26d1c65729142a4a37e13d78acef35e8f7f7ddbfc" },
-    { "id": "world.proportional-reasoning", "version": "1.0.2", "route": "/learn/proportional-reasoning", "runtime_binding_digest": "sha256:cb3f795c0955d583005c7d7a9bda416476d9461ca7ced02bda54735965a3e9f2" },
-    { "id": "world.source-corroboration", "version": "1.0.1", "route": "/learn/ai-and-learning", "runtime_binding_digest": "sha256:a2ee4fd52dec67a7ffe5bafdc5a04cd078f0ca70c4c1454a311639e4de34fce9" },
-    { "id": "world.primary-source-reasoning", "version": "1.0.2", "route": "/learn/primary-source-reasoning", "runtime_binding_digest": "sha256:4e4c91287aa341d69f8931bc5165a40835cd6788323c00394ffca5e8df3bc5f8" }
+    { "id": "world.force-and-motion", "version": "1.0.1", "route": "/learn/force-and-motion", "runtime_binding_digest": "sha256:ddfcd178172013a83066fea4d582e2879d3eab2b44998626baad6b956dc2d10e", "package_integrity_hash": "sha256:a11acc406e7e72614d72784e6505c97acd524422329fb80ae776a23aa70a8936" },
+    { "id": "world.proportional-reasoning", "version": "1.0.2", "route": "/learn/proportional-reasoning", "runtime_binding_digest": "sha256:1506f83fbdd33fb12c8109c62383387a4f237c538463b5b37f87dbec68480c3c", "package_integrity_hash": "sha256:d266b2cb72e3abdf9915ad68cfd08823a7bdc8364c09d5849b9abd2a4184e1c2" },
+    { "id": "world.source-corroboration", "version": "1.0.1", "route": "/learn/ai-and-learning", "runtime_binding_digest": "sha256:da1ee5d20f85dddb7b6414c0f27da02063b4b89df2eb9009487a4d7879edb6e0", "package_integrity_hash": "sha256:8de710030e7a42728c030422ce2d8c3b55f05e09883a728bb74b77ead07f23d6" },
+    { "id": "world.primary-source-reasoning", "version": "1.0.2", "route": "/learn/primary-source-reasoning", "runtime_binding_digest": "sha256:5b49129f030c223e47b76fe1a8853b42cee72d3b7c154c69530a642065cb997c", "package_integrity_hash": "sha256:340d5cdbcf34c659fe848c4daacef2597a84a900dcfc9356ee324f2cf4bc16b2" }
   ]
 }

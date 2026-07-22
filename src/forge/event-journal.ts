@@ -66,6 +66,7 @@ export interface Adr001WorldRunProjection {
   readonly world_version: string;
   readonly content_version: string;
   readonly package_integrity_hash: string;
+  readonly runtime_binding_digest: string;
   readonly validator_id: string;
   readonly validator_version: string;
   readonly proof_authority: "honour_based" | "server_enforced" | "human_observed";
@@ -502,6 +503,7 @@ function projectAdr001WorldRunEvent(
         world_version: event.payload.world_version,
         content_version: event.payload.content_version,
         package_integrity_hash: event.payload.package_integrity_hash,
+        runtime_binding_digest: event.payload.runtime_binding_digest,
         validator_id: event.payload.validator_id,
         validator_version: event.payload.validator_version,
         proof_authority: event.payload.proof_authority,
@@ -593,6 +595,7 @@ function projectAdr001WorldRunEvent(
         || canonicalJson(event.payload.access_accommodations) !== canonicalJson(proof.payload.access_accommodations)
         || event.payload.source_provenance_status !== started.payload.source_provenance_status
         || canonicalJson(event.payload.source_bindings) !== canonicalJson(started.payload.source_bindings)
+        || event.payload.runtime_binding_digest !== started.payload.runtime_binding_digest
       ) {
         return {
           ok: false,

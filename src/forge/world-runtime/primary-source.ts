@@ -109,7 +109,7 @@ export const primarySourceWorldRuntimeAdapter: WorldRuntimeAdapter<
   supportEvent(event: PrimarySourceWorldEvent, state: PrimarySourceWorldState): CanonicalSupportEvent | null {
     if (event.type === "USE_EXPLANATION_SAMPLE") {
       return {
-        actionId: "action.primary-source.support",
+        actionId: "action.primary-source.support.example",
         stage: "commit_model",
         source: "authored",
         tier: "example",
@@ -123,7 +123,7 @@ export const primarySourceWorldRuntimeAdapter: WorldRuntimeAdapter<
     const level = state.supportUsed.at(-1);
     if (!level) return null;
     return {
-      actionId: "action.primary-source.support",
+      actionId: `action.primary-source.support.${supportTier(level)}`,
       stage: "governed_support",
       source: "authored",
       tier: supportTier(level),

@@ -43,15 +43,18 @@ const STAGE_MAP: Record<LearningState["stage"], WorldRuntimeStage> = {
 function representationSupport(interpretation: LearningInterpretation | undefined): CanonicalSupportEvent | null {
   if (!interpretation) return null;
   const isModel = interpretation.source === "model";
+  const fallbackReason = interpretation.fallbackReason ?? "ambiguous_input";
   return {
-    actionId: "action.force-and-motion.interpretation",
+    actionId: isModel
+      ? "action.force-and-motion.interpretation.model"
+      : `action.force-and-motion.interpretation.fallback.${fallbackReason.replaceAll("_", "-")}`,
     stage: "interpret_two_readings",
     source: isModel ? "model" : "authored",
     tier: "representation",
     policyId: FORCE_INTERPRETATION_POLICY_ID,
     providerId: isModel ? interpretation.providerId : null,
     modelId: isModel ? interpretation.modelId : null,
-    fallbackReason: isModel ? null : interpretation.fallbackReason ?? "ambiguous_input",
+    fallbackReason: isModel ? null : fallbackReason,
   };
 }
 
@@ -138,7 +141,7 @@ export const forceAndMotionWorldRuntimeAdapter: WorldRuntimeAdapter<
     const support = state.context.consumedSupport.at(-1);
     if (!support) return null;
     return {
-      actionId: "action.force-and-motion.support",
+      actionId: `action.force-and-motion.support.${authoredSupportTier(support.level)}`,
       stage: "governed_support",
       source: "authored",
       tier: authoredSupportTier(support.level),

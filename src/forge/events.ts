@@ -353,6 +353,7 @@ const adr001WorldRunStartedPayloadSchema = z
     world_version: forgeEventSemverSchema,
     content_version: forgeEventSemverSchema,
     package_integrity_hash: forgeEventDigestSchema,
+    runtime_binding_digest: forgeEventDigestSchema,
     protocol_version: forgeEventSemverSchema,
     capability_id: identifierSchema,
     proof_claim_id: identifierSchema,
@@ -389,15 +390,30 @@ const adr001AttemptCommittedPayloadSchema = z
     }
   });
 
-const adr001AssistanceRecordedPayloadSchema = z.strictObject({
-  support_id: identifierSchema,
-  stage_id: adr001RuntimeStageSchema,
-  tier: adr001SupportTierSchema,
-  source: adr001SupportSourceSchema,
-  content_reference: identifierSchema,
-  policy_version: forgeEventReferenceSchema,
-  protected_operation_overlap: z.number().min(0).max(1),
-});
+const adr001AssistanceRecordedPayloadSchema = z
+  .strictObject({
+    support_id: identifierSchema,
+    stage_id: adr001RuntimeStageSchema,
+    tier: adr001SupportTierSchema,
+    source: adr001SupportSourceSchema,
+    content_reference: identifierSchema,
+    policy_version: forgeEventReferenceSchema,
+    provider_id: forgeEventReferenceSchema.nullable(),
+    model_id: forgeEventReferenceSchema.nullable(),
+    fallback_reason: forgeEventReferenceSchema.nullable(),
+    protected_operation_overlap: z.number().min(0).max(1),
+  })
+  .superRefine((payload, context) => {
+    if (payload.source === "model" && (payload.provider_id === null || payload.model_id === null)) {
+      context.addIssue({ code: "custom", message: "Model assistance must include provider and model identity.", path: ["model_id"] });
+    }
+    if (payload.source !== "model" && (payload.provider_id !== null || payload.model_id !== null)) {
+      context.addIssue({ code: "custom", message: "Only model assistance may include provider or model identity.", path: ["provider_id"] });
+    }
+    if (payload.source !== "authored" && payload.fallback_reason !== null) {
+      context.addIssue({ code: "custom", message: "Only authored assistance may include a fallback reason.", path: ["fallback_reason"] });
+    }
+  });
 
 const adr001ProofSubmittedPayloadSchema = z
   .strictObject({
@@ -440,6 +456,7 @@ const adr001EvidenceRecordedPayloadSchema = z
     access_accommodations: adr001AccessAccommodationsSchema,
     source_bindings: adr001SourceBindingsSchema,
     source_provenance_status: z.enum(["bound", "incomplete"]),
+    runtime_binding_digest: forgeEventDigestSchema,
     response_digest: forgeEventDigestSchema.nullable(),
     explicit_uncertainty: z.boolean(),
     authored_uncertainty_exception_reference: forgeEventReferenceSchema.nullable(),

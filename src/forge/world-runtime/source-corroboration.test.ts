@@ -126,10 +126,10 @@ describe("source corroboration World runtime adapter", () => {
     ]);
     expect(runtime.receipt).toMatchObject({
       world: { id: "world.source-corroboration", version: "1.0.1", contentVersion: "1.0.0" },
-      schemaVersion: "1.0.2",
+      schemaVersion: "1.1.0",
       attemptId: expect.stringMatching(/^attempt\./),
       recordedAt: expect.any(String),
-      protocol: { version: "1.0.2" },
+      protocol: { version: "1.1.0" },
       authority: { proofAuthority: "honour_based", persistence: "not_persisted", isDurable: false },
       validator: {
         outcome: "pass",

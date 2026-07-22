@@ -9,8 +9,8 @@ import type {
   WorldRuntimeStage,
 } from "../contracts";
 
-export const WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION = "1.0.2" as const;
-export const WORLD_RUNTIME_PROTOCOL_VERSION = "1.0.2" as const;
+export const WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION = "1.1.0" as const;
+export const WORLD_RUNTIME_PROTOCOL_VERSION = "1.1.0" as const;
 export const LOCAL_RUNTIME_RECEIPT_LIMITATION =
   "This is a client runtime receipt only. It is not server-enforced, durable, tamper-resistant, or an independent evidence record.";
 
@@ -89,6 +89,10 @@ export interface BoundedLocalWorldRuntimeReceipt {
   /** Local idempotency key only; not learner identity or authentication. */
   readonly attemptId: string;
   readonly recordedAt: string;
+  /** Retained release-manifest digest; the compiler compares it with a fresh runtime digest. */
+  readonly runtimeBindingDigest: string;
+  /** Retained package digest; binds non-runtime released package facts as well. */
+  readonly packageIntegrityHash: string;
   readonly authority: {
     readonly proofAuthority: "honour_based";
     readonly persistence: "not_persisted";
@@ -101,6 +105,7 @@ export interface BoundedLocalWorldRuntimeReceipt {
     readonly contentVersion: string;
     readonly capabilityId: string;
     readonly proofClaimId: string;
+    readonly taskCode: string;
     readonly taskFamilyId: string;
   };
   readonly protocol: {
@@ -111,6 +116,8 @@ export interface BoundedLocalWorldRuntimeReceipt {
   readonly validator: {
     readonly id: string;
     readonly version: string;
+    /** Exact canonical validator result code, not adapter-authored explanation. */
+    readonly code: string;
     readonly outcome: ValidatorOutcome;
     readonly disposition: EvidenceDisposition;
     readonly criteria: readonly string[];
@@ -159,7 +166,10 @@ export interface WorldRuntimeAdapter<State, DomainEvent, DomainProof> {
   proof(state: State): DomainProof | null;
   /** Provides only validator input; the shared runtime resolves the validator. */
   validatorInput(proof: DomainProof): unknown;
-  /** Optional, bounded explanatory criteria. It cannot set outcome or disposition. */
+  /**
+   * Compatibility-only adapter hook. Its value is never allowed to alter the
+   * receipt: criteria and code come directly from the released validator.
+   */
   validatorCriteria?(result: DeterministicValidationResult, proof: DomainProof): readonly string[];
   remainsUntested(proof: DomainProof): readonly string[];
 }
@@ -325,17 +335,19 @@ function isRuntimeSourceBindingReceipt(value: unknown): value is RuntimeSourceBi
 export function isBoundedLocalWorldRuntimeReceipt(value: unknown): value is BoundedLocalWorldRuntimeReceipt {
   if (!isRecord(value) || !hasExactKeys(value, [
     "schemaVersion", "kind", "attemptId", "recordedAt", "authority", "world", "protocol", "validator",
-    "cognitiveSupport", "accessAccommodations", "sourceBindings", "sourceProvenanceStatus", "remainsUntested", "responseDigest",
+    "runtimeBindingDigest", "packageIntegrityHash", "cognitiveSupport", "accessAccommodations", "sourceBindings", "sourceProvenanceStatus", "remainsUntested", "responseDigest",
   ])) return false;
   if (value.schemaVersion !== WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION || value.kind !== "forge.runtime.bounded-local-attempt" ||
     !isWorldRuntimeAttemptId(value.attemptId) || !isIsoTimestamp(value.recordedAt) || value.responseDigest !== null ||
+    !isSha256Digest(value.runtimeBindingDigest) || !isSha256Digest(value.packageIntegrityHash) ||
     !isRecord(value.authority) || !isRecord(value.world) || !isRecord(value.protocol) || !isRecord(value.validator)) return false;
   if (!hasExactKeys(value.authority, ["proofAuthority", "persistence", "isDurable", "limitation"]) ||
     value.authority.proofAuthority !== "honour_based" || value.authority.persistence !== "not_persisted" ||
     value.authority.isDurable !== false || value.authority.limitation !== LOCAL_RUNTIME_RECEIPT_LIMITATION) return false;
-  if (!hasExactKeys(value.world, ["id", "version", "contentVersion", "capabilityId", "proofClaimId", "taskFamilyId"]) ||
+  if (!hasExactKeys(value.world, ["id", "version", "contentVersion", "capabilityId", "proofClaimId", "taskCode", "taskFamilyId"]) ||
     !isBoundedMetadataId(value.world.id) || !isSemver(value.world.version) || !isSemver(value.world.contentVersion) ||
     !isBoundedMetadataId(value.world.capabilityId) || !isBoundedMetadataId(value.world.proofClaimId) ||
+    typeof value.world.taskCode !== "string" || !/^[a-z][a-z0-9_]{2,127}$/.test(value.world.taskCode) ||
     !isBoundedMetadataId(value.world.taskFamilyId)) return false;
   if (!hasExactKeys(value.protocol, ["version", "semanticTrace", "instructionalActionsRejectedDuringProof"]) ||
     value.protocol.version !== WORLD_RUNTIME_PROTOCOL_VERSION || !Array.isArray(value.protocol.semanticTrace) ||
@@ -343,11 +355,11 @@ export function isBoundedLocalWorldRuntimeReceipt(value: unknown): value is Boun
     !hasCompleteReceiptTrace(value.protocol.semanticTrace) ||
     !Array.isArray(value.protocol.instructionalActionsRejectedDuringProof) ||
     !value.protocol.instructionalActionsRejectedDuringProof.every((kind) => typeof kind === "string" && runtimeActionKinds.has(kind as WorldRuntimeActionKind))) return false;
-  if (!hasExactKeys(value.validator, ["id", "version", "outcome", "disposition", "criteria"]) ||
-    !isBoundedMetadataId(value.validator.id) || !isSemver(value.validator.version) ||
+  if (!hasExactKeys(value.validator, ["id", "version", "code", "outcome", "disposition", "criteria"]) ||
+    !isBoundedMetadataId(value.validator.id) || !isSemver(value.validator.version) || !isBoundedMetadataId(value.validator.code) ||
     !["pass", "fail", "inconclusive", "not_scored"].includes(value.validator.outcome as string) ||
     !["demonstrated", "not_demonstrated", "open_question", "not_evaluated", "invalidated"].includes(value.validator.disposition as string) ||
-    !isStringArray(value.validator.criteria, 8) || !value.validator.criteria.every((criterion) =>
+    !isStringArray(value.validator.criteria, 8) || new Set(value.validator.criteria).size !== value.validator.criteria.length || !value.validator.criteria.every((criterion) =>
       /^[A-Za-z0-9][A-Za-z0-9:._,/-]{0,159}$/.test(criterion)
     ) ||
     deriveDefaultEvidenceDisposition(value.validator.outcome as ValidatorOutcome) !== value.validator.disposition) return false;

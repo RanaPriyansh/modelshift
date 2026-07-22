@@ -89,6 +89,7 @@ function inputFor(receipt = completedReceipt()): Adr001RuntimeProjectionInput {
       actor: { type: "learner", id: "device.learner.fixture" },
       authority: { policyVersion: "policy.primary-source.runtime.1", consentGrantIds: [] },
       packageIntegrityHash: `sha256:${"a".repeat(64)}`,
+      runtimeBindingDigest: receipt.runtimeBindingDigest,
       occurredAt: "2026-07-22T12:00:00.000Z",
       recordedAt: "2026-07-22T12:00:01.000Z",
       idempotencyNamespace: "idempotency.adr001.fixture",

@@ -9,6 +9,8 @@ import {
   type CanonicalSupportEvent,
 } from "../../forge/world-runtime";
 import type { EvidenceLearningAction } from "../../worlds/ai-learning";
+import { PROPORTIONAL_REASONING_WORLD } from "../../forge/worlds";
+import { retainedRuntimeIdentityFor } from "../../forge/world-runtime/retained-runtime-binding";
 import { createLocalStorageEvidenceLedgerAdapter } from "./local-storage";
 import {
   projectRuntimeSupportAssistanceKind,
@@ -43,10 +45,12 @@ const CORE_TRACE_WITHOUT_SUPPORT = [
 
 function receipt(overrides: Partial<BoundedLocalWorldRuntimeReceipt> = {}): BoundedLocalWorldRuntimeReceipt {
   return {
-    schemaVersion: "1.0.2",
+    schemaVersion: "1.1.0",
     kind: "forge.runtime.bounded-local-attempt",
     attemptId: "attempt.receipt-projection",
     recordedAt: "2026-07-22T00:00:00.000Z",
+    runtimeBindingDigest: retainedRuntimeIdentityFor(PROPORTIONAL_REASONING_WORLD)!.runtimeBindingDigest,
+    packageIntegrityHash: retainedRuntimeIdentityFor(PROPORTIONAL_REASONING_WORLD)!.packageIntegrityHash,
     authority: {
       proofAuthority: "honour_based",
       persistence: "not_persisted",
@@ -59,23 +63,25 @@ function receipt(overrides: Partial<BoundedLocalWorldRuntimeReceipt> = {}): Boun
       contentVersion: "1.0.0",
       capabilityId: "capability.proportional-reasoning.compare-and-scale",
       proofClaimId: "proof.proportional-reasoning.independent-transfer",
+      taskCode: "map_scale_transfer",
       taskFamilyId: "task-family.proportional-reasoning.map-scale-transfer.v1",
     },
     protocol: {
-      version: "1.0.2",
+      version: "1.1.0",
       semanticTrace: CORE_TRACE,
       instructionalActionsRejectedDuringProof: [],
     },
     validator: {
       id: "validator.proportional-reasoning-transfer.v1",
       version: "1.0.0",
+      code: "transfer.demonstrated",
       outcome: "pass",
       disposition: "demonstrated",
       criteria: ["answer:32_km"],
     },
     cognitiveSupport: [
       {
-        actionId: "action.proportional-reasoning.support",
+        actionId: "action.proportional-reasoning.support.representation",
         stage: "governed_support",
         source: "authored",
         tier: "representation",
@@ -165,7 +171,7 @@ describe("recordWorldRuntimeReceipt", () => {
         proof: expect.objectContaining({ outcome: "proved", assistanceAccess: "removed" }),
         returnSchedule: null,
         assistance: [
-          { kind: "authored_representation", sourceId: "action.proportional-reasoning.support" },
+          { kind: "authored_representation", sourceId: "action.proportional-reasoning.support.representation" },
         ],
       }),
     ]);
@@ -182,7 +188,7 @@ describe("recordWorldRuntimeReceipt", () => {
     const completedReceipt = completedSourceCorroborationReceipt();
 
     expect(completedReceipt).toMatchObject({
-      schemaVersion: "1.0.2",
+      schemaVersion: "1.1.0",
       attemptId: "attempt.source-corroboration-projector",
       world: {
         id: "world.source-corroboration",
@@ -192,7 +198,7 @@ describe("recordWorldRuntimeReceipt", () => {
         proofClaimId: "proof.ai-literacy.independent-corroboration",
         taskFamilyId: "task-family.source-corroboration.cold-transfer.v1",
       },
-      protocol: { version: "1.0.2", semanticTrace: CORE_TRACE_WITHOUT_SUPPORT },
+      protocol: { version: "1.1.0", semanticTrace: CORE_TRACE_WITHOUT_SUPPORT },
       validator: {
         id: "validator.source-corroboration-transfer.v1",
         version: "1.0.0",
@@ -262,6 +268,7 @@ describe("recordWorldRuntimeReceipt", () => {
         validator: {
           id: "validator.proportional-reasoning-transfer.v1",
           version: "1.0.0",
+          code: "invalid.transfer-input",
           outcome,
           disposition,
           criteria: [],

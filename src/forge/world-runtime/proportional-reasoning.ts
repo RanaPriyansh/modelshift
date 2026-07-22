@@ -83,7 +83,7 @@ export const proportionalReasoningWorldRuntimeAdapter: WorldRuntimeAdapter<
     const level = state.supportUsed.at(-1);
     if (!level) return null;
     return {
-      actionId: "action.proportional-reasoning.support",
+      actionId: `action.proportional-reasoning.support.${supportTier(level)}`,
       stage: "governed_support",
       source: "authored",
       tier: supportTier(level),

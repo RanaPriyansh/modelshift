@@ -10,6 +10,7 @@ type RetainedContentEntry = {
   readonly version: string;
   readonly route: string;
   readonly runtime_binding_digest?: string;
+  readonly package_integrity_hash?: string;
 };
 
 type RetainedBuiltInPack = {
@@ -66,13 +67,16 @@ function parseManifest(manifest: unknown): readonly RetainedContentEntry[] {
   return manifest.packages.map((entry, index) => {
     if (!isRecord(entry)) fail(`package at index ${index} must be an object.`);
     const keys = Object.keys(entry).sort();
-    const allowed = ["id", "route", "runtime_binding_digest", "version"];
+    const allowed = ["id", "package_integrity_hash", "route", "runtime_binding_digest", "version"];
     if (keys.some((key) => !allowed.includes(key))) fail(`package at index ${index} has an unsupported field.`);
     if (typeof entry.id !== "string" || typeof entry.version !== "string" || typeof entry.route !== "string") {
       fail(`package at index ${index} must have string id, version, and route.`);
     }
     if ("runtime_binding_digest" in entry && typeof entry.runtime_binding_digest !== "string") {
       fail(`package ${entry.id} has a non-string runtime binding digest.`);
+    }
+    if ("package_integrity_hash" in entry && typeof entry.package_integrity_hash !== "string") {
+      fail(`package ${entry.id} has a non-string package integrity hash.`);
     }
     return entry as RetainedContentEntry;
   });
@@ -92,6 +96,10 @@ export function canonicalContentJson(value: unknown): string {
 
 export function runtimeBindingDigest(binding: unknown): string {
   return sha256Reference(canonicalContentJson(binding));
+}
+
+export function packageIntegrityHash(pack: unknown): string {
+  return sha256Reference(canonicalContentJson(pack));
 }
 
 /** Compatibility export retained for existing release callers. */
@@ -127,12 +135,15 @@ export function assertRetainedContentPackageManifest(
     if (entry.route !== pack.manifest.route) fail(`stale route for ${pack.manifest.id}.`);
 
     if (pack.runtime === undefined) {
-      if ("runtime_binding_digest" in entry) fail(`legacy package ${pack.manifest.id} must not declare a runtime binding digest.`);
+      if ("runtime_binding_digest" in entry || "package_integrity_hash" in entry) fail(`legacy package ${pack.manifest.id} must not declare runtime or package identity digests.`);
       continue;
     }
 
     if (entry.runtime_binding_digest !== runtimeBindingDigest(pack.runtime)) {
       fail(`stale runtime binding digest for ${pack.manifest.id}.`);
+    }
+    if (entry.package_integrity_hash !== packageIntegrityHash(pack)) {
+      fail(`stale package integrity hash for ${pack.manifest.id}.`);
     }
   }
 

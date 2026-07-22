@@ -21,6 +21,7 @@ import {
   type RuntimeSourceBindingReceipt,
 } from "./protocol";
 import { lintWorldRuntimePack } from "./linter";
+import { retainedRuntimeIdentityFor } from "./retained-runtime-binding";
 
 /**
  * The compiler is deliberately an in-memory, client-safe boundary. It turns a
@@ -28,7 +29,7 @@ import { lintWorldRuntimePack } from "./linter";
  * chain; it does not authenticate a learner, persist an event, or make the
  * local receipt independent evidence.
  */
-export const WORLD_RUNTIME_ADR001_COMPILER_VERSION = "1.0.0" as const;
+export const WORLD_RUNTIME_ADR001_COMPILER_VERSION = "1.1.0" as const;
 
 export interface ReleasedWorldRuntimeIdentity {
   readonly worldId: string;
@@ -52,9 +53,12 @@ export type WorldRuntimeAdr001CompilerErrorCode =
   | "malformed_receipt"
   | "unreleased_world"
   | "runtime_identity_mismatch"
+  | "runtime_binding_digest_mismatch"
+  | "package_integrity_hash_mismatch"
   | "validator_identity_mismatch"
   | "validator_input_rejected"
   | "validator_outcome_mismatch"
+  | "validator_result_mismatch"
   | "source_identity_mismatch"
   | "support_identity_mismatch"
   | "access_identity_mismatch"
@@ -140,7 +144,8 @@ function declaredAccessMatches(
     if (seen.has(access.accommodationId)) return false;
     seen.add(access.accommodationId);
     const declared = runtime.access.accommodations.find((candidate) => candidate.id === access.accommodationId);
-    return declared !== undefined
+    return receipt.protocol.semanticTrace.includes(access.stage)
+      && declared !== undefined
       && declared.kind === access.kind
       && declared.modality === access.modality
       && declared.representation === access.representation
@@ -156,11 +161,33 @@ function declaredSupportMatches(
   runtime: WorldRuntimeBinding,
 ): boolean {
   if (!runtime.support.recordsCognitiveSupport && receipt.cognitiveSupport.length > 0) return false;
-  return receipt.cognitiveSupport.every((support) =>
-    runtime.actions.some(
-      (action) => action.id === support.actionId && action.kind === "instructional_support",
-    ) && support.policyId === runtime.support.policyId,
-  );
+  let priorTraceIndex = -1;
+  const occurrences = new Map<string, number>();
+  return receipt.cognitiveSupport.every((support) => {
+    const declared = runtime.support.catalog.find((entry) => entry.actionId === support.actionId);
+    const action = runtime.actions.find((candidate) => candidate.id === support.actionId);
+    if (!declared || action?.kind !== "instructional_support") return false;
+    const expectedModelId = declared.modelIdentity.mode === "pinned"
+      ? declared.modelIdentity.modelId
+      : declared.source === "model"
+        ? support.modelId
+        : null;
+    const traceIndex = receipt.protocol.semanticTrace.indexOf(support.stage);
+    const occurrence = (occurrences.get(support.actionId) ?? 0) + 1;
+    occurrences.set(support.actionId, occurrence);
+    const ordered = traceIndex >= priorTraceIndex;
+    priorTraceIndex = traceIndex;
+    return traceIndex >= 0
+      && ordered
+      && occurrence <= declared.maxOccurrences
+      && support.stage === declared.stage
+      && support.source === declared.source
+      && support.tier === declared.tier
+      && support.policyId === declared.policyId
+      && support.providerId === declared.providerId
+      && support.modelId === expectedModelId
+      && support.fallbackReason === declared.fallbackReason;
+  });
 }
 
 function uuidFromDigest(digest: string): string {
@@ -204,23 +231,33 @@ export async function releasedWorldRuntimeIdentity(
   };
 }
 
-function taskIdFor(
+async function taskIdFor(
   receipt: BoundedLocalWorldRuntimeReceipt,
-  canonicalCriteria: readonly string[],
-): string {
-  // Where a canonical validator has a task identifier, retain it. Older
-  // authored validators only name their released task family; that immutable
-  // family is the narrowest truthful task identifier available to this event
-  // compiler and must not be replaced with an adapter-invented task label.
-  const taskId = canonicalCriteria.find((criterion) => criterion.startsWith("task:"))?.slice("task:".length);
-  // Domain validators may use an internal task code such as
-  // `cargo_pod_force_graph`. ADR-001 envelope identifiers deliberately use a
-  // narrower namespace grammar, so retain that code only when it can be
-  // represented exactly; otherwise the released task-family identifier is the
-  // truthful stable identity.
-  return taskId && /^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/.test(taskId)
-    ? taskId
-    : receipt.world.taskFamilyId;
+): Promise<string> {
+  // Task identity is opaque and only derived from the exact released
+  // validator identity plus released task code. It is never a task-family
+  // fallback and never copies a domain-shaped task label into the envelope.
+  return stableId({
+    validatorId: receipt.validator.id,
+    validatorVersion: receipt.validator.version,
+    taskCode: receipt.world.taskCode,
+  }, "task", 32);
+}
+
+function contaminationReasonCodes(
+  receipt: BoundedLocalWorldRuntimeReceipt,
+  runtime: WorldRuntimeBinding,
+): readonly string[] {
+  const reasons = new Set<string>();
+  for (const support of receipt.cognitiveSupport) {
+    const catalog = runtime.support.catalog.find((entry) => entry.actionId === support.actionId);
+    if (support.tier === "solution") reasons.add("support.solution");
+    if (catalog?.answerExposing) reasons.add("support.answer-exposure");
+    if (["withdraw_instructional_ai", "cold_transfer", "bounded_result", "return_or_apply"].includes(support.stage)) {
+      reasons.add("support.prohibited-stage");
+    }
+  }
+  return [...reasons];
 }
 
 function isAdr001WorldRunProjection(
@@ -253,6 +290,7 @@ export async function compileWorldRuntimeReceiptToAdr001(
     || receipt.world.contentVersion !== pack.release.contentVersion
     || receipt.world.capabilityId !== proofClaim.capabilityId
     || receipt.world.proofClaimId !== proofClaim.id
+    || receipt.world.taskCode !== runtime.proof.taskCode
     || receipt.world.taskFamilyId !== runtime.proof.taskFamilyId
     || receipt.protocol.version !== runtime.protocolVersion
     || receipt.authority.proofAuthority !== "honour_based"
@@ -275,6 +313,11 @@ export async function compileWorldRuntimeReceiptToAdr001(
   }
   if (!declaredAccessMatches(receipt, runtime)) {
     return reject("access_identity_mismatch", "Receipt access accommodation is not an exact declared construct-preserving runtime alternative.");
+  }
+
+  const retainedIdentity = retainedRuntimeIdentityFor(pack);
+  if (!retainedIdentity) {
+    return reject("runtime_binding_digest_mismatch", "The released World has no retained runtime and package identity digests.");
   }
 
   const validatorDefinition = pack.deterministicValidators.find(
@@ -303,8 +346,39 @@ export async function compileWorldRuntimeReceiptToAdr001(
   }
 
   const identity = await releasedWorldRuntimeIdentity(pack);
+  if (
+    receipt.runtimeBindingDigest !== retainedIdentity.runtimeBindingDigest
+    || retainedIdentity.runtimeBindingDigest !== identity.runtimeBindingDigest
+  ) {
+    return reject("runtime_binding_digest_mismatch", "Receipt, retained manifest, and fresh canonical runtime binding digests must be identical.");
+  }
+  if (
+    receipt.packageIntegrityHash !== retainedIdentity.packageIntegrityHash
+    || retainedIdentity.packageIntegrityHash !== identity.packageIntegrityHash
+  ) {
+    return reject("package_integrity_hash_mismatch", "Receipt, retained manifest, and fresh canonical package hashes must be identical.");
+  }
+  if (
+    receipt.validator.code !== validation.code
+    || !sameCanonicalJson(receipt.validator.criteria, validation.evidence)
+    || receipt.validator.disposition !== deriveDefaultEvidenceDisposition(validatorOutcome)
+  ) {
+    return reject("validator_result_mismatch", "Receipt validator code, disposition, or ordered criteria differ from the canonical validator result.");
+  }
   const attemptToken = await stableId(
-    { worldId: receipt.world.id, attemptId: receipt.attemptId, packageIntegrityHash: identity.packageIntegrityHash },
+    {
+      worldId: receipt.world.id,
+      attemptId: receipt.attemptId,
+      packageIntegrityHash: identity.packageIntegrityHash,
+      runtimeBindingDigest: identity.runtimeBindingDigest,
+      canonicalValidatorResult: {
+        id: receipt.validator.id,
+        version: receipt.validator.version,
+        code: validation.code,
+        outcome: validatorOutcome,
+        criteria: validation.evidence,
+      },
+    },
     "attempt-token",
   );
   const aggregateId = `run.${receipt.world.id}.${attemptToken.slice("attempt-token.".length)}`;
@@ -317,22 +391,11 @@ export async function compileWorldRuntimeReceiptToAdr001(
   // stricter shared identifier grammar, so derive opaque stable references
   // rather than copying criterion text into the event envelope.
   const selectionIds = await Promise.all(
-    validation.evidence.map((criterion, index) => stableId({ aggregateId, criterion, index }, "selection")),
+    validation.evidence.map((criterion, index) => stableId({ aggregateId, validationCode: validation.code, criterion, index }, "selection")),
   );
-  const normalizedReceipt: BoundedLocalWorldRuntimeReceipt = {
-    ...receipt,
-    // The compiler does not let an adapter-chosen disposition or criterion
-    // become event authority. Both come from the canonical validator result.
-    validator: {
-      ...receipt.validator,
-      outcome: validatorOutcome,
-      disposition: deriveDefaultEvidenceDisposition(validatorOutcome),
-      criteria: [...validation.evidence],
-    },
-  };
-  const taskId = taskIdFor(receipt, validation.evidence);
+  const taskId = await taskIdFor(receipt);
   const project = await projectAdr001RuntimeAttempt({
-    receipt: normalizedReceipt,
+    receipt,
     attempt: {
       taskId,
       taskVersion: receipt.world.contentVersion,
@@ -350,6 +413,7 @@ export async function compileWorldRuntimeReceiptToAdr001(
       actor: { type: "learner", id: `device.${attemptToken.slice("attempt-token.".length)}` },
       authority: { policyVersion: runtime.support.policyId, consentGrantIds: [] },
       packageIntegrityHash: identity.packageIntegrityHash,
+      runtimeBindingDigest: identity.runtimeBindingDigest,
       occurredAt: receipt.recordedAt,
       recordedAt: receipt.recordedAt,
       idempotencyNamespace: "idempotency.world-runtime-v2",
@@ -371,7 +435,7 @@ export async function compileWorldRuntimeReceiptToAdr001(
     integrity: {
       packageIntegrityMatches: true,
       proofAuthorityMatches: true,
-      contaminationReasonCodes: [],
+      contaminationReasonCodes: contaminationReasonCodes(receipt, runtime),
       constructChangingAccommodation: false,
     },
     authoredUncertaintyExceptionReference: null,

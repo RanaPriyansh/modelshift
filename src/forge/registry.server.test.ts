@@ -89,8 +89,8 @@ describe("TrustedWorldRegistry", () => {
       release: { contentVersion: "1.0.0" },
     });
     expect(trustedWorldRegistry.getRuntimeBinding("world.force-and-motion")).toMatchObject({
-      protocolVersion: "1.0.2",
-      evidence: { receiptSchemaVersion: "1.0.2" },
+      protocolVersion: "1.1.0",
+      evidence: { receiptSchemaVersion: "1.1.0" },
       proof: {
         proofClaimId: "proof.force-motion.independent-transfer",
         validatorId: "validator.force-motion-transfer.v1",
@@ -102,16 +102,16 @@ describe("TrustedWorldRegistry", () => {
       release: { contentVersion: "1.0.0" },
     });
     expect(trustedWorldRegistry.getRuntimeBinding("world.proportional-reasoning")).toMatchObject({
-      protocolVersion: "1.0.2",
-      evidence: { receiptSchemaVersion: "1.0.2" },
+      protocolVersion: "1.1.0",
+      evidence: { receiptSchemaVersion: "1.1.0" },
     });
     expect(trustedWorldRegistry.getPack("world.source-corroboration")).toMatchObject({
       manifest: { version: "1.0.1" },
       release: { contentVersion: "1.0.0" },
     });
     expect(trustedWorldRegistry.getRuntimeBinding("world.source-corroboration")).toMatchObject({
-      protocolVersion: "1.0.2",
-      evidence: { receiptSchemaVersion: "1.0.2" },
+      protocolVersion: "1.1.0",
+      evidence: { receiptSchemaVersion: "1.1.0" },
       proof: {
         proofClaimId: "proof.ai-literacy.independent-corroboration",
         validatorId: "validator.source-corroboration-transfer.v1",
@@ -136,8 +136,8 @@ describe("TrustedWorldRegistry", () => {
       release: { contentVersion: "1.0.1" },
     });
     expect(trustedWorldRegistry.getRuntimeBinding("world.primary-source-reasoning")).toMatchObject({
-      protocolVersion: "1.0.2",
-      evidence: { receiptSchemaVersion: "1.0.2" },
+      protocolVersion: "1.1.0",
+      evidence: { receiptSchemaVersion: "1.1.0" },
       proof: {
         proofClaimId: "proof.primary-source-reasoning.independent-transfer",
         validatorId: "validator.primary-source-reasoning-transfer.v1",
