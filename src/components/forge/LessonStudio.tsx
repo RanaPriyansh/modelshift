@@ -22,7 +22,7 @@ const ERROR_FALLBACK = "FORGE could not generate a valid draft. Your key was cle
 
 type ErrorEnvelope = { error?: { message?: unknown } };
 
-export function LessonStudio() {
+export function LessonStudio({ authoringAvailable }: { authoringAvailable: boolean }) {
   const [provider, setProvider] = useState<LessonProvider>("openai");
   const [model, setModel] = useState(LESSON_PROVIDER_DEFAULTS.openai);
   const [apiKey, setApiKey] = useState("");
@@ -40,6 +40,29 @@ export function LessonStudio() {
   const providerNote = useMemo(() => {
     return `Paste an approved ${PROVIDER_LABELS[provider]} key for this one request. FORGE clears the field after the provider responds and never uses a deployment-managed key.`;
   }, [provider]);
+
+  if (!authoringAvailable) {
+    return (
+      <div className="lesson-studio-layout">
+        <section className="lesson-studio-form lesson-studio-unavailable" aria-labelledby="lesson-studio-unavailable-title">
+          <h2 id="lesson-studio-unavailable-title">Adult author connector unavailable</h2>
+          <p>
+            Public Studio provider requests are locked. A request-only key, target audience selection, and this page&apos;s copy do not establish adult authority.
+          </p>
+          <p>
+            The connector can open only after active adult server-owned authority and separate quota, abuse, privacy, and review controls are approved. Do not submit child learner input here.
+          </p>
+        </section>
+        <section className="lesson-studio-output" aria-live="polite">
+          <div className="lesson-studio-empty">
+            <span>Compiler output</span>
+            <h2>Authoring stays local and deterministic while the external connector is unavailable.</h2>
+            <p>No provider request, source acquisition, review decision, proof grade, or publication is available from this state.</p>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   function changeProvider(value: string) {
     const parsed = lessonProviderSchema.safeParse(value);

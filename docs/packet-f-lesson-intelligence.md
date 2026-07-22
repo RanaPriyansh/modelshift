@@ -16,22 +16,23 @@ These are capability references, not a live integration result. Model availabili
 ## Boundaries implemented
 
 - Fixed provider endpoints and fixed provider/model allowlists; model text is no longer a free-form override.
-- Request-only API keys only; the Studio page and server no longer use deployment-managed provider credentials.
+- Request-only API keys only; there is no managed Studio credential or environment switch. The public Studio page and direct POST are unavailable unless `readForgeCloudIdentity` returns active server-owned adult authority. The literal/UI authoring declaration and target audience metadata are not authority.
 - Per-depth timeout, output-token, conservative estimated-cost budgets; provider refusals, rate limits, timeout, malformed output, output exhaustion, and provider errors have distinct prompt-free failures.
 - Random correlation IDs are returned in a no-store response/header without input, source text, or key logging.
 - The local package is `generation → deterministic critique → unresolved source plan → unreviewed revision`. Source needs are explicitly unresolved requirements, never source records or citations.
-- The pure review machine requires named-human decisions through `draft`, `source-needed`, factual, pedagogy, access, and proof review. Progress out of `source-needed` additionally requires an upstream immutable source-binding receipt; `approved-package` remains `not-published`, with no publication or proof-grade transition.
-- Offline metrics cover two readings, disagreement, separating-test shape, source-need completeness, answer leakage, cold-transfer shape, safety, latency, and cost across history/physics/mathematics/health and child/teen/adult target audiences.
+- The pure ADR-002 review machine requires coordinator, source, factual, pedagogy, access, safety, and proof reviewers with state-scoped roles. Every unique decision names exact immutable refs, policy ref, conflicts/dissent, and supersession metadata. `safety-review` locally maps to ADR-002 `safety_review`; `approved-package` remains `not-published`, with no publication or proof-grade transition.
+- A source-needed transition accepts only a digest-checked local package of complete ADR-003 item bindings. Its union of resolved source-need IDs must equal the exact IDs frozen from the pipeline source plan, exactly once. Each item retains nonempty upstream source/rights/claim review IDs; the local source-review decision binds the package digest separately. This is completeness/digest validation only, never authenticity, durability, rights attestation, or publication authority.
+- Offline metrics cover two readings, disagreement, separating-test shape, source-need completeness, answer leakage, cold-transfer shape, bounded draft-safety signals (not child-safety proof), latency, and cost across history/physics/mathematics/health and child/teen/adult target audiences.
 
 ## Live evaluation status
 
-`evals/run-lesson-studio-live-evals.ts` is deliberately **NOT RUN**. It exits without a provider request unless all of the following are present: the explicit opt-in value `run-provider-specific-redacted-suite`, one allowlisted provider, one allowlisted model, and a separate live-eval credential. Its report contains only fixture IDs, aggregate booleans/counts, and error codes; never prompts, drafts, provider bodies, or keys.
+`pnpm eval:lesson-studio:live` is deliberately **NOT RUN**. It exits without a provider request unless all of the following are present: the explicit opt-in value `run-provider-specific-redacted-suite`, one allowlisted provider, one allowlisted model, and a separate live-eval credential. It exits nonzero for **NOT_RUN**, failed/error, missing-fixture, or contract-metric failure. Its report contains only expected fixture IDs, aggregate booleans/counts, and closed error codes; never prompts, drafts, provider bodies, error messages, or keys.
 
 ## Local verification
 
 - `pnpm typecheck` — passed.
 - `pnpm lint` — passed.
-- `pnpm test` — passed: 30 application test files / 260 tests and 2 evaluator test files / 12 tests.
+- `pnpm test` — passed before the correction request; the correction commit requires a fresh final run.
 - `pnpm build` — passed.
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3117 pnpm playwright test tests/e2e/forge-expansion.spec.ts --project=desktop --project=mobile` — passed: 22 tests. The server used a unique local port; no deployment occurred.
 - Manual local Studio inspection at desktop and 320 CSS px confirmed model selection is constrained to allowlisted options, request-only disclosure is visible, no horizontal overflow was present, and keyboard focus reached the skip link then primary navigation. Temporary screenshots were deleted after inspection and are not part of this handoff.

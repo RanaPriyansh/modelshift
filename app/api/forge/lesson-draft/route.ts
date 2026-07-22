@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 
-import { containsAdversarialText, isRestrictedTopic } from "../../../../src/lib/forge-planner/safety";
+import { containsAdversarialText, containsPrivateData, isRestrictedTopic } from "../../../../src/lib/forge-planner/safety";
+import { readForgeCloudIdentity, type ForgeCloudIdentity } from "../../../../src/lib/forge-auth/session.server";
 import {
   generateLessonDraft,
   LessonStudioError,
@@ -23,6 +24,8 @@ const ERROR_MESSAGES = {
   wrong_origin: "This endpoint accepts requests only from this FORGE site.",
   unsafe_topic: "FORGE cannot generate a lesson for that request.",
   adversarial_input: "The lesson request contains instructions FORGE cannot pass to a model.",
+  private_data: "Remove personal or private data from this authoring material before trying again.",
+  authoring_unavailable: "Studio provider requests are unavailable until active adult server-owned authority and required controls are approved.",
   missing_key: "Add a provider API key for this request.",
   request_budget_exceeded: "This request exceeds FORGE's fixed time, output, or estimated-cost budget.",
   provider_refusal: "The provider refused the draft request. The key was discarded.",
@@ -98,75 +101,93 @@ async function readBoundedBody(request: Request): Promise<string | null> {
   }
 }
 
-export async function POST(request: Request) {
-  const correlationId = randomUUID();
-  if (!isSameOrigin(request)) return errorResponse("wrong_origin", 403, correlationId);
-  const mediaType = request.headers.get("content-type")?.toLowerCase().split(";", 1)[0]?.trim();
-  if (mediaType !== "application/json") {
-    return errorResponse("bad_request", 415, correlationId);
-  }
+type LessonDraftRouteDependencies = {
+  readIdentity: () => Promise<ForgeCloudIdentity | null>;
+  generate: typeof generateLessonDraft;
+};
 
-  let rawBody: string | null;
-  try {
-    rawBody = await readBoundedBody(request);
-  } catch {
-    return errorResponse("bad_request", 400, correlationId);
-  }
-  if (rawBody === null) return errorResponse("bad_request", 413, correlationId);
+const DEFAULT_DEPENDENCIES: LessonDraftRouteDependencies = {
+  readIdentity: readForgeCloudIdentity,
+  generate: generateLessonDraft,
+};
 
-  let json: unknown;
-  try {
-    json = JSON.parse(rawBody);
-  } catch {
-    return errorResponse("bad_request", 400, correlationId);
-  }
-
-  const parsed = lessonStudioRequestSchema.safeParse(json);
-  if (!parsed.success) return errorResponse("bad_request", 400, correlationId);
-  const input = parsed.data;
-
-  if (isRestrictedTopic(input.question)) return errorResponse("unsafe_topic", 403, correlationId);
-  if (
-    [input.question, input.startingPoint, input.successShape, input.sourceContext]
-      .filter(Boolean)
-      .some(containsAdversarialText)
-  ) {
-    return errorResponse("adversarial_input", 403, correlationId);
-  }
-
-  try {
-    const generated = await generateLessonDraft(input);
-    const budget = LESSON_STUDIO_BUDGETS[input.depth];
-    const response = lessonStudioResponseSchema.parse({
-      schemaVersion: "1.0",
-      draft: generated.draft,
-      pipeline: compileLessonDraftPipeline(generated.draft),
-      provenance: {
-        provider: input.provider,
-        model: generated.model,
-        generatedAt: new Date().toISOString(),
-        correlationId,
-        sourceStatus: "unverified_draft",
-        keyHandling: generated.keyHandling,
-        budget: {
-          timeoutMs: budget.timeoutMs,
-          maxOutputTokens: generated.outputTokenBudget,
-          maxEstimatedCostMicros: budget.maxEstimatedCostMicros,
-          estimatedCostMicros: generated.estimatedCostMicros,
-        },
-      },
-      claimBoundary: "AI-generated draft. Not a reviewed World, verified source record, grade, or proof of learning.",
-    });
-    return NextResponse.json(response, { status: 200, headers: jsonHeaders(correlationId) });
-  } catch (error) {
-    if (error instanceof LessonStudioError) {
-      const status = error.code === "missing_key" ? 400
-        : error.code === "provider_refusal" ? 422
-          : error.code === "rate_limited" || error.code === "request_budget_exceeded" ? 429
-            : error.code === "timeout" ? 504
-              : 502;
-      return errorResponse(error.code, status, correlationId);
+/**
+ * The route body is deliberately inaccessible until server-owned active adult
+ * identity succeeds. The literal authoring mode and all UI copy remain
+ * declarations only, never authority.
+ */
+export function createLessonDraftPost(dependencies: LessonDraftRouteDependencies = DEFAULT_DEPENDENCIES) {
+  return async function POST(request: Request) {
+    const correlationId = randomUUID();
+    if (!isSameOrigin(request)) return errorResponse("wrong_origin", 403, correlationId);
+    if (!await dependencies.readIdentity()) return errorResponse("authoring_unavailable", 403, correlationId);
+    const mediaType = request.headers.get("content-type")?.toLowerCase().split(";", 1)[0]?.trim();
+    if (mediaType !== "application/json") {
+      return errorResponse("bad_request", 415, correlationId);
     }
-    return errorResponse("provider_error", 502, correlationId);
-  }
+
+    let rawBody: string | null;
+    try {
+      rawBody = await readBoundedBody(request);
+    } catch {
+      return errorResponse("bad_request", 400, correlationId);
+    }
+    if (rawBody === null) return errorResponse("bad_request", 413, correlationId);
+
+    let json: unknown;
+    try {
+      json = JSON.parse(rawBody);
+    } catch {
+      return errorResponse("bad_request", 400, correlationId);
+    }
+
+    const parsed = lessonStudioRequestSchema.safeParse(json);
+    if (!parsed.success) return errorResponse("bad_request", 400, correlationId);
+    const input = parsed.data;
+    const forwardedAuthoringFields = [input.question, input.startingPoint, input.successShape, input.sourceContext];
+
+    if (forwardedAuthoringFields.some(isRestrictedTopic)) return errorResponse("unsafe_topic", 403, correlationId);
+    if (forwardedAuthoringFields.some(containsAdversarialText)) {
+      return errorResponse("adversarial_input", 403, correlationId);
+    }
+    if (forwardedAuthoringFields.some(containsPrivateData)) return errorResponse("private_data", 403, correlationId);
+
+    try {
+      const generated = await dependencies.generate(input);
+      const budget = LESSON_STUDIO_BUDGETS[input.depth];
+      const response = lessonStudioResponseSchema.parse({
+        schemaVersion: "1.0",
+        draft: generated.draft,
+        pipeline: compileLessonDraftPipeline(generated.draft),
+        provenance: {
+          provider: input.provider,
+          model: generated.model,
+          generatedAt: new Date().toISOString(),
+          correlationId,
+          sourceStatus: "unverified_draft",
+          keyHandling: generated.keyHandling,
+          budget: {
+            timeoutMs: budget.timeoutMs,
+            maxOutputTokens: generated.outputTokenBudget,
+            maxEstimatedCostMicros: budget.maxEstimatedCostMicros,
+            estimatedCostMicros: generated.estimatedCostMicros,
+          },
+        },
+        claimBoundary: "AI-generated draft. Not a reviewed World, verified source record, grade, or proof of learning.",
+      });
+      return NextResponse.json(response, { status: 200, headers: jsonHeaders(correlationId) });
+    } catch (error) {
+      if (error instanceof LessonStudioError) {
+        const status = error.code === "missing_key" ? 400
+          : error.code === "provider_refusal" ? 422
+            : error.code === "rate_limited" || error.code === "request_budget_exceeded" ? 429
+              : error.code === "timeout" ? 504
+                : 502;
+        return errorResponse(error.code, status, correlationId);
+      }
+      return errorResponse("provider_error", 502, correlationId);
+    }
+  };
 }
+
+export const POST = createLessonDraftPost();

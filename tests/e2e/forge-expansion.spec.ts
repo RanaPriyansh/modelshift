@@ -1,27 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-import lessonDraftResponse from "../fixtures/lesson-draft-response.json";
-import { compileLessonDraftPipeline } from "../../src/lib/lesson-studio/pipeline.server";
-import { lessonDraftSchema } from "../../src/lib/lesson-studio/schema";
-
-const lessonDraft = lessonDraftSchema.parse(lessonDraftResponse.draft);
-const lessonDraftResponseWithPipeline = {
-  ...lessonDraftResponse,
-  draft: lessonDraft,
-  pipeline: compileLessonDraftPipeline(lessonDraft),
-  provenance: {
-    ...lessonDraftResponse.provenance,
-    correlationId: "86fe2328-56f8-4f49-8532-b71066170df2",
-    keyHandling: "request_only",
-    budget: {
-      timeoutMs: 25_000,
-      maxOutputTokens: 2_400,
-      maxEstimatedCostMicros: 140_000,
-      estimatedCostMicros: 80_000,
-    },
-  },
-};
-
 const DEVICE_PROFILE_KEY = "forge.device-profile:v1";
 
 async function seedDeviceProfile(page: import("@playwright/test").Page, ageMode: "child_with_grown_up" | "teen" | "adult") {
@@ -157,39 +135,14 @@ test.describe("FORGE expanded learning system", () => {
     await expect(page.getByTestId("ratio-stage-mystery")).toBeVisible();
   });
 
-  test("offers four provider adapters without retaining a BYOK credential", async ({ page }) => {
+  test("keeps the public Studio provider connector unavailable without server-owned adult authority", async ({ page }) => {
     await page.goto("/studio");
 
     await expect(page.getByRole("heading", { name: "Turn a learning question into a testable lesson draft." })).toBeVisible();
-    const provider = page.getByLabel("Provider");
-    await expect(provider.locator("option")).toHaveCount(4);
-    await provider.selectOption("anthropic");
-    await expect(page.getByLabel("Model ID")).toHaveValue("claude-sonnet-5");
-
-    const key = page.getByLabel(/API key/);
-    await key.fill("temporary-provider-key-123");
-    expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain("temporary-provider-key-123");
-    await page.reload();
-    await expect(page.getByLabel(/API key/)).toHaveValue("");
+    await expect(page.getByRole("heading", { name: "Adult author connector unavailable" })).toBeVisible();
+    await expect(page.getByLabel("Provider")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Generate unverified lesson draft" })).toHaveCount(0);
     await page.setViewportSize({ width: 320, height: 800 });
     expect(await page.locator("html").evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
-  });
-
-  test("renders a provider draft as two readings, a separating test, and bounded cold proof", async ({ page }) => {
-    await page.route("**/api/forge/lesson-draft", async (route) => {
-      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(lessonDraftResponseWithPipeline) });
-    });
-    await page.goto("/studio");
-    await page.getByLabel("Provider").selectOption("anthropic");
-    await page.getByLabel(/API key/).fill("temporary-provider-key-123");
-    await page.getByRole("button", { name: "Generate unverified lesson draft" }).click();
-
-    await expect(page.getByText(/Unverified lesson draft/)).toBeVisible();
-    await expect(page.getByText("Reading 1", { exact: true })).toBeVisible();
-    await expect(page.getByText("Reading 2", { exact: true })).toBeVisible();
-    await expect(page.getByText("Separating test", { exact: true })).toBeVisible();
-    await expect(page.getByText("AI withdraws · unfamiliar transfer", { exact: true })).toBeVisible();
-    await expect(page.getByText("Still untested", { exact: true })).toBeVisible();
-    await expect(page.getByLabel(/API key/)).toHaveValue("");
   });
 });

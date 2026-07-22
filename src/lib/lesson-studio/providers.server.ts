@@ -18,7 +18,14 @@ export type LessonStudioOpenAIClient = {
     parse: (
       body: Parameters<OpenAI["responses"]["parse"]>[0],
       options?: { signal?: AbortSignal },
-    ) => Promise<{ output_parsed?: unknown; output_text?: string; output?: unknown[] }>;
+    ) => Promise<{
+      output_parsed?: unknown;
+      output_text?: string;
+      /** Responses API output items, including message.content refusal parts. */
+      output?: unknown[];
+      status?: string;
+      incomplete_details?: { reason?: string | null } | null;
+    }>;
   };
 };
 
@@ -89,12 +96,30 @@ async function readProviderJson(response: Response): Promise<unknown> {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The Responses API places refusal parts inside output message.content. Scan
+ * only the documented top-level output/message-content shape with hard bounds;
+ * never recursively walk arbitrary provider data.
+ */
 function hasOpenAIRefusal(response: { output?: unknown[] }): boolean {
-  return response.output?.some((item) => (
-    typeof item === "object"
-    && item !== null
-    && (("type" in item && item.type === "refusal") || ("refusal" in item && Boolean(item.refusal)))
-  )) ?? false;
+  if (!Array.isArray(response.output)) return false;
+  return response.output.slice(0, 32).some((item) => {
+    if (!isRecord(item)) return false;
+    if (item.type === "refusal" && typeof item.refusal === "string") return true;
+    if (item.type !== "message" || !Array.isArray(item.content)) return false;
+    return item.content.slice(0, 64).some((part) => (
+      isRecord(part) && part.type === "refusal" && typeof part.refusal === "string"
+    ));
+  });
+}
+
+function isOpenAIOutputBudgetExhausted(response: { status?: string; incomplete_details?: { reason?: string | null } | null }): boolean {
+  return response.status === "incomplete"
+    && (response.incomplete_details?.reason === "max_output_tokens" || response.incomplete_details?.reason === "max_tokens");
 }
 
 function classifyThrownProviderError(error: unknown): LessonStudioError | null {
@@ -126,6 +151,7 @@ async function generateWithOpenAI(
       { signal },
     );
     if (hasOpenAIRefusal(response)) throw new LessonStudioError("provider_refusal");
+    if (isOpenAIOutputBudgetExhausted(response)) throw new LessonStudioError("request_budget_exceeded");
     if (response.output_parsed === undefined || response.output_parsed === null) {
       throw new LessonStudioError("malformed_provider_output");
     }

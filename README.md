@@ -91,7 +91,7 @@ pnpm dev
 
 Open `http://127.0.0.1:3000`.
 
-No model credential is required for the authored and deterministic paths. External model calls are off by default even when an existing `OPENAI_API_KEY` is present. Keep `OPENAI_INTERPRETATION_ENABLED=false`, `OPENAI_FORGE_PLANNER_ENABLED=false`, and `FORGE_LESSON_STUDIO_OPENAI_ENABLED=false` for public operation unless the corresponding disclosure, consent, budget, and abuse controls have been approved. Studio BYOK keys are request-only; deployment-managed credentials remain server-only and must never use a `NEXT_PUBLIC_*` variable.
+No model credential is required for the authored and deterministic paths. External interpretation and planner calls are off by default even when an existing `OPENAI_API_KEY` is present; keep `OPENAI_INTERPRETATION_ENABLED=false` and `OPENAI_FORGE_PLANNER_ENABLED=false` for public operation unless their separate controls are approved. Public managed and BYOK Lesson Studio calls are locked: neither a request-only key, a page declaration, nor target-audience metadata authorizes a provider request. They require active adult server-owned authority plus separately approved quota, abuse, privacy, and review controls. Lesson Studio has no managed-provider environment switch, and must never use a `NEXT_PUBLIC_*` credential.
 
 ## Verify
 

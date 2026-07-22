@@ -1,6 +1,7 @@
 import { LESSON_STUDIO_GOLDEN_FIXTURES } from "./lesson-studio-fixtures";
 import {
   evaluateLessonDraft,
+  evaluationPasses,
   summarizeLessonDraftEvaluations,
   type LessonDraftEvaluation,
 } from "../src/lib/lesson-studio/evaluation";
@@ -11,7 +12,11 @@ import {
   type LessonProvider,
   type LessonStudioRequest,
 } from "../src/lib/lesson-studio/schema";
-import type { GeneratedLessonDraft } from "../src/lib/lesson-studio/providers.server";
+import {
+  LessonStudioError,
+  type GeneratedLessonDraft,
+  type LessonStudioErrorCode,
+} from "../src/lib/lesson-studio/providers.server";
 
 export const LESSON_STUDIO_LIVE_EVAL_OPT_IN = "run-provider-specific-redacted-suite";
 
@@ -54,15 +59,18 @@ function requestForFixture(
 }
 
 export type LessonStudioLiveEvalReport =
-  | { status: "NOT_RUN"; reason: Exclude<LessonStudioLiveEvalConfig, { enabled: true }>["reason"] }
+  | { status: "NOT_RUN"; outcome: "not-run"; reason: Exclude<LessonStudioLiveEvalConfig, { enabled: true }>["reason"] }
   | {
-    status: "COMPLETED";
+    status: "PASSED" | "FAILED";
+    outcome: "pass" | "fail";
     provider: LessonProvider;
     model: string;
+    /** Expected fixture IDs only; this report never contains fixture prompts or drafts. */
     fixtureIds: readonly string[];
+    missingFixtureIds: readonly string[];
     metrics: readonly LessonDraftEvaluation[];
     summary: ReturnType<typeof summarizeLessonDraftEvaluations>;
-    errors: readonly { fixtureId: string; code: string }[];
+    errors: readonly { fixtureId: string; code: LessonStudioErrorCode | "runner_error" }[];
   };
 
 /**
@@ -74,10 +82,10 @@ export async function runLessonStudioLiveEval(
   runner: (request: LessonStudioRequest) => Promise<GeneratedLessonDraft>,
   now: () => number = () => Date.now(),
 ): Promise<LessonStudioLiveEvalReport> {
-  if (!config.enabled) return { status: "NOT_RUN", reason: config.reason };
+  if (!config.enabled) return { status: "NOT_RUN", outcome: "not-run", reason: config.reason };
 
   const metrics: LessonDraftEvaluation[] = [];
-  const errors: { fixtureId: string; code: string }[] = [];
+  const errors: { fixtureId: string; code: LessonStudioErrorCode | "runner_error" }[] = [];
   for (const fixture of LESSON_STUDIO_GOLDEN_FIXTURES) {
     const startedAt = now();
     try {
@@ -89,16 +97,26 @@ export async function runLessonStudioLiveEval(
     } catch (error) {
       errors.push({
         fixtureId: fixture.id,
-        code: error instanceof Error && error.name === "LessonStudioError" ? error.message : "runner_error",
+        // Do not inspect Error.name/message: they are attacker/provider controlled.
+        code: error instanceof LessonStudioError ? error.code : "runner_error",
       });
     }
   }
 
+  const fixtureIds = LESSON_STUDIO_GOLDEN_FIXTURES.map((fixture) => fixture.id);
+  const measuredFixtureIds = new Set(metrics.map((metric) => metric.fixtureId));
+  const missingFixtureIds = fixtureIds.filter((fixtureId) => !measuredFixtureIds.has(fixtureId));
+  const allExpectedFixturesMeasured = metrics.length === fixtureIds.length && missingFixtureIds.length === 0;
+  const allContractMetricsPass = metrics.every(evaluationPasses);
+  const passed = errors.length === 0 && allExpectedFixturesMeasured && allContractMetricsPass;
+
   return {
-    status: "COMPLETED",
+    status: passed ? "PASSED" : "FAILED",
+    outcome: passed ? "pass" : "fail",
     provider: config.provider,
     model: config.model,
-    fixtureIds: LESSON_STUDIO_GOLDEN_FIXTURES.map((fixture) => fixture.id),
+    fixtureIds,
+    missingFixtureIds,
     metrics,
     summary: summarizeLessonDraftEvaluations(metrics),
     errors,
