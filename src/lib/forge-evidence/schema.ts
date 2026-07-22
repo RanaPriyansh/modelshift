@@ -38,7 +38,7 @@ export const proofConditionsSchema = z
 
 export const assistanceProvenanceSchema = z
   .object({
-    kind: z.enum(["authored_hint", "authored_contrast", "authored_principle", "model_interpretation"]),
+    kind: z.enum(["authored_hint", "authored_contrast", "authored_principle", "authored_representation", "model_interpretation"]),
     sourceId: evidenceIdentifierSchema,
   })
   .strict();

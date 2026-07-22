@@ -6,6 +6,7 @@ import {
 } from "../../types/modelshift";
 import type {
   FallbackReason,
+  HypothesisId,
   InterpretationSource,
   Level1QuestionId,
   LearningStage,
@@ -26,6 +27,11 @@ export type SupportKind = "none" | "attention_cue" | "contrast" | "principle";
 
 export interface LearningInterpretation {
   source: InterpretationSource;
+  /** Accepted authored hypothesis IDs only; no model prose is retained here. */
+  hypothesisIds: readonly [HypothesisId, HypothesisId];
+  providerId: "openai" | null;
+  modelId: string | null;
+  policyId: "policy.force-and-motion.interpretation.v1";
   recommendedProbeId: ProbeId;
   recommendedLevel1QuestionId: Level1QuestionId;
   fallbackReason?: FallbackReason;
@@ -69,6 +75,7 @@ export type LearningState = {
 };
 
 export type LearningEvent =
+  | { type: "RESET" }
   | { type: "START" }
   | { type: "COMMIT_PREDICTION"; predictionId: PredictionId; confidence: number }
   | { type: "COMMIT_EXPLANATION"; explanation: string; dontKnow?: boolean }
@@ -112,6 +119,7 @@ export type LearningTransition =
   | { accepted: false; state: LearningState; reason: TransitionRejectionReason };
 
 export const LEARNING_EVENT_TYPES = [
+  "RESET",
   "START",
   "COMMIT_PREDICTION",
   "COMMIT_EXPLANATION",
@@ -130,16 +138,16 @@ export const LEARNING_EVENT_TYPES = [
 ] as const satisfies readonly LearningEventType[];
 
 const STAGE_EVENTS: Record<LearningStage, readonly LearningEventType[]> = {
-  HOOK: ["START"],
-  PREDICT: ["COMMIT_PREDICTION"],
-  EXPLAIN: ["COMMIT_EXPLANATION"],
-  INTERPRET: ["RESOLVE_INTERPRETATION", "INTERPRETATION_FAILED"],
-  PROBE_PREDICT: ["COMMIT_PROBE_PREDICTION"],
-  EXPERIMENT: ["RUN_EXPERIMENT", "REPLAY_EXPERIMENT", "OBSERVE_EXPERIMENT", "REQUEST_SUPPORT", "CONSUME_SUPPORT"],
-  REFLECT: ["SUBMIT_REFLECTION", "REQUEST_SUPPORT", "CONSUME_SUPPORT"],
-  RECONSTRUCT: ["SUBMIT_RECONSTRUCTION", "CONTINUE_TO_COLD_TRANSFER", "REQUEST_SUPPORT", "CONSUME_SUPPORT"],
-  COLD_TRANSFER: ["SUBMIT_TRANSFER"],
-  PROOF_RESULT: [],
+  HOOK: ["RESET", "START"],
+  PREDICT: ["RESET", "COMMIT_PREDICTION"],
+  EXPLAIN: ["RESET", "COMMIT_EXPLANATION"],
+  INTERPRET: ["RESET", "RESOLVE_INTERPRETATION", "INTERPRETATION_FAILED"],
+  PROBE_PREDICT: ["RESET", "COMMIT_PROBE_PREDICTION"],
+  EXPERIMENT: ["RESET", "RUN_EXPERIMENT", "REPLAY_EXPERIMENT", "OBSERVE_EXPERIMENT", "REQUEST_SUPPORT", "CONSUME_SUPPORT"],
+  REFLECT: ["RESET", "SUBMIT_REFLECTION", "REQUEST_SUPPORT", "CONSUME_SUPPORT"],
+  RECONSTRUCT: ["RESET", "SUBMIT_RECONSTRUCTION", "CONTINUE_TO_COLD_TRANSFER", "REQUEST_SUPPORT", "CONSUME_SUPPORT"],
+  COLD_TRANSFER: ["RESET", "SUBMIT_TRANSFER"],
+  PROOF_RESULT: ["RESET"],
 };
 
 /** All event types that are categorically invalid in each stage. Conditional guards remain in the reducer. */
@@ -175,6 +183,9 @@ export function transitionLearningState(state: LearningState, event: LearningEve
   }
 
   switch (event.type) {
+    case "RESET":
+      return accept(createInitialLearningState());
+
     case "START":
       return accept(next(state, "PREDICT"));
 
@@ -402,17 +413,40 @@ function toLearningInterpretation(interpretation: ValidatedInterpretation): Lear
   ) {
     return undefined;
   }
+  const hypothesisIds = twoDistinctHypotheses(
+    interpretation.hypotheses.map((hypothesis) => hypothesis.id),
+    interpretation.recommended_probe_id,
+  );
+  if (!hypothesisIds) return undefined;
   return {
     source: "model",
+    hypothesisIds,
+    providerId: interpretation.providerId ?? null,
+    modelId: interpretation.modelId ?? null,
+    policyId: interpretation.policyId ?? "policy.force-and-motion.interpretation.v1",
     recommendedProbeId: interpretation.recommended_probe_id,
     recommendedLevel1QuestionId: interpretation.recommended_level_1_question_id,
   };
+}
+
+function twoDistinctHypotheses(
+  acceptedIds: readonly HypothesisId[],
+  probeId: ProbeId,
+): readonly [HypothesisId, HypothesisId] | undefined {
+  const probe = PROBES[probeId];
+  const candidates = [...acceptedIds, ...probe.compatibleHypotheses];
+  const distinct = [...new Set(candidates)].filter((id) => probe.compatibleHypotheses.includes(id));
+  return distinct.length >= 2 ? [distinct[0]!, distinct[1]!] : undefined;
 }
 
 function neutralFallback(reason: FallbackReason): Pick<LearningContext, "interpretation" | "selectedProbeId"> {
   return {
     interpretation: {
       source: "fallback",
+      hypothesisIds: ["continuous_force_required", "scientific_or_near_scientific"],
+      providerId: null,
+      modelId: null,
+      policyId: "policy.force-and-motion.interpretation.v1",
       recommendedProbeId: "neutral_core_probe",
       recommendedLevel1QuestionId: "neutral_observation_prompt",
       fallbackReason: reason,

@@ -255,7 +255,7 @@ test.describe("FORGE force-and-motion World journey", () => {
     await expect(page.getByRole("heading", { name: "The test that separates the models" })).toBeVisible();
     await expect(page.getByText("Friction or no friction?", { exact: true })).toBeVisible();
     await page.getByText("How this test was chosen").click();
-    await expect(page.getByText(/GPT-5\.6, after schema and semantic validation/)).toBeVisible();
+    await expect(page.getByText(/Validated model interpretation, after schema and semantic validation/)).toBeVisible();
 
     await page.getByRole("radio", { name: /The no-resistance puck/ }).press("Space");
     await page.getByRole("button", { name: /Commit and open the test/ }).click();

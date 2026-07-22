@@ -33,5 +33,8 @@ export function neutralFallback(reason: FallbackReason): ValidatedInterpretation
     abstain_reason: abstainReasonForFallback[reason],
     source: "fallback",
     fallback_reason: reason,
+    providerId: null,
+    modelId: null,
+    policyId: "policy.force-and-motion.interpretation.v1",
   };
 }

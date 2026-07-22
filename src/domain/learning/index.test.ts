@@ -31,6 +31,8 @@ const validModelInterpretation = {
 
 function eventFor(type: LearningEventType): LearningEvent {
   switch (type) {
+    case "RESET":
+      return { type };
     case "START":
       return { type };
     case "COMMIT_PREDICTION":
@@ -125,7 +127,56 @@ describe("learning transitions", () => {
       stage: "PROBE_PREDICT",
       context: {
         selectedProbeId: "neutral_core_probe",
-        interpretation: { source: "fallback", fallbackReason: "timeout" },
+        interpretation: {
+          source: "fallback",
+          hypothesisIds: ["continuous_force_required", "scientific_or_near_scientific"],
+          fallbackReason: "timeout",
+          providerId: null,
+          modelId: null,
+          policyId: "policy.force-and-motion.interpretation.v1",
+        },
+      },
+    });
+  });
+
+  it("preserves a non-first accepted model reading, removes duplicates, and pads the selected probe to exactly two authored IDs", () => {
+    const modelWithDuplicate = {
+      ...validModelInterpretation,
+      hypotheses: [
+        {
+          id: "force_equals_velocity" as const,
+          support: "high" as const,
+          evidence_spans: ["needs a push"],
+          rationale: "The explanation treats force as current speed.",
+        },
+        {
+          id: "force_equals_velocity" as const,
+          support: "medium" as const,
+          evidence_spans: ["needs a push"],
+          rationale: "The same reading appears twice.",
+        },
+      ],
+      recommended_probe_id: "brief_vs_continuous_force" as const,
+      recommended_level_1_question_id: "compare_force_and_velocity_graphs" as const,
+      providerId: "openai" as const,
+      modelId: "gpt-5.6-sol",
+      policyId: "policy.force-and-motion.interpretation.v1" as const,
+    };
+    const result = transitionLearningState(stateAt("INTERPRET"), {
+      type: "RESOLVE_INTERPRETATION",
+      interpretation: modelWithDuplicate,
+    });
+    expect(result).toMatchObject({
+      accepted: true,
+      state: {
+        context: {
+          interpretation: {
+            hypothesisIds: ["force_equals_velocity", "continuous_force_required"],
+            providerId: "openai",
+            modelId: "gpt-5.6-sol",
+            policyId: "policy.force-and-motion.interpretation.v1",
+          },
+        },
       },
     });
   });
