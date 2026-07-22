@@ -19,6 +19,10 @@ export const WORLD_INVARIANT_CODES = [
   "grounded.reviewed-sources-required",
   "under-13.guardian-managed-required",
   "under-13.curated-retrieval-required",
+  "runtime.proof-claim-mismatch",
+  "runtime.validator-mismatch",
+  "runtime.source-binding-missing",
+  "runtime.return-proof-mismatch",
 ] as const;
 
 export type WorldInvariantCode = (typeof WORLD_INVARIANT_CODES)[number];
@@ -175,6 +179,51 @@ function validateInvariants(pack: LearningWorldPack): readonly WorldInvariantIss
         path: "manifest.safety.retrievalMode",
         message: "Under-13 worlds may use no retrieval or curated-only retrieval, and cannot expose open-web retrieval.",
       });
+    }
+  }
+
+  if (pack.runtime) {
+    if (!proofClaims.has(pack.runtime.proof.proofClaimId)) {
+      issues.push({
+        code: "runtime.proof-claim-mismatch",
+        path: "runtime.proof.proofClaimId",
+        message: `Runtime proof claim ${pack.runtime.proof.proofClaimId} is absent from the pack.`,
+      });
+    }
+    if (manifest.deterministicValidatorId !== pack.runtime.proof.validatorId || !validators.has(pack.runtime.proof.validatorId)) {
+      issues.push({
+        code: "runtime.validator-mismatch",
+        path: "runtime.proof.validatorId",
+        message: "Runtime proof validation must use the manifest's declared deterministic validator.",
+      });
+    }
+    if (pack.runtime.returnProof.enabled !== manifest.returnProof.enabled) {
+      issues.push({
+        code: "runtime.return-proof-mismatch",
+        path: "runtime.returnProof.enabled",
+        message: "Runtime return-proof availability must match the manifest policy.",
+      });
+    }
+
+    const manifestSourceIds = new Set(manifest.sources.map((source) => source.id));
+    const runtimeSourceIds = new Set(pack.runtime.sourceBindings.map((binding) => binding.sourceItemId));
+    for (const sourceId of manifestSourceIds) {
+      if (!runtimeSourceIds.has(sourceId)) {
+        issues.push({
+          code: "runtime.source-binding-missing",
+          path: "runtime.sourceBindings",
+          message: `Runtime binding does not map manifest source ${sourceId}.`,
+        });
+      }
+    }
+    for (const sourceId of runtimeSourceIds) {
+      if (!manifestSourceIds.has(sourceId)) {
+        issues.push({
+          code: "runtime.source-binding-missing",
+          path: "runtime.sourceBindings",
+          message: `Runtime binding references source ${sourceId}, which is absent from the manifest.`,
+        });
+      }
     }
   }
 

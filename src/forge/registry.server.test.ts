@@ -83,6 +83,18 @@ describe("TrustedWorldRegistry", () => {
     expect(Object.isFrozen(trustedWorldRegistry.list())).toBe(true);
   });
 
+  it("keeps the Primary Source runtime binding under the existing package identity", () => {
+    expect(trustedWorldRegistry.getRuntimeBinding("world.force-and-motion")).toBeUndefined();
+    expect(trustedWorldRegistry.getRuntimeBinding("world.primary-source-reasoning")).toMatchObject({
+      protocolVersion: "1.0.0",
+      proof: {
+        proofClaimId: "proof.primary-source-reasoning.independent-transfer",
+        validatorId: "validator.primary-source-reasoning-transfer.v1",
+        accessAllowed: true,
+      },
+    });
+  });
+
   it("runs the executable force-and-motion validator", () => {
     expect(
       trustedWorldRegistry.runDeterministicValidator("world.force-and-motion", {

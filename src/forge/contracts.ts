@@ -5,10 +5,48 @@ export const LEARNER_DEPTH_MODES = ["introductory", "core", "advanced"] as const
 export const EVIDENCE_TIERS = ["verified", "grounded", "exploratory", "restricted"] as const;
 export const WORLD_KINDS = ["model", "evidence", "practice", "project"] as const;
 
+/**
+ * The runtime speaks these semantic stages even when a World presents them as
+ * fewer or differently named screens. Domain reducers retain their own
+ * display-stage vocabulary.
+ */
+export const WORLD_RUNTIME_STAGES = [
+  "encounter",
+  "commit_model",
+  "interpret_two_readings",
+  "name_disagreement",
+  "commit_test_prediction",
+  "run_separating_experience",
+  "governed_support",
+  "reconstruct",
+  "withdraw_instructional_ai",
+  "cold_transfer",
+  "bounded_result",
+  "return_or_apply",
+] as const;
+
+export const WORLD_RUNTIME_ACTION_KINDS = [
+  "learner_operation",
+  "instructional_support",
+  "model_action",
+  "experience_replay",
+  "access_accommodation",
+  "return_proof",
+  "reset",
+] as const;
+
+export const WORLD_RUNTIME_PROOF_BLOCKED_ACTION_KINDS = [
+  "instructional_support",
+  "model_action",
+  "experience_replay",
+] as const;
+
 export type LearnerAgeMode = (typeof LEARNER_AGE_MODES)[number];
 export type LearnerDepthMode = (typeof LEARNER_DEPTH_MODES)[number];
 export type EvidenceTier = (typeof EVIDENCE_TIERS)[number];
 export type WorldKind = (typeof WORLD_KINDS)[number];
+export type WorldRuntimeStage = (typeof WORLD_RUNTIME_STAGES)[number];
+export type WorldRuntimeActionKind = (typeof WORLD_RUNTIME_ACTION_KINDS)[number];
 
 export const AI_ACTIONS = [
   "clarify-input",
@@ -217,6 +255,127 @@ export const learningWorldManifestSchema = z.strictObject({
 
 export type LearningWorldManifest = z.infer<typeof learningWorldManifestSchema>;
 
+const runtimeStageIdsSchema = uniqueIdentifiers(z.enum(WORLD_RUNTIME_STAGES), WORLD_RUNTIME_STAGES.length)
+  .length(WORLD_RUNTIME_STAGES.length)
+  .superRefine((stages, context) => {
+    for (const stage of WORLD_RUNTIME_STAGES) {
+      if (!stages.includes(stage)) {
+        context.addIssue({ code: "custom", message: `Missing canonical runtime stage: ${stage}` });
+      }
+    }
+  });
+
+export const worldRuntimeActionSchema = z.strictObject({
+  id: identifierSchema,
+  kind: z.enum(WORLD_RUNTIME_ACTION_KINDS),
+  label: shortTextSchema,
+});
+
+export const worldRuntimeSourceBindingSchema = z.strictObject({
+  /** Domain-authored reference preserved for compatibility with a legacy World. */
+  domainSourceRef: identifierSchema,
+  /** Existing manifest/registry source identity; this is not a new source ID. */
+  sourceItemId: identifierSchema,
+  sourcePackageId: identifierSchema.nullable(),
+  sourcePackageVersion: z.string().trim().min(1).max(120).nullable(),
+  sourceSnapshotDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/).nullable(),
+  locatorIds: uniqueIdentifiers(identifierSchema),
+  claimIds: uniqueIdentifiers(identifierSchema),
+  rightsRecordId: identifierSchema.nullable(),
+  reviewDecisionIds: uniqueIdentifiers(identifierSchema),
+  provenanceStatus: z.enum(["bound", "legacy_metadata_only"]),
+});
+
+export const worldRuntimeBindingSchema = z
+  .strictObject({
+    protocolVersion: semverSchema,
+    semanticStages: runtimeStageIdsSchema,
+    actions: uniqueIdentifiers(worldRuntimeActionSchema, 1),
+    support: z.strictObject({
+      policyId: identifierSchema,
+      allowedDuringProof: z.literal(false),
+      recordsCognitiveSupport: z.literal(true),
+    }),
+    proof: z.strictObject({
+      proofClaimId: identifierSchema,
+      validatorId: identifierSchema,
+      taskFamilyId: identifierSchema,
+      blockedActionKinds: uniqueIdentifiers(z.enum(WORLD_RUNTIME_PROOF_BLOCKED_ACTION_KINDS), 3),
+      accessAllowed: z.literal(true),
+    }),
+    evidence: z.strictObject({
+      receiptSchemaVersion: semverSchema,
+      // This client-only runtime cannot honestly claim durable or server-side
+      // authority. A future durable projection needs its own reviewed adapter.
+      proofAuthority: z.literal("honour_based"),
+      persistence: z.literal("not_persisted"),
+    }),
+    returnProof: z.strictObject({
+      enabled: z.boolean(),
+      policyId: identifierSchema,
+    }),
+    access: z.strictObject({
+      accommodationIds: uniqueIdentifiers(identifierSchema, 1),
+      nonvisualAlternativeIds: uniqueIdentifiers(identifierSchema, 1),
+      focusTargetId: identifierSchema,
+      reducedMotionPolicyId: identifierSchema,
+    }),
+    sourceBindings: z.array(worldRuntimeSourceBindingSchema).min(1),
+  })
+  .superRefine((binding, context) => {
+    for (const kind of WORLD_RUNTIME_PROOF_BLOCKED_ACTION_KINDS) {
+      if (!binding.proof.blockedActionKinds.includes(kind)) {
+        context.addIssue({
+          code: "custom",
+          path: ["proof", "blockedActionKinds"],
+          message: `Proof mode must block ${kind}.`,
+        });
+      }
+    }
+    const actionKinds = new Set(binding.actions.map((action) => action.kind));
+    for (const kind of [...WORLD_RUNTIME_PROOF_BLOCKED_ACTION_KINDS, "access_accommodation"] as const) {
+      if (!actionKinds.has(kind)) {
+        context.addIssue({
+          code: "custom",
+          path: ["actions"],
+          message: `Runtime action catalog must declare ${kind}.`,
+        });
+      }
+    }
+    const sourceItemIds = new Set<string>();
+    const domainSourceRefs = new Set<string>();
+    for (const source of binding.sourceBindings) {
+      if (sourceItemIds.has(source.sourceItemId) || domainSourceRefs.has(source.domainSourceRef)) {
+        context.addIssue({
+          code: "custom",
+          path: ["sourceBindings"],
+          message: "Runtime source bindings must have unique domain references and manifest source IDs.",
+        });
+      }
+      sourceItemIds.add(source.sourceItemId);
+      domainSourceRefs.add(source.domainSourceRef);
+      if (
+        source.provenanceStatus === "bound" &&
+        (!source.sourceSnapshotDigest || !source.sourcePackageId || !source.sourcePackageVersion)
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["sourceBindings"],
+          message: "A bound source requires package identity, version, and snapshot digest.",
+        });
+      }
+      if (source.provenanceStatus === "legacy_metadata_only" && source.sourceSnapshotDigest !== null) {
+        context.addIssue({
+          code: "custom",
+          path: ["sourceBindings"],
+          message: "Legacy metadata cannot claim a source snapshot digest.",
+        });
+      }
+    }
+  });
+
+export type WorldRuntimeBinding = z.infer<typeof worldRuntimeBindingSchema>;
+
 export const learningWorldPackSchema = z.strictObject({
   manifest: learningWorldManifestSchema,
   release: z.strictObject({
@@ -226,6 +385,8 @@ export const learningWorldPackSchema = z.strictObject({
   capabilities: uniqueIdentifiers(capabilityDefinitionSchema, 1),
   proofClaims: uniqueIdentifiers(proofClaimSchema, 1),
   deterministicValidators: uniqueIdentifiers(deterministicValidatorDefinitionSchema),
+  /** Optional while the other pre-runtime Worlds retain legacy adapters. */
+  runtime: worldRuntimeBindingSchema.optional(),
 });
 
 export type LearningWorldPack = z.infer<typeof learningWorldPackSchema>;

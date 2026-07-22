@@ -8,6 +8,7 @@ import {
   type LearningWorldManifest,
   type LearningWorldPack,
   type SourceProvenance,
+  type WorldRuntimeBinding,
   type WorldKind,
 } from "./contracts";
 import { parseLearningWorldPack } from "./validation";
@@ -151,6 +152,14 @@ export class TrustedWorldRegistry {
 
   getPack(worldId: string): LearningWorldPack | undefined {
     return this.#packsById.get(worldId);
+  }
+
+  /**
+   * Runtime bindings are owned by the same immutable package snapshot as the
+   * manifest. The registry never assigns a second World identity to a runtime.
+   */
+  getRuntimeBinding(worldId: string): WorldRuntimeBinding | undefined {
+    return this.#packsById.get(worldId)?.runtime;
   }
 
   listSources(): readonly SourceProvenance[] {

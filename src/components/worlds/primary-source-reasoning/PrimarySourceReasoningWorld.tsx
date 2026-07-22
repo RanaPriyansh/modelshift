@@ -23,8 +23,6 @@ import {
   TRANSFER_STATEMENTS,
   WASHINGTON_CATALOG,
   WORKED_STATEMENTS,
-  createInitialPrimarySourceState,
-  transitionPrimarySourceWorld,
   type AssignmentMap,
   type EvidenceCategory,
   type MysteryChoiceId,
@@ -36,6 +34,12 @@ import {
   type TransitionRejectReason,
   type WorkedStatementId,
 } from "../../../worlds/primary-source-reasoning";
+import {
+  createWorldRuntimeSession,
+  dispatchWorldRuntimeCommand,
+  primarySourceWorldRuntimeAdapter,
+  type TrustedWorldRuntimeReceipt,
+} from "../../../forge/world-runtime";
 import styles from "./PrimarySourceReasoningWorld.module.css";
 
 const STAGES: ReadonlyArray<{
@@ -948,14 +952,18 @@ function ResultStage({
 
 export function PrimarySourceReasoningWorld({
   onEvidence,
+  onRuntimeReceipt,
 }: {
   onEvidence?: (record: PrimarySourceProofRecord) => void;
+  onRuntimeReceipt?: (receipt: TrustedWorldRuntimeReceipt) => void;
 }) {
   const instanceId = useId();
   const mainRef = useRef<HTMLElement>(null);
   const emittedProofRef = useRef<PrimarySourceProofRecord | null>(null);
-  const [state, setState] = useState(createInitialPrimarySourceState);
-  const stateRef = useRef(state);
+  const emittedReceiptRef = useRef<TrustedWorldRuntimeReceipt | null>(null);
+  const [runtime, setRuntime] = useState(() => createWorldRuntimeSession(primarySourceWorldRuntimeAdapter));
+  const runtimeRef = useRef(runtime);
+  const state = runtime.state;
   const [error, setError] = useState<TransitionRejectReason | null>(null);
 
   const [mysteryChoice, setMysteryChoice] = useState<MysteryChoiceId | null>(null);
@@ -970,19 +978,17 @@ export function PrimarySourceReasoningWorld({
 
   const send = useCallback(
     (event: PrimarySourceWorldEvent) => {
-      const current = stateRef.current;
-      const result = transitionPrimarySourceWorld(current, event);
+      const result = dispatchWorldRuntimeCommand(primarySourceWorldRuntimeAdapter, runtimeRef.current, {
+        kind: "domain",
+        event,
+      });
       if (result.accepted) {
-        stateRef.current = result.state;
-        setState(result.state);
+        runtimeRef.current = result.session;
+        setRuntime(result.session);
         setError(null);
         return true;
       }
-      if (result.state !== current) {
-        stateRef.current = result.state;
-        setState(result.state);
-      }
-      setError(result.reason);
+      setError((result.domainReason ?? "invalid_event_for_stage") as TransitionRejectReason);
       return false;
     },
     [],
@@ -999,9 +1005,17 @@ export function PrimarySourceReasoningWorld({
     }
   }, [onEvidence, state.proof]);
 
+  useEffect(() => {
+    if (runtime.receipt && emittedReceiptRef.current !== runtime.receipt) {
+      emittedReceiptRef.current = runtime.receipt;
+      onRuntimeReceipt?.(runtime.receipt);
+    }
+  }, [onRuntimeReceipt, runtime.receipt]);
+
   function resetWorld() {
     send({ type: "RESET" });
     emittedProofRef.current = null;
+    emittedReceiptRef.current = null;
     setMysteryChoice(null);
     setInitialConfidence(65);
     setInitialExplanation("");

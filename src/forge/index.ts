@@ -4,6 +4,9 @@ export {
   EVIDENCE_TIERS,
   LEARNER_AGE_MODES,
   LEARNER_DEPTH_MODES,
+  WORLD_RUNTIME_ACTION_KINDS,
+  WORLD_RUNTIME_PROOF_BLOCKED_ACTION_KINDS,
+  WORLD_RUNTIME_STAGES,
   WORLD_KINDS,
   aiActionBoundarySchema,
   assistanceEventSchema,
@@ -20,6 +23,7 @@ export {
   routeSchema,
   safetyPolicySchema,
   sourceProvenanceSchema,
+  worldRuntimeBindingSchema,
 } from "./contracts";
 
 export type {
@@ -41,7 +45,24 @@ export type {
   SafetyPolicy,
   SourceProvenance,
   WorldKind,
+  WorldRuntimeActionKind,
+  WorldRuntimeBinding,
+  WorldRuntimeStage,
 } from "./contracts";
+
+export {
+  createWorldRuntimeSession,
+  dispatchWorldRuntimeCommand,
+  lintWorldRuntimePack,
+  primarySourceWorldRuntimeAdapter,
+} from "./world-runtime";
+
+export type {
+  RuntimeDispatchResult,
+  TrustedWorldRuntimeReceipt,
+  WorldRuntimeLintResult,
+  WorldRuntimeSession,
+} from "./world-runtime";
 
 export {
   WORLD_INVARIANT_CODES,
