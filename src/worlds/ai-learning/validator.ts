@@ -15,6 +15,7 @@ import type {
   EncounterInput,
   ReadingId,
   ReadingVerdict,
+  TestPredictionId,
   TransferChoiceId,
   TransferOpenQuestionId,
   TransferScore,
@@ -28,6 +29,17 @@ export function validateEncounter(input: EncounterInput): ValidationResult {
   if (!input.stanceId || !STANCES.some((stance) => stance.id === input.stanceId)) return invalid("stance-required");
   if (!Number.isInteger(input.confidence) || input.confidence < 0 || input.confidence > 100) return invalid("confidence-invalid");
   if (input.reason.trim().length < 24) return invalid("reason-too-short");
+  return valid();
+}
+
+export function validateTestPrediction(
+  acceptedTwoReadings: boolean,
+  predictionId: TestPredictionId | null,
+): ValidationResult {
+  if (!acceptedTwoReadings) return invalid("readings-acceptance-required");
+  if (!predictionId || !PLAUSIBLE_READINGS.some((reading) => reading.id === predictionId)) {
+    return invalid("test-prediction-required");
+  }
   return valid();
 }
 
@@ -96,14 +108,14 @@ export function deriveLearningRecord(input: {
   return {
     startedWith: `${stance} · ${input.encounter.confidence}% confidence · “${input.encounter.reason.trim()}”`,
     testedWith: `Two reviewed source briefs, the direct-student versus tutor-mediated contrast, and two cross-source readings. Reconstructed claim: ${claim}`,
-    supportUsed: "Reviewed source summaries, source links, and authored retry prompts before the evidence desk closed; none during the cold transfer.",
+    supportUsed: "No instructional support was consumed. Reviewed source briefs and fixed links were available before the evidence desk closed; none were available during the cold transfer.",
     didAlone: `${transferChoice} Still-open choice: ${openQuestion}`,
     stillOpen: "The two AI studies differ in population, subject, delivery, and outcome definition; neither comparison by itself isolates every mechanism. The transfer set also changes more than one study feature.",
     returnProof:
       input.transferScore.outcome === "held"
-        ? "Held once: the bounded-reading pattern transferred to an unfamiliar source set in a single unaided submission. This is one immediate performance trace, not proof of durable learning."
+        ? "Held once: the bounded-reading pattern transferred to an unfamiliar authored transfer-fixture pair in a single unaided submission. This is one immediate performance trace, not proof of durable learning. A reviewed delayed task family and scheduler are not published."
         : input.transferScore.outcome === "partial"
-          ? "Partially held: one of the two bounded-reading decisions transferred. Return with a fresh source set; this attempt remains recorded."
-          : "Not yet: the bounded-reading pattern did not transfer on this source set. Return with a fresh source set; this attempt remains recorded.",
+          ? "Partially held: one of the two bounded-reading decisions transferred. This attempt remains recorded; a reviewed delayed task family and scheduler are not published."
+          : "Not yet: the bounded-reading pattern did not transfer on this source set. This attempt remains recorded; a reviewed delayed task family and scheduler are not published.",
   };
 }

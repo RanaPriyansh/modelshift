@@ -17,6 +17,14 @@ function committedEncounter(): EvidenceLearningState {
   );
 }
 
+function openedEvidence(): EvidenceLearningState {
+  return reduce(
+    committedEncounter(),
+    { type: "ACCEPT_TWO_READINGS" },
+    { type: "COMMIT_TEST_PREDICTION", predictionId: "design-changes-effect" },
+  );
+}
+
 describe("evidenceLearningReducer", () => {
   it("fails closed on a skipped stage", () => {
     const next = evidenceLearningReducer(initialEvidenceLearningState, { type: "CONTINUE_FROM_EVIDENCE" });
@@ -28,7 +36,7 @@ describe("evidenceLearningReducer", () => {
     const before = initialEvidenceLearningState;
     const next = committedEncounter();
     expect(before).toEqual(initialEvidenceLearningState);
-    expect(next.stage).toBe("evidence");
+    expect(next.stage).toBe("compiler");
     expect(next.committedEncounter).toEqual({
       stanceId: "depends",
       confidence: 70,
@@ -38,7 +46,7 @@ describe("evidenceLearningReducer", () => {
 
   it("does not let duplicate review events unlock comparison", () => {
     const next = reduce(
-      committedEncounter(),
+      openedEvidence(),
       { type: "REVIEW_EVIDENCE", evidenceId: "bastani-pnas" },
       { type: "REVIEW_EVIDENCE", evidenceId: "bastani-pnas" },
       { type: "CONTINUE_FROM_EVIDENCE" },
@@ -50,7 +58,7 @@ describe("evidenceLearningReducer", () => {
 
   it("keeps authored retry checks before proof and never advances a mismatch", () => {
     const difference = reduce(
-      committedEncounter(),
+      openedEvidence(),
       { type: "REVIEW_EVIDENCE", evidenceId: "bastani-pnas" },
       { type: "REVIEW_EVIDENCE", evidenceId: "tutor-copilot" },
       { type: "CONTINUE_FROM_EVIDENCE" },
@@ -74,7 +82,7 @@ describe("evidenceLearningReducer", () => {
 
   it("runs the full deterministic loop and locks the first transfer submission", () => {
     let state = reduce(
-      committedEncounter(),
+      openedEvidence(),
       { type: "REVIEW_EVIDENCE", evidenceId: "bastani-pnas" },
       { type: "REVIEW_EVIDENCE", evidenceId: "tutor-copilot" },
       { type: "CONTINUE_FROM_EVIDENCE" },
@@ -85,6 +93,7 @@ describe("evidenceLearningReducer", () => {
       { type: "COMMIT_READINGS" },
       { type: "SET_BOUNDED_CLAIM", claimId: CORRECT_BOUNDED_CLAIM_ID },
       { type: "COMMIT_BOUNDED_CLAIM" },
+      { type: "ACKNOWLEDGE_WITHDRAWAL" },
       { type: "SET_TRANSFER_CHOICE", choiceId: "bounded-measures" },
       { type: "SET_TRANSFER_OPEN_QUESTION", openQuestionId: "held-constant" },
       { type: "SUBMIT_TRANSFER" },
@@ -104,5 +113,45 @@ describe("evidenceLearningReducer", () => {
     expect(state.stage).toBe("result");
     expect(state.lastError).toBe("invalid-transition");
     expect(state.record).toEqual(firstRecord);
+  });
+
+  it("requires the two-reading acknowledgement and a prediction before source evidence can appear", () => {
+    const rejected = evidenceLearningReducer(committedEncounter(), {
+      type: "COMMIT_TEST_PREDICTION",
+      predictionId: null,
+    });
+    expect(rejected).toMatchObject({ stage: "compiler", lastError: "readings-acceptance-required" });
+
+    const stillClosed = reduce(
+      rejected,
+      { type: "ACCEPT_TWO_READINGS" },
+      { type: "COMMIT_TEST_PREDICTION", predictionId: null },
+    );
+    expect(stillClosed).toMatchObject({ stage: "compiler", lastError: "test-prediction-required" });
+
+    const opened = reduce(
+      stillClosed,
+      { type: "COMMIT_TEST_PREDICTION", predictionId: "performance-is-learning" },
+    );
+    expect(opened.stage).toBe("evidence");
+  });
+
+  it("enters an explicit withdrawal state and resets to an isolated encounter", () => {
+    const withdrawal = reduce(
+      openedEvidence(),
+      { type: "REVIEW_EVIDENCE", evidenceId: "bastani-pnas" },
+      { type: "REVIEW_EVIDENCE", evidenceId: "tutor-copilot" },
+      { type: "CONTINUE_FROM_EVIDENCE" },
+      { type: "SET_DIFFERENCE", differenceId: CORRECT_DIFFERENCE_ID },
+      { type: "COMMIT_DIFFERENCE" },
+      { type: "SET_READING_VERDICT", readingId: "performance-is-learning", verdict: "overreaches" },
+      { type: "SET_READING_VERDICT", readingId: "design-changes-effect", verdict: "fits" },
+      { type: "COMMIT_READINGS" },
+      { type: "SET_BOUNDED_CLAIM", claimId: CORRECT_BOUNDED_CLAIM_ID },
+      { type: "COMMIT_BOUNDED_CLAIM" },
+    );
+    expect(withdrawal.stage).toBe("withdrawal");
+    expect(evidenceLearningReducer(withdrawal, { type: "ACKNOWLEDGE_WITHDRAWAL" }).stage).toBe("transfer");
+    expect(evidenceLearningReducer(withdrawal, { type: "RESET" })).toEqual(initialEvidenceLearningState);
   });
 });

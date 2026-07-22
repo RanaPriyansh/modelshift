@@ -157,7 +157,7 @@
   margin: 25px auto 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(9, minmax(0, 1fr));
   list-style: none;
 }
 
@@ -316,6 +316,29 @@
   letter-spacing: -0.045em;
   text-align: center;
   text-wrap: balance;
+}
+
+.forge-evidence-compiler-commitment {
+  margin: 0 0 18px;
+  border-left: 3px solid var(--forge-evidence-gold);
+  border-radius: 0 14px 14px 0;
+  background: color-mix(in srgb, var(--forge-evidence-gold) 9%, var(--forge-evidence-surface));
+  padding: 16px 18px;
+  color: var(--forge-evidence-ink);
+  font-family: var(--forge-evidence-serif);
+  font-size: clamp(20px, 2.8vw, 28px);
+  line-height: 1.35;
+}
+
+.forge-evidence-compiler-commitment > span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--forge-evidence-gold);
+  font-family: var(--forge-evidence-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .forge-evidence-claim > span {
@@ -1100,6 +1123,35 @@
   line-height: 1.6;
 }
 
+.forge-evidence-record > div {
+  min-height: 92px;
+  border-bottom: 1px solid var(--forge-evidence-line);
+  padding: 18px 20px;
+}
+
+.forge-evidence-record > div:nth-child(odd) {
+  border-right: 1px solid var(--forge-evidence-line);
+}
+
+.forge-evidence-record > div:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+
+.forge-evidence-record dt {
+  color: var(--forge-evidence-teal);
+  font-family: var(--forge-evidence-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.forge-evidence-record dd {
+  margin: 8px 0 0;
+  color: var(--forge-evidence-muted);
+  font-size: 13px;
+}
+
 .forge-evidence-footer {
   width: min(1220px, calc(100% - 48px));
   margin: 0 auto;
@@ -1295,6 +1347,18 @@
   }
 
   .forge-evidence-record article:last-child {
+    border-bottom: 0;
+  }
+
+  .forge-evidence-record > div,
+  .forge-evidence-record > div:nth-child(odd),
+  .forge-evidence-record > div:nth-last-child(-n + 2) {
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--forge-evidence-line);
+  }
+
+  .forge-evidence-record > div:last-child {
     border-bottom: 0;
   }
 

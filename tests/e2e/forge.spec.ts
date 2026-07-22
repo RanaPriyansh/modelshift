@@ -174,6 +174,10 @@ async function reachEvidenceWorldProof(page: Page): Promise<void> {
     "The role, access conditions, and later measurement probably change the result.",
   );
   await page.getByTestId("commit-encounter").click();
+  await expect(page.getByTestId("stage-compiler")).toBeVisible();
+  await page.getByTestId("accept-two-readings").click();
+  await page.getByRole("radio", { name: /better support Reading 02/i }).press("Space");
+  await page.getByTestId("commit-test-prediction").click();
   await page.getByTestId("review-bastani-pnas").click();
   await page.getByTestId("review-tutor-copilot").click();
   await page.getByTestId("continue-from-evidence").click();
@@ -187,6 +191,8 @@ async function reachEvidenceWorldProof(page: Page): Promise<void> {
   await page.getByTestId("commit-readings").click();
   await page.getByRole("radio", { name: /In these studies, learning outcomes differed/i }).press("Space");
   await page.getByTestId("commit-bounded-claim").click();
+  await expect(page.getByTestId("stage-withdrawal")).toBeVisible();
+  await page.getByTestId("acknowledge-withdrawal").click();
   await expect(page.getByTestId("stage-transfer")).toBeVisible();
 }
 
@@ -445,7 +451,27 @@ test.describe("FORGE cross-route release contract", () => {
       "The role, access conditions, and later measurement probably change the result.",
     );
     await page.getByTestId("commit-encounter").click();
+    await expect(page.getByRole("main", { name: "compiler learning stage" })).toBeFocused();
+    await page.getByTestId("accept-two-readings").click();
+    await page.getByRole("radio", { name: /better support Reading 02/i }).press("Space");
+    await page.getByTestId("commit-test-prediction").click();
     await expect(page.getByRole("main", { name: "evidence learning stage" })).toBeFocused();
+    await page.getByTestId("review-bastani-pnas").click();
+    await page.getByTestId("review-tutor-copilot").click();
+    await page.getByTestId("continue-from-evidence").click();
+    await expect(page.getByRole("main", { name: "difference learning stage" })).toBeFocused();
+    await page.getByRole("radio", { name: /Who receives the output/i }).press("Space");
+    await page.getByTestId("commit-difference").click();
+    await expect(page.getByRole("main", { name: "readings learning stage" })).toBeFocused();
+    await page.getByRole("group", { name: "Reading 01" }).getByRole("radio", { name: "Overreaches the cards" }).press("Space");
+    await page.getByRole("group", { name: "Reading 02" }).getByRole("radio", { name: "Fits both cards" }).press("Space");
+    await page.getByTestId("commit-readings").click();
+    await expect(page.getByRole("main", { name: "reconstruct learning stage" })).toBeFocused();
+    await page.getByRole("radio", { name: /In these studies, learning outcomes differed/i }).press("Space");
+    await page.getByTestId("commit-bounded-claim").click();
+    await expect(page.getByRole("main", { name: "withdrawal learning stage" })).toBeFocused();
+    await page.getByTestId("acknowledge-withdrawal").click();
+    await expect(page.getByRole("main", { name: "transfer learning stage" })).toBeFocused();
   });
 
   test("force world removes assistance and accepts only one proof submission", async ({ page }, testInfo) => {
@@ -475,6 +501,7 @@ test.describe("FORGE cross-route release contract", () => {
   test("evidence world seals the desk, submits once, and emits a bounded record", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "The full evidence journey already receives cross-viewport smoke coverage.");
     const failures = capturePageFailures(page);
+    await page.setViewportSize({ width: 320, height: 844 });
     await reachEvidenceWorldProof(page);
 
     const proof = page.getByTestId("stage-transfer");
@@ -487,11 +514,16 @@ test.describe("FORGE cross-route release contract", () => {
     await page.getByTestId("submit-transfer").click();
 
     const result = page.getByTestId("stage-result");
-    await expect(result).toContainText("It is not an intelligence score, a durable-learning claim, or a population-level conclusion.");
-    for (const id of ["started-with", "tested-with", "support-used", "did-alone", "still-open", "return-proof"]) {
+    await expect(result).toContainText("Delayed retention remains untested and no return is scheduled.");
+    await expect(result.getByTestId("runtime-receipt-limits")).toContainText("honour-based");
+    await expect(result.getByTestId("runtime-receipt-limits")).toContainText("not persisted");
+    await expect(result.getByTestId("runtime-receipt-limits")).toContainText("incomplete");
+    await expect(result.getByText("Return proof", { exact: true })).toHaveCount(0);
+    for (const id of ["started-with", "tested-with", "support-used", "did-alone", "still-open", "this-attempt"]) {
       await expect(result.getByTestId(`record-${id}`)).toBeVisible();
     }
     await expect(page.getByTestId("submit-transfer")).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
     expect(failures).toEqual([]);
   });
 

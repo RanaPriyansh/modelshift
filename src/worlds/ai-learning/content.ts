@@ -6,6 +6,7 @@ import type {
   ReadingId,
   ReadingVerdict,
   StanceId,
+  TestPredictionId,
   TransferChoiceId,
   TransferOpenQuestionId,
 } from "./types";
@@ -110,6 +111,27 @@ export const PLAUSIBLE_READINGS: ReadonlyArray<{
   },
 ];
 
+/**
+ * These are intentionally predictions, not pre-evidence verdicts. The
+ * authored evidence cards remain hidden until a learner has committed one.
+ */
+export const TEST_PREDICTION_OPTIONS: ReadonlyArray<{
+  id: TestPredictionId;
+  label: string;
+  detail: string;
+}> = [
+  {
+    id: "performance-is-learning",
+    label: "The two studies will better support Reading 01.",
+    detail: "I expect assisted performance to settle the question across both studies.",
+  },
+  {
+    id: "design-changes-effect",
+    label: "The two studies will better support Reading 02.",
+    detail: "I expect the role of the tool and the measured outcome to matter.",
+  },
+];
+
 export const BOUNDED_CLAIMS: ReadonlyArray<{ id: BoundedClaimId; label: string; note: string }> = [
   {
     id: "ai-always-helps",
@@ -132,17 +154,17 @@ export const CORRECT_BOUNDED_CLAIM_ID: BoundedClaimId = "conditions-shape-outcom
 
 export const COLD_TRANSFER = {
   claim: "Highlighting always improves memory",
-  instruction: "Use only the two source briefs below. Choose the claim they jointly warrant and the uncertainty that remains.",
+  instruction: "Use only the two authored transfer fixtures below. Choose the claim they jointly warrant and the uncertainty that remains. They are not reviewed external research sources.",
   sources: [
     {
       id: "open-text",
-      label: "Source A · Open-text task",
+      label: "Authored transfer fixture A · Open-text task",
       title: "Faster finding while the passage remained visible",
       body: "During a timed fact-finding exercise, readers allowed to highlight located named details faster than readers who could not mark the text. The passage stayed open. Delayed recall was not tested.",
     },
     {
       id: "delayed-recall",
-      label: "Source B · Delayed task",
+      label: "Authored transfer fixture B · Delayed task",
       title: "A different study activity won after two days",
       body: "On a closed-book quiz two days later, retrieval practice outperformed highlight-only study. The comparison changed the study activity as well as the use of highlighting.",
     },
@@ -176,10 +198,12 @@ export const COLD_TRANSFER = {
 
 export const STAGE_STEPS = [
   { id: "encounter", label: "Commit" },
+  { id: "compiler", label: "Readings" },
   { id: "evidence", label: "Inspect" },
   { id: "difference", label: "Contrast" },
-  { id: "readings", label: "Test readings" },
+  { id: "readings", label: "Analyze" },
   { id: "reconstruct", label: "Rebuild" },
+  { id: "withdrawal", label: "Withdraw" },
   { id: "transfer", label: "Prove" },
   { id: "result", label: "Record" },
 ] as const;
@@ -189,12 +213,14 @@ export const ERROR_MESSAGES: Record<EvidenceLearningError, string> = {
   "stance-required": "Choose the stance you are starting with.",
   "confidence-invalid": "Confidence must be a whole number from 0 to 100.",
   "reason-too-short": "Give at least 24 characters so the starting reason is inspectable later.",
+  "readings-acceptance-required": "Acknowledge both possible readings before predicting the separating evidence.",
+  "test-prediction-required": "Choose the reading you predict the reviewed evidence will better support.",
   "evidence-not-reviewed": "Review both evidence cards before comparing them.",
   "difference-required": "Choose the most important structural difference.",
-  "difference-mismatch": "That difference does not explain the access structure. Compare who receives the output and whether it can give answers directly.",
+  "difference-mismatch": "That choice does not meet this authored evidence check. Revisit both source briefs and try again.",
   "readings-incomplete": "Test both readings against both cards.",
-  "readings-mismatch": "At least one verdict does not survive both cards. Separate performance during use from later unaided performance.",
+  "readings-mismatch": "Those verdicts do not meet this authored evidence check. Revisit both source briefs and try again.",
   "claim-required": "Choose the claim the two cards can jointly support.",
-  "claim-overreaches": "That claim is still universal. Keep the access conditions and measured outcomes in view.",
+  "claim-overreaches": "That claim does not meet this authored evidence check. Revisit the studied conditions and outcomes, then try again.",
   "transfer-incomplete": "Choose one warranted claim and one still-open question before the single submission.",
 };

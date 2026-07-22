@@ -16,6 +16,7 @@ import {
   validateEncounter,
   validateEvidenceReview,
   validateReadings,
+  validateTestPrediction,
   validateTransferSubmission,
 } from "./validator";
 
@@ -43,6 +44,13 @@ describe("deterministic evidence validators", () => {
   it("cannot satisfy review with duplicates or one source", () => {
     expect(validateEvidenceReview(["bastani-pnas", "bastani-pnas"])).toEqual({ ok: false, error: "evidence-not-reviewed" });
     expect(validateEvidenceReview(["bastani-pnas", "tutor-copilot"])).toEqual({ ok: true });
+  });
+
+  it("requires a pre-evidence prediction without judging which prediction is correct", () => {
+    expect(validateTestPrediction(false, null)).toEqual({ ok: false, error: "readings-acceptance-required" });
+    expect(validateTestPrediction(true, null)).toEqual({ ok: false, error: "test-prediction-required" });
+    expect(validateTestPrediction(true, "performance-is-learning")).toEqual({ ok: true });
+    expect(validateTestPrediction(true, "design-changes-effect")).toEqual({ ok: true });
   });
 
   it("accepts only the authored structural contrast", () => {
@@ -99,7 +107,8 @@ describe("cold-transfer scoring and record", () => {
       "returnProof",
     ]);
     expect(record.startedWith).toContain("65% confidence");
-    expect(record.supportUsed).toContain("none during the cold transfer");
+    expect(record.supportUsed).toContain("No instructional support was consumed");
     expect(record.returnProof).toContain("not proof of durable learning");
+    expect(record.returnProof).toContain("scheduler are not published");
   });
 });
