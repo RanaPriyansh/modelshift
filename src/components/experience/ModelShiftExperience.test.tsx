@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY } from "@/src/lib/forge-evidence";
@@ -81,6 +81,21 @@ async function completeProof(): Promise<void> {
 }
 
 describe("ModelShiftExperience runtime migration", () => {
+  it.each([
+    ["empty", {}],
+    ["incomplete", { schema_version: "1.0", source: "model" }],
+  ])("routes an %s successful API payload through authored fallback", async (_label, payload) => {
+    installMotionStubs();
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => payload })));
+    render(<ModelShiftExperience />);
+
+    await reachCompiler();
+    expect(screen.queryByTestId("stage-interpret-loading")).toBeNull();
+    expect(screen.getAllByTestId("compiler-reading")).toHaveLength(2);
+    expect(screen.getByText("Motion needs an ongoing push")).toBeTruthy();
+    expect(screen.getByText("Force changes velocity")).toBeTruthy();
+  });
+
   it("uses the runtime receipt once for model support and renders exactly two distinct compiler readings", async () => {
     installMotionStubs();
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => modelInterpretation })));
@@ -148,13 +163,50 @@ describe("ModelShiftExperience runtime migration", () => {
     const { container } = render(<><ModelShiftExperience /><ModelShiftExperience /></>);
     const ids = [...container.querySelectorAll("input[id]")].map((input) => input.id);
     const names = [...new Set([...container.querySelectorAll("input[type=radio]")].map((input) => input.getAttribute("name")))];
+    const mains = [...container.querySelectorAll("main[id]")];
+    const mainIds = mains.map((main) => main.id);
+    const skipTargets = screen.getAllByRole("link", { name: "Skip to the experiment" }).map((link) => link.getAttribute("href"));
     expect(new Set(ids).size).toBe(ids.length);
     expect(names).toHaveLength(2);
+    expect(new Set(mainIds).size).toBe(2);
+    expect(skipTargets).toEqual(mainIds.map((id) => `#${id}`));
 
     cleanup();
     render(<ModelShiftExperience />);
     fireEvent.click(screen.getByRole("radio", { name: "Gradually slows" }));
     fireEvent.click(screen.getByTestId("commit-prediction"));
     expect(document.activeElement?.tagName).toBe("MAIN");
+  });
+
+  it("aborts an outstanding interpretation on unmount and ignores its stale response", async () => {
+    installMotionStubs();
+    type MockResponse = { readonly ok: true; readonly json: () => Promise<typeof modelInterpretation> };
+    let resolveFetch!: (response: MockResponse) => void;
+    const pendingFetch = new Promise<MockResponse>((resolve) => { resolveFetch = resolve; });
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<MockResponse>>();
+    fetchMock.mockReturnValue(pendingFetch);
+    vi.stubGlobal("fetch", fetchMock);
+    const first = render(<ModelShiftExperience />);
+
+    fireEvent.click(screen.getByRole("radio", { name: "Gradually slows" }));
+    fireEvent.click(screen.getByTestId("commit-prediction"));
+    fireEvent.change(screen.getByRole("textbox", { name: /Your explanation/ }), {
+      target: { value: "A push sets the speed, so motion needs that push." },
+    });
+    fireEvent.click(screen.getByTestId("submit-explanation"));
+    await waitFor(() => expect(screen.getByTestId("stage-interpret-loading")).toBeTruthy());
+    const signal = fetchMock.mock.calls[0]?.[1]?.signal;
+
+    first.unmount();
+    expect(signal?.aborted).toBe(true);
+    render(<ModelShiftExperience />);
+    await act(async () => {
+      resolveFetch({ ok: true, json: async () => modelInterpretation });
+      await pendingFetch;
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId("stage-predict")).toBeTruthy();
+    expect(screen.queryByTestId("stage-interpret")).toBeNull();
   });
 });

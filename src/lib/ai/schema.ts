@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   ABSTAIN_REASONS,
+  FALLBACK_REASONS,
   HYPOTHESIS_IDS,
   LEVEL_1_QUESTION_IDS,
   MISSING_DISTINCTION_IDS,
@@ -41,5 +42,29 @@ export const interpretationRequestSchema = z.strictObject({
   stage: z.literal("INTERPRET"),
 });
 
+const interpretationPolicyId = z.literal("policy.force-and-motion.interpretation.v1");
+
+/**
+ * The API adds server-owned provenance to the validated model payload. Keep
+ * the client response boundary strict without adding those fields to the
+ * model-authored Structured Outputs schema above.
+ */
+export const interpretationApiResponseSchema = z.discriminatedUnion("source", [
+  interpretationSchema.extend({
+    source: z.literal("model"),
+    providerId: z.literal("openai"),
+    modelId: z.string().trim().min(1).max(120),
+    policyId: interpretationPolicyId,
+  }),
+  interpretationSchema.extend({
+    source: z.literal("fallback"),
+    fallback_reason: z.enum(FALLBACK_REASONS),
+    providerId: z.null(),
+    modelId: z.null(),
+    policyId: interpretationPolicyId,
+  }),
+]);
+
 export type ModelInterpretation = z.infer<typeof interpretationSchema>;
+export type InterpretationApiResponse = z.infer<typeof interpretationApiResponseSchema>;
 export type InterpretRequestInput = z.infer<typeof interpretationRequestSchema>;
