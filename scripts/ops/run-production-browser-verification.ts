@@ -6,7 +6,16 @@ import { pathToFileURL } from "node:url";
 
 type ServerProcess = ChildProcessByStdio<null, Readable, Readable>;
 const STARTUP_TIMEOUT_MS = 90_000;
+export const MAX_SERVER_LOG_BYTES = 16_000;
 const arg = (name: string): string | undefined => { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : undefined; };
+
+/** Keep only a rolling tail; never concatenate an unbounded server-log buffer. */
+export function appendBoundedServerLog(current: Buffer, chunk: Buffer, maximumBytes = MAX_SERVER_LOG_BYTES): Buffer {
+  if (maximumBytes <= 0) return Buffer.alloc(0);
+  if (chunk.length >= maximumBytes) return chunk.subarray(chunk.length - maximumBytes);
+  const retainedCurrent = current.subarray(Math.max(0, current.length - (maximumBytes - chunk.length)));
+  return Buffer.concat([retainedCurrent, chunk], retainedCurrent.length + chunk.length);
+}
 
 async function availablePort(): Promise<number> {
   return new Promise((resolvePort, reject) => {
@@ -42,9 +51,11 @@ async function main() {
   const serverEnv: NodeJS.ProcessEnv = { NODE_ENV: "production", NEXT_TELEMETRY_DISABLED: "1", OPENAI_API_KEY: "", OPENAI_INTERPRETATION_ENABLED: "false", OPENAI_FORGE_PLANNER_ENABLED: "false", FORGE_LESSON_STUDIO_OPENAI_ENABLED: "false", FORGE_CLOUD_ACCOUNTS_ENABLED: "false", FORGE_RELEASE_SHA: expectedSha.toLowerCase(), FORGE_BUILD_TIME: process.env.FORGE_BUILD_TIME ?? "unknown", FORGE_LOCKFILE_DIGEST: process.env.FORGE_LOCKFILE_DIGEST, FORGE_CONTENT_MANIFEST_DIGEST: process.env.FORGE_CONTENT_MANIFEST_DIGEST, FORGE_EVALUATOR_BASELINE_DIGEST: process.env.FORGE_EVALUATOR_BASELINE_DIGEST, FORGE_DATABASE_MIGRATION_IDENTITY: process.env.FORGE_DATABASE_MIGRATION_IDENTITY ?? "not_configured" };
   for (const key of ["PATH", "HOME", "TMPDIR", "PNPM_HOME", "COREPACK_HOME", "CI"]) if (process.env[key]) serverEnv[key] = process.env[key];
   const child = spawn(command, ["start", "--hostname", "127.0.0.1", "--port", String(port)], { cwd: process.cwd(), env: serverEnv, stdio: ["ignore", "pipe", "pipe"] });
-  const logs: Buffer[] = []; child.stdout.on("data", (chunk: Buffer) => logs.push(chunk)); child.stderr.on("data", (chunk: Buffer) => logs.push(chunk));
+  let logs: Buffer<ArrayBufferLike> = Buffer.alloc(0);
+  const appendLog = (chunk: Buffer) => { logs = appendBoundedServerLog(logs, chunk); };
+  child.stdout.on("data", appendLog); child.stderr.on("data", appendLog);
   try { await waitForServer(baseUrl, child); const result = await new Promise<number>((resolveExit) => { const browser = spawn(command, ["exec", "playwright", "test"], { cwd: process.cwd(), env: browserEnvironment(baseUrl), stdio: "inherit" }); browser.once("exit", (code) => resolveExit(code ?? 1)); }); if (result !== 0) process.exitCode = result; }
-  catch (error) { const bounded = Buffer.concat(logs).toString("utf8").slice(-16_000).replace(/\bsk-[A-Za-z0-9_-]{12,}\b/g, "[REDACTED_TOKEN]"); if (bounded) console.error(`bounded production server log:\n${bounded}`); throw error; }
+  catch (error) { const bounded = logs.toString("utf8").replace(/\bsk-[A-Za-z0-9_-]{12,}\b/g, "[REDACTED_TOKEN]"); if (bounded) console.error(`bounded production server log:\n${bounded}`); throw error; }
   finally { await stop(child); }
 }
 const entryUrl = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : "";

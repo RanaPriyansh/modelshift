@@ -410,7 +410,7 @@ export async function verifyDeployment(options: VerifyDeploymentOptions): Promis
     rollbackRehearsal: options.rollbackRehearsal,
     decisionName: options.decisionName,
   });
-  const identityFailures = validateReleaseIdentity(releaseIdentity, { liveEvaluationStatus: options.liveEvaluationStatus, liveEvaluationArtifactId: options.liveEvaluationArtifactId });
+  const identityFailures = validateReleaseIdentity(releaseIdentity);
   record(checks, "release_identity.contract", identityFailures.length === 0, identityFailures.length === 0 ? "ADR-006 identity tuple is complete and internally consistent" : `ADR-006 identity tuple fields are invalid: ${identityFailures.join(", ")}`);
   record(checks, "release_identity.state_bound", candidateState !== "DEPLOYMENT_BLOCKED", candidateState === "DEPLOYMENT_BLOCKED" ? "immutable deployment metadata is missing; candidate remains blocked" : `candidate state is ${candidateState}`);
   passed = checks.filter((item) => item.status === "pass").length; failed = checks.length - passed;

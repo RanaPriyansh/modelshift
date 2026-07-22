@@ -9,6 +9,33 @@ export const RELEASE_CANDIDATE_STATES = [
 
 export type ReleaseCandidateState = (typeof RELEASE_CANDIDATE_STATES)[number];
 
+/** The flattened, secret-free projection of `ReleaseHealth` used by ADR-006. */
+export const RELEASE_HEALTH_CLOUD_PROVIDER_FLAG_KEYS = [
+  "cloud_accounts_enabled",
+  "cloud_auth_configured",
+  "provider_mode",
+  "managed_openai",
+  "managed_anthropic",
+  "managed_gemini",
+  "managed_openrouter",
+  "managed_lesson_studio",
+  "managed_interpretation",
+  "managed_planner",
+] as const;
+
+export type ReleaseHealthCloudProviderFlags = {
+  cloud_accounts_enabled: boolean;
+  cloud_auth_configured: boolean;
+  provider_mode: "request_only_byok" | "managed_openai";
+  managed_openai: boolean;
+  managed_anthropic: boolean;
+  managed_gemini: boolean;
+  managed_openrouter: boolean;
+  managed_lesson_studio: boolean;
+  managed_interpretation: boolean;
+  managed_planner: boolean;
+};
+
 export type ReleaseIdentityTuple = {
   source_sha: string | "unknown";
   tested_sha: string | "unknown";
@@ -16,7 +43,7 @@ export type ReleaseIdentityTuple = {
   immutable_deployment: { id: string; url: string } | { status: "not_evaluated" };
   public_alias: { url: string; resolved_at: string } | { status: "not_evaluated" };
   build_runtime_mode: string;
-  cloud_provider_flags: Record<string, boolean | string>;
+  cloud_provider_flags: Record<string, unknown>;
   database: { status: "not_configured" } | { project: string; migration: string };
   critical_verification: {
     browser: "pass" | "fail" | "not_evaluated";
@@ -42,7 +69,7 @@ export type ReleaseIdentityOptions = {
   generatedAt: string;
   candidateState: ReleaseCandidateState;
   buildRuntimeMode: string;
-  cloudProviderFlags: Record<string, boolean | string>;
+  cloudProviderFlags: Record<string, unknown>;
   retainedArtifactIds?: readonly string[];
   deploymentId?: string;
   deploymentUrl?: string;
@@ -60,48 +87,222 @@ export type ReleaseIdentityOptions = {
   decisionName?: string;
 };
 
+/**
+ * Terminal authority is intentionally separate from the serialised tuple. A
+ * principal-controlled release service must derive it from retained evidence;
+ * a report/CLI string is not evidence of a release decision.
+ */
+export type ReleaseIdentityVerificationAuthority = {
+  immutable_deployment: { id: string; url: string };
+  public_alias: { url: string; resolved_at: string; resolved_deployment_id: string };
+  production_verification_artifact_id: string;
+  live_evaluation: { status: "pass"; artifact_id: string };
+  rollback_rehearsal: { deployment_id: string; sha: string; artifact_id: string };
+  named_release_decision: { name: string; decided_at: string };
+};
+
 export type ReleaseIdentityValidationOptions = {
-  liveEvaluationStatus?: "not_evaluated" | "pass" | "fail";
-  liveEvaluationArtifactId?: string;
-  rollbackRehearsalArtifactId?: string;
+  verificationAuthority?: ReleaseIdentityVerificationAuthority;
 };
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/i;
-const ISO_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+const ARTIFACT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/;
+const DEPLOYMENT_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{2,127}$/;
+const DECISION_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ._;:-]{2,159}$/;
+const DATABASE_IDENTITY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
+const VERIFICATION_STATUSES = new Set(["pass", "fail", "not_evaluated"]);
+const TERMINAL_STATES = new Set<ReleaseCandidateState>(["PRODUCTION_VERIFIED", "ROLLED_BACK"]);
+const SECRET_LIKE = /(?:api[_-]?key|secret|token|password|authorization|bearer|^sk-[A-Za-z0-9_-]{8,}$)/i;
 
-export function validateReleaseIdentity(identity: ReleaseIdentityTuple & { candidate_state: string }, options: ReleaseIdentityValidationOptions = {}): string[] {
-  const failures: string[] = [];
+type RecordValue = Record<string, unknown>;
+type Deployment = { id: string; url: string };
+type Alias = { url: string; resolved_at: string };
+
+function isRecord(value: unknown): value is RecordValue {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isCanonicalTimestamp(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) return false;
+  const timestamp = new Date(value);
+  return !Number.isNaN(timestamp.getTime()) && timestamp.toISOString() === value;
+}
+
+function canonicalHttpsOrigin(value: unknown): string | null {
+  if (typeof value !== "string" || value.length > 2_048 || SECRET_LIKE.test(value)) return null;
   try {
-  if (!identity || typeof identity !== "object") return ["identity"];
-  if (!RELEASE_CANDIDATE_STATES.includes(identity.candidate_state as ReleaseCandidateState)) failures.push("candidate_state");
-  if (!SHA_PATTERN.test(identity.source_sha) || !SHA_PATTERN.test(identity.tested_sha) || identity.source_sha.toLowerCase() !== identity.tested_sha.toLowerCase()) failures.push("source_tested_sha");
-  if (identity.retained_artifact_ids.length === 0 || identity.retained_artifact_ids.some((id) => !/^[A-Za-z0-9._/-]{1,200}$/.test(id))) failures.push("retained_artifact_ids");
-  if (!("status" in identity.immutable_deployment) && (!identity.immutable_deployment.id || !/^https:\/\//.test(identity.immutable_deployment.url))) failures.push("immutable_deployment");
-  if (!("status" in identity.public_alias) && (!/^https:\/\//.test(identity.public_alias.url) || !ISO_PATTERN.test(identity.public_alias.resolved_at))) failures.push("public_alias");
-  if (!identity.build_runtime_mode) failures.push("build_runtime_mode");
-  if (!identity.cloud_provider_flags || Object.keys(identity.cloud_provider_flags).length === 0) failures.push("cloud_provider_flags");
-  if (!("status" in identity.database) && (!identity.database.project || !identity.database.migration)) failures.push("database");
-  if (!["pass", "fail", "not_evaluated"].includes(identity.critical_verification.browser) || !["pass", "fail", "not_evaluated"].includes(identity.critical_verification.csp) || !["pass", "fail", "not_evaluated"].includes(identity.critical_verification.console) || !["pass", "fail", "not_evaluated"].includes(identity.critical_verification.network)) failures.push("critical_verification");
-  if (!identity.rollback.deployment_id || !identity.rollback.sha || !["pass", "fail", "not_evaluated"].includes(identity.rollback.rehearsal)) failures.push("rollback");
-  if (!identity.named_release_decision.name || !ISO_PATTERN.test(identity.named_release_decision.decided_at)) failures.push("named_release_decision");
-  const state = identity.candidate_state as ReleaseCandidateState;
-  const hasDeployment = !("status" in identity.immutable_deployment);
-  const hasAlias = !("status" in identity.public_alias);
-  const critical = identity.critical_verification;
-  if (state === "DEPLOYED_CANDIDATE" && (!hasDeployment || critical.browser === "not_evaluated" || critical.csp === "not_evaluated" || critical.network === "not_evaluated")) failures.push("deployed_candidate_evidence");
-  if (state === "PRODUCTION_VERIFIED") {
-    const explicitDecision = identity.named_release_decision.name !== "Packet D worker handoff; promotion not authorized";
-    const validRollbackSha = SHA_PATTERN.test(identity.rollback.sha);
-    const validLiveArtifact = Boolean(options.liveEvaluationArtifactId && /^[A-Za-z0-9._/-]{1,200}$/.test(options.liveEvaluationArtifactId) && identity.retained_artifact_ids.includes(options.liveEvaluationArtifactId));
-    if (!hasDeployment || !hasAlias || critical.browser !== "pass" || critical.csp !== "pass" || critical.console !== "pass" || critical.network !== "pass" || !SHA_PATTERN.test(identity.source_sha) || !validRollbackSha || identity.rollback.rehearsal !== "pass" || options.liveEvaluationStatus !== "pass" || !validLiveArtifact || !explicitDecision) failures.push("production_verified_evidence");
+    const url = new URL(value);
+    if (url.protocol !== "https:" || !url.hostname || url.username || url.password || url.search || url.hash || url.pathname !== "/") return null;
+    return url.toString();
+  } catch {
+    return null;
   }
-  if (state === "ROLLED_BACK") {
-    const rollbackTarget = hasDeployment && hasAlias && "url" in identity.public_alias && "url" in identity.immutable_deployment && identity.public_alias.url === identity.immutable_deployment.url;
-    const rollbackArtifact = Boolean(options.rollbackRehearsalArtifactId && /^[A-Za-z0-9._/-]{1,200}$/.test(options.rollbackRehearsalArtifactId) && identity.retained_artifact_ids.includes(options.rollbackRehearsalArtifactId));
-    if (!rollbackTarget || critical.browser !== "pass" || critical.csp !== "pass" || critical.console !== "pass" || critical.network !== "pass" || !SHA_PATTERN.test(identity.rollback.sha) || identity.rollback.rehearsal !== "pass" || !rollbackArtifact) failures.push("rolled_back_evidence");
+}
+
+function canonicalOrOriginal(value: string | undefined): string | undefined {
+  if (!value) return value;
+  return canonicalHttpsOrigin(value) ?? value;
+}
+
+function validArtifactId(value: unknown): value is string {
+  return typeof value === "string" && ARTIFACT_ID_PATTERN.test(value) && !value.includes("//") && !value.split("/").includes("..") && !SECRET_LIKE.test(value);
+}
+
+function validDeploymentId(value: unknown): value is string {
+  return typeof value === "string" && DEPLOYMENT_ID_PATTERN.test(value) && !SECRET_LIKE.test(value) && value !== "not_evaluated";
+}
+
+function validDecisionName(value: unknown): value is string {
+  return typeof value === "string" && DECISION_NAME_PATTERN.test(value) && !SECRET_LIKE.test(value) && !["unknown", "not_evaluated"].includes(value.toLowerCase());
+}
+
+function validVerificationStatus(value: unknown): value is "pass" | "fail" | "not_evaluated" {
+  return typeof value === "string" && VERIFICATION_STATUSES.has(value);
+}
+
+function isNotEvaluated(value: unknown): value is { status: "not_evaluated" } {
+  return isRecord(value) && Object.keys(value).length === 1 && value.status === "not_evaluated";
+}
+
+function isNotConfigured(value: unknown): value is { status: "not_configured" } {
+  return isRecord(value) && Object.keys(value).length === 1 && value.status === "not_configured";
+}
+
+function parseDeployment(value: unknown): Deployment | null {
+  if (!isRecord(value) || Object.keys(value).sort().join(",") !== "id,url" || !validDeploymentId(value.id)) return null;
+  const url = canonicalHttpsOrigin(value.url);
+  return url ? { id: value.id, url } : null;
+}
+
+function parseAlias(value: unknown): Alias | null {
+  if (!isRecord(value) || Object.keys(value).sort().join(",") !== "resolved_at,url" || !isCanonicalTimestamp(value.resolved_at)) return null;
+  const url = canonicalHttpsOrigin(value.url);
+  return url ? { url, resolved_at: value.resolved_at } : null;
+}
+
+function sameDeployment(left: Deployment | null, right: Deployment | null): boolean {
+  return Boolean(left && right && left.id === right.id && left.url === right.url);
+}
+
+function sameAlias(left: Alias | null, right: Alias | null): boolean {
+  return Boolean(left && right && left.url === right.url && left.resolved_at === right.resolved_at);
+}
+
+function flagsAreExactProjection(value: unknown): value is ReleaseHealthCloudProviderFlags {
+  if (!isRecord(value) || Object.keys(value).sort().join(",") !== [...RELEASE_HEALTH_CLOUD_PROVIDER_FLAG_KEYS].sort().join(",")) return false;
+  if (Object.keys(value).some((key) => SECRET_LIKE.test(key))) return false;
+  const booleans = RELEASE_HEALTH_CLOUD_PROVIDER_FLAG_KEYS.filter((key) => key !== "provider_mode");
+  if (booleans.some((key) => typeof value[key] !== "boolean")) return false;
+  if (value.provider_mode !== "request_only_byok" && value.provider_mode !== "managed_openai") return false;
+  const managedOpenAi = value.managed_openai === true;
+  const hasManagedSurface = value.managed_lesson_studio === true || value.managed_interpretation === true || value.managed_planner === true;
+  return managedOpenAi === hasManagedSurface
+    && value.provider_mode === (managedOpenAi ? "managed_openai" : "request_only_byok")
+    && value.managed_anthropic === false
+    && value.managed_gemini === false
+    && value.managed_openrouter === false
+    && value.cloud_accounts_enabled === false
+    && value.cloud_auth_configured === false;
+}
+
+function validProductionRuntime(value: unknown, flags: ReleaseHealthCloudProviderFlags | null): boolean {
+  return Boolean(flags && (value === "fallback_only" || value === "managed_openai") && value === (flags.managed_openai ? "managed_openai" : "fallback_only"));
+}
+
+function retained(identity: RecordValue, artifactId: unknown): artifactId is string {
+  return validArtifactId(artifactId)
+    && Array.isArray(identity.retained_artifact_ids)
+    && identity.retained_artifact_ids.includes(artifactId);
+}
+
+function parseAuthorityAlias(value: unknown): { alias: Alias; resolved_deployment_id: string } | null {
+  if (!isRecord(value) || Object.keys(value).sort().join(",") !== "resolved_at,resolved_deployment_id,url" || !validDeploymentId(value.resolved_deployment_id)) return null;
+  const alias = parseAlias({ url: value.url, resolved_at: value.resolved_at });
+  return alias ? { alias, resolved_deployment_id: value.resolved_deployment_id } : null;
+}
+
+function terminalAuthorityValid(authority: unknown): authority is ReleaseIdentityVerificationAuthority {
+  if (!isRecord(authority) || Object.keys(authority).sort().join(",") !== "immutable_deployment,live_evaluation,named_release_decision,production_verification_artifact_id,public_alias,rollback_rehearsal") return false;
+  const deployment = parseDeployment(authority.immutable_deployment);
+  const alias = parseAuthorityAlias(authority.public_alias);
+  const rollback = isRecord(authority.rollback_rehearsal) ? authority.rollback_rehearsal : null;
+  const decision = isRecord(authority.named_release_decision) ? authority.named_release_decision : null;
+  const live = isRecord(authority.live_evaluation) ? authority.live_evaluation : null;
+  return Boolean(deployment && alias && validArtifactId(authority.production_verification_artifact_id)
+    && live?.status === "pass" && validArtifactId(live.artifact_id)
+    && rollback && validDeploymentId(rollback.deployment_id) && typeof rollback.sha === "string" && SHA_PATTERN.test(rollback.sha) && validArtifactId(rollback.artifact_id)
+    && decision && validDecisionName(decision.name) && isCanonicalTimestamp(decision.decided_at));
+}
+
+function terminalEvidenceMatches(identity: RecordValue, authority: ReleaseIdentityVerificationAuthority, state: ReleaseCandidateState): boolean {
+  const deployment = parseDeployment(identity.immutable_deployment);
+  const alias = parseAlias(identity.public_alias);
+  const authorityDeployment = parseDeployment(authority.immutable_deployment);
+  const authorityAlias = parseAuthorityAlias(authority.public_alias);
+  const critical = isRecord(identity.critical_verification) ? identity.critical_verification : null;
+  const rollback = isRecord(identity.rollback) ? identity.rollback : null;
+  const decision = isRecord(identity.named_release_decision) ? identity.named_release_decision : null;
+  const isRolledBack = state === "ROLLED_BACK";
+  const aliasTarget = isRolledBack ? rollback?.deployment_id : deployment?.id;
+  if (!deployment || !alias || !authorityDeployment || !authorityAlias || !critical || !rollback || !decision || !Array.isArray(critical.packet_artifact_ids) || typeof rollback.sha !== "string") return false;
+  return sameDeployment(deployment, authorityDeployment)
+    && sameAlias(alias, authorityAlias.alias)
+    && authorityAlias.resolved_deployment_id === aliasTarget
+    && critical.browser === "pass"
+    && critical.csp === "pass"
+    && critical.console === "pass"
+    && critical.network === "pass"
+    && retained(identity, authority.production_verification_artifact_id)
+    && critical.packet_artifact_ids.includes(authority.production_verification_artifact_id)
+    && authority.live_evaluation.status === "pass"
+    && retained(identity, authority.live_evaluation.artifact_id)
+    && validDeploymentId(rollback.deployment_id)
+    && SHA_PATTERN.test(rollback.sha)
+    && rollback.rehearsal === "pass"
+    && rollback.deployment_id === authority.rollback_rehearsal.deployment_id
+    && rollback.sha.toLowerCase() === authority.rollback_rehearsal.sha.toLowerCase()
+    && retained(identity, authority.rollback_rehearsal.artifact_id)
+    && decision.name === authority.named_release_decision.name
+    && decision.decided_at === authority.named_release_decision.decided_at
+    && (!isRolledBack || (deployment.id === rollback.deployment_id && deployment.url === authorityDeployment.url));
+}
+
+export function validateReleaseIdentity(identity: unknown, options: ReleaseIdentityValidationOptions = {}): string[] {
+  const failures: string[] = [];
+  if (!isRecord(identity)) return ["identity"];
+  const state = typeof identity.candidate_state === "string" && RELEASE_CANDIDATE_STATES.includes(identity.candidate_state as ReleaseCandidateState)
+    ? identity.candidate_state as ReleaseCandidateState
+    : null;
+  if (!state) failures.push("candidate_state");
+  const sourceSha = typeof identity.source_sha === "string" ? identity.source_sha : null;
+  const testedSha = typeof identity.tested_sha === "string" ? identity.tested_sha : null;
+  if (!sourceSha || !testedSha || !SHA_PATTERN.test(sourceSha) || !SHA_PATTERN.test(testedSha) || sourceSha.toLowerCase() !== testedSha.toLowerCase()) failures.push("source_tested_sha");
+  const artifactIds = Array.isArray(identity.retained_artifact_ids) ? identity.retained_artifact_ids : null;
+  if (!artifactIds || artifactIds.length === 0 || artifactIds.some((id) => !validArtifactId(id)) || new Set(artifactIds).size !== artifactIds.length) failures.push("retained_artifact_ids");
+
+  const deployment = parseDeployment(identity.immutable_deployment);
+  const hasDeployment = deployment !== null;
+  if (!hasDeployment && !isNotEvaluated(identity.immutable_deployment)) failures.push("immutable_deployment");
+  const alias = parseAlias(identity.public_alias);
+  const hasAlias = alias !== null;
+  if (!hasAlias && !isNotEvaluated(identity.public_alias)) failures.push("public_alias");
+  if (typeof identity.build_runtime_mode !== "string" || identity.build_runtime_mode.length === 0 || identity.build_runtime_mode.length > 80 || SECRET_LIKE.test(identity.build_runtime_mode)) failures.push("build_runtime_mode");
+  const flags = flagsAreExactProjection(identity.cloud_provider_flags) ? identity.cloud_provider_flags : null;
+  if (!flags) failures.push("cloud_provider_flags");
+  if (!isNotConfigured(identity.database) && (!isRecord(identity.database) || Object.keys(identity.database).sort().join(",") !== "migration,project" || typeof identity.database.project !== "string" || typeof identity.database.migration !== "string" || !DATABASE_IDENTITY_PATTERN.test(identity.database.project) || !DATABASE_IDENTITY_PATTERN.test(identity.database.migration))) failures.push("database");
+  const critical = isRecord(identity.critical_verification) ? identity.critical_verification : null;
+  if (!critical || !validVerificationStatus(critical.browser) || !validVerificationStatus(critical.csp) || !validVerificationStatus(critical.console) || !validVerificationStatus(critical.network) || !Array.isArray(critical.packet_artifact_ids) || critical.packet_artifact_ids.some((id) => !retained(identity, id))) failures.push("critical_verification");
+  const rollback = isRecord(identity.rollback) ? identity.rollback : null;
+  if (!rollback || !validVerificationStatus(rollback.rehearsal) || !((rollback.deployment_id === "not_evaluated") || validDeploymentId(rollback.deployment_id)) || !((rollback.sha === "not_evaluated") || (typeof rollback.sha === "string" && SHA_PATTERN.test(rollback.sha)))) failures.push("rollback");
+  const decision = isRecord(identity.named_release_decision) ? identity.named_release_decision : null;
+  if (!isRecord(decision) || !validDecisionName(decision.name) || !isCanonicalTimestamp(decision.decided_at)) failures.push("named_release_decision");
+
+  if (state === "DEPLOYED_CANDIDATE" && (!hasDeployment || critical?.browser === "not_evaluated" || critical?.csp === "not_evaluated" || critical?.network === "not_evaluated" || !critical)) failures.push("deployed_candidate_evidence");
+  if (state && TERMINAL_STATES.has(state)) {
+    if (!validProductionRuntime(identity.build_runtime_mode, flags)) failures.push("terminal_runtime_mode");
+    if (!terminalAuthorityValid(options.verificationAuthority) || !terminalEvidenceMatches(identity, options.verificationAuthority, state)) failures.push(state === "PRODUCTION_VERIFIED" ? "production_verified_evidence" : "rolled_back_evidence");
   }
-  if (state === "PUSHED" && (hasDeployment || hasAlias || critical.browser !== "not_evaluated" || critical.csp !== "not_evaluated" || critical.console !== "not_evaluated" || critical.network !== "not_evaluated")) failures.push("pushed_evidence_scope");
-  } catch { failures.push("missing_fields"); }
+  if (state === "PUSHED" && (hasDeployment || hasAlias || !critical || critical.browser !== "not_evaluated" || critical.csp !== "not_evaluated" || critical.console !== "not_evaluated" || critical.network !== "not_evaluated")) failures.push("pushed_evidence_scope");
   return [...new Set(failures)];
 }
 
@@ -113,10 +314,10 @@ export function buildReleaseIdentity(options: ReleaseIdentityOptions): ReleaseId
     tested_sha: options.testedSha,
     retained_artifact_ids: artifacts,
     immutable_deployment: options.deploymentId && options.deploymentUrl
-      ? { id: options.deploymentId, url: options.deploymentUrl }
+      ? { id: options.deploymentId, url: canonicalOrOriginal(options.deploymentUrl) ?? options.deploymentUrl }
       : { status: "not_evaluated" },
     public_alias: options.aliasUrl && options.aliasResolvedAt
-      ? { url: options.aliasUrl, resolved_at: options.aliasResolvedAt }
+      ? { url: canonicalOrOriginal(options.aliasUrl) ?? options.aliasUrl, resolved_at: options.aliasResolvedAt }
       : { status: "not_evaluated" },
     build_runtime_mode: options.buildRuntimeMode,
     cloud_provider_flags: { ...options.cloudProviderFlags },

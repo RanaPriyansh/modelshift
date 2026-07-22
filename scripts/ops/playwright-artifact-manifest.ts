@@ -31,9 +31,30 @@ async function files(root: string, excludedDirectory: string, current = root): P
   return output;
 }
 
+function isStrictChild(parent: string, child: string): boolean {
+  const path = relative(parent, child);
+  return path.length > 0 && !path.startsWith("..") && !path.includes("../") && !path.startsWith("/");
+}
+
+function overlaps(left: string, right: string): boolean {
+  return left === right || isStrictChild(left, right) || isStrictChild(right, left);
+}
+
+/** Validate every destructive/output boundary before touching the stage path. */
+export function validateArtifactPaths(rootDirectory: string, outputPath: string, stageDirectory: string): void {
+  const root = resolve(rootDirectory);
+  const output = resolve(outputPath);
+  const stage = resolve(stageDirectory);
+  if (!isStrictChild(root, stage)) throw new Error("--stage-dir must be strictly contained by --root and cannot equal, contain, or sit outside it");
+  if (!isStrictChild(root, output)) throw new Error("--output must be strictly contained by --root");
+  if (overlaps(stage, output)) throw new Error("--stage-dir and --output must not overlap");
+}
+
 export async function writePlaywrightArtifactManifest(rootDirectory: string, testedSha: string, outputPath: string, retainedArtifactId: string, stageDirectory: string): Promise<PlaywrightArtifactManifest> {
   const root = resolve(rootDirectory);
   const stage = resolve(stageDirectory);
+  const output = resolve(outputPath);
+  validateArtifactPaths(root, output, stage);
   let candidates: string[] = [];
   try { candidates = await files(root, stage); } catch { /* no failures produced */ }
   const artifacts: Artifact[] = [];
@@ -57,8 +78,8 @@ export async function writePlaywrightArtifactManifest(rootDirectory: string, tes
     total += bytes;
   }
   const manifest: PlaywrightArtifactManifest = { schema_version: "1.0", report_kind: "bounded_playwright_failure_artifacts", tested_sha: testedSha, retained_artifact_ids: [retainedArtifactId], artifacts, excluded_count: excludedCount, truncated };
-  await mkdir(resolve(outputPath, ".."), { recursive: true });
-  await writeFile(resolve(outputPath), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  await mkdir(resolve(output, ".."), { recursive: true });
+  await writeFile(output, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   return manifest;
 }
 

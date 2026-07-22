@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -29,5 +29,27 @@ describe("bounded Playwright artifact staging", () => {
     const second = await writePlaywrightArtifactManifest(root, SHA, output, "playwright-failure-2", stage);
     expect(second.retained_artifact_ids).toEqual(["playwright-failure-2"]);
     expect((await readdir(stage)).some((name) => name === "stale.png")).toBe(false);
+  });
+
+  it.each(["equal", "outside", "ancestor", "output-overlap"])("rejects a %s stage path before it can remove sentinel evidence", async (caseName) => {
+    const container = await mkdtemp(resolve(tmpdir(), "forge-artifact-boundary-")); temporaryDirectories.push(container);
+    const root = resolve(container, "test-results"); await mkdir(root);
+    const output = resolve(root, "release-ops", "manifest.json");
+    const sentinel = resolve(container, `${caseName}-sentinel.txt`); await writeFile(sentinel, "preserve me");
+    const stage = caseName === "equal"
+      ? root
+      : caseName === "outside"
+        ? resolve(container, "outside-stage")
+        : caseName === "ancestor"
+          ? container
+          : resolve(root, "release-ops");
+    if (caseName === "outside") {
+      await mkdir(stage);
+      await writeFile(resolve(stage, "outside-sentinel.txt"), "outside evidence");
+    }
+
+    await expect(writePlaywrightArtifactManifest(root, SHA, output, "playwright-failure-1", stage)).rejects.toThrow(/stage-dir|overlap/);
+    await expect(readFile(sentinel, "utf8")).resolves.toBe("preserve me");
+    if (caseName === "outside") await expect(readFile(resolve(stage, "outside-sentinel.txt"), "utf8")).resolves.toBe("outside evidence");
   });
 });
