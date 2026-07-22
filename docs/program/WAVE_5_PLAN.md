@@ -102,11 +102,11 @@ Owned files:
 
 Required behavior:
 
-1. Accept only a structurally valid receipt bound to an exact released built-in World package, content version, runtime protocol, validator, task family, source tuple, and runtime-binding digest; require the receipt digest, retained content-manifest digest, and fresh current-binding digest to agree.
-2. Re-run the released validator and require exact canonical validation code, outcome, and ordered criteria/evidence equality; derive, never trust, disposition, closed-catalog assistance provenance, access provenance, remains-untested claims, task identity, and event ordering.
+1. Accept only a structurally valid receipt bound to an exact released built-in World package, content version, runtime protocol, validator, task family, source tuple, package-integrity hash, and runtime-binding digest; require the receipt values, retained content-manifest values, and fresh current package/binding digests to agree.
+2. Re-run the released validator and require exact canonical validation code, outcome, and ordered criteria/evidence equality; derive, never trust, disposition, closed-catalog assistance provenance, access provenance, remains-untested claims, event ordering, and stable task identity from the released validator plus exact task code rather than the outcome.
 3. Emit an exact v2 chain with stable aggregate identity, correlation, causation, aggregate versions, idempotency keys, integrity hashes, and deterministic event references.
 4. Represent current authority as `honour_based`; a proof nonce stays absent until a server-owned attempt exists.
-5. Reject forged pass/disposition/support, stale package/runtime identity, lossy task-code fallback, duplicate or reordered stages, source-status inflation, proof contamination, malformed canonical validation, raw prose, and mixed v1/v2 replay. Solution-revealing or out-of-policy support cannot produce demonstrated evidence.
+5. Reject forged pass/disposition/support, stale package/runtime identity, lossy or outcome-dependent task identity, duplicate or reordered support/stages, source-status inflation, proof contamination, malformed canonical validation, raw prose, and mixed v1/v2 replay. Solution-revealing or out-of-policy support cannot produce demonstrated evidence; permitted pre-proof model interpretation remains factual assistance rather than automatic contamination.
 6. Replay the result through `ForgeEventJournal` and the ADR-001 projector; no event sequence is accepted only because individual event schemas pass.
 7. Cover all four released Worlds with pass, fail, malformed, duplicate, contamination, and reset cases.
 
