@@ -48,12 +48,13 @@ function copyReleaseDigestInputs(): string {
 }
 
 describe("retained content package identity", () => {
-  it("retains exactly every released built-in package and only runtime-bound package digests", () => {
+  it("matches every released built-in package and assigns digests only to runtime-bound packs", () => {
     const retained = manifest();
     assertRetainedContentPackageManifest(retained);
     assertPrimarySourceContentPackageManifest(retained);
 
-    expect(retained.packages.map(({ id, version, route, runtime_binding_digest }) => ({ id, version, route, runtime_binding_digest }))).toEqual(
+    const byId = <Entry extends { id: string }>(left: Entry, right: Entry) => left.id.localeCompare(right.id);
+    expect(retained.packages.map(({ id, version, route, runtime_binding_digest }) => ({ id, version, route, runtime_binding_digest })).sort(byId)).toEqual(
       BUILT_IN_WORLD_PACKS
         .filter((pack) => pack.release.status === "released")
         .map((pack) => ({
@@ -61,11 +62,16 @@ describe("retained content package identity", () => {
           version: pack.manifest.version,
           route: pack.manifest.route,
           runtime_binding_digest: "runtime" in pack ? runtimeBindingDigest(pack.runtime) : undefined,
-        })),
+        }))
+        .sort(byId),
     );
   });
 
   it.each([
+    ["missing schema version", (candidate: Manifest) => { delete (candidate as unknown as Record<string, unknown>).schema_version; }],
+    ["wrong schema version", (candidate: Manifest) => { (candidate as unknown as Record<string, unknown>).schema_version = "2.0"; }],
+    ["non-string schema version", (candidate: Manifest) => { (candidate as unknown as Record<string, unknown>).schema_version = 1; }],
+    ["unsupported root field", (candidate: Manifest) => { (candidate as unknown as Record<string, unknown>).unexpected = true; }],
     ["missing ID", (candidate: Manifest) => { candidate.packages = candidate.packages.filter((entry) => entry.id !== "world.proportional-reasoning"); }],
     ["extra ID", (candidate: Manifest) => { candidate.packages.push({ id: "world.unreviewed", version: "1.0.0", route: "/learn/unreviewed" }); }],
     ["duplicate ID", (candidate: Manifest) => { candidate.packages.push({ ...packageById(candidate, "world.proportional-reasoning"), route: "/learn/duplicate" }); }],

@@ -54,7 +54,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function parseManifest(manifest: unknown): readonly RetainedContentEntry[] {
-  if (!isRecord(manifest) || !Array.isArray(manifest.packages)) fail("packages must be an array.");
+  if (!isRecord(manifest)) fail("root must be an object.");
+  const rootKeys = Object.keys(manifest).sort();
+  const allowedRootKeys = ["packages", "schema_version"];
+  if (rootKeys.length !== allowedRootKeys.length || rootKeys.some((key, index) => key !== allowedRootKeys[index])) {
+    fail("root must contain only schema_version and packages.");
+  }
+  if (manifest.schema_version !== "1.0") fail("schema_version must be the string 1.0.");
+  if (!Array.isArray(manifest.packages)) fail("packages must be an array.");
 
   return manifest.packages.map((entry, index) => {
     if (!isRecord(entry)) fail(`package at index ${index} must be an object.`);
