@@ -1,11 +1,12 @@
 import type { WorldRuntimeBinding } from "../contracts";
+import { deepFreeze } from "../deep-freeze";
 
 /**
  * Binds the existing authored source-corroboration package to the shared
  * runtime. Its PNAS and arXiv metadata is legacy metadata only: it does not
  * create a source snapshot, locator, claim, rights, or review authority.
  */
-export const SOURCE_CORROBORATION_RUNTIME_BINDING = {
+export const SOURCE_CORROBORATION_RUNTIME_BINDING = deepFreeze({
   protocolVersion: "1.1.0",
   semanticStages: [
     "encounter",
@@ -121,4 +122,4 @@ export const SOURCE_CORROBORATION_RUNTIME_BINDING = {
       provenanceStatus: "legacy_metadata_only",
     },
   ],
-} as const satisfies WorldRuntimeBinding;
+} as const satisfies WorldRuntimeBinding);
