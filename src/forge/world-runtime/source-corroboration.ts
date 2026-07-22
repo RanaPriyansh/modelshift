@@ -1,5 +1,9 @@
-import { sourceCorroborationTransferValidator, SOURCE_CORROBORATION_WORLD } from "../worlds";
-import type { WorldRuntimeActionKind, WorldRuntimeStage } from "../contracts";
+import { SOURCE_CORROBORATION_WORLD } from "../worlds";
+import type {
+  DeterministicValidationResult,
+  WorldRuntimeActionKind,
+  WorldRuntimeStage,
+} from "../contracts";
 import {
   evidenceLearningReducer,
   initialEvidenceLearningState,
@@ -9,7 +13,6 @@ import {
 } from "../../worlds/ai-learning";
 import type {
   CanonicalSupportEvent,
-  CanonicalValidatorProjection,
   DomainTransition,
   RuntimePhase,
   WorldRuntimeAdapter,
@@ -30,22 +33,6 @@ const STAGE_MAP: Record<EvidenceLearningState["stage"], WorldRuntimeStage> = {
   transfer: "cold_transfer",
   result: "bounded_result",
 };
-
-export function projectSourceCorroborationTransferValidation(input: unknown): CanonicalValidatorProjection {
-  const result = sourceCorroborationTransferValidator.validate(input);
-  if (result.code === "invalid.transfer-input") {
-    return {
-      outcome: "not_scored",
-      criteria: ["The transfer payload did not match the authored two-decision source-corroboration task."],
-    };
-  }
-  return {
-    outcome: result.code === "transfer.held" ? "pass" : "fail",
-    // The only scored criteria are the two authored selections returned by
-    // the fixed source-corroboration validator.
-    criteria: result.evidence,
-  };
-}
 
 function toRuntimeProof(state: EvidenceLearningState): SourceCorroborationRuntimeProof | null {
   return state.transferSubmission ? { submission: state.transferSubmission } : null;
@@ -107,11 +94,14 @@ export const sourceCorroborationWorldRuntimeAdapter: WorldRuntimeAdapter<
     return null;
   },
   proof: toRuntimeProof,
-  projectValidator(proof: SourceCorroborationRuntimeProof) {
-    return projectSourceCorroborationTransferValidation({
+  validatorInput(proof: SourceCorroborationRuntimeProof) {
+    return {
       choiceId: proof.submission.choiceId,
       openQuestionId: proof.submission.openQuestionId,
-    });
+    };
+  },
+  validatorCriteria(result: DeterministicValidationResult) {
+    return result.evidence;
   },
   remainsUntested() {
     return [

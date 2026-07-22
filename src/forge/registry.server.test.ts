@@ -83,7 +83,7 @@ describe("TrustedWorldRegistry", () => {
     expect(Object.isFrozen(trustedWorldRegistry.list())).toBe(true);
   });
 
-  it("keeps Force and Primary Source runtime bindings under their existing package identities", () => {
+  it("keeps every released runtime binding under its accepted package identity", () => {
     expect(trustedWorldRegistry.getPack("world.force-and-motion")).toMatchObject({
       manifest: { version: "1.0.1" },
       release: { contentVersion: "1.0.0" },
@@ -96,6 +96,40 @@ describe("TrustedWorldRegistry", () => {
         validatorId: "validator.force-motion-transfer.v1",
         accessAllowed: true,
       },
+    });
+    expect(trustedWorldRegistry.getPack("world.proportional-reasoning")).toMatchObject({
+      manifest: { version: "1.0.2" },
+      release: { contentVersion: "1.0.0" },
+    });
+    expect(trustedWorldRegistry.getRuntimeBinding("world.proportional-reasoning")).toMatchObject({
+      protocolVersion: "1.0.2",
+      evidence: { receiptSchemaVersion: "1.0.2" },
+    });
+    expect(trustedWorldRegistry.getPack("world.source-corroboration")).toMatchObject({
+      manifest: { version: "1.0.1" },
+      release: { contentVersion: "1.0.0" },
+    });
+    expect(trustedWorldRegistry.getRuntimeBinding("world.source-corroboration")).toMatchObject({
+      protocolVersion: "1.0.2",
+      evidence: { receiptSchemaVersion: "1.0.2" },
+      proof: {
+        proofClaimId: "proof.ai-literacy.independent-corroboration",
+        validatorId: "validator.source-corroboration-transfer.v1",
+        taskFamilyId: "task-family.source-corroboration.cold-transfer.v1",
+        accessAllowed: true,
+      },
+      sourceBindings: [
+        {
+          domainSourceRef: "source.bastani-pnas.genai-learning-2025",
+          sourceItemId: "source.bastani-pnas.genai-learning-2025",
+          provenanceStatus: "legacy_metadata_only",
+        },
+        {
+          domainSourceRef: "source.tutor-copilot.arxiv-2024",
+          sourceItemId: "source.tutor-copilot.arxiv-2024",
+          provenanceStatus: "legacy_metadata_only",
+        },
+      ],
     });
     expect(trustedWorldRegistry.getPack("world.primary-source-reasoning")).toMatchObject({
       manifest: { version: "1.0.2" },

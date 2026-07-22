@@ -5,11 +5,11 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../lib/forge-evidence", () => ({
-  recordWorldProof: vi.fn(),
+vi.mock("../../../lib/forge-evidence/record-world-runtime-receipt", () => ({
+  recordWorldRuntimeReceipt: vi.fn(),
 }));
 
-import { recordWorldProof } from "../../../lib/forge-evidence";
+import { recordWorldRuntimeReceipt } from "../../../lib/forge-evidence/record-world-runtime-receipt";
 import { EvidenceLearningWorld } from "./EvidenceLearningWorld";
 
 afterEach(() => {
@@ -85,7 +85,7 @@ describe("EvidenceLearningWorld", () => {
     expect(onRuntimeReceipt).not.toHaveBeenCalled();
   });
 
-  it("uses runtime-only state, writes one receipt-derived compatibility record, and keeps raw prose out of the receipt", async () => {
+  it("uses runtime-only state, projects one canonical receipt, and keeps raw prose out of the receipt", async () => {
     const onRuntimeReceipt = vi.fn();
     const { rerender } = render(<EvidenceLearningWorld onRuntimeReceipt={onRuntimeReceipt} />);
     reachTransfer({ acknowledge: false });
@@ -113,13 +113,8 @@ describe("EvidenceLearningWorld", () => {
     expect(screen.getByTestId("record-this-attempt")).toBeInTheDocument();
 
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
-    expect(recordWorldProof).toHaveBeenCalledTimes(1);
-    expect(recordWorldProof).toHaveBeenCalledWith({
-      capabilityId: "capability.ai-literacy.source-corroboration",
-      conditionId: "proof.ai-literacy.independent-corroboration",
-      sourceRefId: "world.source-corroboration",
-      outcome: "proved",
-    });
+    expect(recordWorldRuntimeReceipt).toHaveBeenCalledTimes(1);
+    expect(recordWorldRuntimeReceipt).toHaveBeenCalledWith(onRuntimeReceipt.mock.calls[0]?.[0]);
     expect(onRuntimeReceipt.mock.calls[0]?.[0]).toMatchObject({
       cognitiveSupport: [],
       accessAccommodations: [],
@@ -127,10 +122,10 @@ describe("EvidenceLearningWorld", () => {
       sourceProvenanceStatus: "incomplete",
     });
     expect(JSON.stringify(onRuntimeReceipt.mock.calls[0]?.[0])).not.toContain("The role, access conditions");
-    expect(JSON.stringify(vi.mocked(recordWorldProof).mock.calls)).not.toContain("The role, access conditions");
+    expect(JSON.stringify(vi.mocked(recordWorldRuntimeReceipt).mock.calls)).not.toContain("The role, access conditions");
 
     rerender(<EvidenceLearningWorld onRuntimeReceipt={onRuntimeReceipt} />);
-    expect(recordWorldProof).toHaveBeenCalledTimes(1);
+    expect(recordWorldRuntimeReceipt).toHaveBeenCalledTimes(1);
     expect(onRuntimeReceipt).toHaveBeenCalledTimes(1);
   });
 

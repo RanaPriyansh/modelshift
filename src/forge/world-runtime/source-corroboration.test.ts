@@ -6,11 +6,15 @@ import {
   type WorldRuntimeSession,
 } from "./runtime";
 import {
-  projectSourceCorroborationTransferValidation,
   sourceCorroborationWorldRuntimeAdapter,
   type SourceCorroborationRuntimeProof,
 } from "./source-corroboration";
-import type { EvidenceLearningAction, EvidenceLearningState } from "../../worlds/ai-learning";
+import type {
+  EvidenceLearningAction,
+  EvidenceLearningState,
+  TransferChoiceId,
+  TransferOpenQuestionId,
+} from "../../worlds/ai-learning";
 
 type SourceCorroborationRuntimeSession = WorldRuntimeSession<
   EvidenceLearningState,
@@ -50,6 +54,16 @@ function completeToProof() {
   ];
   for (const event of events) runtime = advance(runtime, event);
   return runtime;
+}
+
+function submitTransfer(
+  choiceId: TransferChoiceId,
+  openQuestionId: TransferOpenQuestionId,
+) {
+  let runtime = completeToProof();
+  runtime = advance(runtime, { type: "SET_TRANSFER_CHOICE", choiceId });
+  runtime = advance(runtime, { type: "SET_TRANSFER_OPEN_QUESTION", openQuestionId });
+  return advance(runtime, { type: "SUBMIT_TRANSFER" });
 }
 
 describe("source corroboration World runtime adapter", () => {
@@ -112,7 +126,10 @@ describe("source corroboration World runtime adapter", () => {
     ]);
     expect(runtime.receipt).toMatchObject({
       world: { id: "world.source-corroboration", version: "1.0.1", contentVersion: "1.0.0" },
-      protocol: { version: "1.0.1" },
+      schemaVersion: "1.0.2",
+      attemptId: expect.stringMatching(/^attempt\./),
+      recordedAt: expect.any(String),
+      protocol: { version: "1.0.2" },
       authority: { proofAuthority: "honour_based", persistence: "not_persisted", isDurable: false },
       validator: {
         outcome: "pass",
@@ -160,25 +177,36 @@ describe("source corroboration World runtime adapter", () => {
     expect(runtime.cognitiveSupport).toEqual([]);
   });
 
-  it("projects held as pass, partial and wrong as fail, and malformed as not scored", () => {
-    expect(projectSourceCorroborationTransferValidation({
-      choiceId: "bounded-measures",
-      openQuestionId: "held-constant",
-    })).toEqual({
+  it("lets the canonical validator derive held as pass and every valid miss as fail", () => {
+    expect(submitTransfer("bounded-measures", "held-constant").receipt?.validator).toMatchObject({
       outcome: "pass",
+      disposition: "demonstrated",
       criteria: ["choice:bounded-measures", "open-question:held-constant"],
     });
-    expect(projectSourceCorroborationTransferValidation({
-      choiceId: "bounded-measures",
-      openQuestionId: "color-choice",
-    }).outcome).toBe("fail");
-    expect(projectSourceCorroborationTransferValidation({
-      choiceId: "always-harms",
-      openQuestionId: "reader-preference",
-    }).outcome).toBe("fail");
-    expect(projectSourceCorroborationTransferValidation({})).toEqual({
-      outcome: "not_scored",
-      criteria: ["The transfer payload did not match the authored two-decision source-corroboration task."],
+    expect(submitTransfer("bounded-measures", "color-choice").receipt?.validator).toMatchObject({
+      outcome: "fail",
+      disposition: "not_demonstrated",
+      criteria: ["choice:bounded-measures", "open-question:color-choice"],
+    });
+    expect(submitTransfer("always-harms", "reader-preference").receipt?.validator).toMatchObject({
+      outcome: "fail",
+      disposition: "not_demonstrated",
+      criteria: ["choice:always-harms", "open-question:reader-preference"],
+    });
+  });
+
+  it("rejects an incomplete domain submission without emitting a receipt", () => {
+    const runtime = completeToProof();
+    const rejected = dispatchWorldRuntimeCommand(sourceCorroborationWorldRuntimeAdapter, runtime, {
+      kind: "domain",
+      event: { type: "SUBMIT_TRANSFER" },
+    });
+
+    expect(rejected).toMatchObject({
+      accepted: false,
+      reason: "domain_rejected",
+      domainReason: "transfer-incomplete",
+      session: { phase: "proof", receipt: null },
     });
   });
 
@@ -204,6 +232,7 @@ describe("source corroboration World runtime adapter", () => {
     runtime = advance(runtime, { type: "SET_TRANSFER_OPEN_QUESTION", openQuestionId: "reader-preference" });
     runtime = advance(runtime, { type: "SUBMIT_TRANSFER" });
     expect(runtime.receipt).toMatchObject({ validator: { outcome: "fail", disposition: "not_demonstrated" } });
+    const completedAttemptId = runtime.attemptId;
 
     const reset = dispatchWorldRuntimeCommand(sourceCorroborationWorldRuntimeAdapter, runtime, {
       kind: "domain",
@@ -213,5 +242,7 @@ describe("source corroboration World runtime adapter", () => {
       accepted: true,
       session: { receipt: null, proof: null, semanticTrace: ["encounter"], state: { stage: "encounter" } },
     });
+    expect(reset.session.attemptId).toMatch(/^attempt\./);
+    expect(reset.session.attemptId).not.toBe(completedAttemptId);
   });
 });
