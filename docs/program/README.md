@@ -1,5 +1,7 @@
 # FORGE Program Control Room
 
+**Active implementation plan:** [`WAVE_4_PLAN.md`](./WAVE_4_PLAN.md) — migrate Force and Motion plus AI & Learning, then require one all-World conformance and exact release gate. This is planning state, not release evidence.
+
 **Authority:** principal architecture/review task  
 **Canonical repository:** `/Users/Priyansh/Documents/codex-buildweek/education`  
 **Product baseline before program control:** `846158a492039b14381eae3c2fbb1f309d049ea5`
