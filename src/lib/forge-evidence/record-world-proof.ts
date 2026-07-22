@@ -1,6 +1,11 @@
 import { createReturnProofSchedule } from "./ledger";
 import { createLocalStorageEvidenceLedgerAdapter } from "./local-storage";
-import { createEvidenceLedgerStore, type EvidenceLedgerMutationResult } from "./store";
+import type { EvidenceLedger } from "./schema";
+import {
+  createEvidenceLedgerStore,
+  type EvidenceLedgerMutationResult,
+  type EvidenceLedgerReadStatus,
+} from "./store";
 
 export interface RecordWorldProofInput {
   capabilityId: string;
@@ -15,20 +20,41 @@ export interface RecordWorldProofInput {
   returnIntervalsDays?: readonly number[];
 }
 
+export type RecordWorldProofResult =
+  | EvidenceLedgerMutationResult
+  | {
+      ok: false;
+      ledger: EvidenceLedger;
+      reason: "invalid_return_schedule";
+      readStatus: EvidenceLedgerReadStatus;
+    };
+
 /**
  * Records only bounded proof metadata. Learner text, identity, confidence,
  * inferred traits, and raw model output are deliberately outside this API.
  */
-export function recordWorldProof(input: RecordWorldProofInput): EvidenceLedgerMutationResult {
+export function recordWorldProof(input: RecordWorldProofInput): RecordWorldProofResult {
   const recordedAt = input.recordedAt ?? new Date().toISOString();
-  const schedule =
-    input.outcome === "proved"
-      ? createReturnProofSchedule(recordedAt, input.returnIntervalsDays ?? [7, 30])
-      : null;
+  const store = createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter());
+  let returnSchedule = null;
+
+  if (input.returnIntervalsDays !== undefined) {
+    const schedule = createReturnProofSchedule(recordedAt, input.returnIntervalsDays);
+    if (!schedule.ok) {
+      const current = store.read();
+      return {
+        ok: false,
+        ledger: current.ledger,
+        reason: "invalid_return_schedule",
+        readStatus: current.status,
+      };
+    }
+    if (input.outcome === "proved") returnSchedule = schedule.schedule;
+  }
+
   const suffix = typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-  const store = createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter());
 
   return store.append({
     id: `proof.${suffix}`,
@@ -43,6 +69,6 @@ export function recordWorldProof(input: RecordWorldProofInput): EvidenceLedgerMu
     },
     assistance: input.assistance ?? [],
     sharing: { status: "private", updatedAt: recordedAt },
-    returnSchedule: schedule?.ok ? schedule.schedule : null,
+    returnSchedule,
   });
 }
