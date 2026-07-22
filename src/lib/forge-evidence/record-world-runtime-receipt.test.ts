@@ -15,6 +15,7 @@ import { createLocalStorageEvidenceLedgerAdapter } from "./local-storage";
 import {
   projectRuntimeSupportAssistanceKind,
   recordWorldRuntimeReceipt,
+  type WorldRuntimeReceiptRecording,
 } from "./record-world-runtime-receipt";
 import { createEvidenceLedgerStore } from "./store";
 
@@ -42,6 +43,12 @@ const CORE_TRACE_WITHOUT_SUPPORT = [
   "encounter", "commit_model", "interpret_two_readings", "name_disagreement", "commit_test_prediction",
   "run_separating_experience", "reconstruct", "withdraw_instructional_ai", "cold_transfer", "bounded_result",
 ] as const;
+
+const PROPORTIONAL_PASS_INPUT = {
+  choiceId: "32_km",
+  explanation: "12 is four times 3, so the real distance scales from 8 to 32 by the same factor.",
+  confidence: 85,
+} as const;
 
 function receipt(overrides: Partial<BoundedLocalWorldRuntimeReceipt> = {}): BoundedLocalWorldRuntimeReceipt {
   return {
@@ -77,7 +84,7 @@ function receipt(overrides: Partial<BoundedLocalWorldRuntimeReceipt> = {}): Boun
       code: "transfer.demonstrated",
       outcome: "pass",
       disposition: "demonstrated",
-      criteria: ["answer:32_km"],
+      criteria: ["answer:32_km", "mechanism-signals:scale_factor"],
     },
     cognitiveSupport: [
       {
@@ -113,7 +120,14 @@ function receipt(overrides: Partial<BoundedLocalWorldRuntimeReceipt> = {}): Boun
   };
 }
 
-function completedSourceCorroborationReceipt(): BoundedLocalWorldRuntimeReceipt {
+function recording(
+  receivedReceipt: BoundedLocalWorldRuntimeReceipt = receipt(),
+  validatorInput: unknown = PROPORTIONAL_PASS_INPUT,
+): WorldRuntimeReceiptRecording {
+  return { receipt: receivedReceipt, validatorInput };
+}
+
+function completedSourceCorroborationRecording(): WorldRuntimeReceiptRecording {
   let session = createWorldRuntimeSession(
     sourceCorroborationWorldRuntimeAdapter,
     "attempt.source-corroboration-projector",
@@ -149,8 +163,11 @@ function completedSourceCorroborationReceipt(): BoundedLocalWorldRuntimeReceipt 
     if (!dispatched.accepted) throw new Error(`Source Corroboration fixture rejected: ${dispatched.reason}`);
     session = dispatched.session;
   }
-  if (!session.receipt) throw new Error("Source Corroboration fixture did not emit a receipt.");
-  return session.receipt;
+  if (!session.receipt || !session.proof) throw new Error("Source Corroboration fixture did not emit a receipt.");
+  return {
+    receipt: session.receipt,
+    validatorInput: sourceCorroborationWorldRuntimeAdapter.validatorInput(session.proof),
+  };
 }
 
 afterEach(() => vi.unstubAllGlobals());
@@ -160,7 +177,7 @@ describe("recordWorldRuntimeReceipt", () => {
     const storage = new MemoryStorage();
     vi.stubGlobal("window", { localStorage: storage });
 
-    const first = recordWorldRuntimeReceipt(receipt());
+    const first = recordWorldRuntimeReceipt(recording());
     expect(first.ok).toBe(true);
     const persisted = createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger;
     expect(persisted.entries).toEqual([
@@ -177,7 +194,7 @@ describe("recordWorldRuntimeReceipt", () => {
     ]);
     expect(JSON.stringify(persisted)).not.toMatch(/raw|prompt|explanation|confidence|gpt-5/i);
 
-    const duplicate = recordWorldRuntimeReceipt(receipt());
+    const duplicate = recordWorldRuntimeReceipt(recording());
     expect(duplicate).toMatchObject({ ok: false, reason: "duplicate_entry" });
     expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(1);
   });
@@ -185,7 +202,8 @@ describe("recordWorldRuntimeReceipt", () => {
   it("accepts one completed Source Corroboration receipt with its exact released identity and source tuple", () => {
     const storage = new MemoryStorage();
     vi.stubGlobal("window", { localStorage: storage });
-    const completedReceipt = completedSourceCorroborationReceipt();
+    const completedRecording = completedSourceCorroborationRecording();
+    const completedReceipt = completedRecording.receipt;
 
     expect(completedReceipt).toMatchObject({
       schemaVersion: "1.1.0",
@@ -237,7 +255,7 @@ describe("recordWorldRuntimeReceipt", () => {
     ]);
     expect(JSON.stringify(completedReceipt)).not.toContain("The role, access conditions");
 
-    expect(recordWorldRuntimeReceipt(completedReceipt)).toMatchObject({ ok: true });
+    expect(recordWorldRuntimeReceipt(completedRecording)).toMatchObject({ ok: true });
     const persisted = createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger;
     expect(persisted.entries).toEqual([
       expect.objectContaining({
@@ -250,34 +268,32 @@ describe("recordWorldRuntimeReceipt", () => {
       }),
     ]);
     expect(JSON.stringify(persisted)).not.toContain("The role, access conditions");
-    expect(recordWorldRuntimeReceipt(completedReceipt)).toMatchObject({ ok: false, reason: "duplicate_entry" });
+    expect(recordWorldRuntimeReceipt(completedRecording)).toMatchObject({ ok: false, reason: "duplicate_entry" });
     expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(1);
   });
 
-  it("bounds every non-demonstrated disposition to a non-strengthened local outcome", () => {
+  it("projects a canonically revalidated failure without strengthening it", () => {
     const storage = new MemoryStorage();
     vi.stubGlobal("window", { localStorage: storage });
-    const cases = [
-      ["not_demonstrated", "fail", "not_proved"],
-      ["not_evaluated", "not_scored", "open_question"],
-      ["open_question", "inconclusive", "open_question"],
-    ] as const;
-    for (const [disposition, outcome, expected] of cases) {
-      const result = recordWorldRuntimeReceipt(receipt({
-        attemptId: `attempt.receipt-${disposition}`,
-        validator: {
-          id: "validator.proportional-reasoning-transfer.v1",
-          version: "1.0.0",
-          code: "invalid.transfer-input",
-          outcome,
-          disposition,
-          criteria: [],
-        },
-      }));
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-      expect(result.ledger.entries.at(-1)?.proof.outcome).toBe(expected);
-    }
+    const failInput = {
+      choiceId: "24_km",
+      explanation: "I used the same relationship idea, but selected 24 kilometres for this map.",
+      confidence: 60,
+    } as const;
+    const result = recordWorldRuntimeReceipt(recording(receipt({
+      attemptId: "attempt.receipt-not-demonstrated",
+      validator: {
+        id: "validator.proportional-reasoning-transfer.v1",
+        version: "1.0.0",
+        code: "transfer.not-demonstrated",
+        outcome: "fail",
+        disposition: "not_demonstrated",
+        criteria: ["answer:24_km", "mechanism-signals:same_relationship"],
+      },
+    }), failInput));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.ledger.entries.at(-1)?.proof.outcome).toBe("not_proved");
   });
 
   it("rejects forged receipt shapes and raw identifier additions without appending", () => {
@@ -287,12 +303,12 @@ describe("recordWorldRuntimeReceipt", () => {
       ...receipt(),
       rawResponse: "learner explanation or provider secret",
     } as unknown as BoundedLocalWorldRuntimeReceipt;
-    expect(recordWorldRuntimeReceipt(forged)).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
+    expect(recordWorldRuntimeReceipt(recording(forged))).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
     const rawIdentifier = receipt({
       attemptId: "attempt.raw-identifier",
       world: { ...receipt().world, id: "world.learner\nsecret" },
     });
-    expect(recordWorldRuntimeReceipt(rawIdentifier)).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
+    expect(recordWorldRuntimeReceipt(recording(rawIdentifier))).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
     expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(0);
   });
 
@@ -302,7 +318,7 @@ describe("recordWorldRuntimeReceipt", () => {
     const forgedLimitations = receipt({
       remainsUntested: ["Trust asserted by an adapter or provider."],
     });
-    expect(recordWorldRuntimeReceipt(forgedLimitations)).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
+    expect(recordWorldRuntimeReceipt(recording(forgedLimitations))).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
     expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(0);
   });
 
@@ -326,7 +342,7 @@ describe("recordWorldRuntimeReceipt", () => {
     ];
 
     for (const forgedReceipt of forgedReceipts) {
-      expect(recordWorldRuntimeReceipt(forgedReceipt)).toMatchObject({
+      expect(recordWorldRuntimeReceipt(recording(forgedReceipt))).toMatchObject({
         ok: false,
         reason: "invalid_runtime_receipt",
       });
@@ -369,7 +385,7 @@ describe("recordWorldRuntimeReceipt", () => {
     ];
 
     for (const substitutedIdentity of substitutedIdentities) {
-      expect(recordWorldRuntimeReceipt(substitutedIdentity)).toMatchObject({
+      expect(recordWorldRuntimeReceipt(recording(substitutedIdentity))).toMatchObject({
         ok: false,
         reason: "invalid_runtime_receipt",
       });
@@ -404,7 +420,7 @@ describe("recordWorldRuntimeReceipt", () => {
       cognitiveSupport: [{ ...receipt().cognitiveSupport[0]!, stage }],
     });
 
-    expect(recordWorldRuntimeReceipt(protectedStageSupport)).toMatchObject({
+    expect(recordWorldRuntimeReceipt(recording(protectedStageSupport))).toMatchObject({
       ok: false,
       reason: "invalid_runtime_receipt",
     });
@@ -414,7 +430,7 @@ describe("recordWorldRuntimeReceipt", () => {
   it("accepts governed support only once in its canonical pre-reconstruction trace slot", () => {
     const storage = new MemoryStorage();
     vi.stubGlobal("window", { localStorage: storage });
-    expect(recordWorldRuntimeReceipt(receipt({ attemptId: "attempt.valid-support-trace" }))).toMatchObject({ ok: true });
+    expect(recordWorldRuntimeReceipt(recording(receipt({ attemptId: "attempt.valid-support-trace" })))).toMatchObject({ ok: true });
 
     const adversarialTraces = [
       // Support after proof starts.
@@ -449,13 +465,13 @@ describe("recordWorldRuntimeReceipt", () => {
     ] as const;
 
     for (const [index, semanticTrace] of adversarialTraces.entries()) {
-      expect(recordWorldRuntimeReceipt(receipt({
+      expect(recordWorldRuntimeReceipt(recording(receipt({
         attemptId: `attempt.invalid-trace-${index}`,
         protocol: {
           ...receipt().protocol,
           semanticTrace,
         },
-      }))).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
+      })))).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
     }
     expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(1);
   });

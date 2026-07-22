@@ -26,6 +26,7 @@ import type { BoundedLocalWorldRuntimeReceipt } from "../../../forge/world-runti
 import styles from "./ArgumentEvidenceWorld.module.css";
 
 export interface ArgumentEvidenceWorldProps {
+  /** Internal unavailable-world observation only; never enters the public ledger projector. */
   readonly onRuntimeReceipt?: (receipt: BoundedLocalWorldRuntimeReceipt) => void;
 }
 

@@ -27,7 +27,10 @@ import type {
   TransferChoiceId,
   TransferOpenQuestionId,
 } from "../../../worlds/ai-learning";
-import { recordWorldRuntimeReceipt } from "../../../lib/forge-evidence/record-world-runtime-receipt";
+import {
+  recordWorldRuntimeReceipt,
+  type WorldRuntimeReceiptRecording,
+} from "../../../lib/forge-evidence/record-world-runtime-receipt";
 import {
   createWorldRuntimeSession,
   dispatchWorldRuntimeCommand,
@@ -669,7 +672,7 @@ function ResultStage({
 
 export interface EvidenceLearningWorldProps {
   /** Receipts are local and bounded; callers must not treat this as durability. */
-  readonly onRuntimeReceipt?: (receipt: BoundedLocalWorldRuntimeReceipt) => void;
+  readonly onRuntimeReceipt?: (recording: WorldRuntimeReceiptRecording) => void;
 }
 
 export function EvidenceLearningWorld({ onRuntimeReceipt }: EvidenceLearningWorldProps = {}) {
@@ -704,11 +707,13 @@ export function EvidenceLearningWorld({ onRuntimeReceipt }: EvidenceLearningWorl
 
   useEffect(() => {
     const receipt = runtime.receipt;
-    if (!receipt || emittedReceiptRef.current === receipt) return;
+    const proof = runtime.proof;
+    if (!receipt || !proof || emittedReceiptRef.current === receipt) return;
     emittedReceiptRef.current = receipt;
-    recordWorldRuntimeReceipt(receipt);
-    onRuntimeReceipt?.(receipt);
-  }, [onRuntimeReceipt, runtime.receipt]);
+    const recording = { receipt, validatorInput: sourceCorroborationWorldRuntimeAdapter.validatorInput(proof) };
+    recordWorldRuntimeReceipt(recording);
+    onRuntimeReceipt?.(recording);
+  }, [onRuntimeReceipt, runtime.proof, runtime.receipt]);
 
   return (
     <section

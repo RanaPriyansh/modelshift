@@ -33,11 +33,11 @@ export const INTERNAL_CANONICAL_DETERMINISTIC_VALIDATORS = Object.freeze([
 const internalValidatorsById = new Map<string, CanonicalDeterministicValidatorRegistration>(
   INTERNAL_CANONICAL_DETERMINISTIC_VALIDATORS.map((validator) => [validator.id, validator === argumentEvidenceTransferValidator
     ? ARGUMENT_EVIDENCE_VALIDATOR_REGISTRATION
-    : {
+    : Object.freeze({
         validator,
         inputContractVersion: "1.0.0",
         outputContractVersion: "1.0.0",
-      }]),
+      })]),
 );
 
 export function getInternalCanonicalDeterministicValidatorRegistration(

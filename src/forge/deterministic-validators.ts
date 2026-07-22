@@ -155,11 +155,11 @@ export interface CanonicalDeterministicValidatorRegistration {
 }
 
 const canonicalValidatorsById = new Map<string, CanonicalDeterministicValidatorRegistration>(
-  CANONICAL_DETERMINISTIC_VALIDATORS.map((validator) => [validator.id, {
+  CANONICAL_DETERMINISTIC_VALIDATORS.map((validator) => [validator.id, Object.freeze({
     validator,
     inputContractVersion: "1.0.0",
     outputContractVersion: "1.0.0",
-  }]),
+  })]),
 );
 
 export function getCanonicalDeterministicValidator(id: string): DeterministicValidator | null {

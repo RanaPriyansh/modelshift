@@ -115,14 +115,14 @@ describe("EvidenceLearningWorld", () => {
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
     expect(recordWorldRuntimeReceipt).toHaveBeenCalledTimes(1);
     expect(recordWorldRuntimeReceipt).toHaveBeenCalledWith(onRuntimeReceipt.mock.calls[0]?.[0]);
-    expect(onRuntimeReceipt.mock.calls[0]?.[0]).toMatchObject({
+    expect(onRuntimeReceipt.mock.calls[0]?.[0].receipt).toMatchObject({
       cognitiveSupport: [],
       accessAccommodations: [],
       authority: { proofAuthority: "honour_based", persistence: "not_persisted", isDurable: false },
       sourceProvenanceStatus: "incomplete",
     });
-    expect(JSON.stringify(onRuntimeReceipt.mock.calls[0]?.[0])).not.toContain("The role, access conditions");
-    expect(JSON.stringify(vi.mocked(recordWorldRuntimeReceipt).mock.calls)).not.toContain("The role, access conditions");
+    expect(JSON.stringify(onRuntimeReceipt.mock.calls[0]?.[0].receipt)).not.toContain("The role, access conditions");
+    expect(JSON.stringify(onRuntimeReceipt.mock.calls[0]?.[0].validatorInput)).toContain("bounded-measures");
 
     rerender(<EvidenceLearningWorld onRuntimeReceipt={onRuntimeReceipt} />);
     expect(recordWorldRuntimeReceipt).toHaveBeenCalledTimes(1);
