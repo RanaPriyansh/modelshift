@@ -12,7 +12,7 @@ This slice is a read-only operations boundary. It never deploys, changes an alia
 | lint/typecheck/unit | `pnpm lint`, `pnpm typecheck`, `pnpm test` | `FAIL` |
 | offline regression | `pnpm eval` and sanitized evaluation report | `FAIL` |
 | production build | `pnpm build` with `FORGE_RELEASE_SHA` and `FORGE_BUILD_TIME` | `FAIL` |
-| browser contract | `pnpm test:e2e` | `FAIL` |
+| browser contract | built artifact via `run-production-browser-verification.ts` (`next start`, unique port, full relevant Playwright suite) | `FAIL` |
 | local artifact verification | `run-local-production-verification.ts` | `FAIL` |
 
 `NOT_EVALUATED` is never promoted to `PASS`. The offline comparator is deterministic evidence only; live model quality, learner outcomes, consent, and production readiness remain outside this slice.
@@ -21,14 +21,37 @@ Reports contain schema/version/SHA, bounded aggregate metrics, check IDs, and st
 
 ## Runtime identity and privacy contract
 
-`GET /api/health` is dynamic and uncached. Its allowlisted payload includes `app_name`, exact `release_sha`, `build_time`, `runtime_mode`, cloud flags, device/evidence mode, and managed-provider flags. It returns booleans and allowlisted enum values only; it never returns credentials or learner state.
+`GET /api/health` is dynamic and uncached. Its allowlisted payload includes `app_name`, exact `release_sha`, `build_time`, runtime mode, independent managed-surface flags (Lesson Studio, interpretation, planner), aggregate provider state, cloud flags, device/evidence mode, and safe retained-artifact digests. It returns booleans, digests, and allowlisted enum values only; it never returns credentials or learner state. Any managed surface requires its own explicit enable flag plus a server-side key; disabled switches or missing/malformed keys report false/unknown.
 
 The current cost-controlled baseline must report:
 
 - `runtime_mode: fallback_only` and `provider_mode: request_only_byok`;
 - `cloud_accounts_enabled: false`, `cloud_auth_configured: false`;
 - `device_profiles: device_only`, `learner_evidence_sync: disabled`; and
-- all managed provider flags false.
+- all managed provider and managed-surface flags false.
+
+## ADR-006 release identity and candidate states
+
+Every generated deployment report carries the exact ADR-006 tuple, with missing fields represented explicitly rather than inferred:
+
+```text
+source SHA
+tested SHA and retained artifact IDs
+immutable deployment ID and URL
+public alias and alias-resolution timestamp
+build/runtime mode
+cloud/provider feature flags without secrets
+database project and migration identity, or explicit not configured
+critical browser/CSP/console/network verification packet
+rollback deployment/SHA and rehearsal result
+named release decision and time
+```
+
+The only candidate states are `BUILT_LOCAL`, `PUSHED`, `DEPLOYMENT_BLOCKED`, `DEPLOYED_CANDIDATE`, `PRODUCTION_VERIFIED`, and `ROLLED_BACK`. The verifier defaults local runs to `BUILT_LOCAL` and inspected remote origins to `DEPLOYED_CANDIDATE`; it never upgrades a candidate to `PRODUCTION_VERIFIED` or changes an alias.
+
+CI derives the build timestamp from the exact commit timestamp and injects lockfile, content-manifest, evaluator-baseline, and database-state metadata before `next build`. These digests are retained-artifact metadata, not additional ADR-006 tuple fields. The checked-in `scripts/ops/deployment-target-policy.ts` is the only workflow target authority; dispatch callers select a target ID and cannot redefine its URL or host. DNS is checked for each bounded request, private/link-local/metadata destinations are rejected, DNS rebinding fails closed, and redirects are never followed. Browser failure collection runs under `always()`: only bounded PNG/WebM/ZIP evidence plus a SHA-bound manifest may be retained, never response bodies, server dumps, secrets, or learner content.
+
+The offline gate reports `PRE_RELEASE_QUALITY_PASS` or `PRE_RELEASE_QUALITY_FAIL`. `release_closure_status` remains `NOT_EVALUATED` until an approved credentialed live evaluation supplies a passing, retained artifact; missing or failed live evidence cannot become `PRODUCTION_VERIFIED`. The live gate is intentionally documented but not executed by this lane and must not spend credits implicitly.
 
 Request-only BYOK remains a per-request boundary. A managed provider or cloud-auth change requires a separately reviewed contract and an updated verifier allowlist.
 
@@ -40,9 +63,12 @@ Example (read-only; do not run against an unapproved origin):
 
 ```bash
 pnpm exec tsx scripts/ops/deployment-verifier.ts \
-  --base-url https://<approved-origin> \
-  --allowed-host <approved-host> \
+  --target-id forge_learning_os_project \
   --expected-sha <40-character-git-sha> \
+  --expected-lockfile-digest <sha256> \
+  --expected-content-manifest-digest <sha256> \
+  --expected-evaluator-baseline-digest <sha256> \
+  --expected-database-migration-identity not_configured \
   --output-dir test-results/release-ops
 ```
 

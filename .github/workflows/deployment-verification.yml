@@ -3,14 +3,12 @@ name: FORGE deployment verification (read-only)
 on:
   workflow_dispatch:
     inputs:
-      target_origin:
-        description: HTTPS origin to inspect; no deployment or alias mutation is performed
+      target_id:
+        description: Checked-in deployment target ID; the caller cannot provide an origin or host
         required: true
-        type: string
-      allowed_host:
-        description: Exact host allowlist entry for target_origin
-        required: true
-        type: string
+        type: choice
+        options:
+          - forge_learning_os_project
       expected_sha:
         description: Full 40-character Git SHA expected at the inspected origin
         required: true
@@ -29,8 +27,9 @@ jobs:
       OPENAI_API_KEY: ""
       FORGE_CLOUD_ACCOUNTS_ENABLED: "false"
       FORGE_LESSON_STUDIO_OPENAI_ENABLED: "false"
-      TARGET_ORIGIN: ${{ inputs.target_origin }}
-      ALLOWED_HOST: ${{ inputs.allowed_host }}
+      OPENAI_INTERPRETATION_ENABLED: "false"
+      OPENAI_FORGE_PLANNER_ENABLED: "false"
+      TARGET_ID: ${{ inputs.target_id }}
       EXPECTED_RELEASE_SHA: ${{ inputs.expected_sha }}
     steps:
       - name: Check out verifier source
@@ -49,8 +48,21 @@ jobs:
           package-manager-cache: false
       - name: Install locked verifier dependencies
         run: pnpm install --frozen-lockfile
+      - name: Compute checked-in release metadata
+        run: |
+          printf 'FORGE_LOCKFILE_DIGEST=%s\n' "$(shasum -a 256 pnpm-lock.yaml | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          printf 'FORGE_CONTENT_MANIFEST_DIGEST=%s\n' "$(shasum -a 256 scripts/ops/content-package-manifest.json | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          printf 'FORGE_EVALUATOR_BASELINE_DIGEST=%s\n' "$(shasum -a 256 scripts/ops/evaluation-baseline.json | cut -d' ' -f1)" >> "$GITHUB_ENV"
       - name: Run bounded same-origin GET verifier
-        run: pnpm exec tsx scripts/ops/deployment-verifier.ts --base-url "$TARGET_ORIGIN" --allowed-host "$ALLOWED_HOST" --expected-sha "$EXPECTED_RELEASE_SHA" --output-dir test-results/release-ops
+        run: >-
+          pnpm exec tsx scripts/ops/deployment-verifier.ts
+          --target-id "$TARGET_ID"
+          --expected-sha "$EXPECTED_RELEASE_SHA"
+          --expected-lockfile-digest "$FORGE_LOCKFILE_DIGEST"
+          --expected-content-manifest-digest "$FORGE_CONTENT_MANIFEST_DIGEST"
+          --expected-evaluator-baseline-digest "$FORGE_EVALUATOR_BASELINE_DIGEST"
+          --expected-database-migration-identity not_configured
+          --output-dir test-results/release-ops
       - name: Upload sanitized verification report
         if: always() && hashFiles('test-results/release-ops/*') != ''
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
