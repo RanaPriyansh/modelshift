@@ -1,12 +1,16 @@
 import { z } from "zod";
 
 import {
+  ADR001_FORGE_EVENT_SCHEMA_VERSION,
   FORGE_EVENT_SCHEMA_VERSION,
+  FORGE_EVENT_SCHEMA_VERSIONS,
   canonicalJson,
   forgeEventSchema,
   parseForgeEvent,
   verifyForgeEventIntegrity,
   type ForgeEvent,
+  type ForgeEventSchemaVersion,
+  type ForgeV2Event,
 } from "./events";
 
 export const FORGE_EVENT_JOURNAL_FORMAT = "forge-event-journal" as const;
@@ -50,6 +54,39 @@ export interface WorldRunProjection {
   }>;
 }
 
+export interface Adr001WorldRunProjection {
+  readonly schema_version: 2;
+  readonly aggregate_type: "world_run";
+  readonly aggregate_id: string;
+  readonly version: number;
+  readonly correlation_id: string;
+  readonly last_event_id: string;
+  readonly status: WorldRunStatus;
+  readonly world_id: string;
+  readonly world_version: string;
+  readonly content_version: string;
+  readonly package_integrity_hash: string;
+  readonly validator_id: string;
+  readonly validator_version: string;
+  readonly proof_authority: "honour_based" | "server_enforced" | "human_observed";
+  readonly assistance_event_ids: readonly string[];
+  readonly proof_event_id: string | null;
+  readonly evidence: {
+    readonly event_id: string;
+    readonly evidence_id: string;
+    readonly disposition: "demonstrated" | "not_demonstrated" | "open_question" | "not_evaluated" | "invalidated";
+    readonly validator_outcome: "pass" | "fail" | "inconclusive" | "not_scored";
+  } | null;
+  readonly completion_event_id: string | null;
+  readonly corrected_event_ids: readonly string[];
+  readonly corrections: ReadonlyArray<{
+    readonly event_id: string;
+    readonly supersedes_event_id: string;
+    readonly correction_id: string;
+    readonly replacement_disposition: "demonstrated" | "not_demonstrated" | "open_question" | "not_evaluated" | "invalidated";
+  }>;
+}
+
 export interface WorldPackageProjection {
   readonly aggregate_type: "world_package";
   readonly aggregate_id: string;
@@ -67,7 +104,7 @@ export interface WorldPackageProjection {
   readonly successor_bundle_integrity_hash: string | null;
 }
 
-export type ForgeAggregateProjection = WorldRunProjection | WorldPackageProjection;
+export type ForgeAggregateProjection = WorldRunProjection | Adr001WorldRunProjection | WorldPackageProjection;
 
 export const FORGE_JOURNAL_REJECTION_CODES = [
   "invalid_event",
@@ -80,6 +117,7 @@ export const FORGE_JOURNAL_REJECTION_CODES = [
   "forbidden_transition",
   "aggregate_identity_mismatch",
   "invalid_event_reference",
+  "schema_version_mismatch",
 ] as const;
 
 export type ForgeJournalRejectionCode = (typeof FORGE_JOURNAL_REJECTION_CODES)[number];
@@ -123,7 +161,7 @@ export interface ForgeEventJournalDecodeResult {
 const persistedJournalSchema = z.strictObject({
   format: z.literal(FORGE_EVENT_JOURNAL_FORMAT),
   journal_version: z.literal(FORGE_EVENT_JOURNAL_VERSION),
-  event_schema_version: z.literal(FORGE_EVENT_SCHEMA_VERSION),
+  event_schema_version: z.union(FORGE_EVENT_SCHEMA_VERSIONS.map((version) => z.literal(version)) as [z.ZodLiteral<1>, z.ZodLiteral<2>]),
   events: z.array(z.unknown()).max(MAX_LOCAL_JOURNAL_EVENTS),
 });
 
@@ -141,9 +179,18 @@ export class ForgeEventJournal {
   readonly #eventsByIdempotencyKey = new Map<string, ForgeEvent>();
   readonly #eventsByAggregate = new Map<string, ForgeEvent[]>();
   readonly #projections = new Map<string, ForgeAggregateProjection>();
+  #eventSchemaVersion: ForgeEventSchemaVersion | null;
+
+  constructor(options: { readonly eventSchemaVersion?: ForgeEventSchemaVersion } = {}) {
+    this.#eventSchemaVersion = options.eventSchemaVersion ?? null;
+  }
 
   get size(): number {
     return this.#events.length;
+  }
+
+  get eventSchemaVersion(): ForgeEventSchemaVersion | null {
+    return this.#eventSchemaVersion;
   }
 
   events(): readonly ForgeEvent[] {
@@ -164,6 +211,9 @@ export class ForgeEventJournal {
     const event = parseForgeEvent(parsed.data);
     if (!(await verifyForgeEventIntegrity(event))) {
       return reject("integrity_mismatch", "The event SHA-256 integrity hash does not match its canonical envelope.");
+    }
+    if (this.#eventSchemaVersion !== null && event.schema_version !== this.#eventSchemaVersion) {
+      return reject("schema_version_mismatch", "A journal cannot mix version 1 and ADR-001 version 2 events.");
     }
 
     const priorForIdempotency = this.#eventsByIdempotencyKey.get(event.idempotency_key);
@@ -195,6 +245,7 @@ export class ForgeEventJournal {
     this.#eventsByIdempotencyKey.set(event.idempotency_key, event);
     this.#eventsByAggregate.set(key, [...aggregateEvents, event]);
     this.#projections.set(key, deepFreeze(transition.projection));
+    this.#eventSchemaVersion ??= event.schema_version;
 
     return { accepted: true, disposition: "appended", event, projection: transition.projection };
   }
@@ -258,6 +309,12 @@ function projectWorldRunEvent(
   event: ForgeEvent,
   aggregateEvents: readonly ForgeEvent[],
 ): ProjectionTransition {
+  if (event.schema_version === ADR001_FORGE_EVENT_SCHEMA_VERSION) {
+    return projectAdr001WorldRunEvent(current, event, aggregateEvents);
+  }
+  if (current && "schema_version" in current) {
+    return { ok: false, reason: "schema_version_mismatch", message: "A v1 run cannot follow an ADR-001 run." };
+  }
   if (!current) {
     if (event.event_type !== "world_run.started") {
       return { ok: false, reason: "forbidden_transition", message: "A world run must begin with world_run.started." };
@@ -394,10 +451,170 @@ function projectWorldRunEvent(
   }
 }
 
+function isAdr001WorldRunProjection(value: ForgeAggregateProjection): value is Adr001WorldRunProjection {
+  return value.aggregate_type === "world_run" && "schema_version" in value && value.schema_version === ADR001_FORGE_EVENT_SCHEMA_VERSION;
+}
+
+function projectAdr001WorldRunEvent(
+  current: ForgeAggregateProjection | undefined,
+  event: ForgeV2Event,
+  aggregateEvents: readonly ForgeEvent[],
+): ProjectionTransition {
+  if (!current) {
+    if (event.event_type !== "world_run.started") {
+      return { ok: false, reason: "forbidden_transition", message: "An ADR-001 world run must begin with world_run.started." };
+    }
+    return {
+      ok: true,
+      projection: {
+        schema_version: ADR001_FORGE_EVENT_SCHEMA_VERSION,
+        aggregate_type: "world_run",
+        aggregate_id: event.aggregate.id,
+        version: event.aggregate.version,
+        correlation_id: event.correlation_id,
+        last_event_id: event.event_id,
+        status: "active",
+        world_id: event.payload.world_id,
+        world_version: event.payload.world_version,
+        content_version: event.payload.content_version,
+        package_integrity_hash: event.payload.package_integrity_hash,
+        validator_id: event.payload.validator_id,
+        validator_version: event.payload.validator_version,
+        proof_authority: event.payload.proof_authority,
+        assistance_event_ids: [],
+        proof_event_id: null,
+        evidence: null,
+        completion_event_id: null,
+        corrected_event_ids: [],
+        corrections: [],
+      },
+    };
+  }
+  if (!isAdr001WorldRunProjection(current)) {
+    return { ok: false, reason: "schema_version_mismatch", message: "An ADR-001 event cannot follow a version 1 aggregate." };
+  }
+
+  const base = { ...current, version: event.aggregate.version, last_event_id: event.event_id };
+  switch (event.event_type) {
+    case "world_run.started":
+    case "world_package.published":
+    case "world_package.disabled":
+    case "world_package.superseded":
+      return { ok: false, reason: "forbidden_transition", message: `${event.event_type} is not valid for an existing run.` };
+    case "attempt.committed":
+      if (current.status !== "active") return forbiddenFrom(current.status, event.event_type);
+      return { ok: true, projection: base };
+    case "assistance.recorded":
+      if (current.status !== "active") return forbiddenFrom(current.status, event.event_type);
+      return { ok: true, projection: { ...base, assistance_event_ids: [...current.assistance_event_ids, event.event_id] } };
+    case "world_run.paused":
+      if (current.status !== "active") return forbiddenFrom(current.status, event.event_type);
+      return { ok: true, projection: { ...base, status: "paused" } };
+    case "world_run.resumed":
+      if (current.status !== "paused") return forbiddenFrom(current.status, event.event_type);
+      return { ok: true, projection: { ...base, status: "active" } };
+    case "proof.submitted":
+      if (current.status !== "active") return forbiddenFrom(current.status, event.event_type);
+      return { ok: true, projection: { ...base, status: "proof_submitted", proof_event_id: event.event_id } };
+    case "evidence.recorded": {
+      if (current.status !== "proof_submitted") return forbiddenFrom(current.status, event.event_type);
+      const assistanceIds = new Set(current.assistance_event_ids);
+      if (event.payload.cognitive_support_event_ids.some((eventId) => !assistanceIds.has(eventId))) {
+        return {
+          ok: false,
+          reason: "invalid_event_reference",
+          message: "ADR-001 evidence may reference only cognitive support events recorded in the same run.",
+        };
+      }
+      const started = aggregateEvents[0];
+      if (
+        !started
+        || started.schema_version !== ADR001_FORGE_EVENT_SCHEMA_VERSION
+        || started.event_type !== "world_run.started"
+        || event.payload.validator_id !== started.payload.validator_id
+        || event.payload.validator_version !== started.payload.validator_version
+      ) {
+        return {
+          ok: false,
+          reason: "aggregate_identity_mismatch",
+          message: "ADR-001 evidence validator identity must match the version pinned when the run started.",
+        };
+      }
+      return {
+        ok: true,
+        projection: {
+          ...base,
+          status: "evidence_recorded",
+          evidence: {
+            event_id: event.event_id,
+            evidence_id: event.payload.evidence_id,
+            disposition: event.payload.disposition,
+            validator_outcome: event.payload.validator_outcome,
+          },
+        },
+      };
+    }
+    case "world_run.completed":
+      if (current.status !== "evidence_recorded" || !current.evidence) return forbiddenFrom(current.status, event.event_type);
+      if (
+        event.payload.evidence_id !== current.evidence.evidence_id
+        || event.payload.disposition !== current.evidence.disposition
+      ) {
+        return {
+          ok: false,
+          reason: "invalid_event_reference",
+          message: "ADR-001 completion must reference the recorded evidence and preserve its disposition.",
+        };
+      }
+      return { ok: true, projection: { ...base, status: "completed", completion_event_id: event.event_id } };
+    case "world_run.corrected": {
+      if (current.status !== "completed") return forbiddenFrom(current.status, event.event_type);
+      const target = aggregateEvents.find((candidate) => candidate.event_id === event.payload.supersedes_event_id);
+      if (!target || target.schema_version !== ADR001_FORGE_EVENT_SCHEMA_VERSION || target.event_type !== "evidence.recorded") {
+        return {
+          ok: false,
+          reason: "invalid_event_reference",
+          message: "ADR-001 corrections must supersede an earlier evidence event in the same run.",
+        };
+      }
+      if (current.corrected_event_ids.includes(target.event_id)) {
+        return {
+          ok: false,
+          reason: "invalid_event_reference",
+          message: "An evidence event already has an ADR-001 correction.",
+        };
+      }
+      return {
+        ok: true,
+        projection: {
+          ...base,
+          corrected_event_ids: [...current.corrected_event_ids, target.event_id],
+          corrections: [
+            ...current.corrections,
+            {
+              event_id: event.event_id,
+              supersedes_event_id: event.payload.supersedes_event_id,
+              correction_id: event.payload.correction_id,
+              replacement_disposition: event.payload.replacement_disposition,
+            },
+          ],
+        },
+      };
+    }
+  }
+}
+
 function projectWorldPackageEvent(
   current: ForgeAggregateProjection | undefined,
   event: ForgeEvent,
 ): ProjectionTransition {
+  if (event.schema_version !== FORGE_EVENT_SCHEMA_VERSION) {
+    return {
+      ok: false,
+      reason: "invalid_event",
+      message: "ADR-001 runtime projection does not create world-package events.",
+    };
+  }
   if (!current) {
     if (event.event_type !== "world_package.published") {
       return {
@@ -484,8 +701,11 @@ function compareSemver(left: string, right: string): number {
   return 0;
 }
 
-export async function replayForgeEvents(events: readonly unknown[]): Promise<ForgeJournalReplayResult> {
-  const journal = new ForgeEventJournal();
+export async function replayForgeEvents(
+  events: readonly unknown[],
+  options: { readonly eventSchemaVersion?: ForgeEventSchemaVersion } = {},
+): Promise<ForgeJournalReplayResult> {
+  const journal = new ForgeEventJournal(options);
   for (let index = 0; index < events.length; index += 1) {
     const result = await journal.append(events[index]);
     if (!result.accepted) {
@@ -508,7 +728,7 @@ export function encodeForgeEventJournal(journal: ForgeEventJournal): string {
   return canonicalJson({
     format: FORGE_EVENT_JOURNAL_FORMAT,
     journal_version: FORGE_EVENT_JOURNAL_VERSION,
-    event_schema_version: FORGE_EVENT_SCHEMA_VERSION,
+    event_schema_version: journal.eventSchemaVersion ?? FORGE_EVENT_SCHEMA_VERSION,
     events: journal.events(),
   });
 }
@@ -529,7 +749,7 @@ export async function decodeForgeEventJournal(raw: string | null): Promise<Forge
     !("journal_version" in candidate) ||
     !("event_schema_version" in candidate) ||
     candidate.journal_version !== FORGE_EVENT_JOURNAL_VERSION ||
-    candidate.event_schema_version !== FORGE_EVENT_SCHEMA_VERSION
+    !FORGE_EVENT_SCHEMA_VERSIONS.includes(candidate.event_schema_version as ForgeEventSchemaVersion)
   ) {
     return { status: "reset_unknown_version", journal: new ForgeEventJournal() };
   }
@@ -537,7 +757,9 @@ export async function decodeForgeEventJournal(raw: string | null): Promise<Forge
   const persisted = persistedJournalSchema.safeParse(candidate);
   if (!persisted.success) return { status: "reset_malformed", journal: new ForgeEventJournal() };
 
-  const replay = await replayForgeEvents(persisted.data.events);
+  const replay = await replayForgeEvents(persisted.data.events, {
+    eventSchemaVersion: persisted.data.event_schema_version,
+  });
   if (replay.ok) return { status: "ok", journal: replay.journal };
   if (replay.reason === "integrity_mismatch") {
     return { status: "reset_tampered", journal: new ForgeEventJournal() };

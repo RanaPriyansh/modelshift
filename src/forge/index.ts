@@ -74,6 +74,8 @@ export {
 export type { WorldInvariantCode, WorldInvariantIssue, WorldPackValidation } from "./validation";
 
 export {
+  ADR001_FORGE_EVENT_PAYLOAD_SCHEMAS,
+  ADR001_FORGE_EVENT_SCHEMA_VERSION,
   FORGE_EVENT_DIGEST_PREFIX,
   FORGE_EVENT_PAYLOAD_SCHEMAS,
   FORGE_EVENT_SCHEMA_VERSION,
@@ -97,11 +99,30 @@ export {
 export type {
   ForgeAggregateType,
   ForgeEvent,
+  ForgeEventSchemaVersion,
   ForgeEventMetadata,
   ForgeEventPayloadMap,
   ForgeEventType,
   ForgeUnsignedEvent,
+  ForgeV1Event,
+  ForgeV1UnsignedEvent,
+  ForgeV2Event,
+  ForgeV2UnsignedEvent,
 } from "./events";
+
+export {
+  ADR001_PROJECTOR_VERSION,
+  projectAdr001Correction,
+  projectAdr001RuntimeAttempt,
+} from "./adr001-projector";
+
+export type {
+  Adr001CorrectionInput,
+  Adr001ProjectionEventIds,
+  Adr001ProjectionResult,
+  Adr001ProjectorErrorCode,
+  Adr001RuntimeProjectionInput,
+} from "./adr001-projector";
 
 export {
   FORGE_EVENT_JOURNAL_FORMAT,
@@ -116,6 +137,7 @@ export {
 
 export type {
   ForgeAggregateProjection,
+  Adr001WorldRunProjection,
   ForgeEventJournalDecodeResult,
   ForgeEventJournalDecodeStatus,
   ForgeJournalAppendResult,
