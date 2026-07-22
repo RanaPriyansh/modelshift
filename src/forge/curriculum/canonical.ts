@@ -55,7 +55,12 @@ export function canonicalCurriculumGraphPayload(input: CurriculumGraphPackageInp
         ...alternative,
         appliesToEdgeIds: strings(alternative.appliesToEdgeIds),
         limitationCodes: strings(alternative.limitationCodes),
-        sourceClaimIds: strings(alternative.sourceClaimIds),
+        alternativeSourceRefs: [...alternative.alternativeSourceRefs]
+          .sort((left, right) => curriculumCodeUnitCompare(
+            `${left.sourcePackageRef.id}@${left.sourcePackageRef.version}@${left.sourcePackageRef.digest}@${left.sourceItemId}`,
+            `${right.sourcePackageRef.id}@${right.sourcePackageRef.version}@${right.sourcePackageRef.digest}@${right.sourceItemId}`,
+          ))
+          .map((reference) => ({ ...reference, claimIds: strings(reference.claimIds) })),
       })),
       supportedAgeModes: strings(node.supportedAgeModes),
       supportedDepthModes: strings(node.supportedDepthModes),

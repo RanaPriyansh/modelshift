@@ -15,6 +15,7 @@ export const CURRICULUM_CAPABILITY_POSITIONS = [
   "return-proof",
 ] as const;
 export const CURRICULUM_AVAILABILITY = ["released", "review-candidate", "identified-gap"] as const;
+export const CURRICULUM_AUTHORITY_PROJECTIONS = ["caller-asserted-release", "review-candidate", "identified-gap"] as const;
 export const CURRICULUM_DEPTH_MODES = ["encounter", "working-model", "independent-transfer", "return-proof"] as const;
 export const CURRICULUM_ACCESS_EFFECTS = ["construct-preserving", "construct-changing"] as const;
 export const CURRICULUM_ACCESS_REPLACEMENTS = [
@@ -34,6 +35,7 @@ export const CURRICULUM_NON_CLAIMS = [
 
 export type CurriculumCapabilityPosition = (typeof CURRICULUM_CAPABILITY_POSITIONS)[number];
 export type CurriculumAvailability = (typeof CURRICULUM_AVAILABILITY)[number];
+export type CurriculumAuthorityProjection = (typeof CURRICULUM_AUTHORITY_PROJECTIONS)[number];
 export type CurriculumDepthMode = (typeof CURRICULUM_DEPTH_MODES)[number];
 export type CurriculumSourceAuthorityStatus =
   | "legacy-incomplete"
@@ -154,7 +156,11 @@ export const alternativeBindingSchema = z.strictObject({
   appliesToEdgeIds: uniqueArray(edgeIdSchema, 0, 64),
   equivalence: z.enum(["reviewed-equivalent", "different-construct"]),
   limitationCodes: uniqueArray(codeSchema, 1, 64),
-  sourceClaimIds: uniqueArray(sourceClaimIdSchema, 1, 64),
+  alternativeSourceRefs: uniqueByKey(z.strictObject({
+    sourcePackageRef: immutableRefSchema.extend({ id: sourcePackageIdSchema }),
+    sourceItemId: sourceItemIdSchema,
+    claimIds: uniqueArray(sourceClaimIdSchema, 1, 64),
+  }), (entry) => `${entry.sourcePackageRef.id}@${entry.sourcePackageRef.version}@${entry.sourcePackageRef.digest}@${entry.sourceItemId}`, 1, 64),
 });
 export type AlternativeBindingV1 = z.infer<typeof alternativeBindingSchema>;
 
@@ -168,7 +174,7 @@ export const accessRouteSchema = z.strictObject({
   supportedAgeModes: uniqueArray(z.enum(LEARNER_AGE_MODES), 1, LEARNER_AGE_MODES.length),
   supportedDepthModes: uniqueArray(z.enum(CURRICULUM_DEPTH_MODES), 1, CURRICULUM_DEPTH_MODES.length),
   evidenceConditionCode: codeSchema,
-  reviewClaimIds: uniqueArray(sourceClaimIdSchema, 1, 64),
+  reviewClaimIds: uniqueArray(sourceClaimIdSchema, 0, 64),
   limitationCodes: uniqueArray(codeSchema, 1, 64),
 });
 export type AccessRouteV1 = z.infer<typeof accessRouteSchema>;
@@ -283,7 +289,7 @@ export const curriculumGraphPackageSchema = z.strictObject({
 export type CurriculumGraphPackageV1 = z.infer<typeof curriculumGraphPackageSchema>;
 export type CurriculumGraphPackageInput = Omit<CurriculumGraphPackageV1, "digest">;
 
-export const releasedWorldAuthoritySchema = worldBindingSchema.extend({
+export const callerAssertedReleasedWorldAuthoritySchema = worldBindingSchema.extend({
   /** Reviewed authority grant; graph authors cannot expand area coverage on their own. */
   reviewedEntitlementAreas: uniqueArray(z.enum(PATHWAY_ENTITLEMENT_AREAS), 1, PATHWAY_ENTITLEMENT_AREAS.length),
   reviewedAgeModes: uniqueArray(z.enum(LEARNER_AGE_MODES), 1, LEARNER_AGE_MODES.length),
@@ -292,11 +298,11 @@ export const releasedWorldAuthoritySchema = worldBindingSchema.extend({
   availabilityStatus: z.enum(["available", "unavailable"]),
   releaseEventRef: codeSchema,
   publicationPolicyRef: z.strictObject({ id: publicationPolicyIdSchema, version: semverSchema, digest: forgeEventDigestSchema }),
-  /** Only retained registry releases may carry legacy source metadata. */
+  /** Caller-asserted lifecycle classification; it establishes no registry trust. */
   lifecycle: z.enum(["existing-registry-release", "new-publication-candidate"]),
 });
-export type ReleasedWorldAuthorityV1 = z.infer<typeof releasedWorldAuthoritySchema>;
-export const releasedWorldAuthoritiesSchema = uniqueByKey(releasedWorldAuthoritySchema, (entry) => entry.worldId, 0, 256);
+export type CallerAssertedReleasedWorldAuthorityV1 = z.infer<typeof callerAssertedReleasedWorldAuthoritySchema>;
+export const callerAssertedReleasedWorldAuthoritiesSchema = uniqueByKey(callerAssertedReleasedWorldAuthoritySchema, (entry) => entry.worldId, 0, 256);
 
 export const sourceAuthorityEvaluationSchema = z.strictObject({
   packageId: sourcePackageIdSchema,
@@ -338,7 +344,7 @@ export const curriculumValidationInputSchema = z.strictObject({
   graph: z.unknown(),
   policy: z.unknown(),
   sourceAuthorities: z.array(z.unknown()).max(256),
-  releasedWorldAuthorities: z.array(z.unknown()).max(256),
+  callerAssertedReleasedWorldAuthorities: z.array(z.unknown()).max(256),
 });
 
 export type { PathwayEntitlementArea };

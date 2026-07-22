@@ -6,15 +6,15 @@ The graph is deliberately not a curriculum-sufficiency, homeschool-readiness, ac
 
 Graph identity is the SHA-256 digest of canonical JSON with code-unit ordering. Semantic sets are normalized before hashing; prerequisites and explanatory text retain stable record IDs. A graph policy is independently content-addressed. An ID and version are never enough to authorize changed content.
 
-Release is derived only from an explicit `ReleasedWorldAuthorityV1` input. The authority record must exactly match the node's World/package/runtime/validator/task/source/provenance/route binding, publication policy, reviewed entitlement areas, reviewed age modes, and reviewed curriculum depth modes. Graph authors cannot broaden a World by adding an area, age mode, or depth mode to an authored node. A candidate and an identified gap never produce a route.
+This pure boundary accepts only `CallerAssertedReleasedWorldAuthorityV1`. Exact matches project as `caller-asserted-release` with `authorityTrust: "caller-asserted-unverified"`; they never project an authenticated or registry-backed release, and every routable route remains `null`. The record must exactly match the node's World/package/runtime/validator/task/source/provenance/proposed-route binding, publication policy, reviewed entitlement areas, reviewed age modes, and reviewed curriculum depth modes. Graph authors cannot broaden a World by adding an area, age mode, or depth mode. A separately reviewed future adapter must derive trusted release authority from the accepted registry; this module exposes no caller-constructible trusted marker.
 
-The current four retained World bindings are represented as legacy metadata truth only: they can remain released when an exact retained release authority says so, while their separate source projection remains `legacy-incomplete` with `source-authority.not-established`. Legacy metadata is never sufficient for a new publication candidate.
+The current four retained World bindings are represented as legacy metadata truth only. Raw exact matches remain explicitly caller-asserted while their separate source projection is `legacy-incomplete` with `source-authority.not-established`. Legacy metadata is never sufficient for a new publication candidate.
 
-Bound-source nodes name an immutable source package ID/version/digest. The graph additionally stores one minimum evaluation instant for each source package. A caller supplies exactly one matching evaluation at or after that floor; an earlier, missing, extra, or ambiguous package evaluation fails closed. A later append-only correction, expiry, or withdrawal may invalidate only the exact bound node without changing the graph package digest. The supplied evaluation must also expose the exact required source items, claims, rights records, product uses, and review scopes. This graph validates that port; it does not manufacture, replay, or authenticate it.
+Bound-source nodes name an immutable source package ID/version/digest. The graph additionally stores one minimum evaluation instant for each source package. A caller supplies exactly one matching evaluation at or after that floor; an earlier, missing, extra, or ambiguous package evaluation fails closed. A later append-only correction, expiry, or withdrawal invalidates its exact bound node regardless of any caller-asserted release lifecycle, without changing the graph package digest. The supplied evaluation must expose the exact required source items, claims, rights records, product uses, and review scopes. Access review claims and each alternative source reference must resolve to that exact accepted package/item/claim evaluation; missing, unknown, cross-package, or synthetic claims fail closed. This graph validates the port but does not manufacture, replay, or authenticate it.
 
-`review-candidate-complete` remains a source-review state, not publication. A matching release authority is separate. The only test authority builder is private to the unit test file and is not exported by production code. A future registry/source adapter must derive authority inputs from the accepted registry and source replay contracts; it must not accept self-asserted release records.
+`review-candidate-complete` remains a source-review state, not publication. The only caller-asserted authority builder is private to the unit test file and is not exported by production code. A future registry/source adapter must derive trusted authority from the accepted registry and source replay contracts; it must not convert this raw port into a trusted release.
 
-Coverage projection always contains the exact nine Packet C areas in canonical order. It groups multiple gaps in one area without changing that nine-entry shape, preserves candidates separately from gaps, and does not double-count computing source corroboration as civic/media coverage. Capability explanation returns authored prerequisite, alternative, access, source, World, policy, and release binding facts only; it accepts no learner profile or evidence and makes no selection for a person.
+Coverage projection always contains the exact nine Packet C areas in canonical order. It groups multiple gaps in one area without changing that shape, preserves candidates separately from gaps, and does not double-count computing source corroboration as civic/media coverage. This slice does not derive trusted `released`; caller-asserted exact matches expose only a non-blank authored proposed route and `routableRoute: null`, while a missing exact authored binding fails closed into the review-candidate list. Capability explanation returns authored prerequisite, alternative, access, source, World, policy, and caller-asserted binding facts only; it accepts no learner profile or evidence and makes no selection for a person. A future trusted adapter remains required before any route is routable.
 
 ## Focused adversarial map
 
@@ -30,7 +30,7 @@ Coverage projection always contains the exact nine Packet C areas in canonical o
 | 10 reviewed entitlement grant | `14...` |
 | 13 access coverage and 14 construct-changing evidence | `8...` and `16...` |
 | 16 deterministic explanation | `9...` |
-| 17 four retained releases with legacy source truth | `5...` |
+| 17 four retained caller-asserted matches with legacy source truth | `5...` |
 | 18 Argument & Evidence candidate | `15...` |
 | 19 correction/expiry/withdrawal invalidation | `11...` and `17...` |
 | 20 non-claims | `12...` |
@@ -40,3 +40,4 @@ Coverage projection always contains the exact nine Packet C areas in canonical o
 | 24 multiple gaps in one area | `15...` |
 | Additional reviewed age/depth grants | `14...` |
 | Additional temporal evaluation floor and offset-equivalence | `17...` |
+| Additional exact access/alternative source-claim binding | `18...` |

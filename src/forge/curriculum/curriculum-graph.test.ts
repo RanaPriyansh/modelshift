@@ -6,15 +6,15 @@ import {
   createCurriculumGraphPackage,
   createCurriculumGraphPolicy,
   createNineAreaCurriculumFixture,
+  callerAssertedReleasedWorldAuthoritiesSchema,
   curriculumGraphPackageSchema,
   explainCapabilityAvailability,
   projectNineAreaCoverage,
-  releasedWorldAuthoritiesSchema,
   sourceAuthorityEvaluationsSchema,
   validateCurriculumGraph,
   type CurriculumGraphPackageV1,
   type CurriculumNodeV1,
-  type ReleasedWorldAuthorityV1,
+  type CallerAssertedReleasedWorldAuthorityV1,
   type SourceAuthorityEvaluationV1,
 } from "./index";
 
@@ -31,8 +31,8 @@ async function repackage(graph: CurriculumGraphPackageV1, change: (input: Omit<C
   return createCurriculumGraphPackage(input);
 }
 
-/** Test-only authority snapshot builder. Production graph code has no registry/source adapter. */
-function testOnlyCurrentAuthorities(fixture: Fixture): readonly ReleasedWorldAuthorityV1[] {
+/** Test-only caller-asserted snapshot builder. Production graph code has no trusted registry/source adapter. */
+function testOnlyCurrentAuthorities(fixture: Fixture): readonly CallerAssertedReleasedWorldAuthorityV1[] {
   return fixture.graph.nodes.map((node) => ({
     ...node.worldBinding!,
     reviewedEntitlementAreas: node.entitlementAreas,
@@ -59,7 +59,7 @@ async function validateFixture(
     graph: options.graph ?? fixture.graph,
     policy: options.policy ?? fixture.policy,
     sourceAuthorities: options.sourceAuthorities ?? [],
-    releasedWorldAuthorities: options.authorities ?? testOnlyCurrentAuthorities(fixture),
+    callerAssertedReleasedWorldAuthorities: options.authorities ?? testOnlyCurrentAuthorities(fixture),
   });
 }
 
@@ -109,6 +109,7 @@ async function boundCandidateFixture(fixture: Fixture) {
       sourceProvenanceStatus: "bound",
     };
     node.evidenceRequirement.taskFamilyIds = [...node.worldBinding.taskFamilyIds];
+    node.accessRoutes[0]!.reviewClaimIds = ["source-claim.bound-item.support"];
     input.sourceAuthorityRefs = [{
       packageId: sourcePackageRef.id,
       packageVersion: sourcePackageRef.version,
@@ -212,7 +213,11 @@ describe("W5-D immutable curriculum graph", () => {
         appliesToEdgeIds: ["curriculum-edge.long-a"],
         equivalence: "reviewed-equivalent",
         limitationCodes: ["alternative.review-limited"],
-        sourceClaimIds: ["source-claim.fixture.alternative"],
+        alternativeSourceRefs: [{
+          sourcePackageRef: { id: "source-package.fixture.alternative", version: "1.0.0", digest: `sha256:${"5".repeat(64)}` },
+          sourceItemId: "source.fixture.alternative",
+          claimIds: ["source-claim.fixture.alternative"],
+        }],
       }];
       input.nodes[1]!.alternatives = [{
         id: "curriculum-alternative.to-math",
@@ -222,7 +227,11 @@ describe("W5-D immutable curriculum graph", () => {
         appliesToEdgeIds: ["curriculum-edge.long-b"],
         equivalence: "reviewed-equivalent",
         limitationCodes: ["alternative.review-limited"],
-        sourceClaimIds: ["source-claim.fixture.alternative-two"],
+        alternativeSourceRefs: [{
+          sourcePackageRef: { id: "source-package.fixture.alternative", version: "1.0.0", digest: `sha256:${"5".repeat(64)}` },
+          sourceItemId: "source.fixture.alternative",
+          claimIds: ["source-claim.fixture.alternative-two"],
+        }],
       }];
     });
     const first = await validateFixture(fixture, { graph });
@@ -233,7 +242,7 @@ describe("W5-D immutable curriculum graph", () => {
     expect(first.cyclePaths.some((path) => path.length === 2 && path[0] === graph.nodes[3]!.id)).toBe(true);
   });
 
-  it("5. derives the four retained World releases only at exact package/runtime identities and keeps legacy source truth", async () => {
+  it("5. projects four exact retained World matches only as caller-asserted and keeps legacy source truth", async () => {
     const fixture = await createNineAreaCurriculumFixture();
     const packs = new Map(BUILT_IN_WORLD_PACKS.map((pack) => [pack.manifest.id, pack]));
     for (const node of fixture.graph.nodes) {
@@ -246,7 +255,12 @@ describe("W5-D immutable curriculum graph", () => {
       expect(pack.runtime?.returnProof.enabled).toBe(false);
     }
     const validated = await validateFixture(fixture);
-    expect(validated.nodes.filter((node) => node.availability === "released")).toHaveLength(4);
+    expect(validated.nodes.filter((node) => node.availability === "caller-asserted-release")).toHaveLength(4);
+    expect(validated.nodes.every((node) => node.authorityTrust === "caller-asserted-unverified" && node.route === null)).toBe(true);
+    expect(JSON.stringify(validated)).not.toContain('"availability":"released"');
+    const projectedMatches = projectNineAreaCoverage(validated).flatMap((entry) => entry.callerAssertedReleaseMatches);
+    expect(projectedMatches.every((entry) => entry.routableRoute === null)).toBe(true);
+    expect(projectedMatches.every((entry) => entry.proposedRoute.trim().length > 0)).toBe(true);
     expect(validated.nodes.every((node) => node.sourceAuthorityStatus === "legacy-incomplete")).toBe(true);
     const stale = clone(testOnlyCurrentAuthorities(fixture));
     stale[0]!.runtimeBindingDigest = `sha256:${"a".repeat(64)}`;
@@ -296,8 +310,8 @@ describe("W5-D immutable curriculum graph", () => {
     ]);
     expect(mathematics.reviewCandidateCapabilityIds).toEqual(["capability.proportional-reasoning.compare-and-scale"]);
     expect(mathematics.gaps).toHaveLength(1);
-    expect(mathematics.released).toEqual([]);
-    expect(coverage.find((entry) => entry.area === "civic-media")!.released).toEqual([]);
+    expect(mathematics.callerAssertedReleaseMatches).toEqual([]);
+    expect(coverage.find((entry) => entry.area === "civic-media")!.callerAssertedReleaseMatches).toEqual([]);
   });
 
   it("8. rejects missing age/depth access, exposes construct-changing conditions, and never interprets learner evidence", async () => {
@@ -319,7 +333,9 @@ describe("W5-D immutable curriculum graph", () => {
     expect(rendered).not.toContain("recommend");
     expect(rendered).not.toContain("best");
     expect(rendered).not.toContain("score");
-    expect(explanation.route).toBe("/learn/proportional-reasoning");
+    expect(explanation.route).toBeNull();
+    expect(explanation.worldBinding?.proposedRoute).toBe("/learn/proportional-reasoning");
+    expect(explanation.authorityTrust).toBe("caller-asserted-unverified");
   });
 
   it("10. treats complete source review as non-publication until an exact release authority is supplied", async () => {
@@ -333,7 +349,8 @@ describe("W5-D immutable curriculum graph", () => {
     expect(derivedNode(withoutAuthority, bound.node.capabilityId).availability).toBe("review-candidate");
     expect(derivedNode(withoutAuthority, bound.node.capabilityId).route).toBeNull();
     const released = await validateFixture(fixture, { graph: bound.graph, sourceAuthorities: [bound.sourceAuthority], authorities: bound.authorities });
-    expect(derivedNode(released, bound.node.capabilityId).availability).toBe("released");
+    expect(derivedNode(released, bound.node.capabilityId).availability).toBe("caller-asserted-release");
+    expect(derivedNode(released, bound.node.capabilityId).route).toBeNull();
     expect(derivedNode(released, bound.node.capabilityId).sourceAuthorityStatus).toBe("bound-review-candidate");
   });
 
@@ -356,12 +373,14 @@ describe("W5-D immutable curriculum graph", () => {
       const validated = await validateFixture(fixture, { graph: bound.graph, sourceAuthorities: [authority], authorities: bound.authorities });
       expect(derivedNode(validated, bound.node.capabilityId).availability).toBe("review-candidate");
       expect(derivedNode(validated, bound.node.capabilityId).sourceAuthorityStatus).toBe("bound-invalidated");
-      expect(derivedNode(validated, "capability.force-motion.zero-net-force").availability).toBe("released");
+      expect(derivedNode(validated, "capability.force-motion.zero-net-force").availability).toBe("caller-asserted-release");
       const retainedRelease = clone(bound.authorities);
       retainedRelease[0]!.lifecycle = "existing-registry-release";
       const retained = await validateFixture(fixture, { graph: bound.graph, sourceAuthorities: [authority], authorities: retainedRelease });
-      expect(derivedNode(retained, bound.node.capabilityId).availability).toBe("released");
+      expect(derivedNode(retained, bound.node.capabilityId).availability).toBe("review-candidate");
+      expect(derivedNode(retained, bound.node.capabilityId).route).toBeNull();
       expect(derivedNode(retained, bound.node.capabilityId).sourceAuthorityStatus).toBe("bound-invalidated");
+      expect(retained.invalidatedNodeIds).toContain(bound.node.id);
     }
   });
 
@@ -406,12 +425,20 @@ describe("W5-D immutable curriculum graph", () => {
         appliesToEdgeIds: ["curriculum-edge.cross-node"],
         equivalence: "different-construct",
         limitationCodes: ["alternative.review-limited"],
-        sourceClaimIds: ["source-claim.fixture.cross-one"],
+        alternativeSourceRefs: [{
+          sourcePackageRef: { id: "source-package.fixture.cross", version: "1.0.0", digest: `sha256:${"6".repeat(64)}` },
+          sourceItemId: "source.fixture.cross",
+          claimIds: ["source-claim.fixture.cross-one"],
+        }],
       }];
       input.nodes[1]!.alternatives = [{
         ...clone(input.nodes[0]!.alternatives[0]!),
         capabilityId: input.nodes[2]!.capabilityId,
-        sourceClaimIds: ["source-claim.fixture.cross-two"],
+        alternativeSourceRefs: [{
+          sourcePackageRef: { id: "source-package.fixture.cross", version: "1.0.0", digest: `sha256:${"6".repeat(64)}` },
+          sourceItemId: "source.fixture.cross",
+          claimIds: ["source-claim.fixture.cross-two"],
+        }],
       }];
       input.nodes[0]!.accessRoutes[0]!.id = "access-route.cross-node";
       input.nodes[1]!.accessRoutes[0]!.id = "access-route.cross-node";
@@ -424,7 +451,7 @@ describe("W5-D immutable curriculum graph", () => {
     duplicateGap.gaps.push(clone(duplicateGap.gaps[0]!));
     expect(curriculumGraphPackageSchema.safeParse(duplicateGap).success).toBe(false);
     const authorities = testOnlyCurrentAuthorities(fixture);
-    expect(releasedWorldAuthoritiesSchema.safeParse([...authorities, clone(authorities[0]!)]).success).toBe(false);
+    expect(callerAssertedReleasedWorldAuthoritiesSchema.safeParse([...authorities, clone(authorities[0]!)]).success).toBe(false);
     const bound = await boundCandidateFixture(fixture);
     expect(sourceAuthorityEvaluationsSchema.safeParse([bound.sourceAuthority, clone(bound.sourceAuthority)]).success).toBe(false);
   });
@@ -467,6 +494,7 @@ describe("W5-D immutable curriculum graph", () => {
       candidate.evidenceRequirement.capabilityId = candidate.capabilityId;
       candidate.evidenceRequirement.validatorRef = { id: "validator.argument-evidence-transfer.v1", version: "1.0.0" };
       candidate.evidenceRequirement.taskFamilyIds = ["task-family.argument-evidence.claim-relevance-transfer.v1"];
+      candidate.accessRoutes[0]!.reviewClaimIds = ["source-claim.argument-evidence.authored-fixture.support"];
       candidate.sourceRequirement = {
         mode: "bound-source-authority",
         sourcePackageRef: { id: "source-package.argument-evidence.authored-fixture", version: "1.0.0", digest: `sha256:${"e".repeat(64)}` },
@@ -564,6 +592,7 @@ describe("W5-D immutable curriculum graph", () => {
         requiredReviewScopes: ["rights", "factual-epistemic"],
       };
       input.nodes[0]!.worldBinding = { ...input.nodes[0]!.worldBinding!, sourceIds: ["source.bound-item"], sourceProvenanceStatus: "bound" };
+      input.nodes[0]!.accessRoutes[0]!.reviewClaimIds = ["source-claim.bound-item.support"];
       input.sourceAuthorityRefs = [{
         packageId: "source-package.curriculum-bound",
         packageVersion: "1.0.0",
@@ -578,7 +607,8 @@ describe("W5-D immutable curriculum graph", () => {
       ? { ...authority, ...floorGraph.nodes[0]!.worldBinding!, reviewedEntitlementAreas: floorGraph.nodes[0]!.entitlementAreas, reviewedAgeModes: floorGraph.nodes[0]!.supportedAgeModes, reviewedDepthModes: floorGraph.nodes[0]!.supportedDepthModes, lifecycle: "new-publication-candidate" as const }
       : authority);
     const accepted = await validateFixture(fixture, { graph: floorGraph, sourceAuthorities: [exactInstant], authorities: currentAuthorities });
-    expect(derivedNode(accepted, floorGraph.nodes[0]!.capabilityId).availability).toBe("released");
+    expect(derivedNode(accepted, floorGraph.nodes[0]!.capabilityId).availability).toBe("caller-asserted-release");
+    expect(derivedNode(accepted, floorGraph.nodes[0]!.capabilityId).route).toBeNull();
     const later = clone(exactInstant);
     later.evaluatedAsOf = "2026-07-24T00:00:00.000Z";
     later.invalidatedNodeIds = [floorGraph.nodes[0]!.id];
@@ -586,9 +616,48 @@ describe("W5-D immutable curriculum graph", () => {
     const invalidated = await validateFixture(fixture, { graph: floorGraph, sourceAuthorities: [later], authorities: currentAuthorities });
     expect(invalidated.graphDigest).toBe(floorGraph.digest);
     expect(derivedNode(invalidated, floorGraph.nodes[0]!.capabilityId).availability).toBe("review-candidate");
-    expect(derivedNode(invalidated, "capability.force-motion.zero-net-force").availability).toBe("released");
+    expect(derivedNode(invalidated, "capability.force-motion.zero-net-force").availability).toBe("caller-asserted-release");
     const earlier = clone(exactInstant);
     earlier.evaluatedAsOf = "2026-07-22T23:59:59.999Z";
     expect((await validateFixture(fixture, { graph: floorGraph, sourceAuthorities: [earlier], authorities: currentAuthorities })).issues.some((entry) => entry.code === "source.evaluation-before-floor")).toBe(true);
+  });
+
+  it("18. binds access and alternative review claims to the exact accepted source evaluation", async () => {
+    const fixture = await createNineAreaCurriculumFixture();
+    const bound = await boundCandidateFixture(fixture);
+    const validGraph = await repackage(bound.graph, (input) => {
+      input.nodes[0]!.alternatives = [{
+        id: "curriculum-alternative.bound-source-review",
+        kind: "construct-route",
+        capabilityId: input.nodes[1]!.capabilityId,
+        capabilityVersion: input.nodes[1]!.capabilityVersion,
+        appliesToEdgeIds: [],
+        equivalence: "different-construct",
+        limitationCodes: ["alternative.review-limited"],
+        alternativeSourceRefs: [{
+          sourcePackageRef: { id: "source-package.curriculum-bound", version: "1.0.0", digest: `sha256:${"2".repeat(64)}` },
+          sourceItemId: "source.bound-item",
+          claimIds: ["source-claim.bound-item.support"],
+        }],
+      }];
+    });
+    const valid = await validateFixture(fixture, { graph: validGraph, sourceAuthorities: [bound.sourceAuthority], authorities: bound.authorities });
+    expect(derivedNode(valid, bound.node.capabilityId).availability).toBe("caller-asserted-release");
+
+    const missingAccessClaim = await repackage(validGraph, (input) => {
+      input.nodes[0]!.accessRoutes[0]!.reviewClaimIds = [];
+    });
+    const unknownAccessClaim = await repackage(validGraph, (input) => {
+      input.nodes[0]!.accessRoutes[0]!.reviewClaimIds = ["source-claim.bound-item.synthetic-access"];
+    });
+    const unknownAlternativeClaim = await repackage(validGraph, (input) => {
+      input.nodes[0]!.alternatives[0]!.alternativeSourceRefs[0]!.claimIds = ["source-claim.bound-item.synthetic-alternative"];
+    });
+    for (const graph of [missingAccessClaim, unknownAccessClaim, unknownAlternativeClaim]) {
+      const validated = await validateFixture(fixture, { graph, sourceAuthorities: [bound.sourceAuthority], authorities: bound.authorities });
+      expect(derivedNode(validated, bound.node.capabilityId).availability).toBe("review-candidate");
+      expect(derivedNode(validated, bound.node.capabilityId).sourceAuthorityStatus).toBe("bound-incomplete");
+      expect(derivedNode(validated, bound.node.capabilityId).route).toBeNull();
+    }
   });
 });

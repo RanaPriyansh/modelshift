@@ -51,7 +51,7 @@ function legacyNode(input: {
       supportedAgeModes: input.ageModes,
       supportedDepthModes: ["encounter", "working-model", "independent-transfer"],
       evidenceConditionCode: `access-evidence.${input.id.slice("curriculum-node.".length)}.preserving`,
-      reviewClaimIds: [`source-claim.${input.id.slice("curriculum-node.".length)}.access`],
+      reviewClaimIds: [],
       limitationCodes: ["access.assistive-technology-session-not-established"],
     }],
     evidenceRequirement: {
