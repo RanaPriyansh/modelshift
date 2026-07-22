@@ -3,18 +3,15 @@ export { PROPORTIONAL_REASONING_RUNTIME_BINDING } from "./proportional-reasoning
 export { lintWorldRuntimePack, type WorldRuntimeLintResult } from "./linter";
 export {
   primarySourceWorldRuntimeAdapter,
-  projectPrimarySourceTransferValidation,
   type PrimarySourceRuntimeProof,
 } from "./primary-source";
 export {
   proportionalReasoningWorldRuntimeAdapter,
-  projectProportionalReasoningTransferValidation,
 } from "./proportional-reasoning";
 export {
   deriveDefaultEvidenceDisposition,
   type AccessAccommodationEvent,
   type BoundedLocalWorldRuntimeReceipt,
-  type CanonicalValidatorProjection,
   type CanonicalSupportEvent,
   type EvidenceDisposition,
   type RuntimeCommand,
@@ -23,10 +20,16 @@ export {
   type ValidatorOutcome,
   type WorldRuntimeAdapter,
   WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION,
+  WORLD_RUNTIME_PROTOCOL_VERSION,
+  LOCAL_RUNTIME_RECEIPT_LIMITATION,
+  isBoundedLocalWorldRuntimeReceipt,
+  isCanonicalSupportEvent,
 } from "./protocol";
 export {
   createWorldRuntimeSession,
   dispatchWorldRuntimeCommand,
+  WorldRuntimeConfigurationError,
   type RuntimeDispatchResult,
+  type WorldRuntimeConfigurationErrorCode,
   type WorldRuntimeSession,
 } from "./runtime";

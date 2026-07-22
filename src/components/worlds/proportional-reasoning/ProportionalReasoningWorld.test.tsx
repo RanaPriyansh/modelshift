@@ -28,9 +28,8 @@ function reachIndependentTransfer({ useSupport = false }: { readonly useSupport?
 
 describe("ProportionalReasoningWorld", () => {
   it("renders the complete authored flow, records one local receipt, and structurally removes support in proof", async () => {
-    const onEvidence = vi.fn();
     const onRuntimeReceipt = vi.fn();
-    render(<ProportionalReasoningWorld onEvidence={onEvidence} onRuntimeReceipt={onRuntimeReceipt} />);
+    render(<ProportionalReasoningWorld onRuntimeReceipt={onRuntimeReceipt} />);
 
     expect(screen.getByTestId("ratio-stage-mystery").textContent).toContain("Which drink will taste more strongly of citrus?");
     reachIndependentTransfer({ useSupport: true });
@@ -49,18 +48,12 @@ describe("ProportionalReasoningWorld", () => {
 
     expect(screen.getByTestId("ratio-stage-evidence").textContent).toContain("What this attempt actually showed.");
     expect(screen.queryByTestId("ratio-submit-proof")).toBeNull();
-    await waitFor(() => expect(onEvidence).toHaveBeenCalledTimes(1));
-    expect(onEvidence.mock.calls[0]?.[0]).toMatchObject({
-      assistance: { levelsUsed: [1], wasAvailableDuringProof: false },
-      independentTransfer: { choiceId: "32_km", answerCorrect: true },
-      returnProof: { scheduled: false, afterDays: 3 },
-    });
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
     expect(onRuntimeReceipt.mock.calls[0]?.[0]).toMatchObject({
       authority: { proofAuthority: "honour_based", persistence: "not_persisted", isDurable: false },
       validator: { outcome: "pass", disposition: "demonstrated" },
       sourceProvenanceStatus: "incomplete",
-      world: { version: "1.0.1", contentVersion: "1.0.0" },
+      world: { version: "1.0.2", contentVersion: "1.0.0" },
     });
     expect(JSON.stringify(onRuntimeReceipt.mock.calls[0]?.[0])).not.toContain("12 is four times 3");
     expect(screen.getByText(/No reviewed delayed task or scheduler is published/i)).toBeTruthy();

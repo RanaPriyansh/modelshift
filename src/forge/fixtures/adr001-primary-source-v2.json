@@ -12,10 +12,10 @@
     "idempotency_key": "idempotency.adr001.fixture.run.primary-source.adr001-fixture.started",
     "payload": {
       "world_id": "world.primary-source-reasoning",
-      "world_version": "1.0.1",
+      "world_version": "1.0.2",
       "content_version": "1.0.1",
       "package_integrity_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "protocol_version": "1.0.1",
+      "protocol_version": "1.0.2",
       "capability_id": "capability.historical-literacy.observation-inference",
       "proof_claim_id": "proof.primary-source-reasoning.independent-transfer",
       "task_id": "loc.washington-street-1937.transfer",
@@ -35,7 +35,7 @@
       "source_provenance_status": "incomplete"
     },
     "schema_version": 2,
-    "integrity_hash": "sha256:88c238d92ea3fe8eba04fcdc8b93ef9537fdabafb9f5ebf4a5e95f5e34e7782a"
+    "integrity_hash": "sha256:09b5e9abcb5ffa16bd158a74a694365db092fafe781e5e075c733d249099378e"
   },
   {
     "event_id": "10000000-0000-4000-8000-000000000002",
@@ -89,7 +89,7 @@
       "task_family_id": "task-family.primary-source-reasoning.cold-transfer.v1",
       "representation_id": "representation.primary-source.evidence-layer-classification",
       "context_id": "context.primary-source.unfamiliar-photograph",
-      "criteria": ["On this unfamiliar photograph, the learner independently distinguished a visible detail, catalog metadata, an inference, and an unanswered question."],
+      "criteria": ["task:loc.washington-street-1937.transfer", "correct-categories:4/4"],
       "proof_authority": "honour_based",
       "cognitive_support_event_ids": ["10000000-0000-4000-8000-000000000002"],
       "access_accommodations": [],
@@ -107,7 +107,7 @@
       "bounded_claim": "On an unfamiliar photograph, the learner independently classifies one observation, one catalog fact, one inference, and one open question after support is removed."
     },
     "schema_version": 2,
-    "integrity_hash": "sha256:41727fa13af57432d1cbe37d3435975959153124b2816e1abb6d8a953435149d"
+    "integrity_hash": "sha256:764b44a8ddb531558dc168b1011dff2640d87cc1c08e16671be5cc9b50183aee"
   },
   {
     "event_id": "10000000-0000-4000-8000-000000000005",

@@ -9,7 +9,6 @@ import {
   validateReconstruction,
   type InitialPredictionId,
   type RatioAudience,
-  type RatioEvidenceRecord,
   type RatioWorldEvent,
   type RatioWorldState,
   type SeparatingTestPredictionId,
@@ -54,8 +53,6 @@ const STAGE_ANNOUNCEMENTS: Readonly<Record<RatioWorldState["stage"], string>> = 
 export interface ProportionalReasoningWorldProps {
   readonly audience?: RatioAudience;
   readonly onExit?: () => void;
-  /** Compatibility callback for the one local, legacy evidence projection. */
-  readonly onEvidence?: (evidence: RatioEvidenceRecord) => void;
   /** Called once per completed local runtime attempt; never persisted here. */
   readonly onRuntimeReceipt?: (receipt: BoundedLocalWorldRuntimeReceipt) => void;
 }
@@ -520,7 +517,6 @@ function EvidenceStage({
 export function ProportionalReasoningWorld({
   audience = "teen",
   onExit,
-  onEvidence,
   onRuntimeReceipt,
 }: ProportionalReasoningWorldProps) {
   const id = useId();
@@ -539,8 +535,6 @@ export function ProportionalReasoningWorld({
   const [transferChoice, setTransferChoice] = useState<TransferChoiceId | null>(null);
   const [transferExplanation, setTransferExplanation] = useState("");
   const [transferConfidence, setTransferConfidence] = useState(60);
-  const evidence = deriveRatioEvidence(state);
-  const lastEvidenceKey = useRef<string | null>(null);
 
   function send(event: RatioWorldEvent): boolean {
     const result = dispatchWorldRuntimeCommand(proportionalReasoningWorldRuntimeAdapter, runtimeRef.current, {
@@ -551,14 +545,6 @@ export function ProportionalReasoningWorld({
     setRuntime(result.session);
     return result.accepted;
   }
-
-  useEffect(() => {
-    if (!evidence || !onEvidence) return;
-    const key = `${evidence.independentTransfer.choiceId}:${evidence.independentTransfer.relationshipMechanismDemonstrated}`;
-    if (lastEvidenceKey.current === key) return;
-    lastEvidenceKey.current = key;
-    onEvidence(evidence);
-  }, [evidence, onEvidence]);
 
   useEffect(() => {
     if (runtime.receipt && emittedReceiptRef.current !== runtime.receipt) {
@@ -581,7 +567,6 @@ export function ProportionalReasoningWorld({
     setTransferChoice(null);
     setTransferExplanation("");
     setTransferConfidence(60);
-    lastEvidenceKey.current = null;
     emittedReceiptRef.current = null;
   }
 

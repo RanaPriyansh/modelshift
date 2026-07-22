@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { PRIMARY_SOURCE_REASONING_WORLD } from "../worlds";
+import { primarySourceReasoningTransferValidator } from "../deterministic-validators";
 import { evaluatePathwayReviewPacket } from "../pathways";
 import {
   createInitialPrimarySourceState,
@@ -10,9 +11,8 @@ import {
 } from "../../worlds/primary-source-reasoning";
 import {
   primarySourceWorldRuntimeAdapter,
-  projectPrimarySourceTransferValidation,
 } from "./primary-source";
-import type { CanonicalValidatorProjection, WorldRuntimeAdapter } from "./protocol";
+import { deriveCanonicalValidatorOutcome, isCanonicalSupportEvent, type WorldRuntimeAdapter } from "./protocol";
 import { createWorldRuntimeSession, dispatchWorldRuntimeCommand } from "./runtime";
 
 const REQUIRED_RECEIPT_TRACE = [
@@ -143,13 +143,16 @@ describe("Primary Source World runtime adapter", () => {
     expect(packetCOutcome.issues.map((issue) => issue.code)).toContain("schema.invalid");
   });
 
-  it("projects the authoritative domain validator without prefix inference", () => {
+  it("uses the canonical validator input status without prefix inference", () => {
     expect(validatePrimarySourceTransfer({})).toMatchObject({ code: "transfer.invalid", valid: false });
-    expect(projectPrimarySourceTransferValidation({})).toEqual({
-      outcome: "not_scored",
-      criteria: ["The transfer payload did not match the authored four-category task."],
+    expect(deriveCanonicalValidatorOutcome(primarySourceReasoningTransferValidator.validate({}))).toBe("not_scored");
+    expect(primarySourceReasoningTransferValidator.validate({})).toMatchObject({
+      inputStatus: "invalid",
+      passed: false,
+      score: 0,
+      evidence: [],
     });
-    expect(projectPrimarySourceTransferValidation({
+    expect(deriveCanonicalValidatorOutcome(primarySourceReasoningTransferValidator.validate({
       taskId: "loc.washington-street-1937.transfer",
       assignments: {
         "washington-visible-detail": "observation",
@@ -157,13 +160,10 @@ describe("Primary Source World runtime adapter", () => {
         "washington-relationship-inference": "observation",
         "washington-open-question": "observation",
       },
-    })).toEqual({
-      outcome: "fail",
-      criteria: ["On this unfamiliar photograph, the learner distinguished some evidence layers, but the four-part boundary did not yet hold independently."],
-    });
+    }))).toBe("fail");
   });
 
-  it("derives disposition in the runtime even if an adapter injects an incoherent value", () => {
+  it("does not let a malicious adapter forge a canonical pass or disposition", () => {
     type State = { readonly step: number };
     type Event = { readonly type: "ADVANCE" };
     const maliciousAdapter: WorldRuntimeAdapter<State, Event, { readonly attempt: "bounded" }> = {
@@ -177,11 +177,16 @@ describe("Primary Source World runtime adapter", () => {
       classify: () => "learner_operation",
       supportEvent: () => null,
       proof: (state) => state.step === REQUIRED_RECEIPT_TRACE.length - 1 ? { attempt: "bounded" } : null,
-      projectValidator: () => ({
-        outcome: "fail",
-        criteria: ["criterion.synthetic"],
-        disposition: "demonstrated",
-      } as unknown as CanonicalValidatorProjection),
+      validatorInput: () => ({
+        taskId: "loc.washington-street-1937.transfer",
+        assignments: {
+          "washington-visible-detail": "observation",
+          "washington-catalog-fact": "observation",
+          "washington-relationship-inference": "observation",
+          "washington-open-question": "observation",
+        },
+      }),
+      validatorCriteria: () => ["adapter.forged-pass"],
       remainsUntested: () => [],
     };
     let runtime = createWorldRuntimeSession(maliciousAdapter);
@@ -195,6 +200,34 @@ describe("Primary Source World runtime adapter", () => {
     expect(submitted).toMatchObject({
       accepted: true,
       session: { receipt: { validator: { outcome: "fail", disposition: "not_demonstrated" } } },
+    });
+  });
+
+  it("rejects a malicious adapter that reaches terminal state with invalid canonical input and emits no receipt", () => {
+    const invalidInputAdapter = {
+      ...primarySourceWorldRuntimeAdapter,
+      validatorInput: () => ({}),
+    } satisfies typeof primarySourceWorldRuntimeAdapter;
+    let runtime = createWorldRuntimeSession(invalidInputAdapter, "attempt.invalid-validator-input");
+    const events = [
+      ...completeToProof(),
+      ...TRANSFER_ASSIGNMENTS.map(([statementId, category]) => ({ type: "SET_TRANSFER_ASSIGNMENT" as const, statementId, category })),
+      transferEvent(),
+    ];
+    for (const event of events.slice(0, -1)) {
+      const dispatched = dispatchWorldRuntimeCommand(invalidInputAdapter, runtime, { kind: "domain", event });
+      expect(dispatched.accepted).toBe(true);
+      if (!dispatched.accepted) return;
+      runtime = dispatched.session;
+    }
+    const rejected = dispatchWorldRuntimeCommand(invalidInputAdapter, runtime, {
+      kind: "domain",
+      event: events.at(-1)!,
+    });
+    expect(rejected).toMatchObject({
+      accepted: false,
+      reason: "canonical_validator_input_invalid",
+      session: { phase: "proof", receipt: null, semanticTrace: REQUIRED_RECEIPT_TRACE.slice(0, -1) },
     });
   });
 
@@ -261,6 +294,22 @@ describe("Primary Source World runtime adapter", () => {
     ]);
   });
 
+  it("accepts bounded authored provenance and rejects raw provider/fallback support fields", () => {
+    const support = {
+      actionId: "action.primary-source.support",
+      stage: "commit_model" as const,
+      source: "authored" as const,
+      tier: "example" as const,
+      policyId: "policy.primary-source.authored-support.v1",
+      providerId: null,
+      modelId: null,
+      fallbackReason: "fallback.provider-unavailable",
+    };
+    expect(isCanonicalSupportEvent(support)).toBe(true);
+    expect(isCanonicalSupportEvent({ ...support, modelId: "raw\nprovider-output" })).toBe(false);
+    expect(isCanonicalSupportEvent({ ...support, source: "model", providerId: "openai", modelId: "gpt-5", fallbackReason: "fallback.invalid" })).toBe(false);
+  });
+
   it("allows repeated governed-support actions without duplicating the semantic stage", () => {
     let runtime = createWorldRuntimeSession(primarySourceWorldRuntimeAdapter);
     const events = completeToProof([
@@ -300,7 +349,7 @@ describe("Primary Source World runtime adapter", () => {
         classify: () => "learner_operation",
         supportEvent: () => null,
         proof: (state) => state.finished ? { attempt: "forged" } : null,
-        projectValidator: () => ({ outcome: "pass", criteria: ["criterion.synthetic"] }),
+        validatorInput: () => ({}),
         remainsUntested: () => [],
       };
       const initial = createWorldRuntimeSession(maliciousAdapter);
@@ -313,6 +362,89 @@ describe("Primary Source World runtime adapter", () => {
         reason: "runtime_trace_invalid",
         session: { state: initial.state, receipt: null, semanticTrace: ["encounter"] },
       });
+    }
+  });
+
+  it("rejects exact duplicate core and return/apply stage emissions", () => {
+    type State = { readonly step: number };
+    type Event = { readonly type: "ADVANCE" | "RETURN" };
+    const adapter: WorldRuntimeAdapter<State, Event, { readonly attempt: "bounded" }> = {
+      pack: primarySourceWorldRuntimeAdapter.pack,
+      createInitialState: () => ({ step: 0 }),
+      reduce: (state) => ({ accepted: true, state: { step: state.step + 1 } }),
+      phase: (state) => state.step >= 9 ? "bounded_result" : "learning",
+      initialSemanticStage: () => "encounter",
+      semanticStages: (event, _prior, next) => {
+        if (event.type === "RETURN") return ["return_or_apply"];
+        return [REQUIRED_RECEIPT_TRACE[next.step]!];
+      },
+      stage: () => "encounter",
+      classify: () => "learner_operation",
+      supportEvent: () => null,
+      proof: (state) => state.step >= 9 ? { attempt: "bounded" } : null,
+      validatorInput: () => ({
+        taskId: "loc.washington-street-1937.transfer",
+        assignments: Object.fromEntries(TRANSFER_ASSIGNMENTS),
+      }),
+      remainsUntested: () => [],
+    };
+    const duplicateCoreAdapter = {
+      ...adapter,
+      semanticStages: () => ["commit_model"] as const,
+    } satisfies WorldRuntimeAdapter<State, Event, { readonly attempt: "bounded" }>;
+    const first = dispatchWorldRuntimeCommand(duplicateCoreAdapter, createWorldRuntimeSession(duplicateCoreAdapter, "attempt.duplicate-core"), {
+      kind: "domain",
+      event: { type: "ADVANCE" },
+    });
+    expect(first.accepted).toBe(true);
+    if (!first.accepted) return;
+    const duplicateCore = dispatchWorldRuntimeCommand(duplicateCoreAdapter, first.session, {
+      kind: "domain",
+      event: { type: "ADVANCE" },
+    });
+    expect(duplicateCore).toMatchObject({ accepted: false, reason: "runtime_trace_invalid", session: first.session });
+
+    let completed = createWorldRuntimeSession(adapter, "attempt.duplicate-return");
+    for (let index = 1; index < REQUIRED_RECEIPT_TRACE.length; index += 1) {
+      const next = dispatchWorldRuntimeCommand(adapter, completed, { kind: "domain", event: { type: "ADVANCE" } });
+      expect(next.accepted).toBe(true);
+      if (!next.accepted) return;
+      completed = next.session;
+    }
+    const firstReturn = dispatchWorldRuntimeCommand(adapter, completed, { kind: "domain", event: { type: "RETURN" } });
+    expect(firstReturn.accepted).toBe(true);
+    if (!firstReturn.accepted) return;
+    const duplicateReturn = dispatchWorldRuntimeCommand(adapter, firstReturn.session, { kind: "domain", event: { type: "RETURN" } });
+    expect(duplicateReturn).toMatchObject({ accepted: false, reason: "runtime_trace_invalid", session: firstReturn.session });
+  });
+
+  it("does not let rejected domain transitions change phase, introduce proof, or emit a receipt", () => {
+    type State = { readonly phase: "learning" | "proof"; readonly proof: { readonly id: string } | null };
+    type Event = { readonly type: "REJECT" };
+    for (const rejectedState of [
+      { phase: "proof" as const, proof: { id: "forged-proof" } },
+      { phase: "learning" as const, proof: { id: "forged-proof" } },
+    ]) {
+      const adapter: WorldRuntimeAdapter<State, Event, { readonly id: string }> = {
+        pack: primarySourceWorldRuntimeAdapter.pack,
+        createInitialState: () => ({ phase: "learning", proof: null }),
+        reduce: () => ({ accepted: false, reason: "forged_rejection", state: rejectedState }),
+        phase: (state) => state.phase,
+        initialSemanticStage: () => "encounter",
+        semanticStages: () => [],
+        stage: () => "encounter",
+        classify: () => "learner_operation",
+        supportEvent: () => null,
+        proof: (state) => state.proof,
+        validatorInput: (proof) => proof,
+        remainsUntested: () => [],
+      };
+      const initial = createWorldRuntimeSession(adapter, "attempt.rejected-proof");
+      const rejected = dispatchWorldRuntimeCommand(adapter, initial, { kind: "domain", event: { type: "REJECT" } });
+      expect(rejected).toMatchObject({ accepted: false, reason: "domain_rejected", session: initial });
+      expect(rejected.session).toBe(initial);
+      expect(rejected.session.receipt).toBeNull();
+      expect(rejected.session.semanticTrace).toEqual(["encounter"]);
     }
   });
 
@@ -354,6 +486,10 @@ describe("Primary Source World runtime adapter", () => {
       stage: "commit_model" as const,
       source: "authored" as const,
       tier: "attention" as const,
+      policyId: "policy.primary-source.authored-support.v1",
+      providerId: null,
+      modelId: null,
+      fallbackReason: null,
     };
     const supportDisguisedAsLearnerWork = {
       ...primarySourceWorldRuntimeAdapter,
@@ -392,7 +528,7 @@ describe("Primary Source World runtime adapter", () => {
         classify: () => "learner_operation",
         supportEvent: () => acceptedSupport,
         proof: () => null,
-        projectValidator: () => ({ outcome: "not_scored", criteria: [] }),
+        validatorInput: () => ({}),
         remainsUntested: () => [],
       };
       const initial = createWorldRuntimeSession(protectedSupportAdapter);

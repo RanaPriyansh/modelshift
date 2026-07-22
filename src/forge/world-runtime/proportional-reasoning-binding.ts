@@ -7,7 +7,7 @@ import type { WorldRuntimeBinding } from "../contracts";
  * named-review authority.
  */
 export const PROPORTIONAL_REASONING_RUNTIME_BINDING = {
-  protocolVersion: "1.0.1",
+  protocolVersion: "1.0.2",
   semanticStages: [
     "encounter",
     "commit_model",
@@ -43,7 +43,7 @@ export const PROPORTIONAL_REASONING_RUNTIME_BINDING = {
     accessAllowed: true,
   },
   evidence: {
-    receiptSchemaVersion: "1.0.1",
+    receiptSchemaVersion: "1.0.2",
     proofAuthority: "honour_based",
     persistence: "not_persisted",
   },

@@ -1,5 +1,5 @@
-import { PROPORTIONAL_REASONING_WORLD, proportionalReasoningTransferValidator } from "../worlds";
-import type { WorldRuntimeActionKind, WorldRuntimeStage } from "../contracts";
+import { PROPORTIONAL_REASONING_WORLD } from "../worlds";
+import type { DeterministicValidationResult, WorldRuntimeActionKind, WorldRuntimeStage } from "../contracts";
 import {
   createInitialRatioWorldState,
   deriveRatioEvidence,
@@ -10,7 +10,6 @@ import {
 } from "../../worlds/proportional-reasoning";
 import type {
   CanonicalSupportEvent,
-  CanonicalValidatorProjection,
   RuntimePhase,
   WorldRuntimeAdapter,
 } from "./protocol";
@@ -25,20 +24,6 @@ const STAGE_MAP: Record<RatioWorldState["stage"], WorldRuntimeStage> = {
   COLD_TRANSFER: "cold_transfer",
   EVIDENCE: "bounded_result",
 };
-
-export function projectProportionalReasoningTransferValidation(input: unknown): CanonicalValidatorProjection {
-  const result = proportionalReasoningTransferValidator.validate(input);
-  if (result.code === "invalid.transfer-input") {
-    return {
-      outcome: "not_scored",
-      criteria: ["The transfer payload did not match the authored map-scale task."],
-    };
-  }
-  return {
-    outcome: result.passed ? "pass" : "fail",
-    criteria: result.evidence,
-  };
-}
 
 function supportTier(level: number): CanonicalSupportEvent["tier"] {
   if (level === 1) return "attention";
@@ -102,17 +87,24 @@ export const proportionalReasoningWorldRuntimeAdapter: WorldRuntimeAdapter<
       stage: "governed_support",
       source: "authored",
       tier: supportTier(level),
+      policyId: "policy.proportional-reasoning.authored-support.v1",
+      providerId: null,
+      modelId: null,
+      fallbackReason: null,
     };
   },
   proof(state: RatioWorldState): RatioProof | null {
     return state.proof;
   },
-  projectValidator(proof: RatioProof): CanonicalValidatorProjection {
-    return projectProportionalReasoningTransferValidation({
+  validatorInput(proof: RatioProof): unknown {
+    return {
       choiceId: proof.choiceId,
       explanation: proof.explanation,
       confidence: proof.confidence,
-    });
+    };
+  },
+  validatorCriteria(result: DeterministicValidationResult) {
+    return result.evidence;
   },
   remainsUntested(proof: RatioProof): readonly string[] {
     const state = {

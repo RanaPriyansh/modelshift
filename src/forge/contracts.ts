@@ -522,10 +522,22 @@ export const returnProofScheduleSchema = z
 export type ReturnProofSchedule = z.infer<typeof returnProofScheduleSchema>;
 
 export const deterministicValidationResultSchema = z.strictObject({
+  inputStatus: z.enum(["valid", "invalid"]),
   passed: z.boolean(),
   score: z.number().min(0).max(1),
   code: identifierSchema,
   evidence: uniqueIdentifiers(shortTextSchema),
+}).superRefine((result, context) => {
+  if (
+    result.inputStatus === "invalid" &&
+    (result.passed || result.score !== 0 || result.evidence.length !== 0)
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "Invalid validator input cannot retain a passing result, score, or evidence.",
+      path: ["inputStatus"],
+    });
+  }
 });
 
 export type DeterministicValidationResult = z.infer<typeof deterministicValidationResultSchema>;

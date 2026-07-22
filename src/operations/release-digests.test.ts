@@ -99,7 +99,7 @@ describe("retained content package identity", () => {
   });
 
   it.each([
-    ["protocol", (binding: Record<string, unknown>) => { binding.protocolVersion = "1.0.2"; }],
+    ["protocol", (binding: Record<string, unknown>) => { binding.protocolVersion = "1.0.3"; }],
     ["validator", (binding: Record<string, unknown>) => { (binding.proof as Record<string, unknown>).validatorId = "validator.primary-source-reasoning-transfer.v2"; }],
     ["source", (binding: Record<string, unknown>) => { ((binding.sourceBindings as Array<Record<string, unknown>>)[0]!).sourceItemId = "source.loc.changed"; }],
     ["proof lock", (binding: Record<string, unknown>) => { (binding.proof as Record<string, unknown>).blockedActionKinds = ["instructional_support", "model_action"]; }],

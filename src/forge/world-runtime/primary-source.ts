@@ -1,7 +1,7 @@
 import {
   PRIMARY_SOURCE_REASONING_WORLD,
 } from "../worlds";
-import type { WorldRuntimeActionKind, WorldRuntimeStage } from "../contracts";
+import type { DeterministicValidationResult, WorldRuntimeActionKind, WorldRuntimeStage } from "../contracts";
 import {
   createInitialPrimarySourceState,
   transitionPrimarySourceWorld,
@@ -10,10 +10,8 @@ import {
   type PrimarySourceWorldEvent,
   type PrimarySourceWorldState,
   type TransferSubmission,
-  validatePrimarySourceTransfer,
 } from "../../worlds/primary-source-reasoning";
 import type {
-  CanonicalValidatorProjection,
   CanonicalSupportEvent,
   RuntimePhase,
   WorldRuntimeAdapter,
@@ -34,25 +32,6 @@ const STAGE_MAP: Record<PrimarySourceStage, WorldRuntimeStage> = {
   COLD_TRANSFER: "cold_transfer",
   RESULT: "bounded_result",
 };
-
-export function projectPrimarySourceTransferValidation(input: unknown): CanonicalValidatorProjection {
-  const result = validatePrimarySourceTransfer(input);
-  if (!result.valid) {
-    return {
-      outcome: "not_scored",
-      criteria: [result.evidence],
-    };
-  }
-  return result.passed
-      ? {
-        outcome: "pass",
-        criteria: [result.evidence],
-      }
-    : {
-        outcome: "fail",
-        criteria: [result.evidence],
-      };
-}
 
 function supportTier(level: number): CanonicalSupportEvent["tier"] {
   if (level === 1) return "attention";
@@ -134,6 +113,10 @@ export const primarySourceWorldRuntimeAdapter: WorldRuntimeAdapter<
         stage: "commit_model",
         source: "authored",
         tier: "example",
+        policyId: "policy.primary-source.authored-support.v1",
+        providerId: null,
+        modelId: null,
+        fallbackReason: null,
       };
     }
     if (event.type !== "REQUEST_SUPPORT") return null;
@@ -144,11 +127,18 @@ export const primarySourceWorldRuntimeAdapter: WorldRuntimeAdapter<
       stage: "governed_support",
       source: "authored",
       tier: supportTier(level),
+      policyId: "policy.primary-source.authored-support.v1",
+      providerId: null,
+      modelId: null,
+      fallbackReason: null,
     };
   },
   proof: toRuntimeProof,
-  projectValidator(proof: PrimarySourceRuntimeProof) {
-    return projectPrimarySourceTransferValidation(proof.submission);
+  validatorInput(proof: PrimarySourceRuntimeProof): unknown {
+    return proof.submission;
+  },
+  validatorCriteria(result: DeterministicValidationResult) {
+    return result.evidence;
   },
   remainsUntested(proof: PrimarySourceRuntimeProof) {
     return proof.record.notYetTested;

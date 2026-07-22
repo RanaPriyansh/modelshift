@@ -1,17 +1,30 @@
 import type { WorldRuntimeActionKind, WorldRuntimeStage } from "../contracts";
 import {
+  getCanonicalDeterministicValidator,
+  getCanonicalDeterministicValidatorRegistration,
+  validateCanonicalDeterministicResult,
+} from "../deterministic-validators";
+import { lintWorldRuntimePack } from "./linter";
+import {
+  deriveCanonicalValidatorOutcome,
   deriveDefaultEvidenceDisposition,
   type AccessAccommodationEvent,
   type BoundedLocalWorldRuntimeReceipt,
   type CanonicalSupportEvent,
+  isCanonicalSupportEvent,
+  isWorldRuntimeAttemptId,
   type RuntimeCommand,
   type RuntimePhase,
   type RuntimeSourceBindingReceipt,
   type WorldRuntimeAdapter,
+  LOCAL_RUNTIME_RECEIPT_LIMITATION,
+  WORLD_RUNTIME_PROTOCOL_VERSION,
   WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION,
 } from "./protocol";
 
 export interface WorldRuntimeSession<State, DomainProof> {
+  /** Local idempotency key only; never identity or authentication. */
+  readonly attemptId: string;
   readonly state: State;
   readonly phase: RuntimePhase;
   readonly semanticTrace: readonly WorldRuntimeStage[];
@@ -20,6 +33,26 @@ export interface WorldRuntimeSession<State, DomainProof> {
   readonly proofBlockedActions: readonly WorldRuntimeActionKind[];
   readonly receipt: BoundedLocalWorldRuntimeReceipt | null;
   readonly proof: DomainProof | null;
+}
+
+export type WorldRuntimeConfigurationErrorCode =
+  | "pack_invalid"
+  | "unsupported_protocol"
+  | "receipt_schema_mismatch"
+  | "unknown_canonical_validator";
+
+/**
+ * A typed, fail-fast admission boundary. Runtime callers cannot defer a bad
+ * pack/action/source/receipt version failure until a learner reaches proof.
+ */
+export class WorldRuntimeConfigurationError extends Error {
+  readonly code: WorldRuntimeConfigurationErrorCode;
+
+  constructor(code: WorldRuntimeConfigurationErrorCode, message: string) {
+    super(message);
+    this.name = "WorldRuntimeConfigurationError";
+    this.code = code;
+  }
 }
 
 export type RuntimeDispatchResult<State, DomainProof> =
@@ -39,6 +72,8 @@ export type RuntimeDispatchResult<State, DomainProof> =
         | "access_not_construct_preserving"
         | "runtime_trace_invalid"
         | "runtime_support_mismatch"
+        | "canonical_validator_malformed"
+        | "canonical_validator_input_invalid"
         | "domain_rejected";
       readonly domainReason?: string;
     };
@@ -78,7 +113,13 @@ function appendValidatedSemanticStages(
   let newCoreStages = 0;
 
   for (const stage of stages) {
-    if (nextTrace.includes(stage)) continue;
+    if (nextTrace.includes(stage)) {
+      // A learner may consume multiple governed supports, but the semantic
+      // trace records that protocol stage once. Every core and return/apply
+      // duplicate is an adapter forgery rather than a harmless no-op.
+      if (stage === "governed_support") continue;
+      return null;
+    }
 
     if (OPTIONAL_SEMANTIC_STAGES.has(stage)) {
       if (stage === "governed_support") {
@@ -121,15 +162,33 @@ function blockedInstructionalSupportSession<State, DomainProof>(
   });
 }
 
+type ReceiptCreation =
+  | { readonly ok: true; readonly receipt: BoundedLocalWorldRuntimeReceipt }
+  | { readonly ok: false; readonly reason: "canonical_validator_malformed" | "canonical_validator_input_invalid" };
+
 function receiptFor<State, DomainEvent, DomainProof>(
   adapter: WorldRuntimeAdapter<State, DomainEvent, DomainProof>,
   session: WorldRuntimeSession<State, DomainProof>,
   proof: DomainProof,
-): BoundedLocalWorldRuntimeReceipt {
+): ReceiptCreation {
   const runtime = adapter.pack.runtime;
-  const validator = adapter.projectValidator(proof);
   const validatorDefinition = adapter.pack.deterministicValidators.find((candidate) => candidate.id === runtime.proof.validatorId);
   if (!validatorDefinition) throw new Error(`Runtime validator ${runtime.proof.validatorId} is absent from its package.`);
+  const canonicalValidator = getCanonicalDeterministicValidator(runtime.proof.validatorId);
+  if (!canonicalValidator) throw new WorldRuntimeConfigurationError(
+    "unknown_canonical_validator",
+    `Runtime validator ${runtime.proof.validatorId} is not in the canonical deterministic registry.`,
+  );
+  const validation = validateCanonicalDeterministicResult(canonicalValidator, adapter.validatorInput(proof));
+  // A domain adapter that reaches a terminal state with invalid validator
+  // input, or a malformed validator implementation/result, fails closed
+  // before it can create a receipt or poison a retryable domain attempt.
+  if (!validation) return { ok: false, reason: "canonical_validator_malformed" };
+  if (validation.inputStatus === "invalid") {
+    return { ok: false, reason: "canonical_validator_input_invalid" };
+  }
+  const outcome = deriveCanonicalValidatorOutcome(validation);
+  const criteria = boundedValidatorCriteria(adapter, validation, proof);
 
   const sourceBindings: RuntimeSourceBindingReceipt[] = runtime.sourceBindings.map((binding) => {
     if (binding.provenanceStatus === "bound") {
@@ -162,15 +221,18 @@ function receiptFor<State, DomainEvent, DomainProof>(
   const proofClaim = adapter.pack.proofClaims.find((claim) => claim.id === runtime.proof.proofClaimId);
   if (!proofClaim) throw new Error(`Runtime proof claim ${runtime.proof.proofClaimId} is absent from its package.`);
 
-  return Object.freeze({
+  return {
+    ok: true,
+    receipt: Object.freeze({
     schemaVersion: WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION,
     kind: "forge.runtime.bounded-local-attempt",
+    attemptId: session.attemptId,
+    recordedAt: new Date().toISOString(),
     authority: {
       proofAuthority: runtime.evidence.proofAuthority,
       persistence: runtime.evidence.persistence,
       isDurable: false as const,
-      limitation:
-        "This is a client runtime receipt only. It is not server-enforced, durable, tamper-resistant, or an independent evidence record.",
+      limitation: LOCAL_RUNTIME_RECEIPT_LIMITATION,
     },
     world: {
       id: adapter.pack.manifest.id,
@@ -187,10 +249,11 @@ function receiptFor<State, DomainEvent, DomainProof>(
     },
     validator: {
       id: validatorDefinition.id,
-      version: validatorDefinition.outputContractVersion,
-      outcome: validator.outcome,
-      disposition: deriveDefaultEvidenceDisposition(validator.outcome),
-      criteria: [...validator.criteria],
+      version: getCanonicalDeterministicValidatorRegistration(runtime.proof.validatorId)?.outputContractVersion
+        ?? validatorDefinition.outputContractVersion,
+      outcome,
+      disposition: deriveDefaultEvidenceDisposition(outcome),
+      criteria,
     },
     cognitiveSupport: [...session.cognitiveSupport],
     accessAccommodations: [...session.accessAccommodations],
@@ -198,14 +261,88 @@ function receiptFor<State, DomainEvent, DomainProof>(
     sourceProvenanceStatus: sourceBindings.every((binding) => binding.status === "bound") ? "bound" : "incomplete",
     remainsUntested: [...adapter.remainsUntested(proof)],
     responseDigest: null,
-  });
+    }),
+  };
+}
+
+function boundedValidatorCriteria<State, DomainEvent, DomainProof>(
+  adapter: WorldRuntimeAdapter<State, DomainEvent, DomainProof>,
+  result: NonNullable<ReturnType<typeof validateCanonicalDeterministicResult>>,
+  proof: DomainProof,
+): readonly string[] {
+  let criteria: readonly string[] = result.evidence;
+  try {
+    criteria = adapter.validatorCriteria?.(result, proof) ?? result.evidence;
+  } catch {
+    criteria = result.evidence;
+  }
+  // Only compact criterion codes may leave a runtime adapter. This excludes
+  // learner prose, raw model output, and credentials while keeping published
+  // task/answer/mechanism identifiers useful to the local ledger.
+  return Object.freeze([...new Set(criteria.filter((criterion) =>
+    typeof criterion === "string" && /^[A-Za-z0-9][A-Za-z0-9:._,/-]{0,159}$/.test(criterion),
+  ))].slice(0, 8));
+}
+
+function createRuntimeAttemptId(): string {
+  const uuid = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID().replaceAll("-", "")
+    : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
+  return `attempt.${uuid.toLowerCase()}`;
+}
+
+function assertWorldRuntimeConfiguration<State, DomainEvent, DomainProof>(
+  adapter: WorldRuntimeAdapter<State, DomainEvent, DomainProof>,
+): void {
+  const lint = lintWorldRuntimePack(adapter.pack);
+  if (!lint.ok) {
+    throw new WorldRuntimeConfigurationError(
+      "pack_invalid",
+      `World runtime pack is invalid: ${lint.issues.map((issue) => issue.code).join(", ")}.`,
+    );
+  }
+  const runtime = adapter.pack.runtime;
+  if (runtime.protocolVersion !== WORLD_RUNTIME_PROTOCOL_VERSION) {
+    throw new WorldRuntimeConfigurationError(
+      "unsupported_protocol",
+      `World runtime protocol ${runtime.protocolVersion} is unsupported; expected ${WORLD_RUNTIME_PROTOCOL_VERSION}.`,
+    );
+  }
+  if (runtime.evidence.receiptSchemaVersion !== WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION) {
+    throw new WorldRuntimeConfigurationError(
+      "receipt_schema_mismatch",
+      `World runtime receipt schema ${runtime.evidence.receiptSchemaVersion} must be ${WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION}.`,
+    );
+  }
+  const canonicalRegistration = getCanonicalDeterministicValidatorRegistration(runtime.proof.validatorId);
+  const declaredValidator = adapter.pack.deterministicValidators.find(
+    (validator) => validator.id === runtime.proof.validatorId,
+  );
+  if (!canonicalRegistration || canonicalRegistration.validator.id !== runtime.proof.validatorId ||
+    !declaredValidator ||
+    declaredValidator.inputContractVersion !== canonicalRegistration.inputContractVersion ||
+    declaredValidator.outputContractVersion !== canonicalRegistration.outputContractVersion) {
+    throw new WorldRuntimeConfigurationError(
+      "unknown_canonical_validator",
+      `World runtime validator ${runtime.proof.validatorId} is not a canonical deterministic validator.`,
+    );
+  }
 }
 
 export function createWorldRuntimeSession<State, DomainEvent, DomainProof>(
   adapter: WorldRuntimeAdapter<State, DomainEvent, DomainProof>,
+  attemptId = createRuntimeAttemptId(),
 ): WorldRuntimeSession<State, DomainProof> {
+  assertWorldRuntimeConfiguration(adapter);
+  if (!isWorldRuntimeAttemptId(attemptId)) {
+    throw new WorldRuntimeConfigurationError(
+      "pack_invalid",
+      "World runtime attempt IDs must use the local attempt.<opaque> format.",
+    );
+  }
   const state = adapter.createInitialState();
   return Object.freeze({
+    attemptId,
     state,
     phase: adapter.phase(state),
     // The runtime, rather than a domain adapter, owns the invariant that
@@ -306,14 +443,14 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
 
   const transition = adapter.reduce(session.state, command.event);
   if (!transition.accepted) {
+    const rejectedPhase = adapter.phase(transition.state);
+    const rejectedProof = adapter.proof(transition.state);
+    const retainsOnlyRetryState = rejectedPhase === session.phase && Object.is(rejectedProof, session.proof);
     return {
       accepted: false,
-      session: Object.freeze({
-        ...session,
-        state: transition.state,
-        phase: adapter.phase(transition.state),
-        proof: adapter.proof(transition.state),
-      }),
+      session: retainsOnlyRetryState
+        ? Object.freeze({ ...session, state: transition.state })
+        : session,
       reason: "domain_rejected",
       domainReason: transition.reason,
     };
@@ -332,7 +469,7 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
       reason: "proof_action_blocked",
     };
   }
-  if ((support !== null) !== isInstructionalSupport) {
+  if ((support !== null && !isCanonicalSupportEvent(support)) || (support !== null) !== isInstructionalSupport) {
     if (support !== null && supportTouchesProtectedPhase) {
       return {
         accepted: false,
@@ -365,7 +502,11 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
   if (support) effects.push("support_recorded");
   if (session.phase !== "proof" && phase === "proof") effects.push("proof_opened");
   if (proof && !session.receipt) {
-    nextSession = Object.freeze({ ...nextSession, receipt: receiptFor(adapter, nextSession, proof) });
+    const receiptCreation = receiptFor(adapter, nextSession, proof);
+    if (!receiptCreation.ok) {
+      return { accepted: false, session, reason: receiptCreation.reason };
+    }
+    nextSession = Object.freeze({ ...nextSession, receipt: receiptCreation.receipt });
     effects.push("receipt_emitted");
   }
   return { accepted: true, session: nextSession, effects };

@@ -1,4 +1,5 @@
 import type {
+  DeterministicValidationResult,
   LearningWorldPack,
   WorldRuntimeAccessAccommodationKind,
   WorldRuntimeAccessModality,
@@ -8,7 +9,10 @@ import type {
   WorldRuntimeStage,
 } from "../contracts";
 
-export const WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION = "1.0.1" as const;
+export const WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION = "1.0.2" as const;
+export const WORLD_RUNTIME_PROTOCOL_VERSION = "1.0.2" as const;
+export const LOCAL_RUNTIME_RECEIPT_LIMITATION =
+  "This is a client runtime receipt only. It is not server-enforced, durable, tamper-resistant, or an independent evidence record.";
 
 export type RuntimePhase = "learning" | "proof" | "bounded_result";
 
@@ -26,6 +30,14 @@ export interface CanonicalSupportEvent {
   readonly stage: WorldRuntimeStage;
   readonly source: "authored" | "model" | "human";
   readonly tier: "attention" | "cue" | "representation" | "example" | "repair" | "solution";
+  /** Reviewed policy that permitted this bounded support event. */
+  readonly policyId: string;
+  /** Null for authored support; never a credential or endpoint. */
+  readonly providerId: string | null;
+  /** Null for authored support; never raw prompt or output content. */
+  readonly modelId: string | null;
+  /** A bounded code only when an authored fallback replaced model support. */
+  readonly fallbackReason: string | null;
 }
 
 export interface AccessAccommodationEvent {
@@ -74,6 +86,9 @@ export type RuntimeSourceBindingReceipt =
 export interface BoundedLocalWorldRuntimeReceipt {
   readonly schemaVersion: typeof WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION;
   readonly kind: "forge.runtime.bounded-local-attempt";
+  /** Local idempotency key only; not learner identity or authentication. */
+  readonly attemptId: string;
+  readonly recordedAt: string;
   readonly authority: {
     readonly proofAuthority: "honour_based";
     readonly persistence: "not_persisted";
@@ -106,11 +121,6 @@ export interface BoundedLocalWorldRuntimeReceipt {
   readonly sourceProvenanceStatus: "bound" | "incomplete";
   readonly remainsUntested: readonly string[];
   readonly responseDigest: null;
-}
-
-export interface CanonicalValidatorProjection {
-  readonly outcome: ValidatorOutcome;
-  readonly criteria: readonly string[];
 }
 
 export type RuntimeCommand<DomainEvent> =
@@ -147,7 +157,10 @@ export interface WorldRuntimeAdapter<State, DomainEvent, DomainProof> {
   classify(event: DomainEvent): WorldRuntimeActionKind;
   supportEvent(event: DomainEvent, state: State): CanonicalSupportEvent | null;
   proof(state: State): DomainProof | null;
-  projectValidator(proof: DomainProof): CanonicalValidatorProjection;
+  /** Provides only validator input; the shared runtime resolves the validator. */
+  validatorInput(proof: DomainProof): unknown;
+  /** Optional, bounded explanatory criteria. It cannot set outcome or disposition. */
+  validatorCriteria?(result: DeterministicValidationResult, proof: DomainProof): readonly string[];
   remainsUntested(proof: DomainProof): readonly string[];
 }
 
@@ -167,4 +180,168 @@ export function deriveDefaultEvidenceDisposition(outcome: ValidatorOutcome): Exc
     case "not_scored":
       return "not_evaluated";
   }
+}
+
+export function deriveCanonicalValidatorOutcome(result: DeterministicValidationResult): ValidatorOutcome {
+  if (result.inputStatus === "invalid") return "not_scored";
+  return result.passed ? "pass" : "fail";
+}
+
+export function isWorldRuntimeAttemptId(value: unknown): value is string {
+  // The evidence projector prefixes this with "proof.", so keep the local
+  // attempt identity at <= 122 characters for the 128-character ledger ID.
+  return typeof value === "string" && /^attempt\.[a-z0-9][a-z0-9._-]{2,113}$/.test(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
+}
+
+function isIsoTimestamp(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.valueOf()) && parsed.toISOString() === value;
+}
+
+function isStringArray(value: unknown, maximum = 64): value is readonly string[] {
+  return Array.isArray(value) && value.length <= maximum && value.every((item) => typeof item === "string" && item.length > 0 && item.length <= 240);
+}
+
+const runtimeStages = new Set<WorldRuntimeStage>([
+  "encounter", "commit_model", "interpret_two_readings", "name_disagreement", "commit_test_prediction",
+  "run_separating_experience", "governed_support", "reconstruct", "withdraw_instructional_ai",
+  "cold_transfer", "bounded_result", "return_or_apply",
+]);
+const runtimeActionKinds = new Set<WorldRuntimeActionKind>([
+  "learner_operation", "instructional_support", "model_action", "experience_replay",
+  "access_accommodation", "return_proof", "reset",
+]);
+const requiredReceiptStages: readonly WorldRuntimeStage[] = [
+  "encounter", "commit_model", "interpret_two_readings", "name_disagreement", "commit_test_prediction",
+  "run_separating_experience", "reconstruct", "withdraw_instructional_ai", "cold_transfer", "bounded_result",
+];
+
+function hasCompleteReceiptTrace(trace: readonly unknown[]): boolean {
+  const core = trace.filter((stage): stage is WorldRuntimeStage =>
+    typeof stage === "string" && requiredReceiptStages.includes(stage as WorldRuntimeStage),
+  );
+  return core.length === requiredReceiptStages.length &&
+    requiredReceiptStages.every((stage, index) => core[index] === stage);
+}
+
+function isBoundedMetadataId(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(value);
+}
+
+function isSemver(value: unknown): value is string {
+  return typeof value === "string" && /^\d+\.\d+\.\d+$/.test(value);
+}
+
+function isSha256Digest(value: unknown): value is string {
+  return typeof value === "string" && /^sha256:[a-f0-9]{64}$/.test(value);
+}
+
+export function isCanonicalSupportEvent(value: unknown): value is CanonicalSupportEvent {
+  if (!isRecord(value) || !hasExactKeys(value, [
+    "actionId", "stage", "source", "tier", "policyId", "providerId", "modelId", "fallbackReason",
+  ])) return false;
+  const metadataValid = value.providerId === null || isBoundedMetadataId(value.providerId);
+  const modelValid = value.modelId === null || isBoundedMetadataId(value.modelId);
+  const fallbackValid = value.fallbackReason === null || isBoundedMetadataId(value.fallbackReason);
+  if (!isBoundedMetadataId(value.actionId) || !isBoundedMetadataId(value.policyId) || !metadataValid || !modelValid || !fallbackValid) return false;
+  if (value.source === "authored" && (value.providerId !== null || value.modelId !== null)) return false;
+  if (value.source === "model" && (value.providerId === null || value.modelId === null)) return false;
+  if (value.source === "human" && (value.providerId !== null || value.modelId !== null)) return false;
+  if (value.source !== "authored" && value.fallbackReason !== null) return false;
+  return (
+    typeof value.stage === "string" && runtimeStages.has(value.stage as WorldRuntimeStage) &&
+    (value.source === "authored" || value.source === "model" || value.source === "human") &&
+    ["attention", "cue", "representation", "example", "repair", "solution"].includes(value.tier as string)
+  );
+}
+
+function isAccessAccommodationEvent(value: unknown): value is AccessAccommodationEvent {
+  if (!isRecord(value) || !hasExactKeys(value, [
+    "accommodationId", "stage", "kind", "modality", "representation", "constructPreservation",
+    "answerChanging", "policyVersion", "nonvisualAlternative",
+  ])) return false;
+  return isBoundedMetadataId(value.accommodationId) && typeof value.stage === "string" &&
+    runtimeStages.has(value.stage as WorldRuntimeStage) &&
+    ["text_alternative", "keyboard_operation", "motion_reduction"].includes(value.kind as string) &&
+    ["textual", "keyboard", "motion"].includes(value.modality as string) &&
+    ["text_description", "native_control", "reduced_motion"].includes(value.representation as string) &&
+    value.constructPreservation === "preserves_construct" && value.answerChanging === false &&
+    isSemver(value.policyVersion) && typeof value.nonvisualAlternative === "boolean";
+}
+
+function isRuntimeSourceBindingReceipt(value: unknown): value is RuntimeSourceBindingReceipt {
+  if (!isRecord(value)) return false;
+  const legacy = value.status === "legacy_metadata_only";
+  const bound = value.status === "bound";
+  if (!legacy && !bound) return false;
+  const expected = [
+    "domainSourceRef", "sourcePackageId", "sourcePackageVersion", "sourceItemId", "sourceSnapshotDigest",
+    "locatorIds", "claimIds", "rightsRecordId", "reviewDecisionIds", "status",
+  ];
+  if (!hasExactKeys(value, expected) || !isBoundedMetadataId(value.domainSourceRef) || !isBoundedMetadataId(value.sourceItemId) ||
+    !isStringArray(value.locatorIds) || !isStringArray(value.claimIds) || !isStringArray(value.reviewDecisionIds) ||
+    !value.locatorIds.every(isBoundedMetadataId) || !value.claimIds.every(isBoundedMetadataId) ||
+    !value.reviewDecisionIds.every(isBoundedMetadataId)) return false;
+  if (legacy) {
+    return value.sourcePackageId === null && value.sourcePackageVersion === null && value.sourceSnapshotDigest === null &&
+      value.rightsRecordId === null && value.locatorIds.length === 0 && value.claimIds.length === 0 && value.reviewDecisionIds.length === 0;
+  }
+  return isBoundedMetadataId(value.sourcePackageId) && isSemver(value.sourcePackageVersion) &&
+    isSha256Digest(value.sourceSnapshotDigest) && isBoundedMetadataId(value.rightsRecordId) &&
+    value.locatorIds.length > 0 && value.claimIds.length > 0 && value.reviewDecisionIds.length > 0;
+}
+
+/**
+ * Receipt projection is intentionally structural, not authenticity proof: a
+ * local browser receipt is not tamper-resistant. This gate rejects malformed,
+ * strengthened, and raw-shape direct calls before they reach the local ledger.
+ */
+export function isBoundedLocalWorldRuntimeReceipt(value: unknown): value is BoundedLocalWorldRuntimeReceipt {
+  if (!isRecord(value) || !hasExactKeys(value, [
+    "schemaVersion", "kind", "attemptId", "recordedAt", "authority", "world", "protocol", "validator",
+    "cognitiveSupport", "accessAccommodations", "sourceBindings", "sourceProvenanceStatus", "remainsUntested", "responseDigest",
+  ])) return false;
+  if (value.schemaVersion !== WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION || value.kind !== "forge.runtime.bounded-local-attempt" ||
+    !isWorldRuntimeAttemptId(value.attemptId) || !isIsoTimestamp(value.recordedAt) || value.responseDigest !== null ||
+    !isRecord(value.authority) || !isRecord(value.world) || !isRecord(value.protocol) || !isRecord(value.validator)) return false;
+  if (!hasExactKeys(value.authority, ["proofAuthority", "persistence", "isDurable", "limitation"]) ||
+    value.authority.proofAuthority !== "honour_based" || value.authority.persistence !== "not_persisted" ||
+    value.authority.isDurable !== false || value.authority.limitation !== LOCAL_RUNTIME_RECEIPT_LIMITATION) return false;
+  if (!hasExactKeys(value.world, ["id", "version", "contentVersion", "capabilityId", "proofClaimId", "taskFamilyId"]) ||
+    !isBoundedMetadataId(value.world.id) || !isSemver(value.world.version) || !isSemver(value.world.contentVersion) ||
+    !isBoundedMetadataId(value.world.capabilityId) || !isBoundedMetadataId(value.world.proofClaimId) ||
+    !isBoundedMetadataId(value.world.taskFamilyId)) return false;
+  if (!hasExactKeys(value.protocol, ["version", "semanticTrace", "instructionalActionsRejectedDuringProof"]) ||
+    value.protocol.version !== WORLD_RUNTIME_PROTOCOL_VERSION || !Array.isArray(value.protocol.semanticTrace) ||
+    !value.protocol.semanticTrace.every((stage) => typeof stage === "string" && runtimeStages.has(stage as WorldRuntimeStage)) ||
+    !hasCompleteReceiptTrace(value.protocol.semanticTrace) ||
+    !Array.isArray(value.protocol.instructionalActionsRejectedDuringProof) ||
+    !value.protocol.instructionalActionsRejectedDuringProof.every((kind) => typeof kind === "string" && runtimeActionKinds.has(kind as WorldRuntimeActionKind))) return false;
+  if (!hasExactKeys(value.validator, ["id", "version", "outcome", "disposition", "criteria"]) ||
+    !isBoundedMetadataId(value.validator.id) || !isSemver(value.validator.version) ||
+    !["pass", "fail", "inconclusive", "not_scored"].includes(value.validator.outcome as string) ||
+    !["demonstrated", "not_demonstrated", "open_question", "not_evaluated", "invalidated"].includes(value.validator.disposition as string) ||
+    !isStringArray(value.validator.criteria, 8) || !value.validator.criteria.every((criterion) =>
+      /^[A-Za-z0-9][A-Za-z0-9:._,/-]{0,159}$/.test(criterion)
+    ) ||
+    deriveDefaultEvidenceDisposition(value.validator.outcome as ValidatorOutcome) !== value.validator.disposition) return false;
+  const sourceProvenanceStatus = Array.isArray(value.sourceBindings) &&
+    value.sourceBindings.every((binding) => isRuntimeSourceBindingReceipt(binding) && binding.status === "bound")
+      ? "bound"
+      : "incomplete";
+  return Array.isArray(value.cognitiveSupport) && value.cognitiveSupport.length <= 8 && value.cognitiveSupport.every(isCanonicalSupportEvent) &&
+    Array.isArray(value.accessAccommodations) && value.accessAccommodations.length <= 16 && value.accessAccommodations.every(isAccessAccommodationEvent) &&
+    Array.isArray(value.sourceBindings) && value.sourceBindings.length > 0 && value.sourceBindings.length <= 16 && value.sourceBindings.every(isRuntimeSourceBindingReceipt) &&
+    value.sourceProvenanceStatus === sourceProvenanceStatus && isStringArray(value.remainsUntested, 16);
 }

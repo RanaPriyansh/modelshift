@@ -38,7 +38,16 @@ export const proofConditionsSchema = z
 
 export const assistanceProvenanceSchema = z
   .object({
-    kind: z.enum(["authored_hint", "authored_contrast", "authored_principle", "model_interpretation"]),
+    kind: z.enum([
+      "authored_hint",
+      "authored_contrast",
+      "authored_principle",
+      // Additive: old ledger records remain valid while runtime receipts can
+      // preserve an authored representational accommodation distinctly.
+      "authored_representation",
+      "model_interpretation",
+      "human_guidance",
+    ]),
     sourceId: evidenceIdentifierSchema,
   })
   .strict();

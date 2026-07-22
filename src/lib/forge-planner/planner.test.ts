@@ -96,7 +96,7 @@ describe("deterministic Forge path compiler", () => {
       route: {
         topicId: "proportional_reasoning",
         worldId: "world.proportional-reasoning",
-        worldVersion: "1.0.1",
+        worldVersion: "1.0.2",
         worldRoute: "/learn/proportional-reasoning",
       },
       grounding: {
@@ -118,7 +118,7 @@ describe("deterministic Forge path compiler", () => {
       route: {
         topicId: "primary_source_reasoning",
         worldId: "world.primary-source-reasoning",
-        worldVersion: "1.0.1",
+        worldVersion: "1.0.2",
         worldRoute: "/learn/primary-source-reasoning",
       },
       grounding: {

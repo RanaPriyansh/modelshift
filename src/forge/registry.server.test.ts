@@ -85,13 +85,13 @@ describe("TrustedWorldRegistry", () => {
 
   it("keeps the Primary Source runtime binding under the existing package identity", () => {
     expect(trustedWorldRegistry.getPack("world.primary-source-reasoning")).toMatchObject({
-      manifest: { version: "1.0.1" },
+      manifest: { version: "1.0.2" },
       release: { contentVersion: "1.0.1" },
     });
     expect(trustedWorldRegistry.getRuntimeBinding("world.force-and-motion")).toBeUndefined();
     expect(trustedWorldRegistry.getRuntimeBinding("world.primary-source-reasoning")).toMatchObject({
-      protocolVersion: "1.0.1",
-      evidence: { receiptSchemaVersion: "1.0.1" },
+      protocolVersion: "1.0.2",
+      evidence: { receiptSchemaVersion: "1.0.2" },
       proof: {
         proofClaimId: "proof.primary-source-reasoning.independent-transfer",
         validatorId: "validator.primary-source-reasoning-transfer.v1",
@@ -211,7 +211,7 @@ describe("TrustedWorldRegistry", () => {
 
     const undeclared: DeterministicValidator = {
       id: "validator.undeclared.v1",
-      validate: () => ({ passed: true, score: 1, code: "test.passed", evidence: [] }),
+      validate: () => ({ inputStatus: "valid", passed: true, score: 1, code: "test.passed", evidence: [] }),
     };
     expectRegistryCode(
       () => createTrustedWorldRegistry({ packs: BUILT_IN_WORLD_PACKS, validators: [...BUILT_IN_DETERMINISTIC_VALIDATORS, undeclared] }),
@@ -222,7 +222,7 @@ describe("TrustedWorldRegistry", () => {
   it("rejects invalid output from a deterministic validator", () => {
     const invalidOutputValidator: DeterministicValidator = {
       id: FORCE_AND_MOTION_VALIDATOR_ID,
-      validate: () => ({ passed: true, score: 2, code: "invalid.score", evidence: [] }),
+      validate: () => ({ inputStatus: "valid", passed: true, score: 2, code: "invalid.score", evidence: [] }),
     };
     const registry = createTrustedWorldRegistry({
       packs: BUILT_IN_WORLD_PACKS,
