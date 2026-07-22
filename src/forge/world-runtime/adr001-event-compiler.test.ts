@@ -350,22 +350,26 @@ describe.each(fixtures)("$name ADR-001 event compiler", (fixture) => {
     await expect(compileWorldRuntimeReceiptToAdr001({
       receipt: { ...passed.receipt, remainsUntested: [] },
       validatorInput: passed.validatorInput,
-    })).resolves.toMatchObject({ ok: false, code: "malformed_receipt" });
+    })).resolves.toMatchObject({ ok: false, code: "remains_untested_mismatch" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: { ...passed.receipt, remainsUntested: "not-an-array" },
+      validatorInput: passed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "remains_untested_mismatch" });
     await expect(compileWorldRuntimeReceiptToAdr001({
       receipt: { ...passed.receipt, remainsUntested: Array.from({ length: 17 }, (_value, index) => `bounded-limit-${index + 1}`) },
       validatorInput: passed.validatorInput,
-    })).resolves.toMatchObject({ ok: false, code: "malformed_receipt" });
+    })).resolves.toMatchObject({ ok: false, code: "remains_untested_mismatch" });
     await expect(compileWorldRuntimeReceiptToAdr001({
       receipt: { ...passed.receipt, remainsUntested: ["x".repeat(241)] },
       validatorInput: passed.validatorInput,
-    })).resolves.toMatchObject({ ok: false, code: "malformed_receipt" });
+    })).resolves.toMatchObject({ ok: false, code: "remains_untested_mismatch" });
     const withoutLimitation = Object.fromEntries(
       Object.entries(passed.receipt).filter(([key]) => key !== "remainsUntested"),
     );
     await expect(compileWorldRuntimeReceiptToAdr001({
       receipt: withoutLimitation,
       validatorInput: passed.validatorInput,
-    })).resolves.toMatchObject({ ok: false, code: "malformed_receipt" });
+    })).resolves.toMatchObject({ ok: false, code: "remains_untested_mismatch" });
     await expect(compileWorldRuntimeReceiptToAdr001({
       receipt: {
         ...passed.receipt,
@@ -385,6 +389,18 @@ describe.each(fixtures)("$name ADR-001 event compiler", (fixture) => {
       receipt: { ...passed.receipt, packageIntegrityHash: `sha256:${"0".repeat(64)}` },
       validatorInput: passed.validatorInput,
     })).resolves.toMatchObject({ ok: false, code: "package_integrity_hash_mismatch" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: {},
+      validatorInput: passed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "malformed_receipt" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: { ...passed.receipt, kind: "forge.runtime.not-a-bounded-local-attempt" },
+      validatorInput: passed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "malformed_receipt" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: { ...passed.receipt, schemaVersion: "9.9.9" },
+      validatorInput: passed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "malformed_receipt" });
 
     const reset = fixture.reset();
     expect(reset.resetAttemptId).not.toBe(reset.completedAttemptId);
