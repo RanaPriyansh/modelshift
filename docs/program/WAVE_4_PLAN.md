@@ -18,14 +18,16 @@ At the end of Wave 4, all four current Worlds should dispatch accepted domain tr
 
 ## Principal decisions
 
-1. **One runtime, four domain authorities.** `src/forge/world-runtime/runtime.ts` owns ordered protocol trace, action blocking, support/access recording, phase changes, and bounded receipt creation. Each `src/worlds/**` reducer and deterministic validator remains the only subject-specific state and scoring authority.
-2. **Components do not create evidence authority.** Migrated components dispatch through `dispatchWorldRuntimeCommand`. A compatibility device-ledger write may occur exactly once only after the runtime emits a receipt, and its outcome may not exceed the receipt disposition.
+1. **One runtime, four domain authorities.** `src/forge/world-runtime/runtime.ts` owns ordered protocol trace, action blocking, support/access recording, phase changes, canonical-validator invocation, and bounded receipt creation. Each `src/worlds/**` reducer and the canonical validator registry remain the only subject-specific state and scoring authorities. An adapter supplies validator input and explanatory criteria; it cannot supply outcome or disposition.
+2. **Components do not create evidence authority.** Migrated components dispatch through `dispatchWorldRuntimeCommand`. A receipt has one stable local attempt ID. The receipt-only compatibility projector derives a deterministic ledger entry ID from it, so duplicate projection is atomically rejected and the projected outcome cannot exceed the receipt disposition.
 3. **Proof is a structural phase.** Instructional support, model action, and experience replay are absent from proof UI and rejected by the runtime. Keyboard operation, text alternatives, and reduced-motion behavior remain available and are recorded separately from cognitive help.
 4. **Receipts remain weak by construction.** Every Wave 4 receipt is `honour_based`, `not_persisted`, `isDurable: false`, has `responseDigest: null`, and contains no raw learner explanation. It is not routed to the ADR-001 projector or Supabase.
 5. **Legacy source metadata stays incomplete.** Existing OpenStax, PNAS, and arXiv manifest metadata is not an ADR-003 source snapshot. Wave 4 bindings use `legacy_metadata_only`; no digest, locator, claim, rights, or named-review authority is invented.
 6. **No delayed-return fiction.** Both migrated Worlds keep return proof disabled because no reviewed delayed task family and scheduler are published. UI or record copy may describe delayed retention as untested; it may not describe a scheduled return.
-7. **Versioning is additive.** Each migrated World manifest advances from `1.0.0` to `1.0.1`; authored content remains `1.0.0`. Retained manifests must bind the exact canonical runtime-binding SHA-256 before release.
-8. **AI is interpretation, never verdict.** Force may use the existing optional `/api/interpret` call only before proof and only within the public feature boundary. The accepted result enters the deterministic runtime as recorded support. AI & Learning uses no live model and remains authored/deterministic.
+7. **Versioning is additive.** Force and AI & Learning advance from `1.0.0` to `1.0.1`; authored content remains `1.0.0`. Shared receipt, validator, and support-provenance hardening advances the runtime protocol/schema to `1.0.2`, and therefore advances the already-migrated Primary Source and Ratio runtime packages to `1.0.2` without changing their authored content. Retained manifests must bind the exact canonical runtime-binding SHA-256 before release.
+8. **AI is interpretation, never verdict.** Force may use the existing optional `/api/interpret` call only before proof and only within the public feature boundary. The accepted result enters the deterministic runtime as recorded support with policy, provider/model when present, or authored fallback reason—never learner text or model output. AI & Learning uses no live model and remains authored/deterministic.
+9. **Malformed submissions do not become evidence.** Domain reducers reject malformed terminal submissions and emit no receipt. Pure canonical-validator tests may project malformed input as `not_scored` / `not_evaluated`; that diagnostic is not a completed learner attempt.
+10. **Rejected transitions cannot escalate authority.** A reducer rejection may preserve error-bearing state only within the same runtime phase and without adding or changing proof. A rejected transition cannot open proof, emit a receipt, change the semantic trace, or poison the valid retry state.
 
 ## Force and Motion contract
 
@@ -59,7 +61,7 @@ At the end of Wave 4, all four current Worlds should dispatch accepted domain tr
 
 ### Evidence boundary
 
-The existing authored transfer validator determines whether the selected post-thrust behavior is correct. The current validator does not validate causal explanation quality, so Wave 4 must not describe a correct choice as proof of a mechanism-level explanation. A valid correct choice can project `pass`; a valid wrong choice projects `fail`; malformed input projects `not_scored`. Criteria must separately state the authored choice result and whether an explanation or explicit uncertainty was submitted.
+The existing authored transfer validator determines whether the selected post-thrust behavior is correct. The current validator does not validate causal explanation quality, so Wave 4 must not describe a correct choice as proof of a mechanism-level explanation. A valid correct choice can project `pass`; a valid wrong choice projects `fail`; a pure malformed-validator call projects `not_scored`, while the live reducer rejects that submission without a receipt. Criteria must separately state the authored choice result and whether an explanation or explicit uncertainty was submitted.
 
 The bounded result must retain at least these untested questions:
 
@@ -114,7 +116,7 @@ The existing post-evidence difference and reading checks remain analysis of the 
 
 ### Evidence boundary
 
-The existing deterministic transfer scorer evaluates exactly two authored decisions: the bounded claim and the unresolved question. Two correct decisions project `pass`; one or zero project `fail`; malformed input projects `not_scored`. The result may say the bounded-reading pattern held once on this immediate task. It may not claim general source literacy, truth-detection ability, retention, efficacy, or mastery.
+The existing deterministic transfer scorer evaluates exactly two authored decisions: the bounded claim and the unresolved question. Two correct decisions project `pass`; one or zero project `fail`; a pure malformed-validator call projects `not_scored`, while the live reducer rejects malformed submission without a receipt. The result may say the bounded-reading pattern held once on this immediate task. It may not claim general source literacy, truth-detection ability, retention, efficacy, or mastery.
 
 The two current research sources must appear in the runtime receipt as incomplete legacy metadata. The receipt and result must preserve at least these untested questions:
 
@@ -129,8 +131,8 @@ The two current research sources must appear in the runtime receipt as incomplet
 | State or tool | Allowed in Wave 4 | Explicitly absent |
 | --- | --- | --- |
 | Component form state | Current draft choices, prose, confidence, display toggles | Cross-session learner model, hidden score, transcript archive |
-| Domain/runtime session | Accepted reducer state, trace, support/access events, proof lock, one receipt | Server authority, synchronization, tamper resistance |
-| Device compatibility ledger | One bounded local projection per completed attempt | Automatic cloud sync, raw prose, delayed schedule |
+| Domain/runtime session | Stable local attempt ID, accepted reducer state, trace, support/access events, proof lock, canonical validator result, one receipt | Server authority, identity, synchronization, tamper resistance |
+| Device compatibility ledger | One deterministic receipt-only bounded projection per completed attempt | Direct score/domain bypass, automatic cloud sync, raw prose, delayed schedule |
 | Force `/api/interpret` | Optional pre-proof interpretation under existing feature flag and fallback | Correctness, proof grading, publication, proof-phase invocation |
 | AI & Learning source cards | Fixed authored briefs and links | Live retrieval, open-web browsing, model-generated evidence |
 | Supabase and auth | No new Wave 4 operation | Evidence writes, account requirement, child cloud identity |
@@ -144,6 +146,7 @@ One shared conformance matrix must run against Primary Source, Ratio, Force, and
 Required positive cases:
 
 - exact ordered core trace from `encounter` through `bounded_result`;
+- canonical validator execution independent of adapter-projected outcome;
 - subject reducer remains authoritative;
 - proof receipt emitted once with exact pack/content/protocol/task/validator IDs;
 - `pass`, `fail`, and malformed `not_scored` projections stay disposition-bounded;
@@ -154,6 +157,7 @@ Required positive cases:
 Required negative cases:
 
 - skipped, reordered, duplicate, or more-than-two fabricated core stages;
+- forged adapter `pass`, unknown canonical validator, malformed validator result, or criteria/outcome mismatch;
 - a learner-shaped domain event classified as model, replay, access, or return proof reaching the reducer;
 - support event/classification mismatch;
 - support crossing into proof or result;
@@ -164,6 +168,7 @@ Required negative cases:
 - receipt containing raw learner prose;
 - component direct reducer or direct score-to-ledger bypass;
 - duplicated compatibility record after rerender;
+- rejected transition phase/proof escalation or retry poisoning;
 - hidden answer or retry assistance during transfer.
 
 ## Accessibility and experience gate
