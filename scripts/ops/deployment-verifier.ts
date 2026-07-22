@@ -90,23 +90,50 @@ export type VerifyDeploymentOptions = {
   resolveHostname?: (hostname: string) => Promise<readonly string[]>;
 };
 
+// IANA IPv4/IPv6 Special-Purpose Address Registries, last updated 2025-10-09.
+// The verifier is intentionally more conservative than "Globally Reachable":
+// every currently registered special-purpose range is denied, including rows
+// whose registry bit is true, because this read-only worker has no reason to
+// contact a protocol-specific anycast, translation, or infrastructure range.
+// Sources: https://www.iana.org/assignments/iana-ipv4-special-registry/ and
+// https://www.iana.org/assignments/iana-ipv6-special-registry/.
+export const IANA_SPECIAL_PURPOSE_POLICY_VERSION = "2025-10-09";
+const IANA_IPV4_SPECIAL_PURPOSE_CIDRS = [
+  "0.0.0.0/8", "0.0.0.0/32", "10.0.0.0/8", "100.64.0.0/10", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12",
+  "192.0.0.0/24", "192.0.0.0/29", "192.0.0.8/32", "192.0.0.9/32", "192.0.0.10/32", "192.0.0.170/32", "192.0.0.171/32",
+  "192.0.2.0/24", "192.31.196.0/24", "192.52.193.0/24", "192.88.99.0/24", "192.88.99.2/32", "192.168.0.0/16", "192.175.48.0/24",
+  "198.18.0.0/15", "198.51.100.0/24", "203.0.113.0/24", "240.0.0.0/4", "255.255.255.255/32",
+  // IPv4 multicast is not a remote unicast target and is denied alongside the registry.
+  "224.0.0.0/4",
+] as const;
+const IANA_IPV6_SPECIAL_PURPOSE_CIDRS = [
+  "::1/128", "::/128", "::ffff:0:0/96", "64:ff9b::/96", "64:ff9b:1::/48", "100::/64", "100:0:0:1::/64",
+  "2001::/23", "2001::/32", "2001:1::1/128", "2001:1::2/128", "2001:1::3/128", "2001:2::/48", "2001:3::/32", "2001:4:112::/48",
+  "2001:10::/28", "2001:20::/28", "2001:30::/28", "2001:db8::/32", "2002::/16", "2620:4f:8000::/48", "3fff::/20", "5f00::/16", "fc00::/7", "fe80::/10",
+] as const;
+
+function matchesCidr(words: readonly number[], network: readonly number[], prefixLength: number, wordBits: number): boolean {
+  if (words.length !== network.length || prefixLength < 0 || prefixLength > words.length * wordBits) return false;
+  let remaining = prefixLength;
+  for (let index = 0; index < words.length && remaining > 0; index += 1) {
+    const maskBits = Math.min(wordBits, remaining);
+    const mask = maskBits === wordBits ? (1 << wordBits) - 1 : ((1 << maskBits) - 1) << (wordBits - maskBits);
+    if (((words[index] ?? 0) & mask) !== ((network[index] ?? 0) & mask)) return false;
+    remaining -= maskBits;
+  }
+  return true;
+}
+
+function matchesIPv4Cidr(parts: readonly number[], cidr: string): boolean {
+  const [networkText, prefixText] = cidr.split("/");
+  const prefixLength = Number(prefixText);
+  const network = networkText?.split(".").map(Number) ?? [];
+  return Number.isInteger(prefixLength) && network.length === 4 && network.every((part) => Number.isInteger(part) && part >= 0 && part <= 255) && matchesCidr(parts, network, prefixLength, 8);
+}
+
 function isBlockedIPv4(parts: readonly number[]): boolean {
-  const [first, second, third] = parts;
-  if ([first, second, third].some((part) => part === undefined || part < 0 || part > 255 || !Number.isInteger(part))) return true;
-  return first === 0
-    || first === 10
-    || first === 127
-    || (first === 100 && second >= 64 && second <= 127)
-    || (first === 169 && second === 254)
-    || (first === 172 && second >= 16 && second <= 31)
-    || (first === 192 && second === 0)
-    || (first === 192 && second === 88 && third === 99)
-    || (first === 192 && second === 168)
-    || (first === 198 && (second === 18 || second === 19))
-    || (first === 192 && second === 0 && third === 2)
-    || (first === 198 && second === 51 && third === 100)
-    || (first === 203 && second === 0 && third === 113)
-    || first >= 224;
+  if (parts.length !== 4 || parts.some((part) => part < 0 || part > 255 || !Number.isInteger(part))) return true;
+  return IANA_IPV4_SPECIAL_PURPOSE_CIDRS.some((cidr) => matchesIPv4Cidr(parts, cidr));
 }
 
 function parseIPv6Words(value: string): number[] | null {
@@ -135,6 +162,13 @@ function parseIPv6Words(value: string): number[] | null {
   return words.length === 8 ? words : null;
 }
 
+function matchesIPv6Cidr(words: readonly number[], cidr: string): boolean {
+  const [networkText, prefixText] = cidr.split("/");
+  const prefixLength = Number(prefixText);
+  const network = networkText ? parseIPv6Words(networkText) : null;
+  return Number.isInteger(prefixLength) && network !== null && matchesCidr(words, network, prefixLength, 16);
+}
+
 /** Only globally routable DNS answers may reach the pinned transport. */
 function isNonGlobalOrSpecialAddress(address: string): boolean {
   const normalized = address.toLowerCase().replace(/^\[|\]$/g, "");
@@ -142,28 +176,8 @@ function isNonGlobalOrSpecialAddress(address: string): boolean {
   if (isIP(normalized) !== 6) return true;
   const words = parseIPv6Words(normalized);
   if (!words) return true;
-  const [first, second, third, fourth, fifth, sixth, , eighth] = words;
-  const mapped = first === 0 && second === 0 && third === 0 && fourth === 0 && fifth === 0 && sixth === 0xffff;
-  // DNS answers never need IPv4-mapped form. Reject the entire special-purpose
-  // range instead of relying on a mapped address's embedded IPv4 classification.
-  if (mapped) return true;
-  const allZero = words.every((word) => word === 0);
-  const loopback = words.slice(0, 7).every((word) => word === 0) && eighth === 1;
-  const ipv4Compatible = words.slice(0, 6).every((word) => word === 0);
-  const multicast = (first! & 0xff00) === 0xff00;
-  const uniqueLocal = (first! & 0xfe00) === 0xfc00;
-  const linkLocal = (first! & 0xffc0) === 0xfe80;
-  const siteLocal = (first! & 0xffc0) === 0xfec0;
-  const discardOnly = first === 0x0100 && second === 0;
-  const documentation = first === 0x2001 && second === 0x0db8;
-  const special2001 = first === 0x2001 && (second === 0 || second === 0x0002 || (second! & 0xfff0) === 0x0010 || (second! & 0xfff0) === 0x0020);
-  const deprecated6to4 = first === 0x2002;
-  const nat64 = first === 0x0064 && second === 0xff9b && ((third === 0 && fourth === 0 && fifth === 0) || (third === 0x0001 && fourth === 0 && fifth === 0));
-  // Public IPv6 DNS answers must sit inside the globally-routable unicast
-  // envelope. Everything outside 2000::/3 is either special-purpose,
-  // multicast, or unallocated/reserved and must not reach the request path.
-  const globalUnicastEnvelope = (first! & 0xe000) === 0x2000;
-  return !globalUnicastEnvelope || allZero || loopback || ipv4Compatible || multicast || uniqueLocal || linkLocal || siteLocal || discardOnly || documentation || special2001 || deprecated6to4 || nat64;
+  const globalUnicastEnvelope = (words[0]! & 0xe000) === 0x2000;
+  return !globalUnicastEnvelope || IANA_IPV6_SPECIAL_PURPOSE_CIDRS.some((cidr) => matchesIPv6Cidr(words, cidr));
 }
 
 async function defaultResolveHostname(hostname: string): Promise<readonly string[]> {
