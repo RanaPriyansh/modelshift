@@ -208,6 +208,7 @@ export type SourceReviewDecision = z.infer<typeof sourceReviewDecisionSchema>;
 const sourcePolicyReferenceSchema = z.strictObject({
   id: sourcePolicyIdSchema,
   version: semverSchema,
+  digest: sha256Schema,
 });
 
 const provMappingSchema = z.strictObject({
@@ -273,12 +274,23 @@ export const sourceReviewPolicySchema = z.strictObject({
     id: reviewerIdentityIdSchema,
     scopes: uniqueStrings(z.enum(SOURCE_REVIEW_SCOPES), 1, SOURCE_REVIEW_SCOPES.length),
   }), 1, 64),
+  digest: sha256Schema,
 });
 
 export type SourceReviewPolicy = z.infer<typeof sourceReviewPolicySchema>;
+export type SourceReviewPolicyInput = Omit<SourceReviewPolicy, "digest">;
+
+/** Matches canonicalJson's deterministic code-unit key ordering; never use locale-sensitive collation in a digest. */
+export function canonicalCodeUnitCompare(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
 
 function byId<T extends { id: string }>(values: readonly T[]): readonly T[] {
-  return [...values].sort((left, right) => left.id.localeCompare(right.id));
+  return [...values].sort((left, right) => canonicalCodeUnitCompare(left.id, right.id));
+}
+
+function canonicalStringSet(values: readonly string[]): readonly string[] {
+  return [...values].sort(canonicalCodeUnitCompare);
 }
 
 /** Package array ordering is canonicalized before hashing; event order is intentionally not. */
@@ -292,9 +304,18 @@ export function canonicalSourceAuthorityPackagePayload(input: SourceAuthorityPac
       ...item,
       locators: byId(item.locators),
     })),
-    claims: byId(input.claims),
-    rightsRecords: byId(input.rightsRecords),
-    reviewDecisions: byId(input.reviewDecisions),
+    claims: byId(input.claims).map((claim) => ({ ...claim, locatorIds: canonicalStringSet(claim.locatorIds) })),
+    rightsRecords: byId(input.rightsRecords).map((record) => ({
+      ...record,
+      permittedProductUses: canonicalStringSet(record.permittedProductUses),
+      productLimitations: canonicalStringSet(record.productLimitations),
+    })),
+    reviewDecisions: byId(input.reviewDecisions).map((decision) => ({
+      ...decision,
+      sourceItemIds: canonicalStringSet(decision.sourceItemIds),
+      rightsRecordIds: canonicalStringSet(decision.rightsRecordIds),
+      claimIds: canonicalStringSet(decision.claimIds),
+    })),
     interoperability: input.interoperability,
   };
 }
@@ -309,6 +330,32 @@ export async function createSourceAuthorityPackage(input: SourceAuthorityPackage
   return sourceAuthorityPackageSchema.parse({
     ...parsed,
     packageDigest: await sourceAuthorityPackageDigest(parsed),
+  });
+}
+
+export function canonicalSourceReviewPolicyPayload(input: SourceReviewPolicyInput): object {
+  return {
+    schemaVersion: input.schemaVersion,
+    id: input.id,
+    version: input.version,
+    requiredScopes: canonicalStringSet(input.requiredScopes),
+    authorizedHumanReviewers: byId(input.authorizedHumanReviewers).map((reviewer) => ({
+      id: reviewer.id,
+      scopes: canonicalStringSet(reviewer.scopes),
+    })),
+  };
+}
+
+export async function sourceReviewPolicyDigest(input: SourceReviewPolicyInput): Promise<string> {
+  const parsed = sourceReviewPolicySchema.omit({ digest: true }).parse(input);
+  return sha256Digest(canonicalJson(canonicalSourceReviewPolicyPayload(parsed)));
+}
+
+export async function createSourceReviewPolicy(input: SourceReviewPolicyInput): Promise<SourceReviewPolicy> {
+  const parsed = sourceReviewPolicySchema.omit({ digest: true }).parse(input);
+  return sourceReviewPolicySchema.parse({
+    ...parsed,
+    digest: await sourceReviewPolicyDigest(parsed),
   });
 }
 
