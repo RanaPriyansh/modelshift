@@ -370,17 +370,29 @@ describe("FORGE Packet C pathway review", () => {
 
   it.each([
     ["mastery", "This certifies the learner's mastery in every setting."],
+    ["not-only mastery construction", "This not only proves mastery but also guarantees success."],
     ["homeschool readiness", "This packet is homeschool-ready."],
     ["solution and suitability", "This is a homeschool solution suitable for every learner."],
     ["school replacement", "This replaces school and education."],
+    ["school replacement identity", "This is a school replacement."],
     ["universal replacement", "This is a universal replacement for education."],
     ["lifelong capability", "This proves lifelong learning capability."],
     ["retention", "This guarantees delayed retention."],
+    ["proven delayed retention", "This proves delayed retention."],
     ["broad transfer", "This proves broad far transfer."],
   ])("rejects %s overreach", (_name, statement) => {
     const packet = packetFor();
     packet.evidenceClaims[0] = { ...packet.evidenceClaims[0], statement };
     expect(issueCodes(packet)).toContain("evidence.claim-overreach");
+  });
+
+  it.each([
+    "This record does not establish delayed retention or far transfer.",
+    "This is not a school replacement.",
+  ])("allows an explicit bounded limitation: %s", (statement) => {
+    const packet = packetFor();
+    packet.evidenceClaims[0] = { ...packet.evidenceClaims[0], statement };
+    expect(issueCodes(packet)).not.toContain("evidence.claim-overreach");
   });
 
   it("fails closed on undeclared LMS state through the strict packet schema", () => {
