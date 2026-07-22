@@ -196,6 +196,7 @@ describe("TrustedWorldRegistry", () => {
   it("rejects conflicting records for one canonical source ID", () => {
     const conflictingSource = structuredClone(SOURCE_CORROBORATION_WORLD) as LearningWorldPack;
     conflictingSource.manifest.sources[0].id = FORCE_AND_MOTION_WORLD.manifest.sources[0].id;
+    conflictingSource.runtime!.sourceBindings[0]!.sourceItemId = FORCE_AND_MOTION_WORLD.manifest.sources[0].id;
 
     expectRegistryCode(
       () =>

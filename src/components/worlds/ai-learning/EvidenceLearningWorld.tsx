@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useReducer, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   BOUNDED_CLAIMS,
   COLD_TRANSFER,
@@ -11,27 +11,36 @@ import {
   REVIEWED_EVIDENCE,
   STAGE_STEPS,
   STANCES,
+  TEST_PREDICTION_OPTIONS,
   WORLD_CLAIM,
-  evidenceLearningReducer,
-  initialEvidenceLearningState,
 } from "../../../worlds/ai-learning";
 import type {
   BoundedClaimId,
   DifferenceId,
   EvidenceId,
+  EvidenceLearningAction,
   EvidenceLearningState,
   ReadingId,
   ReadingVerdict,
   StanceId,
+  TestPredictionId,
   TransferChoiceId,
   TransferOpenQuestionId,
 } from "../../../worlds/ai-learning";
 import { recordWorldProof } from "../../../lib/forge-evidence";
+import {
+  createWorldRuntimeSession,
+  dispatchWorldRuntimeCommand,
+  sourceCorroborationWorldRuntimeAdapter,
+  type BoundedLocalWorldRuntimeReceipt,
+} from "../../../forge/world-runtime";
 import styles from "./EvidenceLearningWorld.module.css";
 
 function classes(...names: Array<string | false | null | undefined>): string {
   return names.filter(Boolean).map((name) => styles[name as keyof typeof styles]).join(" ");
 }
+
+type DomainDispatch = (action: EvidenceLearningAction) => void;
 
 function ArrowIcon() {
   return (
@@ -135,7 +144,7 @@ function ProgressRail({ state }: { state: EvidenceLearningState }) {
 
 function EncounterStage({ state, dispatch, instanceId }: {
   state: EvidenceLearningState;
-  dispatch: React.Dispatch<Parameters<typeof evidenceLearningReducer>[1]>;
+  dispatch: DomainDispatch;
   instanceId: string;
 }) {
   return (
@@ -215,14 +224,89 @@ function EncounterStage({ state, dispatch, instanceId }: {
   );
 }
 
+function CompilerStage({ state, dispatch, instanceId, testPrediction, onTestPrediction }: {
+  state: EvidenceLearningState;
+  dispatch: DomainDispatch;
+  instanceId: string;
+  testPrediction: TestPredictionId | null;
+  onTestPrediction: (predictionId: TestPredictionId) => void;
+}) {
+  return (
+    <section className={styles["forge-evidence-stage"]} data-testid="stage-compiler">
+      <StageHeading
+        number="02"
+        kicker="Consider two possible readings"
+        title="Hold the disagreement before seeing the studies."
+        body="These are two possible readings to test against your committed claim and reason, not generated diagnoses of you and not verdicts. The reviewed study briefs remain closed until you commit a prediction."
+      />
+      <blockquote className={styles["forge-evidence-compiler-commitment"]}>
+        <span>Your committed reason · local to this attempt</span>
+        “{state.committedEncounter?.reason}”
+      </blockquote>
+      <div className={styles["forge-evidence-reading-grid"]}>
+        {PLAUSIBLE_READINGS.map((reading) => (
+          <article key={reading.id} className={styles["forge-evidence-reading-card"]}>
+            <span>{reading.label}</span>
+            <blockquote>{reading.reading}</blockquote>
+            <p>{reading.test}</p>
+          </article>
+        ))}
+      </div>
+      <div className={styles["forge-evidence-actions"]}>
+        <p>{state.acceptedTwoReadings ? "Both possible readings are now part of this attempt." : "Keep both readings available; they disagree about what the studies will establish."}</p>
+        <ActionButton
+          quiet
+          disabled={state.acceptedTwoReadings}
+          onClick={() => dispatch({ type: "ACCEPT_TWO_READINGS" })}
+          testId="accept-two-readings"
+        >
+          {state.acceptedTwoReadings ? "Two readings accepted" : "Accept both possible readings"}
+        </ActionButton>
+      </div>
+      <fieldset className={styles["forge-evidence-choice-fieldset"]} disabled={!state.acceptedTwoReadings}>
+        <legend>Before opening the evidence, which reading do you predict the two studies will better support?</legend>
+        <div className={styles["forge-evidence-option-list"]}>
+          {TEST_PREDICTION_OPTIONS.map((prediction) => (
+            <label
+              key={prediction.id}
+              className={classes("forge-evidence-choice", testPrediction === prediction.id && "forge-evidence-choice-selected")}
+            >
+              <input
+                type="radio"
+                name={`${instanceId}-test-prediction`}
+                checked={testPrediction === prediction.id}
+                onChange={() => onTestPrediction(prediction.id as TestPredictionId)}
+              />
+              <span className={styles["forge-evidence-radio"]} aria-hidden="true" />
+              <strong>{prediction.label}</strong>
+              <small>{prediction.detail}</small>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <ErrorNotice state={state} />
+      <div className={styles["forge-evidence-actions"]}>
+        <p>Your prediction is retained as a commitment, not scored before the evidence review.</p>
+        <ActionButton
+          disabled={!state.acceptedTwoReadings || !testPrediction}
+          onClick={() => dispatch({ type: "COMMIT_TEST_PREDICTION", predictionId: testPrediction })}
+          testId="commit-test-prediction"
+        >
+          Open the reviewed evidence
+        </ActionButton>
+      </div>
+    </section>
+  );
+}
+
 function EvidenceStage({ state, dispatch }: {
   state: EvidenceLearningState;
-  dispatch: React.Dispatch<Parameters<typeof evidenceLearningReducer>[1]>;
+  dispatch: DomainDispatch;
 }) {
   return (
     <section className={styles["forge-evidence-stage"]} data-testid="stage-evidence">
       <StageHeading
-        number="02"
+        number="03"
         kicker="Inspect reviewed evidence"
         title="Two results that only look contradictory."
         body="Read the access arrangement, outcome, and boundary on each card. The headline alone is not the evidence."
@@ -278,13 +362,13 @@ function EvidenceStage({ state, dispatch }: {
 
 function DifferenceStage({ state, dispatch, instanceId }: {
   state: EvidenceLearningState;
-  dispatch: React.Dispatch<Parameters<typeof evidenceLearningReducer>[1]>;
+  dispatch: DomainDispatch;
   instanceId: string;
 }) {
   return (
     <section className={styles["forge-evidence-stage"]} data-testid="stage-difference">
       <StageHeading
-        number="03"
+        number="04"
         kicker="Identify what differs"
         title="Find the variable hiding behind “AI.”"
         body="The papers do not instantiate one identical intervention. Which difference most changes what the evidence can mean?"
@@ -328,13 +412,13 @@ function DifferenceStage({ state, dispatch, instanceId }: {
 
 function ReadingsStage({ state, dispatch, instanceId }: {
   state: EvidenceLearningState;
-  dispatch: React.Dispatch<Parameters<typeof evidenceLearningReducer>[1]>;
+  dispatch: DomainDispatch;
   instanceId: string;
 }) {
   return (
     <section className={styles["forge-evidence-stage"]} data-testid="stage-readings">
       <StageHeading
-        number="04"
+        number="05"
         kicker="Test two plausible readings"
         title="Make each reading face both cards."
         body="A reading fails when it drops a measurement boundary, access condition, or result that the other card makes visible."
@@ -374,13 +458,13 @@ function ReadingsStage({ state, dispatch, instanceId }: {
 
 function ReconstructStage({ state, dispatch, instanceId }: {
   state: EvidenceLearningState;
-  dispatch: React.Dispatch<Parameters<typeof evidenceLearningReducer>[1]>;
+  dispatch: DomainDispatch;
   instanceId: string;
 }) {
   return (
     <section className={styles["forge-evidence-stage"]} data-testid="stage-reconstruct">
       <StageHeading
-        number="05"
+        number="06"
         kicker="Reconstruct the claim"
         title="Trade the universal for a bounded statement."
         body="A useful claim says where the evidence applies, what changed, and which outcome was actually measured."
@@ -413,9 +497,44 @@ function ReconstructStage({ state, dispatch, instanceId }: {
       </fieldset>
       <ErrorNotice state={state} />
       <div className={styles["forge-evidence-actions"]}>
-        <p>Next: a different claim, different sources, and one submission.</p>
+        <p>Next: make the instructional withdrawal explicit before a different claim and one submission.</p>
         <ActionButton onClick={() => dispatch({ type: "COMMIT_BOUNDED_CLAIM" })} testId="commit-bounded-claim">
-          Enter cold transfer
+          Reconstruct this bounded claim
+        </ActionButton>
+      </div>
+    </section>
+  );
+}
+
+function WithdrawalStage({ dispatch }: { dispatch: DomainDispatch }) {
+  return (
+    <section className={styles["forge-evidence-stage"]} data-testid="stage-withdrawal">
+      <StageHeading
+        number="07"
+        kicker="Instructional withdrawal"
+        title="The evidence desk leaves before this new task."
+        body="Cold transfer begins only after this boundary is acknowledged. It is one unfamiliar task with one submission."
+      />
+      <div className={styles["forge-evidence-claim-transform"]}>
+        <div>
+          <span>Leaves now</span>
+          <strong>Interpretation framing, evidence-selection help, and authored corrective prompts.</strong>
+        </div>
+        <ArrowIcon />
+        <div>
+          <span>Stays available</span>
+          <strong>Keyboard operation, textual alternatives, reduced motion, and other construct-preserving access.</strong>
+        </div>
+      </div>
+      <div className={styles["forge-evidence-proof-lock"]}>
+        <LockIcon />
+        <div><strong>No instructional assistance in transfer</strong><span>No model action, replay, retry, or answer-revealing feedback opens with the task.</span></div>
+        <small>BOUNDARY</small>
+      </div>
+      <div className={styles["forge-evidence-actions"]}>
+        <p>Only access support remains when the unfamiliar source briefs appear.</p>
+        <ActionButton onClick={() => dispatch({ type: "ACKNOWLEDGE_WITHDRAWAL" })} testId="acknowledge-withdrawal">
+          Acknowledge and begin cold transfer
         </ActionButton>
       </div>
     </section>
@@ -424,7 +543,7 @@ function ReconstructStage({ state, dispatch, instanceId }: {
 
 function TransferStage({ state, dispatch, instanceId }: {
   state: EvidenceLearningState;
-  dispatch: React.Dispatch<Parameters<typeof evidenceLearningReducer>[1]>;
+  dispatch: DomainDispatch;
   instanceId: string;
 }) {
   return (
@@ -435,7 +554,7 @@ function TransferStage({ state, dispatch, instanceId }: {
         <small>SEALED</small>
       </div>
       <StageHeading
-        number="06"
+        number="08"
         kicker="Cold transfer"
         title="New claim. New measures."
         body={COLD_TRANSFER.instruction}
@@ -482,10 +601,13 @@ function TransferStage({ state, dispatch, instanceId }: {
           </label>
         ))}
       </fieldset>
-      <ErrorNotice state={state} />
       <div className={classes("forge-evidence-actions", "forge-evidence-actions-transfer")}>
         <p>Your first submission becomes the record.</p>
-        <ActionButton onClick={() => dispatch({ type: "SUBMIT_TRANSFER" })} testId="submit-transfer">
+        <ActionButton
+          disabled={!state.transferChoiceId || !state.transferOpenQuestionId}
+          onClick={() => dispatch({ type: "SUBMIT_TRANSFER" })}
+          testId="submit-transfer"
+        >
           Submit once
         </ActionButton>
       </div>
@@ -493,29 +615,43 @@ function TransferStage({ state, dispatch, instanceId }: {
   );
 }
 
-function ResultStage({ state }: { state: EvidenceLearningState }) {
-  if (!state.record || !state.transferScore) return null;
+function ResultStage({
+  state,
+  receipt,
+  onReset,
+}: {
+  state: EvidenceLearningState;
+  receipt: BoundedLocalWorldRuntimeReceipt | null;
+  onReset: () => void;
+}) {
+  if (!state.record || !state.transferScore || !receipt) return null;
   const rows = [
     { id: "started-with", label: "Started with", value: state.record.startedWith },
     { id: "tested-with", label: "Tested with", value: state.record.testedWith },
     { id: "support-used", label: "Support used", value: state.record.supportUsed },
     { id: "did-alone", label: "Did alone", value: state.record.didAlone },
     { id: "still-open", label: "Still open", value: state.record.stillOpen },
-    { id: "return-proof", label: "Return proof", value: state.record.returnProof },
+    { id: "this-attempt", label: "This attempt", value: state.record.returnProof },
   ];
   return (
     <section className={styles["forge-evidence-stage"]} data-testid="stage-result">
       <StageHeading
-        number="07"
-        kicker="Return proof"
+        number="09"
+        kicker="Bounded evidence"
         title={state.transferScore.outcome === "held" ? "The pattern held once without the desk." : "The attempt is recorded, not smoothed over."}
-        body="This is an evidence trail about one bounded-reading attempt. It is not an intelligence score, a durable-learning claim, or a population-level conclusion."
+        body="This is one immediate bounded-reading attempt, not an intelligence score, durable-learning claim, or population-level conclusion. Delayed retention remains untested and no return is scheduled."
       />
       <div className={styles["forge-evidence-result-summary"]} data-outcome={state.transferScore.outcome}>
         <span>{state.transferScore.points} / 2 authored checks</span>
-        <strong>{state.transferScore.outcome === "held" ? "Cold transfer held" : state.transferScore.outcome === "partial" ? "Partial transfer" : "Return needed"}</strong>
+        <strong>{state.transferScore.outcome === "held" ? "Cold transfer held" : state.transferScore.outcome === "partial" ? "Partial transfer" : "Not demonstrated on this attempt"}</strong>
         <p>Deterministic scoring compared two selected authored IDs. No language model judged truth or correctness.</p>
       </div>
+      <dl className={styles["forge-evidence-record"]} data-testid="runtime-receipt-limits">
+        <div><dt>Proof authority</dt><dd>{receipt.authority.proofAuthority.replaceAll("_", "-")}</dd></div>
+        <div><dt>Persistence</dt><dd>{receipt.authority.persistence.replaceAll("_", " ")}</dd></div>
+        <div><dt>Durability</dt><dd>{String(receipt.authority.isDurable)}</dd></div>
+        <div><dt>Source provenance</dt><dd>{receipt.sourceProvenanceStatus}</dd></div>
+      </dl>
       <div className={styles["forge-evidence-record"]}>
         {rows.map((row, index) => (
           <article key={row.id} data-testid={`record-${row.id}`}>
@@ -524,18 +660,43 @@ function ResultStage({ state }: { state: EvidenceLearningState }) {
           </article>
         ))}
       </div>
+      <div className={styles["forge-evidence-actions"]}>
+        <ActionButton onClick={onReset} testId="reset-evidence-world">Start a fresh attempt</ActionButton>
+      </div>
     </section>
   );
 }
 
-export function EvidenceLearningWorld() {
-  const [state, dispatch] = useReducer(evidenceLearningReducer, initialEvidenceLearningState);
+export interface EvidenceLearningWorldProps {
+  /** Receipts are local and bounded; callers must not treat this as durability. */
+  readonly onRuntimeReceipt?: (receipt: BoundedLocalWorldRuntimeReceipt) => void;
+}
+
+function compatibilityOutcome(receipt: BoundedLocalWorldRuntimeReceipt): "proved" | "not_proved" | "open_question" {
+  if (receipt.validator.disposition === "demonstrated") return "proved";
+  return receipt.validator.disposition === "open_question" ? "open_question" : "not_proved";
+}
+
+export function EvidenceLearningWorld({ onRuntimeReceipt }: EvidenceLearningWorldProps = {}) {
+  const [runtime, setRuntime] = useState(() => createWorldRuntimeSession(sourceCorroborationWorldRuntimeAdapter));
+  const [testPrediction, setTestPrediction] = useState<TestPredictionId | null>(null);
+  const runtimeRef = useRef(runtime);
+  const state = runtime.state;
   const instanceId = useId();
   const shellRef = useRef<HTMLElement>(null);
   const mainRef = useRef<HTMLElement>(null);
-  const evidenceRecordedRef = useRef(false);
+  const emittedReceiptRef = useRef<BoundedLocalWorldRuntimeReceipt | null>(null);
   const stageScrollReadyRef = useRef(false);
   const proofMode = state.stage === "transfer" || state.stage === "result";
+
+  const dispatch: DomainDispatch = (event) => {
+    const result = dispatchWorldRuntimeCommand(sourceCorroborationWorldRuntimeAdapter, runtimeRef.current, {
+      kind: "domain",
+      event,
+    });
+    runtimeRef.current = result.session;
+    setRuntime(result.session);
+  };
 
   useEffect(() => {
     if (!stageScrollReadyRef.current) {
@@ -547,15 +708,17 @@ export function EvidenceLearningWorld() {
   }, [state.stage]);
 
   useEffect(() => {
-    if (state.stage !== "result" || !state.transferScore || evidenceRecordedRef.current) return;
-    evidenceRecordedRef.current = true;
+    const receipt = runtime.receipt;
+    if (!receipt || emittedReceiptRef.current === receipt) return;
+    emittedReceiptRef.current = receipt;
     recordWorldProof({
-      capabilityId: "capability.ai-literacy.source-corroboration",
-      conditionId: "proof.ai-literacy.independent-corroboration",
-      sourceRefId: "world.source-corroboration",
-      outcome: state.transferScore.outcome === "held" ? "proved" : "not_proved",
+      capabilityId: receipt.world.capabilityId,
+      conditionId: receipt.world.proofClaimId,
+      sourceRefId: receipt.world.id,
+      outcome: compatibilityOutcome(receipt),
     });
-  }, [state.stage, state.transferScore]);
+    onRuntimeReceipt?.(receipt);
+  }, [onRuntimeReceipt, runtime.receipt]);
 
   return (
     <section
@@ -581,12 +744,22 @@ export function EvidenceLearningWorld() {
         aria-label={`${state.stage.replaceAll("_", " ")} learning stage`}
       >
         {state.stage === "encounter" ? <EncounterStage state={state} dispatch={dispatch} instanceId={instanceId} /> : null}
+        {state.stage === "compiler" ? (
+          <CompilerStage
+            state={state}
+            dispatch={dispatch}
+            instanceId={instanceId}
+            testPrediction={testPrediction}
+            onTestPrediction={setTestPrediction}
+          />
+        ) : null}
         {state.stage === "evidence" ? <EvidenceStage state={state} dispatch={dispatch} /> : null}
         {state.stage === "difference" ? <DifferenceStage state={state} dispatch={dispatch} instanceId={instanceId} /> : null}
         {state.stage === "readings" ? <ReadingsStage state={state} dispatch={dispatch} instanceId={instanceId} /> : null}
         {state.stage === "reconstruct" ? <ReconstructStage state={state} dispatch={dispatch} instanceId={instanceId} /> : null}
+        {state.stage === "withdrawal" ? <WithdrawalStage dispatch={dispatch} /> : null}
         {state.stage === "transfer" ? <TransferStage state={state} dispatch={dispatch} instanceId={instanceId} /> : null}
-        {state.stage === "result" ? <ResultStage state={state} /> : null}
+        {state.stage === "result" ? <ResultStage state={state} receipt={runtime.receipt} onReset={() => { setTestPrediction(null); dispatch({ type: "RESET" }); }} /> : null}
       </main>
       <footer className={styles["forge-evidence-footer"]}>
         <span>Research claims stay bounded to the cited settings.</span>

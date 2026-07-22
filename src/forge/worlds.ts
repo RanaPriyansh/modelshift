@@ -22,6 +22,7 @@ import {
 import { FORCE_AND_MOTION_RUNTIME_BINDING } from "./world-runtime/force-and-motion-binding";
 import { PRIMARY_SOURCE_RUNTIME_BINDING } from "./world-runtime/primary-source-binding";
 import { PROPORTIONAL_REASONING_RUNTIME_BINDING } from "./world-runtime/proportional-reasoning-binding";
+import { SOURCE_CORROBORATION_RUNTIME_BINDING } from "./world-runtime/source-corroboration-binding";
 
 const AI_OFF = {
   mode: "off",
@@ -244,7 +245,7 @@ export const SOURCE_CORROBORATION_WORLD = {
   manifest: {
     schemaVersion: "1.0",
     id: "world.source-corroboration",
-    version: "1.0.0",
+    version: "1.0.1",
     route: "/learn/ai-and-learning",
     title: "AI & learning",
     summary:
@@ -271,7 +272,7 @@ export const SOURCE_CORROBORATION_WORLD = {
     },
     returnProof: {
       enabled: false,
-      reason: "Return-proof scheduling remains disabled until a persisted scheduler and reviewed delayed task family exist.",
+      reason: "No reviewed delayed task family or scheduler is published.",
       aiBoundary: AI_OFF,
     },
     safety: {
@@ -314,11 +315,11 @@ export const SOURCE_CORROBORATION_WORLD = {
       id: "proof.ai-literacy.independent-corroboration",
       capabilityId: "capability.ai-literacy.source-corroboration",
       statement:
-        "Given a new claim and a reviewed source set, the learner independently identifies support, contradiction, and unresolved uncertainty without generative assistance.",
+        "Given a new authored transfer-fixture source-brief pair, the learner independently selects the bounded joint claim and the still-open question in one assistance-free submission.",
       successCriteria: [
-        "cites the exact reviewed sources used",
-        "distinguishes supported content from inference",
-        "states uncertainty when the source set is insufficient",
+        "selects the authored bounded joint claim",
+        "selects the authored still-open question",
+        "submits both decisions once with instructional assistance removed",
       ],
       minimumEvidenceRecords: 1,
       aiBoundary: AI_OFF,
@@ -333,6 +334,7 @@ export const SOURCE_CORROBORATION_WORLD = {
       outputContractVersion: "1.0.0",
     },
   ],
+  runtime: SOURCE_CORROBORATION_RUNTIME_BINDING,
 } satisfies LearningWorldPack;
 
 export const PROPORTIONAL_REASONING_WORLD = {

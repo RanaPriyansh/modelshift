@@ -1,9 +1,11 @@
 export type EvidenceLearningStage =
   | "encounter"
+  | "compiler"
   | "evidence"
   | "difference"
   | "readings"
   | "reconstruct"
+  | "withdrawal"
   | "transfer"
   | "result";
 
@@ -12,6 +14,8 @@ export type EvidenceId = "bastani-pnas" | "tutor-copilot";
 export type DifferenceId = "delivery-role" | "model-brand" | "sample-size" | "same-outcome";
 export type ReadingId = "performance-is-learning" | "design-changes-effect";
 export type ReadingVerdict = "fits" | "overreaches";
+/** A pre-evidence commitment, not a correctness judgment. */
+export type TestPredictionId = ReadingId;
 export type BoundedClaimId = "ai-always-helps" | "ai-always-harms" | "conditions-shape-outcomes";
 export type TransferChoiceId = "always-helps" | "always-harms" | "bounded-measures" | "same-measure";
 export type TransferOpenQuestionId = "color-choice" | "held-constant" | "reader-preference";
@@ -21,6 +25,8 @@ export type EvidenceLearningError =
   | "stance-required"
   | "confidence-invalid"
   | "reason-too-short"
+  | "readings-acceptance-required"
+  | "test-prediction-required"
   | "evidence-not-reviewed"
   | "difference-required"
   | "difference-mismatch"
@@ -62,6 +68,8 @@ export interface EvidenceLearningState {
   stage: EvidenceLearningStage;
   encounter: EncounterInput;
   committedEncounter: EncounterInput | null;
+  acceptedTwoReadings: boolean;
+  testPredictionId: TestPredictionId | null;
   reviewedEvidenceIds: readonly EvidenceId[];
   differenceId: DifferenceId | null;
   readingVerdicts: Partial<Record<ReadingId, ReadingVerdict>>;
@@ -79,6 +87,8 @@ export type EvidenceLearningAction =
   | { type: "SET_CONFIDENCE"; confidence: number }
   | { type: "SET_REASON"; reason: string }
   | { type: "COMMIT_ENCOUNTER" }
+  | { type: "ACCEPT_TWO_READINGS" }
+  | { type: "COMMIT_TEST_PREDICTION"; predictionId: TestPredictionId | null }
   | { type: "REVIEW_EVIDENCE"; evidenceId: EvidenceId }
   | { type: "CONTINUE_FROM_EVIDENCE" }
   | { type: "SET_DIFFERENCE"; differenceId: DifferenceId }
@@ -89,7 +99,9 @@ export type EvidenceLearningAction =
   | { type: "COMMIT_BOUNDED_CLAIM" }
   | { type: "SET_TRANSFER_CHOICE"; choiceId: TransferChoiceId }
   | { type: "SET_TRANSFER_OPEN_QUESTION"; openQuestionId: TransferOpenQuestionId }
-  | { type: "SUBMIT_TRANSFER" };
+  | { type: "SUBMIT_TRANSFER" }
+  | { type: "ACKNOWLEDGE_WITHDRAWAL" }
+  | { type: "RESET" };
 
 export interface ValidationSuccess {
   ok: true;
