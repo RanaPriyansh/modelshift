@@ -15,7 +15,6 @@ export {
   proportionalReasoningWorldRuntimeAdapter,
 } from "./proportional-reasoning";
 export {
-  projectSourceCorroborationTransferValidation,
   sourceCorroborationWorldRuntimeAdapter,
   type SourceCorroborationRuntimeProof,
 } from "./source-corroboration";

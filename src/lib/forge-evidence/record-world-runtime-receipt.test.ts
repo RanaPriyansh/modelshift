@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  createWorldRuntimeSession,
+  dispatchWorldRuntimeCommand,
   LOCAL_RUNTIME_RECEIPT_LIMITATION,
+  sourceCorroborationWorldRuntimeAdapter,
   type BoundedLocalWorldRuntimeReceipt,
   type CanonicalSupportEvent,
 } from "../../forge/world-runtime";
+import type { EvidenceLearningAction } from "../../worlds/ai-learning";
 import { createLocalStorageEvidenceLedgerAdapter } from "./local-storage";
 import {
   projectRuntimeSupportAssistanceKind,
@@ -103,6 +107,46 @@ function receipt(overrides: Partial<BoundedLocalWorldRuntimeReceipt> = {}): Boun
   };
 }
 
+function completedSourceCorroborationReceipt(): BoundedLocalWorldRuntimeReceipt {
+  let session = createWorldRuntimeSession(
+    sourceCorroborationWorldRuntimeAdapter,
+    "attempt.source-corroboration-projector",
+  );
+  const events: readonly EvidenceLearningAction[] = [
+    { type: "SET_STANCE", stanceId: "depends" },
+    { type: "SET_CONFIDENCE", confidence: 70 },
+    { type: "SET_REASON", reason: "The role, access conditions, and later measurement probably change the result." },
+    { type: "COMMIT_ENCOUNTER" },
+    { type: "ACCEPT_TWO_READINGS" },
+    { type: "COMMIT_TEST_PREDICTION", predictionId: "design-changes-effect" },
+    { type: "REVIEW_EVIDENCE", evidenceId: "bastani-pnas" },
+    { type: "REVIEW_EVIDENCE", evidenceId: "tutor-copilot" },
+    { type: "CONTINUE_FROM_EVIDENCE" },
+    { type: "SET_DIFFERENCE", differenceId: "delivery-role" },
+    { type: "COMMIT_DIFFERENCE" },
+    { type: "SET_READING_VERDICT", readingId: "performance-is-learning", verdict: "overreaches" },
+    { type: "SET_READING_VERDICT", readingId: "design-changes-effect", verdict: "fits" },
+    { type: "COMMIT_READINGS" },
+    { type: "SET_BOUNDED_CLAIM", claimId: "conditions-shape-outcomes" },
+    { type: "COMMIT_BOUNDED_CLAIM" },
+    { type: "ACKNOWLEDGE_WITHDRAWAL" },
+    { type: "SET_TRANSFER_CHOICE", choiceId: "bounded-measures" },
+    { type: "SET_TRANSFER_OPEN_QUESTION", openQuestionId: "held-constant" },
+    { type: "SUBMIT_TRANSFER" },
+  ];
+
+  for (const event of events) {
+    const dispatched = dispatchWorldRuntimeCommand(sourceCorroborationWorldRuntimeAdapter, session, {
+      kind: "domain",
+      event,
+    });
+    if (!dispatched.accepted) throw new Error(`Source Corroboration fixture rejected: ${dispatched.reason}`);
+    session = dispatched.session;
+  }
+  if (!session.receipt) throw new Error("Source Corroboration fixture did not emit a receipt.");
+  return session.receipt;
+}
+
 afterEach(() => vi.unstubAllGlobals());
 
 describe("recordWorldRuntimeReceipt", () => {
@@ -129,6 +173,78 @@ describe("recordWorldRuntimeReceipt", () => {
 
     const duplicate = recordWorldRuntimeReceipt(receipt());
     expect(duplicate).toMatchObject({ ok: false, reason: "duplicate_entry" });
+    expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(1);
+  });
+
+  it("accepts one completed Source Corroboration receipt with its exact released identity and source tuple", () => {
+    const storage = new MemoryStorage();
+    vi.stubGlobal("window", { localStorage: storage });
+    const completedReceipt = completedSourceCorroborationReceipt();
+
+    expect(completedReceipt).toMatchObject({
+      schemaVersion: "1.0.2",
+      attemptId: "attempt.source-corroboration-projector",
+      world: {
+        id: "world.source-corroboration",
+        version: "1.0.1",
+        contentVersion: "1.0.0",
+        capabilityId: "capability.ai-literacy.source-corroboration",
+        proofClaimId: "proof.ai-literacy.independent-corroboration",
+        taskFamilyId: "task-family.source-corroboration.cold-transfer.v1",
+      },
+      protocol: { version: "1.0.2", semanticTrace: CORE_TRACE_WITHOUT_SUPPORT },
+      validator: {
+        id: "validator.source-corroboration-transfer.v1",
+        version: "1.0.0",
+        outcome: "pass",
+        disposition: "demonstrated",
+      },
+      cognitiveSupport: [],
+      accessAccommodations: [],
+      sourceProvenanceStatus: "incomplete",
+    });
+    expect(completedReceipt.sourceBindings).toEqual([
+      {
+        domainSourceRef: "source.bastani-pnas.genai-learning-2025",
+        sourcePackageId: null,
+        sourcePackageVersion: null,
+        sourceItemId: "source.bastani-pnas.genai-learning-2025",
+        sourceSnapshotDigest: null,
+        locatorIds: [],
+        claimIds: [],
+        rightsRecordId: null,
+        reviewDecisionIds: [],
+        status: "legacy_metadata_only",
+      },
+      {
+        domainSourceRef: "source.tutor-copilot.arxiv-2024",
+        sourcePackageId: null,
+        sourcePackageVersion: null,
+        sourceItemId: "source.tutor-copilot.arxiv-2024",
+        sourceSnapshotDigest: null,
+        locatorIds: [],
+        claimIds: [],
+        rightsRecordId: null,
+        reviewDecisionIds: [],
+        status: "legacy_metadata_only",
+      },
+    ]);
+    expect(JSON.stringify(completedReceipt)).not.toContain("The role, access conditions");
+
+    expect(recordWorldRuntimeReceipt(completedReceipt)).toMatchObject({ ok: true });
+    const persisted = createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger;
+    expect(persisted.entries).toEqual([
+      expect.objectContaining({
+        id: "proof.attempt.source-corroboration-projector",
+        capabilityId: "capability.ai-literacy.source-corroboration",
+        source: { kind: "authored_activity", refId: "world.source-corroboration" },
+        proof: expect.objectContaining({ outcome: "proved", assistanceAccess: "removed" }),
+        assistance: [],
+        returnSchedule: null,
+      }),
+    ]);
+    expect(JSON.stringify(persisted)).not.toContain("The role, access conditions");
+    expect(recordWorldRuntimeReceipt(completedReceipt)).toMatchObject({ ok: false, reason: "duplicate_entry" });
     expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(1);
   });
 

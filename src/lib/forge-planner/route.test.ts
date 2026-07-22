@@ -48,7 +48,7 @@ describe("POST /api/forge/plan", () => {
       route: {
         topicId: "force_motion",
         worldId: "world.force-and-motion",
-        worldVersion: "1.0.0",
+        worldVersion: "1.0.1",
         worldRoute: "/learn/force-and-motion",
       },
       model: { fallbackReason: "disabled" },

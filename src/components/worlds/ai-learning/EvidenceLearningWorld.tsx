@@ -27,7 +27,7 @@ import type {
   TransferChoiceId,
   TransferOpenQuestionId,
 } from "../../../worlds/ai-learning";
-import { recordWorldProof } from "../../../lib/forge-evidence";
+import { recordWorldRuntimeReceipt } from "../../../lib/forge-evidence/record-world-runtime-receipt";
 import {
   createWorldRuntimeSession,
   dispatchWorldRuntimeCommand,
@@ -672,11 +672,6 @@ export interface EvidenceLearningWorldProps {
   readonly onRuntimeReceipt?: (receipt: BoundedLocalWorldRuntimeReceipt) => void;
 }
 
-function compatibilityOutcome(receipt: BoundedLocalWorldRuntimeReceipt): "proved" | "not_proved" | "open_question" {
-  if (receipt.validator.disposition === "demonstrated") return "proved";
-  return receipt.validator.disposition === "open_question" ? "open_question" : "not_proved";
-}
-
 export function EvidenceLearningWorld({ onRuntimeReceipt }: EvidenceLearningWorldProps = {}) {
   const [runtime, setRuntime] = useState(() => createWorldRuntimeSession(sourceCorroborationWorldRuntimeAdapter));
   const [testPrediction, setTestPrediction] = useState<TestPredictionId | null>(null);
@@ -711,12 +706,7 @@ export function EvidenceLearningWorld({ onRuntimeReceipt }: EvidenceLearningWorl
     const receipt = runtime.receipt;
     if (!receipt || emittedReceiptRef.current === receipt) return;
     emittedReceiptRef.current = receipt;
-    recordWorldProof({
-      capabilityId: receipt.world.capabilityId,
-      conditionId: receipt.world.proofClaimId,
-      sourceRefId: receipt.world.id,
-      outcome: compatibilityOutcome(receipt),
-    });
+    recordWorldRuntimeReceipt(receipt);
     onRuntimeReceipt?.(receipt);
   }, [onRuntimeReceipt, runtime.receipt]);
 
