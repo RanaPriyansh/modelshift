@@ -135,6 +135,10 @@ Workers may implement S0/S1 behavior inside assigned paths. They may stage S2-S4
 - Content incident: unpublish the affected version, preserve audit/provenance, provide correction/appeal path.
 - Deployment failure: keep last known-good alias and record exact candidate/commit/error.
 
-## 10. Architecture change rule
+## 10. Accepted cross-lane decisions
+
+The canonical evidence/support mapping, content/release lifecycle, source identity, World runtime extension, age/guardian enforcement, and release identity tuple are resolved in [Principal Architecture Decisions](ARCHITECTURE_DECISIONS.md). Workers must implement against those decisions or stop with `NEEDS_DECISION`; they must not create compatibility by silently weakening them.
+
+## 11. Architecture change rule
 
 A worker may extend an existing contract inside its lane. Any change to cross-lane IDs, event envelope, proof semantics, evidence claim, age policy, data ownership, provider key handling, publication state, or side-effect authority requires a short architecture decision proposal to the principal before implementation. Silence is not approval.

@@ -71,9 +71,10 @@ The source commit `846158a` is pushed. Its attempted Vercel production deploymen
 ## Canonical program documents
 
 1. [Architecture baseline](ARCHITECTURE.md)
-2. [Dependency-ordered master plan](MASTER_PLAN.md)
-3. [Worker thread ledger and work packets](THREAD_LEDGER.md)
-4. [Principal review and integration protocol](REVIEW_PROTOCOL.md)
-5. [Requirement-by-requirement completion and evidence matrix](COMPLETION_MATRIX.md)
+2. [Accepted principal architecture decisions](ARCHITECTURE_DECISIONS.md)
+3. [Dependency-ordered master plan](MASTER_PLAN.md)
+4. [Worker thread ledger and work packets](THREAD_LEDGER.md)
+5. [Principal review and integration protocol](REVIEW_PROTOCOL.md)
+6. [Requirement-by-requirement completion and evidence matrix](COMPLETION_MATRIX.md)
 
 These files are principal-owned. Workers may cite them and propose changes in their handoff, but must not edit them unless the principal assigns a documentation-only amendment.

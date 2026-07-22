@@ -1,0 +1,296 @@
+# FORGE Principal Architecture Decisions
+
+**Status:** accepted architecture; implementation remains unintegrated until reviewed
+
+**Decision date:** 22 July 2026
+
+**Authority:** principal architecture task under `AGENTS.md` and `ARCHITECTURE.md`
+
+These decisions resolve the cross-lane conflicts found in the completion audit. Workers implement compatible slices; they do not create competing vocabularies or silently reinterpret current records. Existing version-1 records remain readable and immutable. Contract changes use additive schemas, explicit mappings, replay fixtures, and migrations.
+
+## ADR-001 — Canonical evidence, validation, support, and access semantics
+
+### Decision
+
+FORGE separates four facts that current types partially collapse:
+
+1. **Validator outcome:** what an authorized validator observed about one response.
+2. **Evidence disposition:** what that observation permits the system to record about one scoped attempt.
+3. **Cognitive support:** instructional help consumed before proof.
+4. **Access accommodation:** a construct-preserving way to perceive or operate the task.
+
+The canonical version-2 values are:
+
+```ts
+type ValidatorOutcome = "pass" | "fail" | "inconclusive" | "not_scored";
+
+type EvidenceDisposition =
+  | "demonstrated"
+  | "not_demonstrated"
+  | "open_question"
+  | "not_evaluated"
+  | "invalidated";
+
+type SupportTier =
+  | "none"
+  | "attention"
+  | "cue"
+  | "representation"
+  | "example"
+  | "repair"
+  | "solution";
+
+type SupportSource = "authored" | "model" | "human";
+```
+
+Every evidence record also names:
+
+- World/package/content/policy versions and integrity hash;
+- capability, proof claim, task, task-family, representation, and context IDs;
+- proof authority: `honour_based | server_enforced | human_observed`;
+- validator ID/version and its raw bounded `ValidatorOutcome`;
+- criteria-level results rather than a generic partial score;
+- cognitive support event IDs consumed before proof;
+- access accommodation IDs used during proof;
+- source snapshot IDs/digests;
+- response digest where appropriate, not raw learner text;
+- explicit uncertainty, contamination, correction/supersession, and remains-untested fields;
+- the exact bounded learner-facing claim.
+
+`demonstrated` always means “the named criteria were met once under the recorded conditions.” UI copy must include that scope. It never means mastery, retention, intelligence, broad transfer, certification, or permanent capability.
+
+### Validator-to-evidence derivation
+
+| Validator outcome | Default evidence disposition | Required exception handling |
+| --- | --- | --- |
+| `pass` | `demonstrated` | `invalidated` if proof integrity, version, authority, or contamination fails |
+| `fail` | `not_demonstrated` | May be `open_question` only when the learner explicitly submits uncertainty and the authored claim treats that as the truthful result |
+| `inconclusive` | `open_question` | Never upgrade from model confidence or a UI score |
+| `not_scored` | `not_evaluated` | Requires later authorized human/deterministic review to change through a superseding event |
+
+An invalid or contaminated attempt remains a learning attempt but cannot become independent evidence. Corrections append a new event; they never rewrite the original.
+
+### Cognitive support and access
+
+- `SupportTier` describes instructional intensity. `solution` is recordable during learning but always contaminates the current proof task.
+- `SupportSource` describes who/what supplied support. Model metadata additionally records provider/model/action/policy versions without learner text.
+- Accessibility is not a support tier or penalty. `AccessAccommodation` is a separate typed record with accommodation kind, representation/modality, construct-preservation decision, policy version, and user control.
+- Any cognitive-support event after protected proof opens, any protected-operation overlap greater than zero, answer-changing, answer exposure, experiment replay, or unauthorized model/tool call invalidates independent status.
+- A construct-changing accommodation does not become cognitive shame; it routes to an alternative valid task/claim or records `not_evaluated` for the original construct.
+
+### Version-1 mappings
+
+| Existing value | Canonical projection |
+| --- | --- |
+| event/device `proved` | `demonstrated` |
+| event/device `not_proved` | `not_demonstrated`, unless explicit uncertainty maps to `open_question` |
+| event/device `open_question` | `open_question` |
+| shared `demonstrated` | `demonstrated` |
+| shared `not-demonstrated` | `not_demonstrated` |
+| shared `partial` | `not_demonstrated` plus criteria-level detail; never a fractional capability claim |
+| shared `unscored` | `not_evaluated` |
+| SQL `pass` | validator `pass`, then derive evidence disposition |
+| SQL `fail` | validator `fail`, then derive evidence disposition |
+| SQL `inconclusive` | validator `inconclusive`, then derive evidence disposition |
+| SQL `not_scored` | validator `not_scored`, then derive evidence disposition |
+| DB `wait` | no consumed cognitive support; an offer/refusal event may remain factual |
+| DB `attention/cue/representation/example/repair` | same canonical tier |
+| contract `attention-cue` | `cue` |
+| contract `contrast` | `cue` or `representation`, determined by authored content metadata |
+| contract `explanation` | `example` or `repair`, determined by authored content metadata |
+| contract `solution` | `solution` |
+| source `ai` or event `model` | `model` |
+| `model_interpretation` | model-sourced support with its bounded action; it is not itself an intensity tier |
+| source/kind `accessibility` | separate `AccessAccommodation`; never cognitive support |
+
+Version-1 event rows and device exports remain immutable. New code may read them only through a named compatibility projector. It must not write mixed v1/v2 payloads or silently strengthen a legacy result. The additive event/database migration and the World runtime must share golden replay fixtures before persistence is integrated.
+
+## ADR-002 — Review workflow and published World lifecycle are separate
+
+### Decision
+
+An authoring/review workflow is not a release aggregate.
+
+Canonical review states:
+
+```text
+draft
+  -> source_needed
+  -> factual_review
+  -> pedagogy_review
+  -> access_review
+  -> safety_review
+  -> proof_review
+  -> approved | rejected | withdrawn
+```
+
+Reviews may return to an earlier state with a new version and reason. `approved` means a named immutable package snapshot passed the required reviews. It does not make the package visible to learners.
+
+Canonical published-release states:
+
+```text
+published -> disabled | retired | superseded
+```
+
+- `published` requires an approved package snapshot, exact source snapshots, validator/access/policy versions, bundle digest, named publisher, and rollback target.
+- `disabled` is an incident/safety/rights stop. The same release is not silently re-enabled; remediation produces a reviewed release event/version.
+- `retired` ends availability without a replacement.
+- `superseded` points to a separately published successor.
+- Draft/review database rows are authoring projections and never appear in the public registry.
+
+Current mappings:
+
+| Existing state | Canonical meaning |
+| --- | --- |
+| pack `released` | release `published` |
+| pack `suspended` | release `disabled` |
+| pack `draft` | review `draft`, not a release |
+| SQL release `draft/review` | authoring projection only |
+| SQL release `published/disabled/retired` | corresponding release state |
+| event `world_package.published/disabled/superseded` | corresponding release event |
+| source `withdrawn` | withdrawn review/source version; published Worlds referencing it must be disabled or superseded through separate events |
+
+Add `retired` only through an additive event schema/migration. Do not repurpose `disabled` or `superseded`.
+
+## ADR-003 — Canonical source identity and review binding
+
+### Decision
+
+A URL and a Boolean `reviewed` flag are metadata, not publication authority. Every factual World release binds an immutable source tuple:
+
+```ts
+interface SourceBinding {
+  sourcePackageId: string;
+  sourcePackageVersion: string;
+  sourceItemId: string;
+  sourceSnapshotDigest: `sha256:${string}`;
+  locatorIds: string[];
+  claimIds: string[];
+  rightsRecordId: string;
+  reviewDecisionIds: string[];
+}
+```
+
+Identity rules:
+
+- Package IDs are stable semantic identifiers; package versions are immutable and independently hashed.
+- Item IDs identify the continuing source; the snapshot digest identifies exact content inspected. URL, retrieval time, archive/object path, publisher, version label, license, and jurisdiction are metadata on that snapshot.
+- Claim IDs and locator IDs bind a reviewed claim/paraphrase/quotation to the exact snapshot.
+- Rights records name allowed use, limitations, expiry/review trigger, and reviewer.
+- Review decisions name reviewer identity/role, scope, decision, timestamp, policy version, conflicts/dissent, and supersession.
+- A Studio `sourceNeed` is an unresolved requirement. It becomes a `SourceBinding` only after source acquisition, rights, claim/locator, and human review succeed.
+- A source correction/withdrawal never mutates a published binding. It disables or supersedes affected releases and preserves audit history.
+
+World manifests may keep human-readable source metadata as a projection, but registry publication ultimately validates the exact bindings above.
+
+## ADR-004 — The World runtime extends the existing pack and owns common effects
+
+### Decision
+
+There is one World identity and one package registry. Packet E extends `LearningWorldPack`; it must not introduce parallel World/package/proof/evidence IDs.
+
+The stable semantic stages are:
+
+```text
+encounter
+commit_model
+interpret_two_readings
+name_disagreement
+commit_test_prediction
+run_separating_experience
+governed_support
+reconstruct
+withdraw_instructional_ai
+cold_transfer
+bounded_result
+return_or_apply
+```
+
+A domain may visually rename or combine display frames, but its event trace and conformance adapter preserve these boundaries. Exactly two plausible readings are used in the compiler scene. W0/foundation packages may use an explicitly reviewed protocol variant later; they do not silently weaken proof semantics.
+
+Each pack adds a versioned runtime binding to:
+
+- domain reducer and allowed actions;
+- authored fixtures and separating-experience controller;
+- domain validator and task-family IDs;
+- support policy/content references;
+- proof-open lock and contamination rules;
+- event mapper using ADR-001;
+- access/accommodation alternatives and focus/motion hooks;
+- source bindings using ADR-003;
+- device projection adapter derived from canonical events.
+
+The runtime owns common state sequencing, policy decisions, authorized side effects, event append, proof lock, and evidence projection. Domain plugins own truth, correct answers, task construction, representations, and validators. UI components render runtime/domain state; they do not write evidence directly.
+
+Primary Source Reasoning remains the first migration because it stresses source identity, non-STEM truth, and a currently missing evidence route. The first Packet E slice does not migrate the other three Worlds, change public semantics, or connect durable cloud writes.
+
+## ADR-005 — Age, guardian, identity, and authoring-mode enforcement
+
+### Decision
+
+FORGE distinguishes four inputs:
+
+1. **Device age preference:** learner-selected local UX mode; not identity or verified age.
+2. **Grown-up-present confirmation:** local co-use acknowledgement for authored, device-only activity; not legal guardian authority or consent.
+3. **Authenticated age/relationship authority:** future server-owned evidence with policy, expiry, recovery, and appeal.
+4. **Target-audience metadata:** the age band an adult author selects for a lesson draft; not the author's or learner's identity.
+
+Enforcement rules:
+
+- Anonymous/public operation defaults to the most protective policy: no persistence, sharing, people contact, managed provider call, open web, or unrestricted retrieval.
+- Choosing teen/adult content may change representation/depth but cannot authorize an S2–S4 side effect.
+- A World whose manifest requires `guardianManaged` must place every catalog, direct-route, reload, and deep-link entry behind the same local grown-up-present gate for under-13 mode. Query parameters are hints, never authority.
+- Route, API, server action, and database policy each validate their own boundary; passing UI does not grant backend authority.
+- Local grown-up confirmation can authorize only S0/S1 authored device activity. It cannot authorize cloud identity/evidence, external model/source calls with learner data, sharing, contact, or institutional records.
+- Public production cloud signup remains disabled while age assurance/guardian relationship/consent/recovery/safeguarding operation is absent. An `18 or older` checkbox may be used only in a controlled adult-only test environment and must be described as self-attestation, never as proof that under-18 access is impossible.
+- Disposable integration tests use named adult test accounts only. They do not enable ordinary public signup.
+- Lesson Studio is an adult authoring/draft surface. Its `ageMode` describes the proposed lesson audience. It must not accept child learner data, and managed credentials remain disabled until authenticated author, quota, abuse, privacy, and review controls pass.
+- Under-18 cloud identity, evidence sync, open-web retrieval, managed provider calls, and all interpersonal features remain separately gated and off by default.
+
+Direct action/API tests must cover missing/forged device preference, catalog bypass, deep links, query manipulation, reload, and calling server actions without the UI.
+
+## ADR-006 — Release identity and production truth
+
+### Decision
+
+A release is identified only by this frozen tuple:
+
+```text
+source SHA
+tested SHA and retained artifact IDs
+immutable deployment ID and URL
+public alias and alias-resolution timestamp
+build/runtime mode
+cloud/provider feature flags without secrets
+database project and migration identity, or explicit not configured
+critical browser/CSP/console/network verification packet
+rollback deployment/SHA and rehearsal result
+named release decision and time
+```
+
+Source, tested, and deployed SHA must be equal unless a documented reproducible build-metadata commit is the only difference. A branch, dashboard label, public URL, old evaluation report, or successful build cannot fill a missing tuple field.
+
+Candidate states:
+
+```text
+BUILT_LOCAL
+PUSHED
+DEPLOYMENT_BLOCKED
+DEPLOYED_CANDIDATE
+PRODUCTION_VERIFIED
+ROLLED_BACK
+```
+
+A blocked candidate does not change the public alias. Only the principal, with user deployment authority, may promote a candidate after Packet D and the complete integration verification gate pass.
+
+## Implementation order and worker ownership
+
+1. Packet E proposes the additive runtime binding and ADR-001 event projector against existing pack IDs.
+2. Packet B consumes the accepted projector for adult-only persistence; it does not sync existing UI/device records directly or invent schemas.
+3. Packet F implements ADR-002/ADR-003 review/source contracts without publishing.
+4. Packet A preserves these semantics while unifying presentation/access.
+5. Packet C consumes stable capability/package IDs and returns review evidence only.
+6. Packet D implements ADR-006 release evidence without deployment authority.
+7. The principal reviews cross-lane diffs, resolves exact schema ownership, and integrates one lane at a time.
+
+No current worker may rewrite version-1 event/database history, enable cloud/provider credentials, publish a generated package, or call architecture acceptance from its own handoff.

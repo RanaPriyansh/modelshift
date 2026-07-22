@@ -95,7 +95,9 @@ These are the dependency goals from `MASTER_PLAN.md`, not release marketing mile
 | G7 Measurement validity/research | `MISSING` | Construct/task-family validity, reliability, contamination, transfer/retention, representative access, preregistered strong-baseline studies. |
 | G8 Homeschool/institution operations | `MISSING` | All prerequisites plus named jurisdiction, records/rights, accommodations, complaints, workload, continuity, legal/safeguarding/access review, portability acceptance. |
 
-## 5. Principal decisions required before cross-lane integration
+## 5. Accepted principal decisions required by cross-lane integration
+
+The normative resolutions for D-01 through D-06 are in `ARCHITECTURE_DECISIONS.md`. The summaries below remain an audit index; they are no longer open choices for workers.
 
 ### D-01 — Canonical evidence outcome and assistance mapping
 
