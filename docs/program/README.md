@@ -52,11 +52,11 @@ FORGE is successful only if it improves all five dimensions without hiding harm 
 
 ## Current truth
 
-The accepted implementation contains four working Learning Worlds, a deterministic path compiler, browser-local evidence, a typed event journal, privacy-minimal device profiles, a shared bounded runtime on Primary Source Reasoning, a replay-validated provider-neutral Lesson Studio draft pipeline, staged Supabase schemas, and production-grade unit/browser coverage. Cloud identity and the public Studio provider connector remain structurally locked.
+The accepted implementation contains four working Learning Worlds, a deterministic path compiler, browser-local evidence, a typed event journal, privacy-minimal device profiles, and the shared bounded runtime on Primary Source Reasoning and Proportional Reasoning. It also contains a replay-validated provider-neutral Lesson Studio draft pipeline, staged Supabase schemas, and strong unit/browser engineering coverage. Cloud identity and the public Studio managed-provider connector remain structurally locked.
 
 It does **not** contain a complete curriculum, verified cloud identity operation, guardian-consent service, live evidence sync, people network, accredited pathway, representative learner study, efficacy evidence, or a live-credential evaluation of the four provider adapters.
 
-The historical `846158a` Vercel candidate `dpl_GwTK18jVR2NmEb4VKa3KGhf6hLzi` was blocked. Packet D now provides exact source, release-health, CI, verifier, evidence-retention, and rollback-decision contracts; the accepted A-F code-integration tree before this principal evidence update is `15a7531`. A public release is identified only by the final immutable deployment URL, alias, `/api/health` SHA/digests, retained verification artifact, and principal decision—not by this historical paragraph or a worker handoff.
+The current public code SHA is `98687eaac20f956698000467cd01ea1da9b7fd6e`, served by deployment `dpl_pLpQmuCP43Mc3tNt1nErf8MRH2v2` at `https://modelshift.vercel.app`. Its bound verifier passes as `DEPLOYED_CANDIDATE`, not terminal `PRODUCTION_VERIFIED`, because live-model and rollback-rehearsal authority remain absent. A public release is identified only by its immutable deployment URL, alias, `/api/health` SHA/digests, retained verification artifact, and principal decision—not by a worker handoff or documentation-only commit.
 
 ## Cost-aware operating model
 
@@ -77,5 +77,6 @@ The historical `846158a` Vercel candidate `dpl_GwTK18jVR2NmEb4VKa3KGhf6hLzi` was
 5. [Principal review and integration protocol](REVIEW_PROTOCOL.md)
 6. [Requirement-by-requirement completion and evidence matrix](COMPLETION_MATRIX.md)
 7. [Wave 2 architecture and claim boundary](WAVE_2_ARCHITECTURE.md)
+8. [Wave 3 Ratio runtime and release record](WAVE_3_ARCHITECTURE.md)
 
 These files are principal-owned. Workers may cite them and propose changes in their handoff, but must not edit them unless the principal assigns a documentation-only amendment.
