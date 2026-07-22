@@ -15,7 +15,8 @@
       "world_version": "1.0.2",
       "content_version": "1.0.1",
       "package_integrity_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "protocol_version": "1.0.2",
+      "protocol_version": "1.1.0",
+      "runtime_binding_digest": "sha256:5b49129f030c223e47b76fe1a8853b42cee72d3b7c154c69530a642065cb997c",
       "capability_id": "capability.historical-literacy.observation-inference",
       "proof_claim_id": "proof.primary-source-reasoning.independent-transfer",
       "task_id": "loc.washington-street-1937.transfer",
@@ -35,7 +36,7 @@
       "source_provenance_status": "incomplete"
     },
     "schema_version": 2,
-    "integrity_hash": "sha256:09b5e9abcb5ffa16bd158a74a694365db092fafe781e5e075c733d249099378e"
+    "integrity_hash": "sha256:5a1466f5739ef98fce7eab0593cd8d46bb0f23a77ff5bb54c02442cbbecf3758"
   },
   {
     "event_id": "10000000-0000-4000-8000-000000000002",
@@ -48,9 +49,9 @@
     "correlation_id": "correlation.primary-source.adr001-fixture",
     "causation_id": "10000000-0000-4000-8000-000000000001",
     "idempotency_key": "idempotency.adr001.fixture.run.primary-source.adr001-fixture.assistance.1",
-    "payload": { "support_id": "support.primary-source.fixture.001", "stage_id": "governed_support", "tier": "attention", "source": "authored", "content_reference": "action.primary-source.support", "policy_version": "policy.primary-source.runtime.1", "protected_operation_overlap": 0 },
+    "payload": { "support_id": "support.primary-source.fixture.001", "stage_id": "governed_support", "tier": "attention", "source": "authored", "content_reference": "action.primary-source.support.attention", "policy_version": "policy.primary-source.runtime.1", "provider_id": null, "model_id": null, "fallback_reason": null, "protected_operation_overlap": 0 },
     "schema_version": 2,
-    "integrity_hash": "sha256:48b211c86c61e3d6d99d12ae9dafcb600f3c555692c23c8b2b9464750854f439"
+    "integrity_hash": "sha256:72fbc8ad77ccbb4f4496f5f5957fac026a2cb3945a4b55ff4992abc331c11837"
   },
   {
     "event_id": "10000000-0000-4000-8000-000000000003",
@@ -99,6 +100,7 @@
         { "domain_source_ref": "loc.2017716911", "source_item_id": "source.loc.picture.2017716911", "source_package_id": null, "source_package_version": null, "source_snapshot_digest": null, "locator_ids": [], "claim_ids": [], "rights_record_id": null, "review_decision_ids": [], "provenance_status": "legacy_metadata_only" }
       ],
       "source_provenance_status": "incomplete",
+      "runtime_binding_digest": "sha256:5b49129f030c223e47b76fe1a8853b42cee72d3b7c154c69530a642065cb997c",
       "response_digest": null,
       "explicit_uncertainty": false,
       "authored_uncertainty_exception_reference": null,
@@ -107,7 +109,7 @@
       "bounded_claim": "On an unfamiliar photograph, the learner independently classifies one observation, one catalog fact, one inference, and one open question after support is removed."
     },
     "schema_version": 2,
-    "integrity_hash": "sha256:764b44a8ddb531558dc168b1011dff2640d87cc1c08e16671be5cc9b50183aee"
+    "integrity_hash": "sha256:c82fca4c23de907863f0f95e80f724aae044f7b3fdd31881823a935b53b667d6"
   },
   {
     "event_id": "10000000-0000-4000-8000-000000000005",

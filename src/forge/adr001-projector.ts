@@ -44,6 +44,7 @@ export interface Adr001RuntimeProjectionInput {
       readonly consentGrantIds: readonly string[];
     };
     readonly packageIntegrityHash: string;
+    readonly runtimeBindingDigest: string;
     readonly occurredAt: string;
     readonly recordedAt: string;
     readonly idempotencyNamespace: string;
@@ -197,6 +198,8 @@ export async function projectAdr001RuntimeAttempt(
     || input.run.actor.id.length === 0
     || input.run.authority.policyVersion.length === 0
     || input.run.packageIntegrityHash.length === 0
+    || input.run.runtimeBindingDigest.length === 0
+    || input.run.runtimeBindingDigest !== input.receipt.runtimeBindingDigest
     || input.run.idempotencyNamespace.length === 0
     || input.run.evidenceId.length === 0
     || input.attempt.taskId.length === 0
@@ -262,6 +265,7 @@ export async function projectAdr001RuntimeAttempt(
         world_version: input.receipt.world.version,
         content_version: input.receipt.world.contentVersion,
         package_integrity_hash: input.run.packageIntegrityHash,
+        runtime_binding_digest: input.run.runtimeBindingDigest,
         protocol_version: input.receipt.protocol.version,
         capability_id: input.receipt.world.capabilityId,
         proof_claim_id: input.receipt.world.proofClaimId,
@@ -297,6 +301,9 @@ export async function projectAdr001RuntimeAttempt(
           source: support.source,
           content_reference: support.actionId,
           policy_version: input.run.authority.policyVersion,
+          provider_id: support.providerId,
+          model_id: support.modelId,
+          fallback_reason: support.fallbackReason,
           protected_operation_overlap: supportFact.protectedOperationOverlap,
         },
       });
@@ -352,6 +359,7 @@ export async function projectAdr001RuntimeAttempt(
         access_accommodations: accessAccommodations,
         source_bindings: sourceBindings,
         source_provenance_status: derivedSourceStatus,
+        runtime_binding_digest: input.run.runtimeBindingDigest,
         response_digest: input.attempt.responseDigest,
         explicit_uncertainty: input.attempt.explicitUncertainty,
         authored_uncertainty_exception_reference: input.authoredUncertaintyExceptionReference,

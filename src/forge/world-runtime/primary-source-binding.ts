@@ -6,7 +6,7 @@ import type { WorldRuntimeBinding } from "../contracts";
  * durable reviewed snapshot.
  */
 export const PRIMARY_SOURCE_RUNTIME_BINDING = {
-  protocolVersion: "1.0.2",
+  protocolVersion: "1.1.0",
   semanticStages: [
     "encounter",
     "commit_model",
@@ -23,7 +23,10 @@ export const PRIMARY_SOURCE_RUNTIME_BINDING = {
   ],
   actions: [
     { id: "action.primary-source.learner-operation", kind: "learner_operation", label: "Learner-authored investigation action" },
-    { id: "action.primary-source.support", kind: "instructional_support", label: "Authored support ladder action" },
+    { id: "action.primary-source.support.example", kind: "instructional_support", label: "Authored explanation example support" },
+    { id: "action.primary-source.support.attention", kind: "instructional_support", label: "Authored attention support" },
+    { id: "action.primary-source.support.representation", kind: "instructional_support", label: "Authored representation support" },
+    { id: "action.primary-source.support.repair", kind: "instructional_support", label: "Authored repair support" },
     { id: "action.primary-source.model", kind: "model_action", label: "Model action request" },
     { id: "action.primary-source.replay", kind: "experience_replay", label: "Separating-experience replay" },
     { id: "action.primary-source.access", kind: "access_accommodation", label: "Construct-preserving access accommodation" },
@@ -34,16 +37,23 @@ export const PRIMARY_SOURCE_RUNTIME_BINDING = {
     policyId: "policy.primary-source.authored-support.v1",
     allowedDuringProof: false,
     recordsCognitiveSupport: true,
+    catalog: [
+      { actionId: "action.primary-source.support.example", stage: "commit_model", source: "authored", tier: "example", maxOccurrences: 1, answerExposing: false, policyId: "policy.primary-source.authored-support.v1", providerId: null, modelIdentity: { mode: "not_applicable" }, fallbackReason: null },
+      { actionId: "action.primary-source.support.attention", stage: "governed_support", source: "authored", tier: "attention", maxOccurrences: 1, answerExposing: false, policyId: "policy.primary-source.authored-support.v1", providerId: null, modelIdentity: { mode: "not_applicable" }, fallbackReason: null },
+      { actionId: "action.primary-source.support.representation", stage: "governed_support", source: "authored", tier: "representation", maxOccurrences: 1, answerExposing: false, policyId: "policy.primary-source.authored-support.v1", providerId: null, modelIdentity: { mode: "not_applicable" }, fallbackReason: null },
+      { actionId: "action.primary-source.support.repair", stage: "governed_support", source: "authored", tier: "repair", maxOccurrences: 1, answerExposing: false, policyId: "policy.primary-source.authored-support.v1", providerId: null, modelIdentity: { mode: "not_applicable" }, fallbackReason: null },
+    ],
   },
   proof: {
     proofClaimId: "proof.primary-source-reasoning.independent-transfer",
     validatorId: "validator.primary-source-reasoning-transfer.v1",
+    taskCode: "washington_street_1937_transfer",
     taskFamilyId: "task-family.primary-source-reasoning.cold-transfer.v1",
     blockedActionKinds: ["instructional_support", "model_action", "experience_replay"],
     accessAllowed: true,
   },
   evidence: {
-    receiptSchemaVersion: "1.0.2",
+    receiptSchemaVersion: "1.1.0",
     proofAuthority: "honour_based",
     persistence: "not_persisted",
   },

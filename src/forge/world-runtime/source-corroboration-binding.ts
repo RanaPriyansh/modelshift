@@ -6,7 +6,7 @@ import type { WorldRuntimeBinding } from "../contracts";
  * create a source snapshot, locator, claim, rights, or review authority.
  */
 export const SOURCE_CORROBORATION_RUNTIME_BINDING = {
-  protocolVersion: "1.0.2",
+  protocolVersion: "1.1.0",
   semanticStages: [
     "encounter",
     "commit_model",
@@ -32,17 +32,19 @@ export const SOURCE_CORROBORATION_RUNTIME_BINDING = {
   support: {
     policyId: "policy.source-corroboration.authored-support.v1",
     allowedDuringProof: false,
-    recordsCognitiveSupport: true,
+    recordsCognitiveSupport: false,
+    catalog: [],
   },
   proof: {
     proofClaimId: "proof.ai-literacy.independent-corroboration",
     validatorId: "validator.source-corroboration-transfer.v1",
+    taskCode: "source_corroboration_transfer",
     taskFamilyId: "task-family.source-corroboration.cold-transfer.v1",
     blockedActionKinds: ["instructional_support", "model_action", "experience_replay"],
     accessAllowed: true,
   },
   evidence: {
-    receiptSchemaVersion: "1.0.2",
+    receiptSchemaVersion: "1.1.0",
     proofAuthority: "honour_based",
     persistence: "not_persisted",
   },

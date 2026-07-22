@@ -7,7 +7,7 @@ import type { WorldRuntimeBinding } from "../contracts";
  * named-review authority.
  */
 export const PROPORTIONAL_REASONING_RUNTIME_BINDING = {
-  protocolVersion: "1.0.2",
+  protocolVersion: "1.1.0",
   semanticStages: [
     "encounter",
     "commit_model",
@@ -24,7 +24,9 @@ export const PROPORTIONAL_REASONING_RUNTIME_BINDING = {
   ],
   actions: [
     { id: "action.proportional-reasoning.learner-operation", kind: "learner_operation", label: "Learner-authored ratio operation" },
-    { id: "action.proportional-reasoning.support", kind: "instructional_support", label: "Authored ratio support ladder action" },
+    { id: "action.proportional-reasoning.support.attention", kind: "instructional_support", label: "Authored ratio attention support" },
+    { id: "action.proportional-reasoning.support.representation", kind: "instructional_support", label: "Authored ratio representation support" },
+    { id: "action.proportional-reasoning.support.repair", kind: "instructional_support", label: "Authored ratio repair support" },
     { id: "action.proportional-reasoning.model", kind: "model_action", label: "Model action request" },
     { id: "action.proportional-reasoning.replay", kind: "experience_replay", label: "Separating-experience replay" },
     { id: "action.proportional-reasoning.access", kind: "access_accommodation", label: "Construct-preserving access accommodation" },
@@ -34,16 +36,22 @@ export const PROPORTIONAL_REASONING_RUNTIME_BINDING = {
     policyId: "policy.proportional-reasoning.authored-support.v1",
     allowedDuringProof: false,
     recordsCognitiveSupport: true,
+    catalog: [
+      { actionId: "action.proportional-reasoning.support.attention", stage: "governed_support", source: "authored", tier: "attention", maxOccurrences: 1, answerExposing: false, policyId: "policy.proportional-reasoning.authored-support.v1", providerId: null, modelIdentity: { mode: "not_applicable" }, fallbackReason: null },
+      { actionId: "action.proportional-reasoning.support.representation", stage: "governed_support", source: "authored", tier: "representation", maxOccurrences: 1, answerExposing: false, policyId: "policy.proportional-reasoning.authored-support.v1", providerId: null, modelIdentity: { mode: "not_applicable" }, fallbackReason: null },
+      { actionId: "action.proportional-reasoning.support.repair", stage: "governed_support", source: "authored", tier: "repair", maxOccurrences: 1, answerExposing: false, policyId: "policy.proportional-reasoning.authored-support.v1", providerId: null, modelIdentity: { mode: "not_applicable" }, fallbackReason: null },
+    ],
   },
   proof: {
     proofClaimId: "proof.proportional-reasoning.independent-transfer",
     validatorId: "validator.proportional-reasoning-transfer.v1",
+    taskCode: "map_scale_transfer",
     taskFamilyId: "task-family.proportional-reasoning.map-scale-transfer.v1",
     blockedActionKinds: ["instructional_support", "model_action", "experience_replay"],
     accessAllowed: true,
   },
   evidence: {
-    receiptSchemaVersion: "1.0.2",
+    receiptSchemaVersion: "1.1.0",
     proofAuthority: "honour_based",
     persistence: "not_persisted",
   },

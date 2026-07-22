@@ -6,7 +6,7 @@ import type { EvidenceLearningAction } from "../../worlds/ai-learning";
 import type { PrimarySourceWorldEvent } from "../../worlds/primary-source-reasoning";
 import type { RatioWorldEvent } from "../../worlds/proportional-reasoning";
 import { ForgeEventJournal } from "../event-journal";
-import { sealForgeEvent } from "../events";
+import { canonicalJson, sealForgeEvent, sha256Digest } from "../events";
 import type { WorldRuntimeAdapter } from "./protocol";
 import { compileWorldRuntimeReceiptToAdr001 } from "./adr001-event-compiler";
 import { forceAndMotionWorldRuntimeAdapter } from "./force-and-motion";
@@ -323,6 +323,17 @@ describe.each(fixtures)("$name ADR-001 event compiler", (fixture) => {
       receipt: { ...failed.receipt, validator: { ...failed.receipt.validator, outcome: "pass", disposition: "demonstrated" } },
       validatorInput: failed.validatorInput,
     })).resolves.toMatchObject({ ok: false, code: "validator_outcome_mismatch" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: { ...failed.receipt, validator: { ...failed.receipt.validator, code: "transfer.forged" } },
+      validatorInput: failed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "validator_result_mismatch" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: {
+        ...failed.receipt,
+        validator: { ...failed.receipt.validator, criteria: [...failed.receipt.validator.criteria].reverse() },
+      },
+      validatorInput: failed.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "validator_result_mismatch" });
 
     const reset = fixture.reset();
     expect(reset.resetAttemptId).not.toBe(reset.completedAttemptId);
@@ -370,5 +381,139 @@ describe("ADR-001 compiler mixed-version replay refusal", () => {
       },
     });
     await expect(journal.append(legacy)).resolves.toMatchObject({ accepted: false, reason: "schema_version_mismatch" });
+  });
+});
+
+describe("ADR-001 compiler receipt commitments", () => {
+  it("uses the exact released task code seed, not result code or task family", async () => {
+    const force = fixtures.find((fixture) => fixture.name === "Force and Motion");
+    if (!force) throw new Error("Force fixture missing.");
+    const passed = await compileWorldRuntimeReceiptToAdr001(force.complete("pass", "attempt.compiler-task-code-pass"));
+    const failed = await compileWorldRuntimeReceiptToAdr001(force.complete("fail", "attempt.compiler-task-code-fail"));
+    if (!passed.ok || !failed.ok) throw new Error("Expected both canonical Force receipts to compile.");
+    const expectedDigest = await sha256Digest(canonicalJson({
+      validatorId: "validator.force-motion-transfer.v1",
+      validatorVersion: "1.0.0",
+      taskCode: "cargo_pod_force_graph",
+    }));
+    const expectedTaskId = `task.${expectedDigest.slice("sha256:".length, "sha256:".length + 32)}`;
+    const taskIdFor = (events: readonly { readonly event_type: string; readonly payload: unknown }[]) => {
+      const started = events.find((event) => event.event_type === "world_run.started");
+      if (!started || typeof started.payload !== "object" || started.payload === null || !("task_id" in started.payload)) {
+        throw new Error("Compiler start event missing task ID.");
+      }
+      return (started.payload as { readonly task_id: string }).task_id;
+    };
+    expect(taskIdFor(passed.events)).toBe(expectedTaskId);
+    expect(taskIdFor(failed.events)).toBe(expectedTaskId);
+    expect(taskIdFor(passed.events)).not.toBe("task-family.force-motion.cargo-pod-cold-transfer.v1");
+  });
+
+  it("accepts catalog-valid pre-proof model provenance without strengthening a forged support or result", async () => {
+    const force = fixtures.find((fixture) => fixture.name === "Force and Motion");
+    if (!force) throw new Error("Force fixture missing.");
+    const completed = force.complete("pass", "attempt.compiler-model-provenance");
+    const catalogValidModelReceipt = {
+      ...completed.receipt,
+      cognitiveSupport: [{
+        actionId: "action.force-and-motion.interpretation.model",
+        stage: "interpret_two_readings" as const,
+        source: "model" as const,
+        tier: "representation" as const,
+        policyId: "policy.force-and-motion.interpretation.v1",
+        providerId: "openai",
+        modelId: "byok-reviewed-model",
+        fallbackReason: null,
+      }],
+    };
+    const compiled = await compileWorldRuntimeReceiptToAdr001({
+      receipt: catalogValidModelReceipt,
+      validatorInput: completed.validatorInput,
+    });
+    expect(compiled).toMatchObject({ ok: true, projection: { evidence: { disposition: "demonstrated" } } });
+    if (!compiled.ok) return;
+    const assistance = compiled.events.find((event) => event.event_type === "assistance.recorded");
+    expect(assistance?.payload).toMatchObject({
+      provider_id: "openai",
+      model_id: "byok-reviewed-model",
+      fallback_reason: null,
+    });
+  });
+
+  it("rejects forged support cardinality, order, source-runtime support, access stage, and release identities", async () => {
+    const force = fixtures.find((fixture) => fixture.name === "Force and Motion");
+    const source = fixtures.find((fixture) => fixture.name === "Source Corroboration");
+    if (!force || !source) throw new Error("Required fixture missing.");
+    const forceRun = force.complete("pass", "attempt.compiler-adversarial-support");
+    const fallback = forceRun.receipt.cognitiveSupport[0]!;
+    const governed = {
+      actionId: "action.force-and-motion.support.attention",
+      stage: "governed_support" as const,
+      source: "authored" as const,
+      tier: "attention" as const,
+      policyId: "policy.force-and-motion.interpretation.v1",
+      providerId: null,
+      modelId: null,
+      fallbackReason: null,
+    };
+    const traceWithSupport = [
+      "encounter", "commit_model", "interpret_two_readings", "name_disagreement", "commit_test_prediction",
+      "run_separating_experience", "governed_support", "reconstruct", "withdraw_instructional_ai", "cold_transfer", "bounded_result",
+    ] as const;
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: { ...forceRun.receipt, cognitiveSupport: [fallback, fallback] },
+      validatorInput: forceRun.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "support_identity_mismatch" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: {
+        ...forceRun.receipt,
+        protocol: { ...forceRun.receipt.protocol, semanticTrace: traceWithSupport },
+        cognitiveSupport: [governed, fallback],
+      },
+      validatorInput: forceRun.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "support_identity_mismatch" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: {
+        ...forceRun.receipt,
+        accessAccommodations: [{
+          accommodationId: "access.force-and-motion.text-alternative",
+          stage: "return_or_apply",
+          kind: "text_alternative",
+          modality: "textual",
+          representation: "text_description",
+          constructPreservation: "preserves_construct",
+          answerChanging: false,
+          policyVersion: "1.0.0",
+          nonvisualAlternative: true,
+        }],
+      },
+      validatorInput: forceRun.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "access_identity_mismatch" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: { ...forceRun.receipt, runtimeBindingDigest: `sha256:${"0".repeat(64)}` },
+      validatorInput: forceRun.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "runtime_binding_digest_mismatch" });
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: { ...forceRun.receipt, packageIntegrityHash: `sha256:${"0".repeat(64)}` },
+      validatorInput: forceRun.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "package_integrity_hash_mismatch" });
+
+    const sourceRun = source.complete("pass", "attempt.compiler-source-support-forgery");
+    await expect(compileWorldRuntimeReceiptToAdr001({
+      receipt: {
+        ...sourceRun.receipt,
+        cognitiveSupport: [{
+          actionId: "action.source-corroboration.support",
+          stage: "governed_support",
+          source: "authored",
+          tier: "cue",
+          policyId: "policy.source-corroboration.authored-support.v1",
+          providerId: null,
+          modelId: null,
+          fallbackReason: null,
+        }],
+      },
+      validatorInput: sourceRun.validatorInput,
+    })).resolves.toMatchObject({ ok: false, code: "support_identity_mismatch" });
   });
 });

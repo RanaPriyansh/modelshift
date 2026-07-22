@@ -1,4 +1,4 @@
-import type { WorldRuntimeActionKind, WorldRuntimeStage } from "../contracts";
+import type { WorldRuntimeActionKind, WorldRuntimeBinding, WorldRuntimeStage } from "../contracts";
 import {
   getCanonicalDeterministicValidator,
   getCanonicalDeterministicValidatorRegistration,
@@ -21,6 +21,7 @@ import {
   WORLD_RUNTIME_PROTOCOL_VERSION,
   WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION,
 } from "./protocol";
+import { retainedRuntimeIdentityFor } from "./retained-runtime-binding";
 
 export interface WorldRuntimeSession<State, DomainProof> {
   /** Local idempotency key only; never identity or authentication. */
@@ -39,7 +40,8 @@ export type WorldRuntimeConfigurationErrorCode =
   | "pack_invalid"
   | "unsupported_protocol"
   | "receipt_schema_mismatch"
-  | "unknown_canonical_validator";
+  | "unknown_canonical_validator"
+  | "retained_runtime_binding_missing";
 
 /**
  * A typed, fail-fast admission boundary. Runtime callers cannot defer a bad
@@ -188,7 +190,14 @@ function receiptFor<State, DomainEvent, DomainProof>(
     return { ok: false, reason: "canonical_validator_input_invalid" };
   }
   const outcome = deriveCanonicalValidatorOutcome(validation);
-  const criteria = boundedValidatorCriteria(adapter, validation, proof);
+  // The receipt commits the exact released validator result. Adapter criteria
+  // are deliberately not an authority surface for compiler evidence.
+  const criteria = validation.evidence;
+  const retainedIdentity = retainedRuntimeIdentityFor(adapter.pack);
+  if (!retainedIdentity) throw new WorldRuntimeConfigurationError(
+    "retained_runtime_binding_missing",
+    `Released runtime ${adapter.pack.manifest.id} has no retained runtime binding digest.`,
+  );
 
   const sourceBindings: RuntimeSourceBindingReceipt[] = runtime.sourceBindings.map((binding) => {
     if (binding.provenanceStatus === "bound") {
@@ -228,6 +237,8 @@ function receiptFor<State, DomainEvent, DomainProof>(
     kind: "forge.runtime.bounded-local-attempt",
     attemptId: session.attemptId,
     recordedAt: new Date().toISOString(),
+    runtimeBindingDigest: retainedIdentity.runtimeBindingDigest,
+    packageIntegrityHash: retainedIdentity.packageIntegrityHash,
     authority: {
       proofAuthority: runtime.evidence.proofAuthority,
       persistence: runtime.evidence.persistence,
@@ -240,6 +251,7 @@ function receiptFor<State, DomainEvent, DomainProof>(
       contentVersion: adapter.pack.release.contentVersion,
       capabilityId: proofClaim.capabilityId,
       proofClaimId: proofClaim.id,
+      taskCode: runtime.proof.taskCode,
       taskFamilyId: runtime.proof.taskFamilyId,
     },
     protocol: {
@@ -251,6 +263,7 @@ function receiptFor<State, DomainEvent, DomainProof>(
       id: validatorDefinition.id,
       version: getCanonicalDeterministicValidatorRegistration(runtime.proof.validatorId)?.outputContractVersion
         ?? validatorDefinition.outputContractVersion,
+      code: validation.code,
       outcome,
       disposition: deriveDefaultEvidenceDisposition(outcome),
       criteria,
@@ -263,25 +276,6 @@ function receiptFor<State, DomainEvent, DomainProof>(
     responseDigest: null,
     }),
   };
-}
-
-function boundedValidatorCriteria<State, DomainEvent, DomainProof>(
-  adapter: WorldRuntimeAdapter<State, DomainEvent, DomainProof>,
-  result: NonNullable<ReturnType<typeof validateCanonicalDeterministicResult>>,
-  proof: DomainProof,
-): readonly string[] {
-  let criteria: readonly string[] = result.evidence;
-  try {
-    criteria = adapter.validatorCriteria?.(result, proof) ?? result.evidence;
-  } catch {
-    criteria = result.evidence;
-  }
-  // Only compact criterion codes may leave a runtime adapter. This excludes
-  // learner prose, raw model output, and credentials while keeping published
-  // task/answer/mechanism identifiers useful to the local ledger.
-  return Object.freeze([...new Set(criteria.filter((criterion) =>
-    typeof criterion === "string" && /^[A-Za-z0-9][A-Za-z0-9:._,/-]{0,159}$/.test(criterion),
-  ))].slice(0, 8));
 }
 
 function createRuntimeAttemptId(): string {
@@ -312,6 +306,12 @@ function assertWorldRuntimeConfiguration<State, DomainEvent, DomainProof>(
     throw new WorldRuntimeConfigurationError(
       "receipt_schema_mismatch",
       `World runtime receipt schema ${runtime.evidence.receiptSchemaVersion} must be ${WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION}.`,
+    );
+  }
+  if (!retainedRuntimeIdentityFor(adapter.pack)) {
+    throw new WorldRuntimeConfigurationError(
+      "retained_runtime_binding_missing",
+      `Released runtime ${adapter.pack.manifest.id} has no retained runtime binding digest.`,
     );
   }
   const canonicalRegistration = getCanonicalDeterministicValidatorRegistration(runtime.proof.validatorId);
@@ -363,6 +363,41 @@ function isDeclaredRuntimeAction<State, DomainEvent, DomainProof>(
   actionId: string,
 ): boolean {
   return adapter.pack.runtime.actions.some((action) => action.id === actionId && action.kind === kind);
+}
+
+function canonicalSupportFromCatalog(
+  runtime: WorldRuntimeBinding,
+  support: CanonicalSupportEvent,
+): CanonicalSupportEvent | null {
+  const declared = runtime.support.catalog.find((entry) => entry.actionId === support.actionId);
+  if (!declared) return null;
+  const action = runtime.actions.find((candidate) => candidate.id === declared.actionId);
+  if (!action || action.kind !== "instructional_support") return null;
+  const expectedModelId = declared.modelIdentity.mode === "pinned"
+    ? declared.modelIdentity.modelId
+    : declared.source === "model"
+      ? support.modelId
+      : null;
+  const canonical: CanonicalSupportEvent = {
+    actionId: declared.actionId,
+    stage: declared.stage,
+    source: declared.source,
+    tier: declared.tier,
+    policyId: declared.policyId,
+    providerId: declared.providerId,
+    modelId: expectedModelId,
+    fallbackReason: declared.fallbackReason,
+  };
+  return canonical.actionId === support.actionId
+    && canonical.stage === support.stage
+    && canonical.source === support.source
+    && canonical.tier === support.tier
+    && canonical.policyId === support.policyId
+    && canonical.providerId === support.providerId
+    && canonical.modelId === support.modelId
+    && canonical.fallbackReason === support.fallbackReason
+    ? canonical
+    : null;
 }
 
 export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
@@ -418,15 +453,16 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
     if (accommodation.constructPreservation !== "preserves_construct" || accommodation.answerChanging) {
       return { accepted: false, session, reason: "access_not_construct_preserving" };
     }
+    const duplicateAccess = session.accessAccommodations.some(
+      (recorded) => recorded.accommodationId === accommodation.id,
+    );
     const nextSession = Object.freeze({
       ...session,
       // ADR-001 models one selected access alternative as one factual event
       // reference. Re-selecting the same alternative may remain a harmless UI
       // operation, but it must not create a duplicate receipt fact that no v2
       // event chain can faithfully represent.
-      accessAccommodations: session.accessAccommodations.some(
-        (recorded) => recorded.accommodationId === accommodation.id,
-      )
+      accessAccommodations: duplicateAccess
         ? session.accessAccommodations
         : [
             ...session.accessAccommodations,
@@ -443,7 +479,7 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
             } satisfies AccessAccommodationEvent,
           ],
     });
-    return { accepted: true, session: nextSession, effects: ["access_recorded"] };
+    return { accepted: true, session: nextSession, effects: duplicateAccess ? [] : ["access_recorded"] };
   }
 
   // The action wrappers above are terminal. Keep this explicit narrowing so
@@ -470,7 +506,7 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
   if (commandKind === "reset") {
     return { accepted: true, session: createWorldRuntimeSession(adapter), effects: [] };
   }
-  const support = adapter.supportEvent(command.event, transition.state);
+  const reportedSupport = adapter.supportEvent(command.event, transition.state);
   const isInstructionalSupport = commandKind === "instructional_support";
   const supportTouchesProtectedPhase = session.phase !== "learning" || phase !== "learning";
   if (isInstructionalSupport && supportTouchesProtectedPhase) {
@@ -480,8 +516,8 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
       reason: "proof_action_blocked",
     };
   }
-  if ((support !== null && !isCanonicalSupportEvent(support)) || (support !== null) !== isInstructionalSupport) {
-    if (support !== null && supportTouchesProtectedPhase) {
+  if ((reportedSupport !== null && !isCanonicalSupportEvent(reportedSupport)) || (reportedSupport !== null) !== isInstructionalSupport) {
+    if (reportedSupport !== null && supportTouchesProtectedPhase) {
       return {
         accepted: false,
         session: blockedInstructionalSupportSession(session),
@@ -489,6 +525,17 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
       };
     }
     return { accepted: false, session, reason: "runtime_support_mismatch" };
+  }
+  const support = reportedSupport === null ? null : canonicalSupportFromCatalog(adapter.pack.runtime, reportedSupport);
+  if (reportedSupport !== null && support === null) {
+    return { accepted: false, session, reason: "runtime_support_mismatch" };
+  }
+  if (support) {
+    const declared = adapter.pack.runtime.support.catalog.find((entry) => entry.actionId === support.actionId);
+    const priorOccurrences = session.cognitiveSupport.filter((recorded) => recorded.actionId === support.actionId).length;
+    if (!declared || priorOccurrences >= declared.maxOccurrences) {
+      return { accepted: false, session, reason: "runtime_support_mismatch" };
+    }
   }
   const semanticTrace = appendValidatedSemanticStages(
     session.semanticTrace,

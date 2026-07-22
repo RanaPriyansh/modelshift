@@ -299,6 +299,54 @@ export const worldRuntimeActionSchema = z.strictObject({
   label: shortTextSchema,
 });
 
+const worldRuntimeSupportCatalogEntrySchema = z
+  .strictObject({
+    actionId: identifierSchema,
+    stage: z.enum(WORLD_RUNTIME_STAGES),
+    source: z.enum(["authored", "model", "human"]),
+    tier: z.enum(["attention", "cue", "representation", "example", "repair", "solution"]),
+    maxOccurrences: z.number().int().min(1).max(8),
+    answerExposing: z.boolean(),
+    policyId: identifierSchema,
+    providerId: identifierSchema.nullable(),
+    modelIdentity: z.discriminatedUnion("mode", [
+      z.strictObject({ mode: z.literal("not_applicable") }),
+      z.strictObject({ mode: z.literal("runtime_selected") }),
+      z.strictObject({ mode: z.literal("pinned"), modelId: identifierSchema }),
+    ]),
+    fallbackReason: z.enum([
+      "missing_key", "disabled", "timeout", "api_error", "refusal", "malformed_output",
+      "invalid_enum", "unsupported_evidence", "incompatible_probe", "answer_leakage", "ambiguous_input",
+    ]).nullable(),
+  })
+  .superRefine((entry, context) => {
+    if (entry.source === "model" && entry.providerId === null) {
+      context.addIssue({ code: "custom", message: "Model support must name its reviewed provider." });
+    }
+    if (entry.source === "model" && entry.modelIdentity.mode === "not_applicable") {
+      context.addIssue({ code: "custom", message: "Model support must declare a pinned or runtime-selected model identity policy." });
+    }
+    if (entry.source !== "model" && (entry.providerId !== null || entry.modelIdentity.mode !== "not_applicable")) {
+      context.addIssue({ code: "custom", message: "Only model support may name a provider or model identity policy." });
+    }
+    if (entry.source !== "authored" && entry.fallbackReason !== null) {
+      context.addIssue({ code: "custom", message: "Only authored support may name an authored fallback." });
+    }
+  });
+
+const worldRuntimeSupportCatalogSchema = z
+  .array(worldRuntimeSupportCatalogEntrySchema)
+  .min(1)
+  .superRefine((entries, context) => {
+    const seen = new Set<string>();
+    entries.forEach((entry, index) => {
+      if (seen.has(entry.actionId)) {
+        context.addIssue({ code: "custom", message: `Duplicate support action: ${entry.actionId}`, path: [index, "actionId"] });
+      }
+      seen.add(entry.actionId);
+    });
+  });
+
 const sourceSnapshotDigestSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
 
 export const worldRuntimeSourceBindingSchema = z.discriminatedUnion("provenanceStatus", [
@@ -347,14 +395,27 @@ export const worldRuntimeBindingSchema = z
     protocolVersion: semverSchema,
     semanticStages: runtimeStageIdsSchema,
     actions: uniqueIdentifiers(worldRuntimeActionSchema, 1),
-    support: z.strictObject({
-      policyId: identifierSchema,
-      allowedDuringProof: z.literal(false),
-      recordsCognitiveSupport: z.literal(true),
-    }),
+    support: z.discriminatedUnion("recordsCognitiveSupport", [
+      z.strictObject({
+        policyId: identifierSchema,
+        allowedDuringProof: z.literal(false),
+        recordsCognitiveSupport: z.literal(true),
+        /** Closed action-to-fact catalog; the runtime derives every receipt support from this source. */
+        catalog: worldRuntimeSupportCatalogSchema,
+      }),
+      z.strictObject({
+        policyId: identifierSchema,
+        allowedDuringProof: z.literal(false),
+        recordsCognitiveSupport: z.literal(false),
+        /** A runtime with no emit-capable support actions has no receipt-eligible support facts. */
+        catalog: z.array(worldRuntimeSupportCatalogEntrySchema).length(0),
+      }),
+    ]),
     proof: z.strictObject({
       proofClaimId: identifierSchema,
       validatorId: identifierSchema,
+      /** Exact released task code; underscores are preserved rather than normalized into task-family identity. */
+      taskCode: z.string().min(3).max(128).regex(/^[a-z][a-z0-9_]*$/, "Use a lowercase task code."),
       taskFamilyId: identifierSchema,
       blockedActionKinds: uniqueIdentifiers(z.enum(WORLD_RUNTIME_PROOF_BLOCKED_ACTION_KINDS), 3),
       accessAllowed: z.literal(true),
@@ -395,6 +456,46 @@ export const worldRuntimeBindingSchema = z
           path: ["actions"],
           message: `Runtime action catalog must declare ${kind}.`,
         });
+      }
+    }
+    const supportActions = new Map(
+      binding.actions
+        .filter((action) => action.kind === "instructional_support")
+        .map((action) => [action.id, action]),
+    );
+    const catalogActionIds = new Set(binding.support.catalog.map((entry) => entry.actionId));
+    for (const entry of binding.support.catalog) {
+      if (!supportActions.has(entry.actionId)) {
+        context.addIssue({
+          code: "custom",
+          path: ["support", "catalog"],
+          message: `Support catalog action ${entry.actionId} is not a declared instructional support action.`,
+        });
+      }
+      if (["withdraw_instructional_ai", "cold_transfer", "bounded_result", "return_or_apply"].includes(entry.stage)) {
+        context.addIssue({
+          code: "custom",
+          path: ["support", "catalog"],
+          message: `Support catalog action ${entry.actionId} targets a protected proof or result stage.`,
+        });
+      }
+      if (entry.policyId !== binding.support.policyId) {
+        context.addIssue({
+          code: "custom",
+          path: ["support", "catalog"],
+          message: `Support catalog action ${entry.actionId} must use the enclosing support policy.`,
+        });
+      }
+    }
+    if (binding.support.recordsCognitiveSupport) {
+      for (const actionId of supportActions.keys()) {
+        if (!catalogActionIds.has(actionId)) {
+          context.addIssue({
+            code: "custom",
+            path: ["support", "catalog"],
+            message: `Instructional support action ${actionId} has no closed catalog entry.`,
+          });
+        }
       }
     }
     const sourceItemIds = new Set<string>();

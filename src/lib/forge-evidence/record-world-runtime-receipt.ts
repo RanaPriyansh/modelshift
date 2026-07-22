@@ -1,7 +1,7 @@
 import {
   getCanonicalDeterministicValidatorRegistration,
 } from "../../forge/deterministic-validators";
-import type { AIActionBoundary, WorldRuntimeBinding } from "../../forge/contracts";
+import type { WorldRuntimeBinding } from "../../forge/contracts";
 import {
   isBoundedLocalWorldRuntimeReceipt,
   type BoundedLocalWorldRuntimeReceipt,
@@ -11,6 +11,7 @@ import {
   WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION,
 } from "../../forge/world-runtime/protocol";
 import { BUILT_IN_WORLD_PACKS } from "../../forge/worlds";
+import { retainedRuntimeIdentityFor } from "../../forge/world-runtime/retained-runtime-binding";
 import { createLocalStorageEvidenceLedgerAdapter } from "./local-storage";
 import type { AssistanceProvenance, EvidenceLedger } from "./schema";
 import {
@@ -29,6 +30,11 @@ export type RecordWorldRuntimeReceiptResult =
     };
 
 function boundedOutcome(receipt: BoundedLocalWorldRuntimeReceipt): "proved" | "not_proved" | "open_question" {
+  if (receipt.cognitiveSupport.some((support) =>
+    support.source === "model" || support.providerId !== null || support.modelId !== null || support.tier === "solution",
+  )) {
+    return "open_question";
+  }
   switch (receipt.validator.disposition) {
     case "demonstrated":
       return "proved";
@@ -67,10 +73,6 @@ function projectAssistance(receipt: BoundedLocalWorldRuntimeReceipt): Assistance
 
 function sameStrings(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
-}
-
-function permitsModelSupport(boundary: AIActionBoundary): boolean {
-  return boundary.mode === "bounded";
 }
 
 function sameSourceBinding(
@@ -136,13 +138,28 @@ function hasReleasedBuiltInRuntimeIdentity(receipt: BoundedLocalWorldRuntimeRece
   const expectedProvenanceStatus = expectedSourceBindings.every((binding) => binding.status === "bound")
     ? "bound"
     : "incomplete";
-  const instructionalSupportActionIds = new Set<string>(
-    runtime.actions
-      .filter((action) => action.kind === "instructional_support")
-      .map((action) => action.id),
-  );
+  const supportMatchesCatalog = (support: CanonicalSupportEvent): boolean => {
+    if (!runtime.support.recordsCognitiveSupport) return false;
+    const entry = runtime.support.catalog.find((candidate) => candidate.actionId === support.actionId);
+    const action = runtime.actions.find((candidate) => candidate.id === support.actionId);
+    if (!entry || action?.kind !== "instructional_support") return false;
+    const expectedModelId = entry.modelIdentity.mode === "pinned"
+      ? entry.modelIdentity.modelId
+      : entry.source === "model"
+        ? support.modelId
+        : null;
+    return support.stage === entry.stage
+      && support.source === entry.source
+      && support.tier === entry.tier
+      && support.policyId === entry.policyId
+      && support.providerId === entry.providerId
+      && support.modelId === expectedModelId
+      && support.fallbackReason === entry.fallbackReason;
+  };
 
-  return receipt.schemaVersion === WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION &&
+  const retainedIdentity = retainedRuntimeIdentityFor(pack);
+
+  return retainedIdentity !== null && receipt.schemaVersion === WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION &&
     receipt.protocol.version === WORLD_RUNTIME_PROTOCOL_VERSION &&
     pack.manifest.version === receipt.world.version &&
     pack.release.contentVersion === receipt.world.contentVersion &&
@@ -150,10 +167,13 @@ function hasReleasedBuiltInRuntimeIdentity(receipt: BoundedLocalWorldRuntimeRece
     proofClaim.capabilityId === capability.id &&
     (capability.proofClaimIds as readonly string[]).includes(proofClaim.id) &&
     runtime.proof.proofClaimId === proofClaim.id &&
+    runtime.proof.taskCode === receipt.world.taskCode &&
     runtime.proof.taskFamilyId === receipt.world.taskFamilyId &&
     pack.manifest.deterministicValidatorId === validator.id &&
     validator.capabilityId === capability.id &&
     runtime.proof.validatorId === validator.id &&
+    receipt.runtimeBindingDigest === retainedIdentity.runtimeBindingDigest &&
+    receipt.packageIntegrityHash === retainedIdentity.packageIntegrityHash &&
     receipt.validator.version === canonicalValidator.outputContractVersion &&
     validator.outputContractVersion === canonicalValidator.outputContractVersion &&
     runtime.protocolVersion === WORLD_RUNTIME_PROTOCOL_VERSION &&
@@ -161,11 +181,7 @@ function hasReleasedBuiltInRuntimeIdentity(receipt: BoundedLocalWorldRuntimeRece
     receipt.sourceBindings.length === expectedSourceBindings.length &&
     receipt.sourceBindings.every((binding, index) => sameSourceBinding(binding, expectedSourceBindings[index]!)) &&
     receipt.sourceProvenanceStatus === expectedProvenanceStatus &&
-    receipt.cognitiveSupport.every((support) =>
-      instructionalSupportActionIds.has(support.actionId) &&
-      support.policyId === runtime.support.policyId &&
-      (support.source !== "model" || permitsModelSupport(pack.manifest.aiBoundary))
-    );
+    receipt.cognitiveSupport.every(supportMatchesCatalog);
 }
 
 /**

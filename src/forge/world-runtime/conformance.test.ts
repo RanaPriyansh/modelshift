@@ -9,7 +9,7 @@ import { recordWorldRuntimeReceipt } from "../../lib/forge-evidence";
 import type { EvidenceLearningAction } from "../../worlds/ai-learning";
 import type { PrimarySourceWorldEvent } from "../../worlds/primary-source-reasoning";
 import type { RatioWorldEvent } from "../../worlds/proportional-reasoning";
-import { runtimeBindingDigest } from "../../../scripts/ops/release-digests";
+import { packageIntegrityHash, runtimeBindingDigest } from "../../../scripts/ops/release-digests";
 import { BUILT_IN_WORLD_PACKS } from "../worlds";
 import type { WorldRuntimeActionKind, WorldRuntimeStage } from "../contracts";
 import {
@@ -359,7 +359,7 @@ const FIXTURES: readonly ConformanceFixture[] = [
       "The velocity stays flat after the force returns to zero.",
     ],
     expectedCognitiveSupport: [{
-      actionId: "action.force-and-motion.interpretation",
+      actionId: "action.force-and-motion.interpretation.fallback.timeout",
       stage: "interpret_two_readings",
       source: "authored",
       tier: "representation",
@@ -524,7 +524,7 @@ describe.each(FIXTURES)("$name shared-runtime conformance", (fixture) => {
     expect(proofClaim).toBeDefined();
     expect(isBoundedLocalWorldRuntimeReceipt(receipt)).toBe(true);
     expect(receipt).toMatchObject({
-      schemaVersion: "1.0.2",
+      schemaVersion: "1.1.0",
       world: {
         id: fixture.pack.manifest.id,
         version: fixture.pack.manifest.version,
@@ -601,6 +601,7 @@ describe("all released runtime World receipt projection and release identity", (
         version: fixture.pack.manifest.version,
         route: fixture.pack.manifest.route,
         runtime_binding_digest: runtimeBindingDigest(fixture.pack.runtime),
+        package_integrity_hash: packageIntegrityHash(fixture.pack),
       });
     }
   });

@@ -71,8 +71,8 @@ describe("Force & Motion World runtime adapter", () => {
       manifest: { version: "1.0.1" },
       release: { contentVersion: "1.0.0" },
       runtime: {
-        protocolVersion: "1.0.2",
-        evidence: { receiptSchemaVersion: "1.0.2" },
+        protocolVersion: "1.1.0",
+        evidence: { receiptSchemaVersion: "1.1.0" },
         support: { policyId: "policy.force-and-motion.interpretation.v1" },
         returnProof: { enabled: false },
         sourceBindings: [{
@@ -84,8 +84,8 @@ describe("Force & Motion World runtime adapter", () => {
       },
     });
     expect(FORCE_AND_MOTION_WORLD.runtime.actions).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: "action.force-and-motion.interpretation", kind: "instructional_support" }),
-      expect.objectContaining({ id: "action.force-and-motion.support", kind: "instructional_support" }),
+      expect.objectContaining({ id: "action.force-and-motion.interpretation.model", kind: "instructional_support" }),
+      expect.objectContaining({ id: "action.force-and-motion.support.attention", kind: "instructional_support" }),
     ]));
     expect(FORCE_AND_MOTION_WORLD.manifest.returnProof).toMatchObject({
       enabled: false,
@@ -141,11 +141,10 @@ describe("Force & Motion World runtime adapter", () => {
         criteria: [
           "task:cargo_pod_force_graph",
           "answer:stays_constant_after_force",
-          "explanation:submitted-not-evaluated",
         ],
       },
       cognitiveSupport: [{
-        actionId: "action.force-and-motion.interpretation",
+        actionId: "action.force-and-motion.interpretation.model",
         source: "model",
         tier: "representation",
         stage: "interpret_two_readings",
@@ -201,7 +200,9 @@ describe("Force & Motion World runtime adapter", () => {
       }
       const isModel = interpretationEvent.type === "RESOLVE_INTERPRETATION" && interpretationEvent.interpretation.source === "model";
       expect(runtime.cognitiveSupport).toEqual([{
-        actionId: "action.force-and-motion.interpretation",
+        actionId: isModel
+          ? "action.force-and-motion.interpretation.model"
+          : "action.force-and-motion.interpretation.fallback.timeout",
         stage: "interpret_two_readings",
         source: isModel ? "model" : "authored",
         tier: "representation",
@@ -253,7 +254,7 @@ describe("Force & Motion World runtime adapter", () => {
       runtime = dispatched.session;
     }
     expect(runtime.cognitiveSupport).toEqual(expect.arrayContaining([{
-      actionId: "action.force-and-motion.support",
+      actionId: "action.force-and-motion.support.attention",
       stage: "governed_support",
       source: "authored",
       tier: "attention",
@@ -274,7 +275,7 @@ describe("Force & Motion World runtime adapter", () => {
           },
         },
       )).toEqual({
-        actionId: "action.force-and-motion.support",
+        actionId: `action.force-and-motion.support.${tier}`,
         stage: "governed_support",
         source: "authored",
         tier,
@@ -305,6 +306,11 @@ describe("Force & Motion World runtime adapter", () => {
     expect(access.session.accessAccommodations).toEqual([
       expect.objectContaining({ stage: "cold_transfer", constructPreservation: "preserves_construct", answerChanging: false }),
     ]);
+    const duplicateAccess = dispatchWorldRuntimeCommand(forceAndMotionWorldRuntimeAdapter, access.session, {
+      kind: "access_accommodation",
+      accommodationId: "access.force-and-motion.text-alternative",
+    });
+    expect(duplicateAccess).toMatchObject({ accepted: true, effects: [], session: { accessAccommodations: access.session.accessAccommodations } });
   });
 
   it("uses only the canonical validator for correct, wrong, and malformed transfer input", () => {
@@ -325,7 +331,6 @@ describe("Force & Motion World runtime adapter", () => {
         criteria: [
           "task:cargo_pod_force_graph",
           `answer:${choiceId}`,
-          "explanation:submitted-not-evaluated",
         ],
       });
     }
