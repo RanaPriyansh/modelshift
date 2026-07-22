@@ -6,7 +6,7 @@ import type { WorldRuntimeBinding } from "../contracts";
  * being promoted to reviewed source authority by this runtime binding.
  */
 export const FORCE_AND_MOTION_RUNTIME_BINDING = {
-  protocolVersion: "1.0.1",
+  protocolVersion: "1.0.2",
   semanticStages: [
     "encounter",
     "commit_model",
@@ -31,7 +31,7 @@ export const FORCE_AND_MOTION_RUNTIME_BINDING = {
     { id: "action.force-and-motion.reset", kind: "reset", label: "Start a new force and motion investigation" },
   ],
   support: {
-    policyId: "policy.force-and-motion.authored-support.v1",
+    policyId: "policy.force-and-motion.interpretation.v1",
     allowedDuringProof: false,
     recordsCognitiveSupport: true,
   },
@@ -43,7 +43,7 @@ export const FORCE_AND_MOTION_RUNTIME_BINDING = {
     accessAllowed: true,
   },
   evidence: {
-    receiptSchemaVersion: "1.0.1",
+    receiptSchemaVersion: "1.0.2",
     proofAuthority: "honour_based",
     persistence: "not_persisted",
   },

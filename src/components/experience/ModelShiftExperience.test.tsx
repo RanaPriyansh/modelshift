@@ -114,7 +114,16 @@ describe("ModelShiftExperience runtime migration", () => {
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
     const receipt = onRuntimeReceipt.mock.calls[0]?.[0];
     expect(receipt).toMatchObject({
-      cognitiveSupport: [{ source: "model", tier: "representation" }],
+      schemaVersion: "1.0.2",
+      cognitiveSupport: [{
+        actionId: "action.force-and-motion.interpretation",
+        source: "model",
+        tier: "representation",
+        policyId: "policy.force-and-motion.interpretation.v1",
+        providerId: "openai",
+        modelId: "gpt-5.6-sol",
+        fallbackReason: null,
+      }],
       validator: { outcome: "pass" },
       authority: { proofAuthority: "honour_based", persistence: "not_persisted", isDurable: false },
       sourceProvenanceStatus: "incomplete",
@@ -122,7 +131,8 @@ describe("ModelShiftExperience runtime migration", () => {
     expect(JSON.stringify(receipt)).not.toContain("The velocity becomes flat");
     const ledger = JSON.parse(localStorage.getItem(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY) ?? "{}");
     expect(ledger.entries).toHaveLength(1);
-    expect(ledger.entries[0].assistance).toEqual([{ kind: "model_interpretation", sourceId: "model.interpretation.force-motion" }]);
+    expect(ledger.entries[0].id).toBe(`proof.${receipt.attemptId}`);
+    expect(ledger.entries[0].assistance).toEqual([{ kind: "model_interpretation", sourceId: "action.force-and-motion.interpretation" }]);
     expect(JSON.stringify(ledger)).not.toContain("The velocity becomes flat");
     const receiptFacts = screen.getByTestId("force-runtime-receipt").textContent;
     expect(receiptFacts).toContain("honour_based");
@@ -142,11 +152,22 @@ describe("ModelShiftExperience runtime migration", () => {
     await advanceToProof({ fallback: true });
     await completeProof();
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
+    const firstReceipt = onRuntimeReceipt.mock.calls[0]?.[0];
+    expect(firstReceipt.cognitiveSupport).toEqual([{
+      actionId: "action.force-and-motion.interpretation",
+      stage: "interpret_two_readings",
+      source: "authored",
+      tier: "representation",
+      policyId: "policy.force-and-motion.interpretation.v1",
+      providerId: null,
+      modelId: null,
+      fallbackReason: "ambiguous_input",
+    }]);
 
     let ledger = JSON.parse(localStorage.getItem(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY) ?? "{}");
     expect(ledger.entries).toHaveLength(1);
     expect(ledger.entries[0].assistance).toEqual([
-      { kind: "authored_representation", sourceId: "support.force-motion.authored-interpretation" },
+      { kind: "authored_representation", sourceId: "action.force-and-motion.interpretation" },
     ]);
 
     fireEvent.click(screen.getByRole("button", { name: "Start a fresh session" }));
@@ -154,6 +175,8 @@ describe("ModelShiftExperience runtime migration", () => {
     await reachProof({ fallback: true });
     await completeProof();
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(2));
+    const secondReceipt = onRuntimeReceipt.mock.calls[1]?.[0];
+    expect(secondReceipt.attemptId).not.toBe(firstReceipt.attemptId);
     ledger = JSON.parse(localStorage.getItem(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY) ?? "{}");
     expect(ledger.entries).toHaveLength(2);
   });

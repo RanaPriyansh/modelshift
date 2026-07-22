@@ -5,21 +5,25 @@ import {
   transitionLearningState,
   type EvidenceCard,
   type LearningEvent,
+  type LearningInterpretation,
   type LearningState,
 } from "../../domain/learning";
-import { FORCE_AND_MOTION_WORLD, forceAndMotionTransferValidator } from "../worlds";
-import type { WorldRuntimeActionKind, WorldRuntimeStage } from "../contracts";
+import { FORCE_AND_MOTION_WORLD } from "../worlds";
+import type { DeterministicValidationResult, WorldRuntimeActionKind, WorldRuntimeStage } from "../contracts";
 import type {
   CanonicalSupportEvent,
-  CanonicalValidatorProjection,
   RuntimePhase,
   WorldRuntimeAdapter,
 } from "./protocol";
 
+const FORCE_INTERPRETATION_POLICY_ID = "policy.force-and-motion.interpretation.v1" as const;
+
 export interface ForceAndMotionRuntimeProof {
   /** The existing validator's exact payload; learner prose never enters it. */
   readonly validatorInput: unknown;
-  readonly submissionCriterion: string;
+  readonly submissionCriterion:
+    | "explanation:submitted-not-evaluated"
+    | "explanation:explicit-uncertainty-not-evaluated";
   readonly evidence: EvidenceCard;
 }
 
@@ -36,12 +40,18 @@ const STAGE_MAP: Record<LearningState["stage"], WorldRuntimeStage> = {
   PROOF_RESULT: "bounded_result",
 };
 
-function representationSupport(source: "model" | "authored"): CanonicalSupportEvent {
+function representationSupport(interpretation: LearningInterpretation | undefined): CanonicalSupportEvent | null {
+  if (!interpretation) return null;
+  const isModel = interpretation.source === "model";
   return {
     actionId: "action.force-and-motion.interpretation",
     stage: "interpret_two_readings",
-    source,
+    source: isModel ? "model" : "authored",
     tier: "representation",
+    policyId: FORCE_INTERPRETATION_POLICY_ID,
+    providerId: isModel ? interpretation.providerId : null,
+    modelId: isModel ? interpretation.modelId : null,
+    fallbackReason: isModel ? null : interpretation.fallbackReason ?? "ambiguous_input",
   };
 }
 
@@ -51,10 +61,10 @@ function authoredSupportTier(level: 1 | 2 | 3): CanonicalSupportEvent["tier"] {
   return "repair";
 }
 
-function transferSubmissionCriterion(state: LearningState): string {
+function transferSubmissionCriterion(state: LearningState): ForceAndMotionRuntimeProof["submissionCriterion"] {
   return state.context.transferDontKnow
-    ? "Submitted an explicit uncertainty for the authored transfer task."
-    : "Submitted an explanation for the authored transfer task.";
+    ? "explanation:explicit-uncertainty-not-evaluated"
+    : "explanation:submitted-not-evaluated";
 }
 
 function toRuntimeProof(state: LearningState): ForceAndMotionRuntimeProof | null {
@@ -66,36 +76,6 @@ function toRuntimeProof(state: LearningState): ForceAndMotionRuntimeProof | null
     validatorInput,
     submissionCriterion: transferSubmissionCriterion(state),
     evidence: deriveEvidenceCard(state),
-  };
-}
-
-/**
- * The existing validator checks only the authored graph choice. Keep the
- * explanation requirement as a truthful submission criterion, never a claim
- * that the current validator evaluated causal explanation quality.
- */
-export function projectForceAndMotionTransferValidation(
-  input: unknown,
-  submissionCriterion = "An explanation or explicit uncertainty submission was not available.",
-): CanonicalValidatorProjection {
-  const result = forceAndMotionTransferValidator.validate(input);
-  if (result.code === "invalid.transfer-input") {
-    return {
-      outcome: "not_scored",
-      criteria: [
-        "The transfer payload did not match the authored cargo-pod task.",
-        submissionCriterion,
-      ],
-    };
-  }
-  return {
-    outcome: result.passed ? "pass" : "fail",
-    criteria: [
-      result.passed
-        ? "Selected the authored constant-velocity transfer answer."
-        : "Did not select the authored constant-velocity transfer answer.",
-      submissionCriterion,
-    ],
   };
 }
 
@@ -151,10 +131,9 @@ export const forceAndMotionWorldRuntimeAdapter: WorldRuntimeAdapter<
     return "learner_operation";
   },
   supportEvent(event: LearningEvent, state: LearningState): CanonicalSupportEvent | null {
-    if (event.type === "RESOLVE_INTERPRETATION") {
-      return representationSupport(event.interpretation.source === "model" ? "model" : "authored");
+    if (event.type === "RESOLVE_INTERPRETATION" || event.type === "INTERPRETATION_FAILED") {
+      return representationSupport(state.context.interpretation);
     }
-    if (event.type === "INTERPRETATION_FAILED") return representationSupport("authored");
     if (event.type !== "CONSUME_SUPPORT") return null;
     const support = state.context.consumedSupport.at(-1);
     if (!support) return null;
@@ -163,11 +142,18 @@ export const forceAndMotionWorldRuntimeAdapter: WorldRuntimeAdapter<
       stage: "governed_support",
       source: "authored",
       tier: authoredSupportTier(support.level),
+      policyId: FORCE_INTERPRETATION_POLICY_ID,
+      providerId: null,
+      modelId: null,
+      fallbackReason: null,
     };
   },
   proof: toRuntimeProof,
-  projectValidator(proof: ForceAndMotionRuntimeProof): CanonicalValidatorProjection {
-    return projectForceAndMotionTransferValidation(proof.validatorInput, proof.submissionCriterion);
+  validatorInput(proof: ForceAndMotionRuntimeProof): unknown {
+    return proof.validatorInput;
+  },
+  validatorCriteria(result: DeterministicValidationResult, proof: ForceAndMotionRuntimeProof): readonly string[] {
+    return [...result.evidence, proof.submissionCriterion];
   },
   remainsUntested(proof: ForceAndMotionRuntimeProof): readonly string[] {
     return [

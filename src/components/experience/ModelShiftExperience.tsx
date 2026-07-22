@@ -23,7 +23,7 @@ import {
 } from "@/src/forge/world-runtime";
 import { interpretationApiResponseSchema } from "@/src/lib/ai/schema";
 import { validateInterpretation } from "@/src/lib/ai/validation";
-import { recordWorldProof, type RecordWorldProofInput } from "@/src/lib/forge-evidence";
+import { recordWorldRuntimeReceipt } from "@/src/lib/forge-evidence/record-world-runtime-receipt";
 import type {
   FallbackReason,
   LearningStage,
@@ -91,38 +91,6 @@ function validateApiInterpretation(candidate: unknown, explanation: string): Cli
 
 function compilerHypotheses(interpretation: LearningInterpretation) {
   return interpretation.hypothesisIds.map((id) => HYPOTHESES[id]);
-}
-
-function receiptOutcome(receipt: BoundedLocalWorldRuntimeReceipt): "proved" | "not_proved" | "open_question" {
-  if (receipt.validator.disposition === "demonstrated") return "proved";
-  if (receipt.validator.disposition === "not_demonstrated") return "not_proved";
-  return "open_question";
-}
-
-function receiptAssistance(receipt: BoundedLocalWorldRuntimeReceipt): NonNullable<RecordWorldProofInput["assistance"]> {
-  const assistance: NonNullable<RecordWorldProofInput["assistance"]>[number][] = [];
-  for (const support of receipt.cognitiveSupport) {
-    if (support.source === "model") {
-      assistance.push({ kind: "model_interpretation", sourceId: "model.interpretation.force-motion" });
-      continue;
-    }
-    if (support.actionId === "action.force-and-motion.interpretation" && support.tier === "representation") {
-      assistance.push({ kind: "authored_representation", sourceId: "support.force-motion.authored-interpretation" });
-      continue;
-    }
-    if (support.tier === "attention") {
-      assistance.push({ kind: "authored_hint", sourceId: "support.force-motion.level-1" });
-      continue;
-    }
-    if (support.tier === "representation") {
-      assistance.push({ kind: "authored_contrast", sourceId: "support.force-motion.level-2" });
-      continue;
-    }
-    if (support.tier === "repair") {
-      assistance.push({ kind: "authored_principle", sourceId: "support.force-motion.level-3" });
-    }
-  }
-  return assistance;
 }
 
 function createStartedRuntimeSession(): WorldRuntimeSession<LearningState, ForceAndMotionRuntimeProof> {
@@ -508,13 +476,7 @@ export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceP
     const receipt = runtime.receipt;
     if (!receipt || emittedReceiptRef.current === receipt) return;
     emittedReceiptRef.current = receipt;
-    recordWorldProof({
-      capabilityId: receipt.world.capabilityId,
-      conditionId: receipt.world.proofClaimId,
-      sourceRefId: receipt.world.id,
-      outcome: receiptOutcome(receipt),
-      assistance: receiptAssistance(receipt),
-    });
+    recordWorldRuntimeReceipt(receipt);
     onRuntimeReceipt?.(receipt);
   }, [onRuntimeReceipt, runtime.receipt]);
 

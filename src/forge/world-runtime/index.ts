@@ -4,7 +4,6 @@ export { PROPORTIONAL_REASONING_RUNTIME_BINDING } from "./proportional-reasoning
 export { lintWorldRuntimePack, type WorldRuntimeLintResult } from "./linter";
 export {
   forceAndMotionWorldRuntimeAdapter,
-  projectForceAndMotionTransferValidation,
   type ForceAndMotionRuntimeProof,
 } from "./force-and-motion";
 export {
