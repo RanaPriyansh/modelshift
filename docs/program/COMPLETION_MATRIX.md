@@ -1,9 +1,13 @@
 # FORGE Completion and Evidence Matrix
 
-**Authority:** principal review task  
-**Purpose:** map the full FORGE objective to current evidence, missing proof, owners, and stop rules  
-**Implementation baseline audited:** `2e6dc1e33313ae8afc848803f6b0aa77f2cc713d`  
-**Audit date:** 22 July 2026  
+**Authority:** principal review task
+
+**Purpose:** map the full FORGE objective to current evidence, missing proof, owners, and stop rules
+
+**Implementation baseline audited:** `2e6dc1e33313ae8afc848803f6b0aa77f2cc713d`
+
+**Audit date:** 22 July 2026
+
 **Verdict:** the full objective is not complete
 
 This file prevents a strong prototype, a broad plan, or a green test count from being mistaken for a production-grade lifelong or homeschool learning system. It remains current only when the principal updates it after reviewing integrated evidence on an exact SHA.
