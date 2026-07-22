@@ -7,10 +7,7 @@ import {
   type LearningEvent,
 } from "../../domain/learning";
 import { lintWorldRuntimePack } from "./linter";
-import {
-  forceAndMotionWorldRuntimeAdapter,
-  projectForceAndMotionTransferValidation,
-} from "./force-and-motion";
+import { forceAndMotionWorldRuntimeAdapter } from "./force-and-motion";
 import type { WorldRuntimeAdapter } from "./protocol";
 import { createWorldRuntimeSession, dispatchWorldRuntimeCommand } from "./runtime";
 
@@ -74,7 +71,9 @@ describe("Force & Motion World runtime adapter", () => {
       manifest: { version: "1.0.1" },
       release: { contentVersion: "1.0.0" },
       runtime: {
-        protocolVersion: "1.0.1",
+        protocolVersion: "1.0.2",
+        evidence: { receiptSchemaVersion: "1.0.2" },
+        support: { policyId: "policy.force-and-motion.interpretation.v1" },
         returnProof: { enabled: false },
         sourceBindings: [{
           domainSourceRef: "source.openstax.newtons-first-law",
@@ -84,6 +83,10 @@ describe("Force & Motion World runtime adapter", () => {
         }],
       },
     });
+    expect(FORCE_AND_MOTION_WORLD.runtime.actions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "action.force-and-motion.interpretation", kind: "instructional_support" }),
+      expect.objectContaining({ id: "action.force-and-motion.support", kind: "instructional_support" }),
+    ]));
     expect(FORCE_AND_MOTION_WORLD.manifest.returnProof).toMatchObject({
       enabled: false,
       reason: "No reviewed delayed task family or scheduler is published.",
@@ -136,11 +139,21 @@ describe("Force & Motion World runtime adapter", () => {
         outcome: "pass",
         disposition: "demonstrated",
         criteria: [
-          "Selected the authored constant-velocity transfer answer.",
-          "Submitted an explanation for the authored transfer task.",
+          "task:cargo_pod_force_graph",
+          "answer:stays_constant_after_force",
+          "explanation:submitted-not-evaluated",
         ],
       },
-      cognitiveSupport: [{ source: "model", tier: "representation", stage: "interpret_two_readings" }],
+      cognitiveSupport: [{
+        actionId: "action.force-and-motion.interpretation",
+        source: "model",
+        tier: "representation",
+        stage: "interpret_two_readings",
+        policyId: "policy.force-and-motion.interpretation.v1",
+        providerId: "openai",
+        modelId: "gpt-5.6-sol",
+        fallbackReason: null,
+      }],
       sourceProvenanceStatus: "incomplete",
       responseDigest: null,
     });
@@ -186,14 +199,44 @@ describe("Force & Motion World runtime adapter", () => {
         if (!dispatched.accepted) return;
         runtime = dispatched.session;
       }
-      const expectedSource = interpretationEvent.type === "RESOLVE_INTERPRETATION" && interpretationEvent.interpretation.source === "model"
-        ? "model"
-        : "authored";
-      expect(runtime.cognitiveSupport).toEqual([
-        expect.objectContaining({ source: expectedSource, tier: "representation", actionId: "action.force-and-motion.interpretation" }),
-      ]);
+      const isModel = interpretationEvent.type === "RESOLVE_INTERPRETATION" && interpretationEvent.interpretation.source === "model";
+      expect(runtime.cognitiveSupport).toEqual([{
+        actionId: "action.force-and-motion.interpretation",
+        stage: "interpret_two_readings",
+        source: isModel ? "model" : "authored",
+        tier: "representation",
+        policyId: "policy.force-and-motion.interpretation.v1",
+        providerId: isModel ? "openai" : null,
+        modelId: isModel ? "gpt-5.6-sol" : null,
+        fallbackReason: isModel ? null : "timeout",
+      }]);
       expect(runtime.semanticTrace).toEqual(["encounter", "commit_model", "interpret_two_readings", "name_disagreement"]);
     }
+  });
+
+  it("rejects model support that is missing server-owned provider provenance", () => {
+    let runtime = createWorldRuntimeSession(forceAndMotionWorldRuntimeAdapter);
+    for (const event of [
+      { type: "START" as const },
+      { type: "COMMIT_PREDICTION" as const, predictionId: "gradually_slows" as const, confidence: 65 },
+      { type: "COMMIT_EXPLANATION" as const, explanation: "A continuing push sets the speed." },
+    ]) {
+      const dispatched = dispatchWorldRuntimeCommand(forceAndMotionWorldRuntimeAdapter, runtime, { kind: "domain", event });
+      expect(dispatched.accepted).toBe(true);
+      if (!dispatched.accepted) return;
+      runtime = dispatched.session;
+    }
+
+    const rejected = dispatchWorldRuntimeCommand(forceAndMotionWorldRuntimeAdapter, runtime, {
+      kind: "domain",
+      event: {
+        type: "RESOLVE_INTERPRETATION",
+        interpretation: { ...modelInterpretation, providerId: null, modelId: null },
+      },
+    });
+    expect(rejected).toMatchObject({ accepted: false, reason: "runtime_support_mismatch" });
+    expect(rejected.session.state.stage).toBe("INTERPRET");
+    expect(rejected.session.cognitiveSupport).toEqual([]);
   });
 
   it("records authored support only after consumption and blocks support, model, and replay actions in proof while preserving typed access", () => {
@@ -209,9 +252,38 @@ describe("Force & Motion World runtime adapter", () => {
       if (!dispatched.accepted) return;
       runtime = dispatched.session;
     }
-    expect(runtime.cognitiveSupport).toEqual(expect.arrayContaining([
-      expect.objectContaining({ source: "authored", tier: "attention", stage: "governed_support" }),
-    ]));
+    expect(runtime.cognitiveSupport).toEqual(expect.arrayContaining([{
+      actionId: "action.force-and-motion.support",
+      stage: "governed_support",
+      source: "authored",
+      tier: "attention",
+      policyId: "policy.force-and-motion.interpretation.v1",
+      providerId: null,
+      modelId: null,
+      fallbackReason: null,
+    }]));
+    for (const [level, tier] of [[1, "attention"], [2, "representation"], [3, "repair"]] as const) {
+      const initial = createInitialLearningState();
+      expect(forceAndMotionWorldRuntimeAdapter.supportEvent(
+        { type: "CONSUME_SUPPORT", level },
+        {
+          stage: "EXPERIMENT",
+          context: {
+            ...initial.context,
+            consumedSupport: [{ level, reason: level === 1 ? "stuck" : level === 2 ? "second_explicit_request" : "show_principle" }],
+          },
+        },
+      )).toEqual({
+        actionId: "action.force-and-motion.support",
+        stage: "governed_support",
+        source: "authored",
+        tier,
+        policyId: "policy.force-and-motion.interpretation.v1",
+        providerId: null,
+        modelId: null,
+        fallbackReason: null,
+      });
+    }
     expect(runtime.phase).toBe("proof");
 
     for (const command of [
@@ -235,28 +307,43 @@ describe("Force & Motion World runtime adapter", () => {
     ]);
   });
 
-  it("uses the existing validator exactly: correct, wrong, and malformed outcomes never imply mechanism scoring", () => {
-    expect(projectForceAndMotionTransferValidation({})).toEqual({
-      outcome: "not_scored",
-      criteria: [
-        "The transfer payload did not match the authored cargo-pod task.",
-        "An explanation or explicit uncertainty submission was not available.",
-      ],
+  it("uses only the canonical validator for correct, wrong, and malformed transfer input", () => {
+    for (const [choiceId, outcome, disposition] of [
+      ["stays_constant_after_force", "pass", "demonstrated"],
+      ["returns_to_zero", "fail", "not_demonstrated"],
+    ] as const) {
+      let runtime = createWorldRuntimeSession(forceAndMotionWorldRuntimeAdapter);
+      for (const event of [...completeToProof(), transfer(choiceId)]) {
+        const dispatched = dispatchWorldRuntimeCommand(forceAndMotionWorldRuntimeAdapter, runtime, { kind: "domain", event });
+        expect(dispatched.accepted).toBe(true);
+        if (!dispatched.accepted) return;
+        runtime = dispatched.session;
+      }
+      expect(runtime.receipt?.validator).toMatchObject({
+        outcome,
+        disposition,
+        criteria: [
+          "task:cargo_pod_force_graph",
+          `answer:${choiceId}`,
+          "explanation:submitted-not-evaluated",
+        ],
+      });
+    }
+
+    let malformed = createWorldRuntimeSession(forceAndMotionWorldRuntimeAdapter);
+    for (const event of completeToProof()) {
+      const dispatched = dispatchWorldRuntimeCommand(forceAndMotionWorldRuntimeAdapter, malformed, { kind: "domain", event });
+      expect(dispatched.accepted).toBe(true);
+      if (!dispatched.accepted) return;
+      malformed = dispatched.session;
+    }
+    const rejected = dispatchWorldRuntimeCommand(forceAndMotionWorldRuntimeAdapter, malformed, {
+      kind: "domain",
+      event: { type: "SUBMIT_TRANSFER", explanation: "I don't know yet.", dontKnow: true },
     });
-    expect(projectForceAndMotionTransferValidation({
-      taskId: "cargo_pod_force_graph",
-      selectedAnswer: "stays_constant_after_force",
-    }, "Submitted an explanation for the authored transfer task.")).toMatchObject({ outcome: "pass" });
-    expect(projectForceAndMotionTransferValidation({
-      taskId: "cargo_pod_force_graph",
-      selectedAnswer: "returns_to_zero",
-    }, "Submitted an explicit uncertainty for the authored transfer task.")).toEqual({
-      outcome: "fail",
-      criteria: [
-        "Did not select the authored constant-velocity transfer answer.",
-        "Submitted an explicit uncertainty for the authored transfer task.",
-      ],
-    });
+    expect(rejected).toMatchObject({ accepted: false, reason: "canonical_validator_input_invalid" });
+    expect(rejected.session.receipt).toBeNull();
+    expect(rejected.session.phase).toBe("proof");
   });
 
   it("rejects a forged or skipped trace and resets a completed attempt to a fresh encounter", () => {
@@ -273,7 +360,8 @@ describe("Force & Motion World runtime adapter", () => {
       classify: () => "learner_operation",
       supportEvent: () => null,
       proof: (state) => state.advanced ? { proof: true } : null,
-      projectValidator: () => ({ outcome: "pass", criteria: ["forged"] }),
+      validatorInput: () => ({}),
+      validatorCriteria: () => ["forged"],
       remainsUntested: () => [],
     };
     const forgedAttempt = dispatchWorldRuntimeCommand(forged, createWorldRuntimeSession(forged), {
@@ -289,6 +377,7 @@ describe("Force & Motion World runtime adapter", () => {
       if (!dispatched.accepted) return;
       runtime = dispatched.session;
     }
+    const completedAttemptId = runtime.attemptId;
     const reset = dispatchWorldRuntimeCommand(forceAndMotionWorldRuntimeAdapter, runtime, {
       kind: "domain",
       event: { type: "RESET" },
@@ -302,5 +391,8 @@ describe("Force & Motion World runtime adapter", () => {
         proof: null,
       },
     });
+    if (!reset.accepted) return;
+    expect(reset.session.attemptId).not.toBe(completedAttemptId);
+    expect(reset.session.attemptId).toMatch(/^attempt\./);
   });
 });

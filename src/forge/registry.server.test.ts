@@ -89,8 +89,8 @@ describe("TrustedWorldRegistry", () => {
       release: { contentVersion: "1.0.0" },
     });
     expect(trustedWorldRegistry.getRuntimeBinding("world.force-and-motion")).toMatchObject({
-      protocolVersion: "1.0.1",
-      evidence: { receiptSchemaVersion: "1.0.1" },
+      protocolVersion: "1.0.2",
+      evidence: { receiptSchemaVersion: "1.0.2" },
       proof: {
         proofClaimId: "proof.force-motion.independent-transfer",
         validatorId: "validator.force-motion-transfer.v1",
