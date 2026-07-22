@@ -74,6 +74,17 @@ describe("EvidenceLearningWorld", () => {
     expect(screen.getByTestId("evidence-card-bastani-pnas")).toBeInTheDocument();
   });
 
+  it("keeps the native radio focus target without inferring an access accommodation", () => {
+    const onRuntimeReceipt = vi.fn();
+    render(<EvidenceLearningWorld onRuntimeReceipt={onRuntimeReceipt} />);
+
+    const stance = screen.getByRole("radio", { name: /It depends/i });
+    stance.focus();
+
+    expect(stance).toHaveFocus();
+    expect(onRuntimeReceipt).not.toHaveBeenCalled();
+  });
+
   it("uses runtime-only state, writes one receipt-derived compatibility record, and keeps raw prose out of the receipt", async () => {
     const onRuntimeReceipt = vi.fn();
     const { rerender } = render(<EvidenceLearningWorld onRuntimeReceipt={onRuntimeReceipt} />);
@@ -111,6 +122,7 @@ describe("EvidenceLearningWorld", () => {
     });
     expect(onRuntimeReceipt.mock.calls[0]?.[0]).toMatchObject({
       cognitiveSupport: [],
+      accessAccommodations: [],
       authority: { proofAuthority: "honour_based", persistence: "not_persisted", isDurable: false },
       sourceProvenanceStatus: "incomplete",
     });
