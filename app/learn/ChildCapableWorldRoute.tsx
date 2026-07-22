@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { FormEvent, useState, useSyncExternalStore } from "react";
 
+import { PrimarySourceWorldRoute } from "@/src/components/forge/PrimarySourceWorldRoute";
 import { ProportionalWorldRoute } from "@/src/components/forge/ProportionalWorldRoute";
-import { PrimarySourceReasoningWorld } from "@/src/components/worlds/primary-source-reasoning";
 import type { WorldRouteAudience } from "@/src/lib/forge-auth/world-age-policy.server";
 import {
   createForgeDeviceProfile,
@@ -47,7 +47,7 @@ function deviceModeLabel(ageMode: ForgeDeviceProfile["ageMode"]): string {
 
 function renderWorld(world: WorldId, audience: ForgeDeviceProfile["ageMode"]) {
   if (world === "proportional_reasoning") return <ProportionalWorldRoute audience={audience} />;
-  return <PrimarySourceReasoningWorld />;
+  return <PrimarySourceWorldRoute />;
 }
 
 function DeviceProfileSelectionGate({

@@ -73,11 +73,11 @@ function receipt(overrides: Partial<BoundedLocalWorldRuntimeReceipt> = {}): Boun
         fallbackReason: null,
       },
       {
-        actionId: "action.proportional-reasoning.model-support",
+        actionId: "action.proportional-reasoning.support",
         stage: "interpret_two_readings",
         source: "model",
         tier: "cue",
-        policyId: "policy.proportional-reasoning.model-support.v1",
+        policyId: "policy.proportional-reasoning.authored-support.v1",
         providerId: "openai",
         modelId: "gpt-5",
         fallbackReason: null,
@@ -124,7 +124,7 @@ describe("recordWorldRuntimeReceipt", () => {
         returnSchedule: null,
         assistance: [
           { kind: "authored_representation", sourceId: "action.proportional-reasoning.support" },
-          { kind: "model_interpretation", sourceId: "action.proportional-reasoning.model-support" },
+          { kind: "model_interpretation", sourceId: "action.proportional-reasoning.support" },
         ],
       }),
     ]);
@@ -173,6 +173,88 @@ describe("recordWorldRuntimeReceipt", () => {
       world: { ...receipt().world, id: "world.learner\nsecret" },
     });
     expect(recordWorldRuntimeReceipt(rawIdentifier)).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
+    expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(0);
+  });
+
+  it("rejects structurally valid unknown and mixed released-World identities", () => {
+    const storage = new MemoryStorage();
+    vi.stubGlobal("window", { localStorage: storage });
+    const forgedReceipts = [
+      receipt({ world: { ...receipt().world, id: "world.fabricated" } }),
+      receipt({ world: { ...receipt().world, version: "9.9.9" } }),
+      receipt({ world: { ...receipt().world, contentVersion: "9.9.9" } }),
+      receipt({ world: { ...receipt().world, capabilityId: "capability.force-motion.zero-net-force" } }),
+      receipt({ world: { ...receipt().world, proofClaimId: "proof.force-motion.independent-transfer" } }),
+      receipt({ world: { ...receipt().world, taskFamilyId: "task-family.fabricated.v1" } }),
+      receipt({
+        validator: {
+          ...receipt().validator,
+          id: "validator.force-motion-transfer.v1",
+        },
+      }),
+      receipt({ validator: { ...receipt().validator, version: "9.9.9" } }),
+    ];
+
+    for (const forgedReceipt of forgedReceipts) {
+      expect(recordWorldRuntimeReceipt(forgedReceipt)).toMatchObject({
+        ok: false,
+        reason: "invalid_runtime_receipt",
+      });
+    }
+    expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(0);
+  });
+
+  it("rejects a known World with substituted source or support identities", () => {
+    const storage = new MemoryStorage();
+    vi.stubGlobal("window", { localStorage: storage });
+    const canonicalSupport = receipt().cognitiveSupport[0]!;
+    const substitutedIdentities = [
+      receipt({
+        sourceBindings: [{
+          ...receipt().sourceBindings[0]!,
+          domainSourceRef: "legacy.fabricated-source",
+          sourceItemId: "source.fabricated",
+        }],
+      }),
+      receipt({
+        cognitiveSupport: [{
+          ...canonicalSupport,
+          actionId: "action.proportional-reasoning.fabricated-support",
+        }],
+      }),
+      receipt({
+        cognitiveSupport: [{
+          ...canonicalSupport,
+          policyId: "policy.proportional-reasoning.fabricated-support.v1",
+        }],
+      }),
+    ];
+
+    for (const substitutedIdentity of substitutedIdentities) {
+      expect(recordWorldRuntimeReceipt(substitutedIdentity)).toMatchObject({
+        ok: false,
+        reason: "invalid_runtime_receipt",
+      });
+    }
+    expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(0);
+  });
+
+  it.each([
+    "withdraw_instructional_ai",
+    "cold_transfer",
+    "bounded_result",
+    "return_or_apply",
+  ] as const)("rejects cognitive support recorded at protected stage %s", (stage) => {
+    const storage = new MemoryStorage();
+    vi.stubGlobal("window", { localStorage: storage });
+    const protectedStageSupport = receipt({
+      cognitiveSupport: [{ ...receipt().cognitiveSupport[0]!, stage }],
+    });
+
+    expect(recordWorldRuntimeReceipt(protectedStageSupport)).toMatchObject({
+      ok: false,
+      reason: "invalid_runtime_receipt",
+    });
     expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(0);
   });
 });

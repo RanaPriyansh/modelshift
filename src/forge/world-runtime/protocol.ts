@@ -222,6 +222,12 @@ const runtimeActionKinds = new Set<WorldRuntimeActionKind>([
   "learner_operation", "instructional_support", "model_action", "experience_replay",
   "access_accommodation", "return_proof", "reset",
 ]);
+const cognitiveSupportProtectedStages = new Set<WorldRuntimeStage>([
+  "withdraw_instructional_ai",
+  "cold_transfer",
+  "bounded_result",
+  "return_or_apply",
+]);
 const requiredReceiptStages: readonly WorldRuntimeStage[] = [
   "encounter", "commit_model", "interpret_two_readings", "name_disagreement", "commit_test_prediction",
   "run_separating_experience", "reconstruct", "withdraw_instructional_ai", "cold_transfer", "bounded_result",
@@ -259,8 +265,10 @@ export function isCanonicalSupportEvent(value: unknown): value is CanonicalSuppo
   if (value.source === "model" && (value.providerId === null || value.modelId === null)) return false;
   if (value.source === "human" && (value.providerId !== null || value.modelId !== null)) return false;
   if (value.source !== "authored" && value.fallbackReason !== null) return false;
+  if (typeof value.stage !== "string" ||
+    cognitiveSupportProtectedStages.has(value.stage as WorldRuntimeStage)) return false;
   return (
-    typeof value.stage === "string" && runtimeStages.has(value.stage as WorldRuntimeStage) &&
+    runtimeStages.has(value.stage as WorldRuntimeStage) &&
     (value.source === "authored" || value.source === "model" || value.source === "human") &&
     ["attention", "cue", "representation", "example", "repair", "solution"].includes(value.tier as string)
   );
