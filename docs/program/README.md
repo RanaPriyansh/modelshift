@@ -1,5 +1,7 @@
 # FORGE Program Control Room
 
+**Active implementation plan:** [`WAVE_5_PLAN.md`](./WAVE_5_PLAN.md) — trustworthy continuity, additive ADR-001 v2 persistence, source/curriculum authority, and a language/literacy World factory acceptance case. Nothing in the plan is released merely because it is assigned or implemented.
+
 **Current release record:** [`WAVE_4_PLAN.md`](./WAVE_4_PLAN.md) — Wave 4 migration, all-World conformance, exact release gate, and the bounded post-release tuple for `c7d4011`. The implementation plan and release amendment are distinct; the documentation amendment is not deployed.
 
 **Authority:** principal architecture/review task  
@@ -81,5 +83,6 @@ The current public code SHA is `c7d401101791faa80ac0ba61c73044928a2da7b6`, serve
 7. [Wave 2 architecture and claim boundary](WAVE_2_ARCHITECTURE.md)
 8. [Wave 3 Ratio runtime and release record](WAVE_3_ARCHITECTURE.md)
 9. [Wave 4 all-World runtime plan and release record](WAVE_4_PLAN.md)
+10. [Wave 5 trustworthy-continuity and curriculum-expansion plan](WAVE_5_PLAN.md)
 
 These files are principal-owned. Workers may cite them and propose changes in their handoff, but must not edit them unless the principal assigns a documentation-only amendment.

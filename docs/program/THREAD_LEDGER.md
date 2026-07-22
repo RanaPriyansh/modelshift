@@ -6,6 +6,8 @@ Workers implement bounded slices in isolated worktrees. They do not edit the pri
 
 **Wave 4 release boundary:** released source is `c7d401101791faa80ac0ba61c73044928a2da7b6`, public alias is `https://modelshift.vercel.app`, accepted production deployment is `dpl_6MUabxtnuMVzwxHf1vbM5Y1LxNfs`, and immutable URL is `https://forge-learning-2sh2loxy1-ranapriyanshs-projects.vercel.app`. Exact-main CI `29944461461`, pre-main CI `29944088585`, local/public browser 70 pass / 22 intentional skips / 0 fail, all-World conformance 18/18, terminal routed conformance 8/8, and final local/public bound verifier 187/187 passed. The bound verifier status is `DEPLOYED_CANDIDATE`; live evaluation and rollback rehearsal remain `NOT_EVALUATED`. This later documentation-only amendment is not deployed. No lane may describe the release as durable authority, live provider operation, cloud auth, broad curriculum, certification, or homeschool readiness.
 
+**Wave 5 dispatch boundary:** [`WAVE_5_PLAN.md`](./WAVE_5_PLAN.md) is the active architecture and ownership packet on principal base `eca9c3b`. Workers may implement only their assigned packet in isolated worktrees. W5-A owns immutable dependency identity; W5-B owns receipt-to-ADR-001 compilation; W5-C owns additive v2 SQL fixtures. W5-D source/curriculum authority and W5-E Argument & Evidence remain sequenced after those contracts. No worker may enable cloud/provider features, migrate a live database, publish a World, push shared main, deploy, or edit principal program documents.
+
 ## Active lane map
 
 | Lane | Task | Default model | Dispatch status | Existing handoff | Next goal |
