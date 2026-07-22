@@ -22,10 +22,13 @@ function readCredentials(formData: FormData) {
 export async function signIn(formData: FormData) {
   const parsed = readCredentials(formData);
   if (!parsed.success) redirect("/login?status=invalid-fields");
-  if (!allowCloudCredentialAttempt(parsed.data.email)) redirect("/login?status=try-again-later");
 
   const supabase = await createForgeSupabaseServerClient();
   if (!supabase) redirect("/login?status=cloud-not-configured");
+
+  // This is only an in-process secondary backstop; it is never release
+  // evidence and cannot enable cloud auth on its own.
+  if (!allowCloudCredentialAttempt(parsed.data.email)) redirect("/login?status=try-again-later");
 
   const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error || !data.user) redirect("/login?status=sign-in-failed");

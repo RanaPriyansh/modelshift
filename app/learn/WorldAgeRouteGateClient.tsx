@@ -8,7 +8,7 @@ export function LocalGrownUpConfirmationClient({ children, worldTitle }: { child
   if (confirmed) return children;
 
   return (
-    <main className="forge-world-entry-gate" id="ratio-grown-up-gate" data-testid="local-grown-up-confirmation">
+    <main className="forge-world-entry-gate" id="local-grown-up-gate" data-testid="local-grown-up-confirmation">
       <span>Child + grown-up World</span>
       <h1>A grown-up needs to join this learning session.</h1>
       <p>

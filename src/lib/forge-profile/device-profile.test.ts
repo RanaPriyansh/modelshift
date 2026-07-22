@@ -47,4 +47,22 @@ describe("FORGE device profile", () => {
     clearForgeDeviceProfile(storage);
     expect(storage.getItem(FORGE_DEVICE_PROFILE_KEY)).toBeNull();
   });
+
+  it("fails closed when a forged profile omits the required v1 fields", () => {
+    const storage = memoryStorage();
+    storage.setItem(FORGE_DEVICE_PROFILE_KEY, JSON.stringify({ schemaVersion: 1, ageMode: "teen" }));
+    expect(readForgeDeviceProfile(storage)).toBeNull();
+  });
+
+  it("rejects a forged child profile without the original device confirmation", () => {
+    const storage = memoryStorage();
+    storage.setItem(FORGE_DEVICE_PROFILE_KEY, JSON.stringify({
+      schemaVersion: 1,
+      profileId: "9be711de-d7a6-4911-b903-f2d829da83d5",
+      ageMode: "child_with_grown_up",
+      guardianPresent: false,
+      createdAt: "2026-07-22T00:00:00.000Z",
+    }));
+    expect(readForgeDeviceProfile(storage)).toBeNull();
+  });
 });
