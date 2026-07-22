@@ -118,7 +118,7 @@ describe("deterministic Forge path compiler", () => {
       route: {
         topicId: "primary_source_reasoning",
         worldId: "world.primary-source-reasoning",
-        worldVersion: "1.0.0",
+        worldVersion: "1.0.1",
         worldRoute: "/learn/primary-source-reasoning",
       },
       grounding: {
