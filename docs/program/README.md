@@ -1,6 +1,6 @@
 # FORGE Program Control Room
 
-**Active implementation plan:** [`WAVE_4_PLAN.md`](./WAVE_4_PLAN.md) — migrate Force and Motion plus AI & Learning, then require one all-World conformance and exact release gate. This is planning state, not release evidence.
+**Current release record:** [`WAVE_4_PLAN.md`](./WAVE_4_PLAN.md) — Wave 4 migration, all-World conformance, exact release gate, and the bounded post-release tuple for `c7d4011`. The implementation plan and release amendment are distinct; the documentation amendment is not deployed.
 
 **Authority:** principal architecture/review task  
 **Canonical repository:** `/Users/Priyansh/Documents/codex-buildweek/education`  
@@ -54,11 +54,11 @@ FORGE is successful only if it improves all five dimensions without hiding harm 
 
 ## Current truth
 
-The accepted implementation contains four working Learning Worlds, a deterministic path compiler, browser-local evidence, a typed event journal, privacy-minimal device profiles, and the shared bounded runtime on Primary Source Reasoning and Proportional Reasoning. It also contains a replay-validated provider-neutral Lesson Studio draft pipeline, staged Supabase schemas, and strong unit/browser engineering coverage. Cloud identity and the public Studio managed-provider connector remain structurally locked.
+The accepted implementation contains four working Learning Worlds, a deterministic path compiler, browser-local evidence, a typed event journal, privacy-minimal device profiles, and the shared bounded runtime across Primary Source Reasoning, Proportional Reasoning, Force and Motion, and AI & Learning. It also contains a replay-validated provider-neutral Lesson Studio draft pipeline, staged Supabase schemas, and bounded unit/browser engineering coverage. Runtime mode is `fallback_only`; BYOK is request-only; cloud accounts, evidence sync, and managed providers remain disabled.
 
 It does **not** contain a complete curriculum, verified cloud identity operation, guardian-consent service, live evidence sync, people network, accredited pathway, representative learner study, efficacy evidence, or a live-credential evaluation of the four provider adapters.
 
-The current public code SHA is `98687eaac20f956698000467cd01ea1da9b7fd6e`, served by deployment `dpl_pLpQmuCP43Mc3tNt1nErf8MRH2v2` at `https://modelshift.vercel.app`. Its bound verifier passes as `DEPLOYED_CANDIDATE`, not terminal `PRODUCTION_VERIFIED`, because live-model and rollback-rehearsal authority remain absent. A public release is identified only by its immutable deployment URL, alias, `/api/health` SHA/digests, retained verification artifact, and principal decision—not by a worker handoff or documentation-only commit.
+The current public code SHA is `c7d401101791faa80ac0ba61c73044928a2da7b6`, served by accepted deployment `dpl_6MUabxtnuMVzwxHf1vbM5Y1LxNfs` at `https://modelshift.vercel.app` with immutable URL `https://forge-learning-2sh2loxy1-ranapriyanshs-projects.vercel.app`. Pre-main CI `29944088585` and exact-main CI `29944461461` passed; local/public browser evidence was 70 pass / 22 intentional skips / 0 fail; all-World conformance was 18/18, terminal routed conformance 8/8, final local/public bound verification 187/187, and error-level/5xx scans were empty. It remains `DEPLOYED_CANDIDATE`, not terminal `PRODUCTION_VERIFIED`, because live-provider and rollback-rehearsal authority remain absent. The rejected deployment `dpl_4eY4F3vMV1hado7TG1BZN11Mgzvt` was replaced because build time and digests were unknown. Read-only unbound workflow `29945127093` is an operational lock-digest reproducibility follow-up, not a product/public verifier failure. A public release is identified only by its immutable deployment URL, alias, `/api/health` SHA/digests, retained verification artifact, and principal decision—not by a worker handoff or documentation-only commit.
 
 ## Cost-aware operating model
 
@@ -80,5 +80,6 @@ The current public code SHA is `98687eaac20f956698000467cd01ea1da9b7fd6e`, serve
 6. [Requirement-by-requirement completion and evidence matrix](COMPLETION_MATRIX.md)
 7. [Wave 2 architecture and claim boundary](WAVE_2_ARCHITECTURE.md)
 8. [Wave 3 Ratio runtime and release record](WAVE_3_ARCHITECTURE.md)
+9. [Wave 4 all-World runtime plan and release record](WAVE_4_PLAN.md)
 
 These files are principal-owned. Workers may cite them and propose changes in their handoff, but must not edit them unless the principal assigns a documentation-only amendment.
