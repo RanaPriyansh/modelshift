@@ -10,7 +10,7 @@ Workers implement bounded slices in isolated worktrees. They do not edit the pri
 | --- | --- | --- | --- | --- | --- |
 | Experience and design system | `019f8705-865e-7631-a921-ee4b5690b778` | `gpt-5.6-terra` xhigh | `IDLE`; Packet A `ACCEPTED_ON_MAIN` | Worker chain `e84a395` + `eb19eb4`; integrated as `60b947e` + `f7a3bc4` | Hold for cross-lane regression; resume for screen-reader/nonvisual-equivalence work only after Packet E defines the shared runtime |
 | Trust, auth, and private evidence | `019f8705-2825-7cb2-94e1-b30d5aab1447` | `gpt-5.6-terra` xhigh | `IN_PROGRESS` | `24edb6f` on old base | Reconcile with current hardened SSR auth/event spine; stage adult sync and abuse-controlled integration only |
-| Homeschool pathways and entitlement | `019f8704-dc1c-7381-b71b-c0303987251a` | `gpt-5.6-terra` xhigh | `IN_PROGRESS` | `dd6fe0e` on old base | Port pure pathway contracts to current main; connect to capability registry; no certification/UI claims |
+| Homeschool pathways and entitlement | `019f8704-dc1c-7381-b71b-c0303987251a` | `gpt-5.6-terra` xhigh | `IDLE`; Packet C `ACCEPTED_ON_MAIN` | Worker chain `570451b` through `c910c2e`; integrated as `9b62ec9` through `033bb9a` | Hold for Packet E trusted-receipt integration; no scheduler, certification, compliance, or homeschool-readiness claims |
 | Release, evaluation, observability | `019f8705-4855-7522-9140-8d45cd93ae60` | `gpt-5.6-luna` high | `IN_PROGRESS` | `a98f8bb` on old base | Reconcile CI/reports/health against current main; diagnose blocked deployment; produce integration packet |
 | Learning Kernel and World Factory | `client-new-thread:81cee98c-352a-4ca6-8b4e-f4901523dcf2` | `gpt-5.6-terra` xhigh | `QUEUED_WORKTREE` | none | Build conformance SDK, migrate one World, define domain plugin boundary |
 | AI Lesson Intelligence | `client-new-thread:17bde2c6-51a1-4f61-8ddc-b9e98cd0f741` | `gpt-5.6-terra` xhigh | `QUEUED_WORKTREE` | current `/studio` baseline | Add reviewed-draft workflow, capability matrix, live-eval harness, budget/privacy gates |
@@ -81,6 +81,8 @@ Required work:
 5. return only `needs-evidence` or `evidence-complete-for-independent-review`.
 
 Stop gate: no UI scheduler, jurisdictional compliance claim, accreditation, attendance record, or “homeschool ready” wording.
+
+Principal disposition on 2026-07-22: **accepted and integrated**. The handoff was held through three red-team rounds until production evaluation could not promote fixture-injected evidence, the published catalog remained `needs-evidence` without a Packet E trusted receipt, under-18 open-web actions failed closed, positive homeschool/mastery/retention/transfer claims could not hide behind denial prefixes, and honest bounded limitation lists remained expressible. A read-only reviewer accepted the final whole-statement grammar after a 14-case adversarial matrix. On integrated code SHA `033bb9a`, lint, typecheck, 57 focused pathway tests, 239 application tests, 9 evaluator tests, and the optimized build passed. This accepts a pure deterministic review contract only; no curriculum entitlement, jurisdictional operation, attendance record, accreditation, or homeschool-readiness claim is established.
 
 ## Packet D — Release, evaluation, and observability
 
