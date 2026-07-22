@@ -164,11 +164,14 @@ published -> disabled | retired | superseded
 - `superseded` points to a separately published successor.
 - Draft/review database rows are authoring projections and never appear in the public registry.
 
+The codebase also distinguishes an exact retained executable package from learner publication. `release.status: "released"` means the checked-in package bytes/runtime/validator are frozen and admitted by the local runtime compiler; it is not sufficient public authority. A retained package with `availability.status: "unavailable"` is non-routable and remains absent from public catalogs, planner topics, pathway entitlements, and learner pages. Only `release.status: "released"` plus `availability.status: "available"` plus the separate exact publication/release authority maps to canonical `published`.
+
 Current mappings:
 
 | Existing state | Canonical meaning |
 | --- | --- |
-| pack `released` | release `published` |
+| pack `released` + unavailable | retained executable package only; not publicly `published` |
+| pack `released` + available + exact publication authority | release `published` |
 | pack `suspended` | release `disabled` |
 | pack `draft` | review `draft`, not a release |
 | SQL release `draft/review` | authoring projection only |
