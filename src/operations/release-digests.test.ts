@@ -1,68 +1,130 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { createHash } from "node:crypto";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import { PRIMARY_SOURCE_RUNTIME_BINDING } from "../forge/world-runtime/primary-source-binding";
+import { BUILT_IN_WORLD_PACKS } from "../forge/worlds";
 import {
   assertPrimarySourceContentPackageManifest,
+  assertRetainedContentPackageManifest,
   primarySourceRuntimeBindingDigest,
   readReleaseDigests,
+  runtimeBindingDigest,
 } from "../../scripts/ops/release-digests";
 
-function clonedBinding(): {
-  protocolVersion: string;
-  proof: { validatorId: string; blockedActionKinds: string[] };
-  sourceBindings: Array<{ sourceItemId: string }>;
-} {
-  return structuredClone(PRIMARY_SOURCE_RUNTIME_BINDING) as unknown as {
-    protocolVersion: string;
-    proof: { validatorId: string; blockedActionKinds: string[] };
-    sourceBindings: Array<{ sourceItemId: string }>;
-  };
+type Manifest = {
+  schema_version: string;
+  packages: Array<{
+    id: string;
+    version: string;
+    route: string;
+    runtime_binding_digest?: string;
+  }>;
+};
+
+function manifest(): Manifest {
+  return JSON.parse(readFileSync(resolve(process.cwd(), "scripts/ops/content-package-manifest.json"), "utf8")) as Manifest;
+}
+
+function packageById(value: Manifest, id: string) {
+  const entry = value.packages.find((candidate) => candidate.id === id);
+  if (!entry) throw new Error(`Missing fixture package ${id}.`);
+  return entry;
+}
+
+function clonedBinding(): Record<string, unknown> {
+  return structuredClone(PRIMARY_SOURCE_RUNTIME_BINDING) as Record<string, unknown>;
+}
+
+function copyReleaseDigestInputs(): string {
+  const root = mkdtempSync(resolve(tmpdir(), "forge-release-digests-"));
+  cpSync(resolve(process.cwd(), "pnpm-lock.yaml"), resolve(root, "pnpm-lock.yaml"));
+  cpSync(resolve(process.cwd(), "scripts/ops/evaluation-baseline.json"), resolve(root, "scripts/ops/evaluation-baseline.json"));
+  cpSync(resolve(process.cwd(), "scripts/ops/content-package-manifest.json"), resolve(root, "scripts/ops/content-package-manifest.json"));
+  return root;
 }
 
 describe("retained content package identity", () => {
-  it("records the bumped Primary Source package and its exact runtime binding", () => {
-    const manifest = JSON.parse(readFileSync(resolve(process.cwd(), "scripts/ops/content-package-manifest.json"), "utf8")) as {
-      packages: Array<{ id: string; version: string; runtime_binding_digest?: string }>;
-    };
-    const primarySource = manifest.packages.find((entry) => entry.id === "world.primary-source-reasoning");
-    expect(primarySource).toEqual(expect.objectContaining({
-      version: "1.0.1",
-      runtime_binding_digest: primarySourceRuntimeBindingDigest(),
-    }));
-    const exactBytes = readFileSync(resolve(process.cwd(), "scripts/ops/content-package-manifest.json"), "utf8");
-    expect(readReleaseDigests().contentManifest).toBe(createHash("sha256").update(exactBytes).digest("hex"));
-  });
+  it("retains exactly every released built-in package and only runtime-bound package digests", () => {
+    const retained = manifest();
+    assertRetainedContentPackageManifest(retained);
+    assertPrimarySourceContentPackageManifest(retained);
 
-  it("rejects a stale immutable version or runtime-binding digest", () => {
-    const manifest = JSON.parse(readFileSync(resolve(process.cwd(), "scripts/ops/content-package-manifest.json"), "utf8")) as {
-      packages: Array<{ id: string; version: string; runtime_binding_digest?: string }>;
-    };
-    const primarySource = manifest.packages.find((entry) => entry.id === "world.primary-source-reasoning");
-    expect(primarySource).toBeDefined();
-    primarySource!.runtime_binding_digest = "sha256:stale";
-    expect(() => assertPrimarySourceContentPackageManifest(manifest)).toThrow(/immutable version and exact runtime-binding digest/);
+    expect(retained.packages.map(({ id, version, route, runtime_binding_digest }) => ({ id, version, route, runtime_binding_digest }))).toEqual(
+      BUILT_IN_WORLD_PACKS
+        .filter((pack) => pack.release.status === "released")
+        .map((pack) => ({
+          id: pack.manifest.id,
+          version: pack.manifest.version,
+          route: pack.manifest.route,
+          runtime_binding_digest: "runtime" in pack ? runtimeBindingDigest(pack.runtime) : undefined,
+        })),
+    );
   });
 
   it.each([
-    ["protocol", (binding: ReturnType<typeof clonedBinding>) => { binding.protocolVersion = "1.0.2"; }],
-    ["validator", (binding: ReturnType<typeof clonedBinding>) => { binding.proof.validatorId = "validator.primary-source-reasoning-transfer.v2"; }],
-    ["source", (binding: ReturnType<typeof clonedBinding>) => { binding.sourceBindings[0]!.sourceItemId = "source.loc.changed"; }],
-    ["proof lock", (binding: ReturnType<typeof clonedBinding>) => { binding.proof.blockedActionKinds = ["instructional_support", "model_action"]; }],
-  ])("changes retained content identity when %s changes", (_name, mutate) => {
-    const retainedBytes = readFileSync(resolve(process.cwd(), "scripts/ops/content-package-manifest.json"), "utf8");
+    ["missing ID", (candidate: Manifest) => { candidate.packages = candidate.packages.filter((entry) => entry.id !== "world.proportional-reasoning"); }],
+    ["extra ID", (candidate: Manifest) => { candidate.packages.push({ id: "world.unreviewed", version: "1.0.0", route: "/learn/unreviewed" }); }],
+    ["duplicate ID", (candidate: Manifest) => { candidate.packages.push({ ...packageById(candidate, "world.proportional-reasoning"), route: "/learn/duplicate" }); }],
+    ["duplicate route", (candidate: Manifest) => { packageById(candidate, "world.proportional-reasoning").route = "/learn/force-and-motion"; }],
+    ["stale version", (candidate: Manifest) => { packageById(candidate, "world.primary-source-reasoning").version = "1.0.0"; }],
+    ["stale route", (candidate: Manifest) => { packageById(candidate, "world.primary-source-reasoning").route = "/learn/stale"; }],
+    ["stale runtime digest", (candidate: Manifest) => { packageById(candidate, "world.primary-source-reasoning").runtime_binding_digest = "sha256:stale"; }],
+    ["invented legacy runtime digest", (candidate: Manifest) => { packageById(candidate, "world.proportional-reasoning").runtime_binding_digest = primarySourceRuntimeBindingDigest(); }],
+  ])("rejects a %s attack", (_name, mutate) => {
+    const candidate = structuredClone(manifest());
+    mutate(candidate);
+    expect(() => assertRetainedContentPackageManifest(candidate)).toThrow(/Retained content manifest rejected/);
+  });
+
+  it("automatically requires a Ratio runtime digest when its built-in pack gains a runtime binding", () => {
+    const futureRuntimePacks = BUILT_IN_WORLD_PACKS.map((pack) =>
+      pack.manifest.id === "world.proportional-reasoning"
+        ? { ...pack, runtime: clonedBinding() }
+        : pack,
+    );
+
+    expect(() => assertRetainedContentPackageManifest(manifest(), futureRuntimePacks)).toThrow(
+      /stale runtime binding digest for world.proportional-reasoning/,
+    );
+  });
+
+  it.each([
+    ["protocol", (binding: Record<string, unknown>) => { binding.protocolVersion = "1.0.2"; }],
+    ["validator", (binding: Record<string, unknown>) => { (binding.proof as Record<string, unknown>).validatorId = "validator.primary-source-reasoning-transfer.v2"; }],
+    ["source", (binding: Record<string, unknown>) => { ((binding.sourceBindings as Array<Record<string, unknown>>)[0]!).sourceItemId = "source.loc.changed"; }],
+    ["proof lock", (binding: Record<string, unknown>) => { (binding.proof as Record<string, unknown>).blockedActionKinds = ["instructional_support", "model_action"]; }],
+    ["access", (binding: Record<string, unknown>) => { ((binding.access as Record<string, unknown>).accommodations as Array<Record<string, unknown>>)[0]!.nonvisualAlternative = false; }],
+  ])("changes the runtime binding digest when %s changes", (_name, mutate) => {
     const candidate = clonedBinding();
     mutate(candidate);
-    const candidateBytes = retainedBytes.replace(
-      primarySourceRuntimeBindingDigest(),
-      primarySourceRuntimeBindingDigest(candidate as typeof PRIMARY_SOURCE_RUNTIME_BINDING),
+    expect(runtimeBindingDigest(candidate)).not.toBe(primarySourceRuntimeBindingDigest());
+    const packsWithMutatedBinding = BUILT_IN_WORLD_PACKS.map((pack) =>
+      pack.manifest.id === "world.primary-source-reasoning"
+        ? { ...pack, runtime: candidate }
+        : pack,
     );
-    expect(candidateBytes).not.toBe(retainedBytes);
-    expect(createHash("sha256").update(candidateBytes).digest("hex")).not.toBe(
-      createHash("sha256").update(retainedBytes).digest("hex"),
+    expect(() => assertRetainedContentPackageManifest(manifest(), packsWithMutatedBinding)).toThrow(
+      /stale runtime binding digest for world.primary-source-reasoning/,
     );
+  });
+
+  it("keeps release content identity as the SHA-256 of exact retained file bytes", () => {
+    const root = copyReleaseDigestInputs();
+    try {
+      const manifestPath = resolve(root, "scripts/ops/content-package-manifest.json");
+      const originalBytes = readFileSync(manifestPath, "utf8");
+      expect(readReleaseDigests(root).contentManifest).toBe(createHash("sha256").update(originalBytes).digest("hex"));
+
+      writeFileSync(manifestPath, `${originalBytes}\n`, "utf8");
+      const changedBytes = readFileSync(manifestPath, "utf8");
+      expect(readReleaseDigests(root).contentManifest).toBe(createHash("sha256").update(changedBytes).digest("hex"));
+      expect(readReleaseDigests(root).contentManifest).not.toBe(createHash("sha256").update(originalBytes).digest("hex"));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
