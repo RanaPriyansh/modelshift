@@ -245,7 +245,13 @@ test.describe("FORGE cross-route release contract", () => {
     await expect(map.getByText("Released capability", { exact: true })).toHaveCount(4);
     await expect(map.getByText("Identified gap", { exact: true })).toHaveCount(5);
     await expect(map.getByRole("link", { name: /Open .+ World/ })).toHaveCount(4);
-    await expect(page.getByText("Not a curriculum. Not a recommendation.")).toBeVisible();
+    await expect(page.getByText("4 released mappings appear across 9 entitlement areas. 5 identified gaps remain visible instead of being filled with a course list, a generated lesson, or a promise.")).toBeVisible();
+    await expect(page.getByText("Not a curriculum, recommendation, or coverage claim.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Compare and scale proportional relationships" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Distinguish net force from velocity" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Keep historical claims inside their evidence boundary" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Corroborate a model-generated factual claim" })).toBeVisible();
+    await expect(page.locator("body")).not.toContainText(/capability coverage/i);
 
     for (const area of ["language-literacy", "arts-design", "practical-life", "civic-media", "health-movement"]) {
       const gap = page.getByTestId(`pathway-identified-gap-${area}`);
@@ -596,7 +602,7 @@ test.describe("FORGE cross-route release contract", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
 
     await seedDeviceProfile(page, "teen");
-    for (const path of ["/", "/learn/ai-and-learning", "/learn/proportional-reasoning"]) {
+    for (const path of ["/", "/pathways", "/learn/ai-and-learning", "/learn/proportional-reasoning"]) {
       await page.goto(path);
       const motion = await page.evaluate(() => {
         const milliseconds = (raw: string) => raw.split(",").map((part) => {

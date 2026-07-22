@@ -15,10 +15,23 @@ describe("PathwayAvailabilityMap", () => {
     render(<PathwayAvailabilityMap availability={getCurrentPathwayAvailability()} />);
 
     expect(screen.getByRole("heading", { name: "What FORGE can—and cannot—offer today." })).toBeInTheDocument();
-    expect(screen.getByText("Not a curriculum. Not a recommendation.")).toBeInTheDocument();
+    expect(screen.getByText("Not a curriculum, recommendation, or coverage claim.")).toBeInTheDocument();
+    expect(screen.queryByText(/capability coverage/i)).not.toBeInTheDocument();
     expect(screen.getByRole("list", { name: "Current pathway availability by entitlement area" })).toBeInTheDocument();
     expect(screen.getAllByText("Released capability")).toHaveLength(4);
     expect(screen.getAllByText("Identified gap")).toHaveLength(5);
+    expect(screen.getByRole("heading", { name: "Compare and scale proportional relationships" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Distinguish net force from velocity" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Keep historical claims inside their evidence boundary" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Corroborate a model-generated factual claim" })).toBeInTheDocument();
+  });
+
+  it("derives the hero counts from the availability it receives", () => {
+    render(<PathwayAvailabilityMap availability={getCurrentPathwayAvailability().slice(0, 2)} />);
+
+    expect(screen.getByText(
+      "1 released mapping appears across 2 entitlement areas. 1 identified gap remains visible instead of being filled with a course list, a generated lesson, or a promise.",
+    )).toBeInTheDocument();
   });
 
   it("gives released Worlds unique accessible actions and gives gaps no fake action", () => {

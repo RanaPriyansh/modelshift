@@ -17,11 +17,11 @@ describe("public FORGE pathway availability", () => {
     const released = availability.filter((entry) => entry.status === "released-capability");
     const gaps = availability.filter((entry) => entry.status === "identified-gap");
 
-    expect(released.map((entry) => [entry.area, entry.world.title])).toEqual([
-      ["mathematics", "Ratios that stay the same"],
-      ["science", "Force & motion"],
-      ["history-source-reasoning", "What can a photograph prove?"],
-      ["computing-ai", "AI & learning"],
+    expect(released.map((entry) => [entry.area, entry.capability.title, entry.world.title])).toEqual([
+      ["mathematics", "Compare and scale proportional relationships", "Ratios that stay the same"],
+      ["science", "Distinguish net force from velocity", "Force & motion"],
+      ["history-source-reasoning", "Keep historical claims inside their evidence boundary", "What can a photograph prove?"],
+      ["computing-ai", "Corroborate a model-generated factual claim", "AI & learning"],
     ]);
     expect(gaps.map((entry) => entry.area)).toEqual([
       "language-literacy",
@@ -53,6 +53,9 @@ describe("public FORGE pathway availability", () => {
       ],
       returnProof: { status: "unavailable" },
     });
-    expect(JSON.stringify(getCurrentPathwayAvailability())).not.toMatch(/evidence|event|receipt|schedule|recommend/i);
+    const serialized = JSON.stringify(getCurrentPathwayAvailability());
+    expect(serialized).not.toMatch(/"(?:learnerId|profileId|eventRef|eventType|sourceIds|sourceUrl|url|receipt|schedule)"/i);
+    expect(serialized).not.toMatch(/https?:\/\//i);
+    expect(serialized).not.toMatch(/recommend/i);
   });
 });
