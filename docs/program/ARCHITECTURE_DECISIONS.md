@@ -283,6 +283,76 @@ ROLLED_BACK
 
 A blocked candidate does not change the public alias. Only the principal, with user deployment authority, may promote a candidate after Packet D and the complete integration verification gate pass.
 
+## ADR-007 — Source authority is content-addressed, scoped, and independently reviewed
+
+### Decision
+
+FORGE source authority is an append-only relationship between an exact source snapshot, the claims and locators inspected within it, the permitted use of those materials, and scoped human review decisions. A URL, download success, provider citation, model summary, schema-valid object, checksum, or generic `reviewed` label cannot create source authority by itself.
+
+The stable object model is:
+
+```text
+SourcePackage
+  -> SourceItem
+    -> SourceSnapshot (immutable bytes + digest)
+      -> SourceLocator (exact region in the snapshot)
+        -> SourceClaim (bounded statement supported, contradicted, or left open)
+  -> RightsRecord
+  -> SourceReviewDecision[]
+  -> Correction / Withdrawal[]
+```
+
+Identity and lifecycle rules:
+
+- Existing `source.*` IDs remain the continuing source-item identities used by World manifests. W5-D must not replace them with a parallel namespace.
+- `source-package.*` identifies a continuing reviewed package. Semantic package versions are immutable; an exact package digest covers every item snapshot, locator, claim, rights record, review decision, correction, and policy reference in canonical order.
+- A snapshot is identified by `sha256:<64 lowercase hex>`. Its metadata records media type, byte length, acquisition mode, observed timestamp, publisher/version label when available, canonical locator, and an internal object reference. Raw source bytes do not enter the learning-event journal.
+- Acquisition modes are closed and policy-owned. The first slice permits checked-in authored fixtures and principal-supplied reviewed snapshots only. It provides no crawler, arbitrary URL fetch, open-web retrieval, or model-selected source transport.
+- A locator names an exact page, section, paragraph, timestamp, table cell, image region, or authored-fixture field. It cannot point outside its snapshot.
+- A claim records the bounded statement and its relation to named locators. Claim text is curriculum content, not learner data, but remains size-bounded and versioned.
+- Rights review records allowed product uses, attribution requirements, jurisdiction/territory when relevant, expiry or review trigger, and limitations. Unknown rights cannot be coerced into permission.
+- Review scopes are separate: acquisition/authenticity, rights, factual/epistemic, pedagogy, accessibility, age/safety, and proof design. A reviewer decision grants only its named scope. No decision may approve its own authored evidence, silently assume another scope, or claim accountable human authority for an AI worker.
+- A package is `review-candidate` until every policy-required scope is represented by an accepted, non-expired decision from an authorized human identity. Code and AI agents may assemble or lint candidates, but cannot produce the human-authority condition.
+- Correction, expiry, rights change, or withdrawal appends a new lifecycle fact. Historical snapshots and decisions remain immutable. Affected World releases become `review-required`, disabled, or superseded through separate package lifecycle authority; the source service never mutates a released binding in place.
+- Source text is always untrusted data. Prompt assembly must delimit it, exclude tool/policy instructions from it, and prevent it from selecting tools, URLs, credentials, publication state, or evidence outcomes.
+
+The first W5-D implementation is a pure contract/replay boundary. It may prove canonical identity, deterministic state, dependency invalidation, and fail-closed review completeness. It may not claim live acquisition, external authenticity, durable storage, accountable human review, or publication operation.
+
+## ADR-008 — Curriculum breadth is an explicit capability graph, not a recommendation score
+
+### Decision
+
+FORGE represents curriculum as a versioned directed acyclic graph of the existing `capability.*` identities. World packages implement capabilities; the curriculum graph does not create a second source of capability truth or decide subject correctness.
+
+Each capability node declares:
+
+```text
+capability ID + exact version
+construct and learner-facing purpose
+nine-area entitlement membership
+prerequisite capability IDs
+reviewed alternatives and equivalence limits
+supported age/depth/access modes
+required World/source/policy identities
+evidence requirements and explicit untested claims
+position: foundation | chosen-frontier | project-application | relationship | return-proof
+availability: released | review-candidate | identified-gap
+```
+
+Graph rules:
+
+- The nine entitlement areas remain exactly those in Packet C: language/literacy, mathematics, science, history/source reasoning, computing/AI, arts/design, practical life, civic/media, and health/movement.
+- Grade levels, seat time, engagement, streaks, comparative rank, inferred ability, model confidence, or hidden weights do not create prerequisite edges.
+- An edge means a reviewed capability dependency. It must name why the dependency exists, the evidence required to satisfy it, and any reviewed alternative. Missing, self-referential, cyclic, cross-version-ambiguous, or inaccessible edges fail closed.
+- `released` is derived only from an exact released and available World package whose capability, validator, runtime, source, safety, and policy identities match. A graph author cannot mark a node released directly.
+- `review-candidate` is visible as proposed coverage only. `identified-gap` is visible absence. Neither may be routed as a lesson, counted as coverage, or used to produce a readiness/completion claim.
+- The graph may explain deterministic options: why a capability is relevant, which prerequisite is missing, what alternative exists, what evidence would be required, and who controls the next choice. It may not select a path through opaque model output or optimize engagement.
+- Learner/guardian choices are separate append-only state. They may choose, defer, pause, contest, request an alternative, or stop without penalty. These choices do not rewrite the graph or create evidence.
+- Construct-changing access alternatives are disclosed and produce a different evidence condition; construct-preserving alternatives remain first-class routes rather than exceptions.
+- A complete nine-area map proves only that every area is represented as released, candidate, or gap. It does not prove sufficient curriculum, a balanced education, homeschool readiness, accreditation, jurisdiction compliance, retention, efficacy, or learner fit.
+
+The first W5-D graph is a public-truth and authoring contract, not a learner schedule or recommendation service. Individualized path state, delayed return, jurisdiction packs, people relationships, attendance, portability, and institutional reporting remain later gates.
+
 ## Implementation order and worker ownership
 
 1. Packet E proposes the additive runtime binding and ADR-001 event projector against existing pack IDs.
@@ -291,6 +361,10 @@ A blocked candidate does not change the public alias. Only the principal, with u
 4. Packet A preserves these semantics while unifying presentation/access.
 5. Packet C consumes stable capability/package IDs and returns review evidence only.
 6. Packet D implements ADR-006 release evidence without deployment authority.
-7. The principal reviews cross-lane diffs, resolves exact schema ownership, and integrates one lane at a time.
+7. W5-A closes immutable dependency identity before another code release.
+8. W5-B and W5-C establish compiler/SQL parity while public persistence remains disabled.
+9. W5-D implements ADR-007 and ADR-008 as pure source/curriculum contracts before any acquisition, recommendation, or publication surface.
+10. W5-E may enter the released registry only after the runtime, source, curriculum, content/proof, and access gates independently pass.
+11. The principal reviews cross-lane diffs, resolves exact schema ownership, and integrates one lane at a time.
 
 No current worker may rewrite version-1 event/database history, enable cloud/provider credentials, publish a generated package, or call architecture acceptance from its own handoff.
