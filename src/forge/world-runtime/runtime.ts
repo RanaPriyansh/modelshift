@@ -420,20 +420,28 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
     }
     const nextSession = Object.freeze({
       ...session,
-      accessAccommodations: [
-        ...session.accessAccommodations,
-        {
-          accommodationId: accommodation.id,
-          stage: adapter.stage(session.state),
-          kind: accommodation.kind,
-          modality: accommodation.modality,
-          representation: accommodation.representation,
-          constructPreservation: accommodation.constructPreservation,
-          answerChanging: accommodation.answerChanging,
-          policyVersion: accommodation.policyVersion,
-          nonvisualAlternative: accommodation.nonvisualAlternative,
-        } satisfies AccessAccommodationEvent,
-      ],
+      // ADR-001 models one selected access alternative as one factual event
+      // reference. Re-selecting the same alternative may remain a harmless UI
+      // operation, but it must not create a duplicate receipt fact that no v2
+      // event chain can faithfully represent.
+      accessAccommodations: session.accessAccommodations.some(
+        (recorded) => recorded.accommodationId === accommodation.id,
+      )
+        ? session.accessAccommodations
+        : [
+            ...session.accessAccommodations,
+            {
+              accommodationId: accommodation.id,
+              stage: adapter.stage(session.state),
+              kind: accommodation.kind,
+              modality: accommodation.modality,
+              representation: accommodation.representation,
+              constructPreservation: accommodation.constructPreservation,
+              answerChanging: accommodation.answerChanging,
+              policyVersion: accommodation.policyVersion,
+              nonvisualAlternative: accommodation.nonvisualAlternative,
+            } satisfies AccessAccommodationEvent,
+          ],
     });
     return { accepted: true, session: nextSession, effects: ["access_recorded"] };
   }
