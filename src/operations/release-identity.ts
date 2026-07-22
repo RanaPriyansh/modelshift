@@ -180,6 +180,12 @@ function validDecisionOutcome(value: unknown): value is ReleaseDecisionOutcome {
   return typeof value === "string" && RELEASE_DECISION_OUTCOMES.includes(value as ReleaseDecisionOutcome);
 }
 
+function requiredDecisionOutcome(state: ReleaseCandidateState): ReleaseDecisionOutcome {
+  if (state === "PRODUCTION_VERIFIED") return "promote";
+  if (state === "ROLLED_BACK") return "rollback";
+  return "not_authorized";
+}
+
 function validVerificationStatus(value: unknown): value is "pass" | "fail" | "not_evaluated" {
   return typeof value === "string" && VERIFICATION_STATUSES.has(value);
 }
@@ -326,6 +332,7 @@ export function validateReleaseIdentity(identity: unknown, options: ReleaseIdent
   if (!rollback || !validVerificationStatus(rollback.rehearsal) || !((rollback.deployment_id === "not_evaluated") || validDeploymentId(rollback.deployment_id)) || !((rollback.sha === "not_evaluated") || (typeof rollback.sha === "string" && SHA_PATTERN.test(rollback.sha)))) failures.push("rollback");
   const decision = hasExactKeys(identity.named_release_decision, DECISION_KEYS) ? identity.named_release_decision : null;
   if (!decision || !validDecisionName(decision.name) || !validDecisionOutcome(decision.outcome) || !isCanonicalTimestamp(decision.decided_at)) failures.push("named_release_decision");
+  if (state && (!decision || decision.outcome !== requiredDecisionOutcome(state))) failures.push("candidate_decision_outcome");
 
   if (state === "DEPLOYED_CANDIDATE" && (!hasDeployment || critical?.browser === "not_evaluated" || critical?.csp === "not_evaluated" || critical?.network === "not_evaluated" || !critical)) failures.push("deployed_candidate_evidence");
   if (state && TERMINAL_STATES.has(state)) {
