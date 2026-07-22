@@ -1,12 +1,14 @@
 # FORGE Wave 2 Architecture and Claim Boundary
 
-**Accepted code cut:** `b5b3170094ecaac5292c7fd23a8b47d86ccc1a9d`
+**Released code/source SHA:** `6e95a33c4cd82e2b7529f3b5980766a7c13ed068`
 **Projector chain:** `4dab5d9` + `f4179e9`
 **Pathway chain:** `48ea3fd` + `30e1dde` + `2cf81ab`
 **Release-verifier coverage:** `b5b3170`
-**Public production source:** `cd418b8a5bc9784fb5e4add3a2286d011fdbdae0`
+**Public alias:** `https://modelshift.vercel.app`
+**Production deployment:** `dpl_CBzgm4fAVqKy2U8MVLidiTAWTTJD`
+**Immutable deployment URL:** `https://forge-learning-ffh45hv8c-ranapriyanshs-projects.vercel.app`
 
-Wave 2 is accepted code on `main`, not a production release. The public production source remains `cd418b8` until a principal release decision binds a later immutable READY deployment, public alias, health identity, retained verification artifact, and rollback target to one exact source SHA. Nothing in this document upgrades a local receipt, in-memory event, verifier result, or availability page to durable authority.
+This is the post-release record for `6e95a33`. A later documentation-only commit is not deployed and does not alter the source, alias, deployment, immutable URL, or evidence tuple above. Nothing in this document upgrades a local receipt, in-memory event, verifier result, or availability page to durable authority.
 
 ## North star
 
@@ -39,7 +41,7 @@ Wave 2 does not establish any of the following:
 - cloud auth, child cloud auth, guardian identity, sync, or service-role use;
 - live provider/model evaluation, managed-key enablement, cost/spend, or provider privacy approval;
 - broad curriculum coverage, path graphs, recommendation, learner entitlement, attendance, accreditation, certification, or homeschool readiness;
-- public deployment of `b5b3170`, browser evidence on a later deployment, or a new release/rollback tuple;
+- deployment of a later documentation-only SHA, or a new release/rollback tuple without another principal gate;
 - screen-reader sessions, complete semantic/nonvisual equivalence, assistive-technology review, learner studies, learning efficacy, retention, or transfer claims.
 
 No caller may turn missing evidence into a stronger status. No future persistence work may treat an existing device ledger, a local runtime receipt, or a Wave 2 event fixture as already trusted production data.
@@ -52,7 +54,7 @@ No caller may turn missing evidence into a stronger status. No future persistenc
 | `projectAdr001RuntimeAttempt` | Typed caller-supplied IDs, times, policy/actor/authority, task facts, integrity facts, and a completed local receipt; seals events with SHA-256. | No ID/time fabrication, UI update, storage, network, SQL, auth, or provider call. An incoherent chain returns a typed refusal. |
 | `ForgeEventJournal` | In-memory append/replay, integrity and transition checks, optional local encoding/decoding. | No database transaction, cloud sync, cross-user access, or durable authority. |
 | `/pathways` availability projection | Read-only built-in package/catalog metadata on the server and explicit gap projection. | No learner input, local evidence, receipt, schedule, recommendation, completion state, or entitlement calculation. |
-| Deployment verifier | Allowlisted read-only verification of candidate release surfaces, including `/pathways`. | No deployment, mutation, credential enablement, or release approval. |
+| Deployment verifier | Allowlisted read-only verification of candidate release surfaces, including `/pathways`; local/public verification passed 182/182 for `6e95a33`. | No deployment, mutation, credential enablement, durable authority, or educational approval. |
 | Provider, Supabase, auth, or child-cloud tools | Not invoked by Wave 2. | No live provider/model evaluation, SQL persistence, cloud identity, child cloud auth, or data sync claim. |
 
 ## Canonical event state and compatibility
@@ -100,11 +102,25 @@ Any future durable service needs its own reviewed retention, consent, deletion, 
 | Mixed versions or unusable v2 package event | Journal rejects mixed v1/v2 streams; v2 schema rejects package lifecycle events. | A reviewed additive v2 SQL migration has not been designed. |
 | Incoherent correction input | Correction projection replays/verifies one completed coherent v2 chain before sealing; actor is validator or human only. | No durable reviewer identity, queue, or decision authority exists. |
 | Missing pathway coverage | `/pathways` exposes an identified gap instead of selecting or generating a substitute. | No reviewed broad curriculum or path graph exists. |
-| Candidate release missing identity | Release machinery must block rather than infer deployment state. | `b5b3170` has no principal deployment tuple. |
+| Candidate release missing identity | Staged `dpl_BLUz...` had exact health identity; promoted clone `dpl_37...` lost build-time/digests and failed release identity rather than being inferred valid. Direct production `dpl_CBzgm4fAVqKy2U8MVLidiTAWTTJD` then supplied the exact `6e95a33` tuple. | The incident proves identity failure is visible, not that rollback is operable. |
 
 ## Evaluation and release gates
 
-Wave 2 acceptance is code-scope acceptance, not a fresh production verdict. The projector chain has focused schema/journal/projector regressions, including resealed outcome inflation, support omission, source/access/task mismatch, correction coherence, and v1 compatibility. The pathway chain has availability-boundary and reduced-motion checks. `b5b3170` adds the pathway marker to the release-verifier contract.
+The projector chain has focused schema/journal/projector regressions, including resealed outcome inflation, support omission, source/access/task mismatch, correction coherence, and v1 compatibility. The pathway chain has availability-boundary and reduced-motion checks. `b5b3170` adds the pathway marker to the release-verifier contract. The following production engineering record applies only to `6e95a33`.
+
+| Gate | Result | What remains outside the result |
+| --- | --- | --- |
+| CI | `29927061567` PASS | It does not prove learning validity, durable authority, or provider/database operation. |
+| Unit/evaluator | 431 application + 13 evaluator tests PASS | Live model evaluation was NOT RUN. |
+| Verifier | Local/public 182/182 PASS | It verifies the release tuple, not evidence authority. |
+| Optimized browser | Local/public 61 pass / 21 intentional skips / 0 fail | It is not an assistive-technology session or efficacy study. |
+| Error scan | Runtime errors and exact-deployment 5xx scan empty | Empty scans do not prove rollback operability. |
+
+### Promotion and rollback incident
+
+`dpl_BLUz...` staged with exact health identity. The promoted clone `dpl_37...` lost build-time/digests and failed release identity. Hobby refused rollback to the prior known-good deployment because only one-step history was available. Direct production deployment `dpl_CBzgm4fAVqKy2U8MVLidiTAWTTJD` replaced the failed clone with the exact tuple recorded above.
+
+Rollback deployments `dpl_DcKE...` at `cd418b8` and `dpl_HPts...` at `79053` remain READY. The rollback rehearsal is `NOT_EVALUATED` because the CLI target attempt failed. READY artifacts do not establish rollback operability.
 
 Before any production statement for a later SHA, the principal must require all applicable gates on that exact SHA:
 

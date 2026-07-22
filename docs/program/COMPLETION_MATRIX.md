@@ -4,9 +4,13 @@
 
 **Purpose:** map the full FORGE objective to current evidence, missing proof, owners, and stop rules
 
-**Accepted Wave 2 code cut:** `b5b3170094ecaac5292c7fd23a8b47d86ccc1a9d`
+**Released code/source SHA:** `6e95a33c4cd82e2b7529f3b5980766a7c13ed068`
 
-**Public production source:** `cd418b8a5bc9784fb5e4add3a2286d011fdbdae0` remains the last identified public-production source. Wave 2 is accepted code on `main`, not a deployed release, and this documentation amendment does not create a deployment tuple.
+**Public alias:** `https://modelshift.vercel.app`
+**Production deployment:** `dpl_CBzgm4fAVqKy2U8MVLidiTAWTTJD`
+**Immutable deployment URL:** `https://forge-learning-ffh45hv8c-ranapriyanshs-projects.vercel.app`
+
+This is a bounded post-release record for `6e95a33`. The documentation-only commit that follows it is not deployed and does not change this release tuple.
 
 **Audit date:** 22 July 2026
 
@@ -29,7 +33,24 @@ Documentation is never sufficient proof of behavior. Mocked provider/auth tests 
 
 ## 2. Engineering evidence and code-cut boundary
 
-The earlier principal matrix below remains historical evidence for its named SHA only. It is not silently inherited by the Wave 2 code cut. The accepted Wave 2 chain is `4dab5d9` + `f4179e9` for the ADR-001 projector/coherence repair, `48ea3fd` + `30e1dde` + `2cf81ab` for the availability-only pathway surface, and `b5b3170` for release-verifier coverage of `/pathways`. The code cut has no durable/authenticated authority, SQL persistence, application runtime binding, live provider/model evaluation, broad curriculum, recommendation, homeschool-readiness, certification, child-cloud-auth, or public-deployment proof.
+The earlier principal matrix below remains historical evidence for its named SHA only. It is not silently inherited by a later release. The accepted Wave 2 chain is `4dab5d9` + `f4179e9` for the ADR-001 projector/coherence repair, `48ea3fd` + `30e1dde` + `2cf81ab` for the availability-only pathway surface, `b5b3170` for release-verifier coverage of `/pathways`, and released source `6e95a33`. The release proves an exact public engineering tuple, not durable/authenticated authority, SQL persistence, application runtime binding, live provider/model evaluation, broad curriculum, recommendation, homeschool readiness, certification, child cloud auth, or learning validity.
+
+### Post-release evidence for `6e95a33`
+
+| Gate | Recorded result | Boundary retained |
+| --- | --- | --- |
+| CI | Run `29927061567` PASS | CI health is not educational validity or provider/database operation. |
+| Unit/evaluator tests | 431 application tests + 13 evaluator tests PASS | No live model/provider call was run. |
+| Local and public verifier | 182/182 PASS | Verifier success identifies the deployment tuple; it does not create durable evidence authority. |
+| Local and public optimized browser | 61 pass / 21 intentional skips / 0 fail | This is a rendered engineering gate, not assistive-technology-session, efficacy, or broad access proof. |
+| Runtime and HTTP scan | Runtime errors empty; exact-deployment 5xx scan empty | Empty scans do not prove rollback operability, provider quality, or learning outcomes. |
+| Live model | NOT RUN | No live model/provider quality, privacy, cost, or availability claim. |
+
+### Promotion and rollback incident record
+
+The staged deployment `dpl_BLUz...` had exact health identity. The promoted clone `dpl_37...` lost build-time/digest fields and failed release identity. On Hobby, rollback to the prior known-good deployment was refused because only one-step history was available. Direct production deployment `dpl_CBzgm4fAVqKy2U8MVLidiTAWTTJD` replaced the failed clone and supplied the exact released tuple above.
+
+Rollback deployments `dpl_DcKE...` at source `cd418b8` and `dpl_HPts...` at source `79053` remain READY. The rollback rehearsal is `NOT_EVALUATED`: the CLI target attempt failed. READY rollback artifacts are not rollback-operability evidence.
 
 The principal ran these commands on clean `main` at `2e6dc1e` before the governance correction that adds this matrix:
 
@@ -76,11 +97,11 @@ Every integrated candidate must rerun the full matrix on its final exact SHA and
 | PEOPLE-01 | Projects and helpful human relationships are operational and safeguarded | Home roadmap copy; G6 architecture | `MISSING` | No project artifact/version/contribution workflow, verified role, reporting/blocking, contact boundary, expiry, supervision, appeal, or individual defence. | G6 after G1/G5; separate minor gate |
 | ACCESS-01 | One coherent accessible learner instrument | Shared tokens/primitives; Primary Source typed accommodations; Wave 2 `/pathways` reduced-motion check `2cf81ab` | `PARTIAL`; bounded checks only | The availability map joins the reduced-motion scan and keeps an availability-only, keyboard-linkable route. Primary Source records construct-preserving access facts in a local receipt/projector input. Screen-reader sessions, complete all-state semantic/nonvisual equivalence, real assistive-technology review, and conformance across runtime migrations remain incomplete. | Assistive-technology review + all-World runtime conformance |
 | SAFE-01 | Security/privacy/abuse boundaries support enabled cloud/provider use | CSP nonce; SSR/cookie/origin/body/schema checks; fixed providers; locked Packet B/F cloud/provider boundaries | `PARTIAL`; cloud/provider enablement remains forbidden | Public auth and Studio provider calls fail closed before authority/body/provider access. No CAPTCHA/durable limiter, configured-project/provider proof, provider privacy decision, prompt/source-poisoning operation, deletion/backup drill, incident operator, or enabled-cloud evidence exists. | Separately authorized Trust/provider operations |
-| EVAL-01 | Engineering behavior is freshly verified | Historical A-F evidence; accepted Wave 2 focused projector/pathway/release-verifier changes ending at `b5b3170` | `PARTIAL`; no Wave 2 release verdict | The Wave 2 commits add focused adversarial projector tests, pathway availability/reduced-motion checks, and a release-verifier `/pathways` marker. This matrix amendment does not assert a fresh complete release matrix on `b5b3170`; live configured database/provider checks, Safari/Firefox, screen-reader sessions, learning-validity studies, and final public deployment remain separate gates. | Principal fresh release/evaluation gate when authorized |
+| EVAL-01 | Engineering behavior is freshly verified | Released source `6e95a33`; CI `29927061567`; 431 application + 13 evaluator tests; local/public verifier 182/182; local/public optimized browser 61 pass / 21 intentional skips / 0 fail | `PROVEN` for the recorded engineering release gate | Runtime-error and exact-deployment 5xx scans were empty. Live model evaluation was NOT RUN; configured database/provider checks, Safari/Firefox, screen-reader sessions, assistive-technology sessions, learning-validity studies, and claims beyond the exact engineering gate remain separate. | Principal only for later release amendments; research/access/provider owners for their distinct gates |
 | EVAL-02 | Measurement validity, delayed retention, and learning effects are known | Evaluation plans and fixture harness | `MISSING` | No preregistration, equivalent task-family validation, rubric reliability, evaluator disagreement, contamination study, representative learner/access study, delayed retention, strong-baseline comparison, or independent review. | Research G7 |
-| OPS-01 | Current source/test/deployment identity is trustworthy | Packet D release identity; Wave 2 `/pathways` verifier allowlist on `b5b3170` | `PARTIAL`; code identity is not deployed identity | The verifier now requires a pathway availability marker alongside the four Worlds, Studio, device profile, CSP nonce, disabled-cloud state, and release SHA. `b5b3170` is the accepted code cut; public production remains `cd418b8` until a principal binds a new immutable READY URL, alias, health/digests, retained artifact, and rollback target. | Principal final release tuple |
-| OPS-02 | CI, health, observability, artifact retention, and rollback are operational | Packet D machinery plus `b5b3170` verifier coverage | `PARTIAL`; no production operation | The new route is represented in the verifier contract, but no alert/incident operation, public artifact audit on `b5b3170`, configured database operation, or actual rollback rehearsal has been completed. | Principal deployment; later operations rehearsal |
-| DEPLOY-01 | A verified public deployment runs the integrated FORGE source | Historical public source `cd418b8`; Wave 2 code cut `b5b3170`; Packet D verifier | `UNVERIFIED` for Wave 2 | No immutable READY deployment, alias confirmation, exact `/api/health` SHA/digests, rendered journey/CSP/error scan, retained artifact, or rollback target has been bound to `b5b3170`. Do not describe Wave 2 as public production. | Principal final release tuple |
+| OPS-01 | Current source/test/deployment identity is trustworthy | Released source `6e95a33`; public alias `https://modelshift.vercel.app`; production deployment `dpl_CBzgm4fAVqKy2U8MVLidiTAWTTJD`; immutable URL; local/public verifier 182/182 | `PROVEN` for this exact release tuple | The exact identity gate passed after the failed promoted clone was replaced by direct production deployment. This does not identify the later documentation-only commit as deployed. | Principal for any later source/alias change |
+| OPS-02 | CI, health, observability, artifact retention, and rollback are operational | CI `29927061567`; empty runtime/5xx scans; READY rollback artifacts `dpl_DcKE...` (`cd418b8`) and `dpl_HPts...` (`79053`) | `PARTIAL`; rollback operation not evaluated | The promotion incident is retained: `dpl_37...` lost build-time/digests and failed identity; Hobby refused the rollback attempt due one-step history. The CLI target attempt failed, so rollback rehearsal is `NOT_EVALUATED`; no rollback-operability claim is allowed. Alert/incident operation, configured database operation, and later rehearsal remain open. | Principal operations rehearsal + incident/alerting slice |
+| DEPLOY-01 | A verified public deployment runs the integrated FORGE source | `6e95a33`; `https://modelshift.vercel.app`; `dpl_CBzgm4fAVqKy2U8MVLidiTAWTTJD`; immutable deployment URL; CI/verifier/browser/runtime-scan record | `PROVEN` for the exact `6e95a33` engineering deployment | The deployment is public and identity-verified. It does not make the later docs-only SHA deployed, nor prove durable evidence, all-World runtime, cloud auth, provider operation, accessibility sessions, curriculum coverage, efficacy, homeschool readiness, or certification. | Principal final release tuple again for every later SHA |
 | CLAIM-01 | Production-grade, broad homeschool/lifelong objective is achieved | Entire matrix | `CONTRADICTED` | Multiple foundational requirements are missing or contradicted. The strongest current statement remains a C1 interactive foundation/G1 candidate with four bounded Worlds. | Full G0–G8 program |
 
 ## 4. Goal-gate status
