@@ -177,6 +177,27 @@ For both migrated Worlds, run the complete critical journey at desktop and 320 C
 
 Manual screen-reader, voice control, switch control, magnification, Safari, Firefox, and representative learner sessions remain `NOT_RUN` until executed. Automated semantics are not a substitute for those sessions.
 
+## All-World conformance worker candidate — 22 July 2026
+
+This is bounded local candidate evidence from branch `agent/world-runtime-conformance-wave4` on exact integrated base `54bd7fc4bf16924d253010c0b849bd5c9bf7104b`. It is not principal acceptance, CI evidence, a public release, or a change to the Wave status above.
+
+### Achieved locally
+
+- one parameterized canonical suite exercises Force and Motion, Proportional Reasoning, Source Corroboration, and Primary Source Reasoning against the shared runtime; `18/18` focused conformance tests passed;
+- the suite verifies reducer equivalence, exact ordered trace, canonical pass/fail, malformed terminal rejection with no receipt, cognitive-support provenance, access separation, proof locks, fresh reset identity, exact source status and tuples, raw-prose exclusion, exact retained manifest/runtime-binding digests, receipt-projector acceptance, and deterministic duplicate rejection;
+- no new malicious adapter or forged-receipt implementation was added because the existing exhaustive runtime and receipt-guard suites already cover those negative boundaries and this audit found no remaining P0/P1 gap requiring another implementation fixture;
+- the full application unit gate passed `528/528` tests in `53/53` files; the evaluator-contract gate passed `13/13` tests in `2/2` files; the deterministic interpretation evaluation passed fixture validity and authored-probe selection across `54` fixtures, with live model evaluation explicitly not run;
+- full lint, TypeScript typecheck, and optimized Next.js build passed;
+- one focused optimized-production Chromium matrix ran on unique local port `3118`: `8/8` routed checks passed, covering all four Worlds at desktop `1440x900` and explicit `320x800`, proof-control isolation, stage focus, keyboard traversal to a proof control, reduced motion, forced colors, horizontal overflow, and console/page errors.
+
+### Still `NOT_RUN` or not established
+
+- manual screen reader, Safari, Firefox, voice control, switch control, magnification, and representative learner/accessibility sessions are `NOT_RUN`;
+- the complete repository Playwright matrix, exact-SHA CI, public immutable-deployment verification, runtime-log/5xx scan, and rollback rehearsal are `NOT_RUN` for this candidate;
+- live provider/model evaluation is `NOT_RUN`; no provider credential or paid request was used;
+- no deploy, push, database operation, cloud identity/evidence operation, or external write was performed;
+- source bindings remain `legacy_metadata_only`, receipts remain honour-based and non-durable, and no efficacy, mastery, retention, broad curriculum, homeschool-readiness, certification, or universal-World claim follows.
+
 ## Integration order
 
 1. Freeze this plan and collect the independent baseline red-team matrix.
