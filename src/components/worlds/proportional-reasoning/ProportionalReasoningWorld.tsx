@@ -1,21 +1,26 @@
 "use client";
 
-import { useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import {
   AUDIENCE_COPY,
   PROPORTIONAL_REASONING_CONTENT,
-  createInitialRatioWorldState,
   deriveRatioEvidence,
-  transitionRatioWorld,
   validateReconstruction,
   type InitialPredictionId,
   type RatioAudience,
   type RatioEvidenceRecord,
   type RatioWorldEvent,
   type RatioWorldState,
+  type SeparatingTestPredictionId,
   type TransferChoiceId,
 } from "../../../worlds/proportional-reasoning";
+import {
+  createWorldRuntimeSession,
+  dispatchWorldRuntimeCommand,
+  proportionalReasoningWorldRuntimeAdapter,
+  type BoundedLocalWorldRuntimeReceipt,
+} from "../../../forge/world-runtime";
 
 import styles from "./ProportionalReasoningWorld.module.css";
 import {
@@ -27,15 +32,32 @@ import {
   RatioStageRail,
 } from "./visuals";
 
+const TEST_PREDICTION_OPTIONS: readonly {
+  readonly id: SeparatingTestPredictionId;
+  readonly label: string;
+}[] = [
+  { id: "same_strength", label: PROPORTIONAL_REASONING_CONTENT.readings[0].prediction },
+  { id: "jug_b_stronger", label: PROPORTIONAL_REASONING_CONTENT.readings[1].prediction },
+];
+
+const STAGE_ANNOUNCEMENTS: Readonly<Record<RatioWorldState["stage"], string>> = {
+  MYSTERY: "Commit stage",
+  EXPLAIN: "Explain stage",
+  COMPILER: "Two readings and test prediction stage",
+  EXPERIMENT: "Separating comparison stage",
+  RECONSTRUCT: "Reconstruct stage",
+  WITHDRAWAL: "Assistance withdrawal stage",
+  COLD_TRANSFER: "Independent transfer stage",
+  EVIDENCE: "Bounded evidence stage",
+};
+
 export interface ProportionalReasoningWorldProps {
   readonly audience?: RatioAudience;
   readonly onExit?: () => void;
-  /** Called when the evidence record is first created and again if return proof is scheduled. */
+  /** Compatibility callback for the one local, legacy evidence projection. */
   readonly onEvidence?: (evidence: RatioEvidenceRecord) => void;
-}
-
-function reduceRatioState(state: RatioWorldState, event: RatioWorldEvent): RatioWorldState {
-  return transitionRatioWorld(state, event).state;
+  /** Called once per completed local runtime attempt; never persisted here. */
+  readonly onRuntimeReceipt?: (receipt: BoundedLocalWorldRuntimeReceipt) => void;
 }
 
 function ConfidenceControl({
@@ -83,6 +105,8 @@ function MysteryStage({
   onPrediction,
   onConfidence,
   onCommit,
+  predictionName,
+  confidenceId,
 }: {
   readonly audience: RatioAudience;
   readonly prediction: InitialPredictionId | null;
@@ -90,6 +114,8 @@ function MysteryStage({
   readonly onPrediction: (prediction: InitialPredictionId) => void;
   readonly onConfidence: (confidence: number) => void;
   readonly onCommit: () => void;
+  readonly predictionName: string;
+  readonly confidenceId: string;
 }) {
   return (
     <section className={styles["forge-ratio-stage"]} data-testid="ratio-stage-mystery">
@@ -110,7 +136,7 @@ function MysteryStage({
             >
               <input
                 type="radio"
-                name="forge-ratio-initial-prediction"
+                name={predictionName}
                 checked={prediction === option.id}
                 onChange={() => onPrediction(option.id)}
               />
@@ -120,7 +146,7 @@ function MysteryStage({
           ))}
         </fieldset>
         <div className={styles["forge-ratio-commit-panel"]}>
-          <ConfidenceControl id="forge-ratio-initial-confidence" value={confidence} onChange={onConfidence} />
+          <ConfidenceControl id={confidenceId} value={confidence} onChange={onConfidence} />
           <p>Your choice will be preserved. No answer appears until after your explanation.</p>
           <RatioPrimaryButton disabled={!prediction} onClick={onCommit} testId="ratio-commit-initial">Commit my prediction</RatioPrimaryButton>
         </div>
@@ -135,12 +161,14 @@ function ExplanationStage({
   audience,
   onExplanation,
   onCommit,
+  explanationId,
 }: {
   readonly prediction: InitialPredictionId;
   readonly explanation: string;
   readonly audience: RatioAudience;
   readonly onExplanation: (explanation: string) => void;
   readonly onCommit: () => void;
+  readonly explanationId: string;
 }) {
   const predictionLabel = PROPORTIONAL_REASONING_CONTENT.initialOptions.find((option) => option.id === prediction)?.label;
   return (
@@ -155,10 +183,10 @@ function ExplanationStage({
         <span>Your prediction is locked</span>
         <strong>{predictionLabel}</strong>
       </div>
-      <label className={styles["forge-ratio-text-field"]} htmlFor="forge-ratio-explanation">
+      <label className={styles["forge-ratio-text-field"]} htmlFor={explanationId}>
         <span>Your exact words</span>
         <textarea
-          id="forge-ratio-explanation"
+          id={explanationId}
           rows={7}
           maxLength={600}
           value={explanation}
@@ -175,7 +203,19 @@ function ExplanationStage({
   );
 }
 
-function CompilerStage({ explanation, onOpenTest }: { readonly explanation: string; readonly onOpenTest: () => void }) {
+function CompilerStage({
+  explanation,
+  prediction,
+  predictionName,
+  onPrediction,
+  onOpenTest,
+}: {
+  readonly explanation: string;
+  readonly prediction: SeparatingTestPredictionId | null;
+  readonly predictionName: string;
+  readonly onPrediction: (prediction: SeparatingTestPredictionId) => void;
+  readonly onOpenTest: () => void;
+}) {
   return (
     <section className={styles["forge-ratio-stage"]} data-testid="ratio-stage-compiler">
       <RatioStageHeader
@@ -214,8 +254,26 @@ function CompilerStage({ explanation, onOpenTest }: { readonly explanation: stri
           <p>{PROPORTIONAL_REASONING_CONTENT.separatingTest}</p>
         </div>
       </div>
+      <fieldset className={styles["forge-ratio-choice-list"]}>
+        <legend>Before opening the comparison, which reading do you predict will hold at 6 cups of water?</legend>
+        {TEST_PREDICTION_OPTIONS.map((option) => (
+          <label
+            className={`${styles["forge-ratio-choice"]} ${prediction === option.id ? styles["forge-ratio-choice-selected"] : ""}`}
+            key={option.id}
+          >
+            <input
+              type="radio"
+              name={predictionName}
+              checked={prediction === option.id}
+              onChange={() => onPrediction(option.id)}
+            />
+            <span className={styles["forge-ratio-choice-control"]} aria-hidden="true" />
+            <strong>{option.label}</strong>
+          </label>
+        ))}
+      </fieldset>
       <div className={styles["forge-ratio-actions-end"]}>
-        <RatioPrimaryButton onClick={onOpenTest} testId="ratio-open-experiment">Open the exact comparison</RatioPrimaryButton>
+        <RatioPrimaryButton disabled={!prediction} onClick={onOpenTest} testId="ratio-commit-test-prediction">Commit this test prediction</RatioPrimaryButton>
       </div>
     </section>
   );
@@ -285,12 +343,14 @@ function ReconstructionStage({
   onChange,
   onSupport,
   onSubmit,
+  reconstructionId,
 }: {
   readonly state: RatioWorldState;
   readonly value: string;
   readonly onChange: (value: string) => void;
   readonly onSupport: () => void;
   readonly onSubmit: () => void;
+  readonly reconstructionId: string;
 }) {
   const nextCue = PROPORTIONAL_REASONING_CONTENT.cues[state.supportUsed.length];
   return (
@@ -307,10 +367,10 @@ function ReconstructionStage({
         <div><span>same factor ×2</span><strong>4 : 6</strong></div>
       </div>
       <SupportLedger used={state.supportUsed} />
-      <label className={styles["forge-ratio-text-field"]} htmlFor="forge-ratio-reconstruction">
+      <label className={styles["forge-ratio-text-field"]} htmlFor={reconstructionId}>
         <span>Your proportional rule</span>
         <textarea
-          id="forge-ratio-reconstruction"
+          id={reconstructionId}
           rows={6}
           maxLength={500}
           value={value}
@@ -360,6 +420,9 @@ function TransferStage({
   onExplanation,
   onConfidence,
   onSubmit,
+  choiceName,
+  explanationId,
+  confidenceId,
 }: {
   readonly choice: TransferChoiceId | null;
   readonly explanation: string;
@@ -368,6 +431,9 @@ function TransferStage({
   readonly onExplanation: (explanation: string) => void;
   readonly onConfidence: (confidence: number) => void;
   readonly onSubmit: () => void;
+  readonly choiceName: string;
+  readonly explanationId: string;
+  readonly confidenceId: string;
 }) {
   return (
     <section className={`${styles["forge-ratio-stage"]} ${styles["forge-ratio-proof-stage"]}`} data-testid="ratio-stage-transfer" data-assistance="off">
@@ -385,19 +451,19 @@ function TransferStage({
         <legend>Select one exact distance.</legend>
         {PROPORTIONAL_REASONING_CONTENT.transfer.options.map((option) => (
           <label key={option.id} data-selected={choice === option.id}>
-            <input type="radio" name="forge-ratio-transfer" checked={choice === option.id} onChange={() => onChoice(option.id)} />
+            <input type="radio" name={choiceName} checked={choice === option.id} onChange={() => onChoice(option.id)} />
             <span aria-hidden="true" />
             <strong>{option.label}</strong>
           </label>
         ))}
       </fieldset>
-      <label className={styles["forge-ratio-text-field"]} htmlFor="forge-ratio-transfer-explanation">
+      <label className={styles["forge-ratio-text-field"]} htmlFor={explanationId}>
         <span>Show the relationship you used</span>
-        <textarea id="forge-ratio-transfer-explanation" rows={4} maxLength={400} value={explanation} onChange={(event) => onExplanation(event.target.value)} placeholder="I know this because…" />
+        <textarea id={explanationId} rows={4} maxLength={400} value={explanation} onChange={(event) => onExplanation(event.target.value)} placeholder="I know this because…" />
         <small>{explanation.length} / 400</small>
       </label>
       <div className={styles["forge-ratio-proof-submit"]}>
-        <ConfidenceControl id="forge-ratio-transfer-confidence" value={confidence} onChange={onConfidence} label="Confidence in this new problem" />
+        <ConfidenceControl id={confidenceId} value={confidence} onChange={onConfidence} label="Confidence in this new problem" />
         <RatioPrimaryButton disabled={!choice || explanation.trim().length < 8} onClick={onSubmit} testId="ratio-submit-proof">Submit this proof once</RatioPrimaryButton>
       </div>
     </section>
@@ -406,15 +472,14 @@ function TransferStage({
 
 function EvidenceStage({
   state,
-  onSchedule,
   onReset,
 }: {
   readonly state: RatioWorldState;
-  readonly onSchedule: () => void;
   readonly onReset: () => void;
 }) {
   const evidence = deriveRatioEvidence(state);
   if (!evidence) return null;
+  const demonstrated = evidence.independentTransfer.relationshipMechanismDemonstrated;
   return (
     <section className={`${styles["forge-ratio-stage"]} ${styles["forge-ratio-evidence-stage"]}`} data-testid="ratio-stage-evidence">
       <RatioStageHeader
@@ -426,7 +491,7 @@ function EvidenceStage({
       <div className={styles["forge-ratio-evidence-paper"]}>
         <header>
           <span>Capability evidence</span>
-          <strong>{evidence.independentTransfer.answerCorrect ? "Exact result on this new problem" : "More independent evidence needed"}</strong>
+          <strong>{demonstrated ? "Relationship demonstrated on this new problem" : "More independent evidence needed"}</strong>
         </header>
         <dl>
           <div><dt>Initial model</dt><dd>{PROPORTIONAL_REASONING_CONTENT.initialOptions.find((option) => option.id === evidence.before.predictionId)?.label} · {evidence.before.confidence}% confidence</dd></div>
@@ -435,7 +500,7 @@ function EvidenceStage({
           <div><dt>Independent transfer</dt><dd>{evidence.independentTransfer.answerCorrect ? "Exact choice" : "Choice did not match the exact relationship"}; explanation submitted at {evidence.independentTransfer.confidence}% confidence</dd></div>
         </dl>
         <div className={styles["forge-ratio-evidence-claim"]}>
-          <span>Demonstrated on this attempt</span>
+          <span>{demonstrated ? "Demonstrated on this attempt" : "Not demonstrated on this attempt"}</span>
           <p>{evidence.demonstrated}</p>
         </div>
         <div className={styles["forge-ratio-untested"]}>
@@ -444,8 +509,8 @@ function EvidenceStage({
         </div>
       </div>
       <div className={styles["forge-ratio-return-proof"]}>
-        <div><span>Return proof</span><p>{PROPORTIONAL_REASONING_CONTENT.returnProof.description}</p></div>
-        {state.returnProofScheduled ? <strong role="status">Marked for a new check in {PROPORTIONAL_REASONING_CONTENT.returnProof.afterDays} days.</strong> : <RatioPrimaryButton onClick={onSchedule} testId="ratio-schedule-return">Schedule a quiet return check</RatioPrimaryButton>}
+        <div><span>Return proof not yet available</span><p>{PROPORTIONAL_REASONING_CONTENT.returnProof.description}</p></div>
+        <strong>No reviewed delayed task or scheduler is published for this World.</strong>
       </div>
       <div className={styles["forge-ratio-actions-end"]}><RatioSecondaryButton onClick={onReset}>Start this world again</RatioSecondaryButton></div>
     </section>
@@ -456,45 +521,76 @@ export function ProportionalReasoningWorld({
   audience = "teen",
   onExit,
   onEvidence,
+  onRuntimeReceipt,
 }: ProportionalReasoningWorldProps) {
   const id = useId();
-  const [state, dispatch] = useReducer(reduceRatioState, createInitialRatioWorldState());
+  const instanceId = id.replaceAll(":", "");
+  const mainId = `forge-ratio-main-${instanceId}`;
+  const mainRef = useRef<HTMLElement>(null);
+  const emittedReceiptRef = useRef<BoundedLocalWorldRuntimeReceipt | null>(null);
+  const [runtime, setRuntime] = useState(() => createWorldRuntimeSession(proportionalReasoningWorldRuntimeAdapter));
+  const runtimeRef = useRef(runtime);
+  const state = runtime.state;
   const [prediction, setPrediction] = useState<InitialPredictionId | null>(null);
   const [initialConfidence, setInitialConfidence] = useState(60);
   const [explanation, setExplanation] = useState("");
+  const [testPrediction, setTestPrediction] = useState<SeparatingTestPredictionId | null>(null);
   const [reconstruction, setReconstruction] = useState("");
   const [transferChoice, setTransferChoice] = useState<TransferChoiceId | null>(null);
   const [transferExplanation, setTransferExplanation] = useState("");
   const [transferConfidence, setTransferConfidence] = useState(60);
-  const evidence = useMemo(() => deriveRatioEvidence(state), [state]);
+  const evidence = deriveRatioEvidence(state);
   const lastEvidenceKey = useRef<string | null>(null);
+
+  function send(event: RatioWorldEvent): boolean {
+    const result = dispatchWorldRuntimeCommand(proportionalReasoningWorldRuntimeAdapter, runtimeRef.current, {
+      kind: "domain",
+      event,
+    });
+    runtimeRef.current = result.session;
+    setRuntime(result.session);
+    return result.accepted;
+  }
 
   useEffect(() => {
     if (!evidence || !onEvidence) return;
-    const key = `${evidence.independentTransfer.choiceId}:${evidence.returnProof.scheduled}`;
+    const key = `${evidence.independentTransfer.choiceId}:${evidence.independentTransfer.relationshipMechanismDemonstrated}`;
     if (lastEvidenceKey.current === key) return;
     lastEvidenceKey.current = key;
     onEvidence(evidence);
   }, [evidence, onEvidence]);
 
+  useEffect(() => {
+    if (runtime.receipt && emittedReceiptRef.current !== runtime.receipt) {
+      emittedReceiptRef.current = runtime.receipt;
+      onRuntimeReceipt?.(runtime.receipt);
+    }
+  }, [onRuntimeReceipt, runtime.receipt]);
+
+  useEffect(() => {
+    mainRef.current?.focus({ preventScroll: true });
+  }, [state.stage]);
+
   function resetWorld(): void {
-    dispatch({ type: "RESET" });
+    send({ type: "RESET" });
     setPrediction(null);
     setInitialConfidence(60);
     setExplanation("");
+    setTestPrediction(null);
     setReconstruction("");
     setTransferChoice(null);
     setTransferExplanation("");
     setTransferConfidence(60);
     lastEvidenceKey.current = null;
+    emittedReceiptRef.current = null;
   }
 
   const proofSurface = state.stage === "COLD_TRANSFER" || state.stage === "EVIDENCE";
   const shellClassName = `${styles["forge-ratio-shell"]} ${proofSurface ? styles["forge-ratio-shell-proof"] : ""}`;
 
   return (
-    <div className={shellClassName} data-world="proportional-reasoning" data-stage={state.stage} id={`forge-ratio-${id.replaceAll(":", "")}`}>
-      <a className={styles["forge-ratio-skip-link"]} href="#forge-ratio-main">Skip to the current question</a>
+    <div className={shellClassName} data-world="proportional-reasoning" data-stage={state.stage} id={`forge-ratio-${instanceId}`}>
+      <a className={styles["forge-ratio-skip-link"]} href={`#${mainId}`}>Skip to the current question</a>
       <header className={styles["forge-ratio-topbar"]}>
         <div className={styles["forge-ratio-wordmark"]} aria-label="FORGE model world">
           <span>F</span>
@@ -506,7 +602,8 @@ export function ProportionalReasoningWorld({
         </div>
       </header>
       <RatioStageRail stage={state.stage} />
-      <main id="forge-ratio-main" className={styles["forge-ratio-main"]}>
+      <p className={styles["forge-ratio-stage-announcement"]} aria-live="polite">{STAGE_ANNOUNCEMENTS[state.stage]}</p>
+      <main id={mainId} className={styles["forge-ratio-main"]} ref={mainRef} tabIndex={-1}>
         {state.stage === "MYSTERY" ? (
           <MysteryStage
             audience={audience}
@@ -515,8 +612,10 @@ export function ProportionalReasoningWorld({
             onPrediction={setPrediction}
             onConfidence={setInitialConfidence}
             onCommit={() => {
-              if (prediction) dispatch({ type: "COMMIT_INITIAL", predictionId: prediction, confidence: initialConfidence });
+              if (prediction) send({ type: "COMMIT_INITIAL", predictionId: prediction, confidence: initialConfidence });
             }}
+            predictionName={`forge-ratio-initial-prediction-${instanceId}`}
+            confidenceId={`forge-ratio-initial-confidence-${instanceId}`}
           />
         ) : null}
         {state.stage === "EXPLAIN" && state.initialPredictionId ? (
@@ -525,18 +624,29 @@ export function ProportionalReasoningWorld({
             explanation={explanation}
             audience={audience}
             onExplanation={setExplanation}
-            onCommit={() => dispatch({ type: "COMMIT_EXPLANATION", explanation })}
+            onCommit={() => send({ type: "COMMIT_EXPLANATION", explanation })}
+            explanationId={`forge-ratio-explanation-${instanceId}`}
           />
         ) : null}
-        {state.stage === "COMPILER" ? <CompilerStage explanation={state.initialExplanation} onOpenTest={() => dispatch({ type: "ACCEPT_SEPARATING_TEST" })} /> : null}
+        {state.stage === "COMPILER" ? (
+          <CompilerStage
+            explanation={state.initialExplanation}
+            prediction={testPrediction}
+            predictionName={`forge-ratio-test-prediction-${instanceId}`}
+            onPrediction={setTestPrediction}
+            onOpenTest={() => {
+              if (testPrediction) send({ type: "COMMIT_TEST_PREDICTION", predictionId: testPrediction });
+            }}
+          />
+        ) : null}
         {state.stage === "EXPERIMENT" ? (
           <ExperimentStage
             state={state}
             audience={audience}
-            onRun={() => dispatch({ type: "RUN_EXPERIMENT" })}
-            onView={(view) => dispatch({ type: "SET_EXPERIMENT_VIEW", view })}
-            onSupport={() => dispatch({ type: "REQUEST_SUPPORT" })}
-            onReconstruct={() => dispatch({ type: "BEGIN_RECONSTRUCTION" })}
+            onRun={() => send({ type: "RUN_EXPERIMENT" })}
+            onView={(view) => send({ type: "SET_EXPERIMENT_VIEW", view })}
+            onSupport={() => send({ type: "REQUEST_SUPPORT" })}
+            onReconstruct={() => send({ type: "BEGIN_RECONSTRUCTION" })}
           />
         ) : null}
         {state.stage === "RECONSTRUCT" ? (
@@ -544,11 +654,12 @@ export function ProportionalReasoningWorld({
             state={state}
             value={reconstruction}
             onChange={setReconstruction}
-            onSupport={() => dispatch({ type: "REQUEST_SUPPORT" })}
-            onSubmit={() => dispatch({ type: "SUBMIT_RECONSTRUCTION", reconstruction })}
+            onSupport={() => send({ type: "REQUEST_SUPPORT" })}
+            onSubmit={() => send({ type: "SUBMIT_RECONSTRUCTION", reconstruction })}
+            reconstructionId={`forge-ratio-reconstruction-${instanceId}`}
           />
         ) : null}
-        {state.stage === "WITHDRAWAL" ? <WithdrawalStage onBegin={() => dispatch({ type: "ACKNOWLEDGE_WITHDRAWAL" })} /> : null}
+        {state.stage === "WITHDRAWAL" ? <WithdrawalStage onBegin={() => send({ type: "ACKNOWLEDGE_WITHDRAWAL" })} /> : null}
         {state.stage === "COLD_TRANSFER" ? (
           <TransferStage
             choice={transferChoice}
@@ -558,11 +669,14 @@ export function ProportionalReasoningWorld({
             onExplanation={setTransferExplanation}
             onConfidence={setTransferConfidence}
             onSubmit={() => {
-              if (transferChoice) dispatch({ type: "SUBMIT_TRANSFER", choiceId: transferChoice, explanation: transferExplanation, confidence: transferConfidence });
+              if (transferChoice) send({ type: "SUBMIT_TRANSFER", choiceId: transferChoice, explanation: transferExplanation, confidence: transferConfidence });
             }}
+            choiceName={`forge-ratio-transfer-${instanceId}`}
+            explanationId={`forge-ratio-transfer-explanation-${instanceId}`}
+            confidenceId={`forge-ratio-transfer-confidence-${instanceId}`}
           />
         ) : null}
-        {state.stage === "EVIDENCE" ? <EvidenceStage state={state} onSchedule={() => dispatch({ type: "SCHEDULE_RETURN_PROOF" })} onReset={resetWorld} /> : null}
+        {state.stage === "EVIDENCE" ? <EvidenceStage state={state} onReset={resetWorld} /> : null}
       </main>
     </div>
   );

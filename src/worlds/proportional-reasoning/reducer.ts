@@ -8,9 +8,11 @@ import type {
 } from "./model";
 import {
   evaluateTransfer,
+  isIndependentProportionalTransferDemonstrated,
   isExperimentView,
   isInitialPredictionId,
   isMeaningfulExplanation,
+  isSeparatingTestPredictionId,
   isTransferChoiceId,
   isValidConfidence,
   validateReconstruction,
@@ -22,13 +24,13 @@ export function createInitialRatioWorldState(): RatioWorldState {
     initialPredictionId: null,
     initialConfidence: null,
     initialExplanation: "",
+    testPredictionId: null,
     experimentRun: false,
     experimentView: "parts",
     supportUsed: Object.freeze([]),
     reconstruction: "",
     transferSubmitted: false,
     proof: null,
-    returnProofScheduled: false,
   });
 }
 
@@ -56,8 +58,9 @@ export function transitionRatioWorld(state: RatioWorldState, event: RatioWorldEv
       return accept({ ...state, stage: "COMPILER", initialExplanation: event.explanation.trim() });
     }
     case "COMPILER": {
-      if (event.type !== "ACCEPT_SEPARATING_TEST") return reject(state, "invalid_event_for_stage");
-      return accept({ ...state, stage: "EXPERIMENT" });
+      if (event.type !== "COMMIT_TEST_PREDICTION") return reject(state, "invalid_event_for_stage");
+      if (!isSeparatingTestPredictionId(event.predictionId)) return reject(state, "invalid_test_prediction");
+      return accept({ ...state, stage: "EXPERIMENT", testPredictionId: event.predictionId });
     }
     case "EXPERIMENT": {
       if (event.type === "RUN_EXPERIMENT") return accept({ ...state, experimentRun: true, experimentView: "common_water" });
@@ -101,25 +104,29 @@ export function transitionRatioWorld(state: RatioWorldState, event: RatioWorldEv
       const proof = evaluateTransfer(event.choiceId, event.explanation, event.confidence);
       return accept({ ...state, stage: "EVIDENCE", transferSubmitted: true, proof });
     }
-    case "EVIDENCE": {
-      if (event.type !== "SCHEDULE_RETURN_PROOF") return reject(state, "transfer_already_submitted");
-      if (state.returnProofScheduled) return reject(state, "return_proof_already_scheduled");
-      return accept({ ...state, returnProofScheduled: true });
-    }
+    case "EVIDENCE":
+      return reject(state, "transfer_already_submitted");
   }
 }
 
 export function deriveRatioEvidence(state: RatioWorldState): RatioEvidenceRecord | null {
-  if (state.stage !== "EVIDENCE" || !state.proof || !state.initialPredictionId || state.initialConfidence === null) return null;
-  const mechanismDemonstrated = state.proof.mechanismSignals.length > 0;
+  if (
+    state.stage !== "EVIDENCE" ||
+    !state.proof ||
+    !state.initialPredictionId ||
+    !state.testPredictionId ||
+    state.initialConfidence === null
+  ) return null;
+  const relationshipMechanismDemonstrated = isIndependentProportionalTransferDemonstrated(state.proof);
   return Object.freeze({
-    capabilityId: "proportional-reasoning.compare-and-scale",
+    capabilityId: "capability.proportional-reasoning.compare-and-scale",
     before: Object.freeze({
       predictionId: state.initialPredictionId,
       confidence: state.initialConfidence,
       explanation: state.initialExplanation,
     }),
     separatingTest: Object.freeze({
+      predictionId: state.testPredictionId,
       exactComparison: "2/3 < 5/6",
       commonWaterComparison: "4/6 < 5/6",
       observed: state.experimentRun,
@@ -133,9 +140,10 @@ export function deriveRatioEvidence(state: RatioWorldState): RatioEvidenceRecord
       answerCorrect: state.proof.answerCorrect,
       explanationProvided: state.proof.explanation.length > 0,
       mechanismSignals: state.proof.mechanismSignals,
+      relationshipMechanismDemonstrated,
       confidence: state.proof.confidence,
     }),
-    demonstrated: state.proof.answerCorrect && mechanismDemonstrated
+    demonstrated: relationshipMechanismDemonstrated
       ? "On this new map-scale problem, the learner selected the exact proportional result and explained a relevant relationship without support."
       : state.proof.answerCorrect
         ? "On this new map-scale problem, the learner selected the exact proportional result without support; the explanation did not yet show how the relationship was preserved."
@@ -146,7 +154,7 @@ export function deriveRatioEvidence(state: RatioWorldState): RatioEvidenceRecord
       "Independent setup when no answer choices are provided",
     ]),
     returnProof: Object.freeze({
-      scheduled: state.returnProofScheduled,
+      scheduled: false,
       afterDays: PROPORTIONAL_REASONING_CONTENT.returnProof.afterDays,
     }),
   });

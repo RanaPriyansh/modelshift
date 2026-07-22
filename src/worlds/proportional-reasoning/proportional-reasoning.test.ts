@@ -18,6 +18,7 @@ import {
   rational,
   solveTransferExactly,
   transitionRatioWorld,
+  isIndependentProportionalTransferDemonstrated,
   validateReconstruction,
   type RatioWorldEvent,
   type RatioWorldState,
@@ -33,7 +34,7 @@ function stateAtExperiment(): RatioWorldState {
   let state = createInitialRatioWorldState();
   state = advance(state, { type: "COMMIT_INITIAL", predictionId: "same_strength", confidence: 65 });
   state = advance(state, { type: "COMMIT_EXPLANATION", explanation: "Both have one extra cup of water." });
-  return advance(state, { type: "ACCEPT_SEPARATING_TEST" });
+  return advance(state, { type: "COMMIT_TEST_PREDICTION", predictionId: "same_strength" });
 }
 
 function stateAtTransfer({ support = false }: { support?: boolean } = {}): RatioWorldState {
@@ -102,10 +103,12 @@ describe("authored content and validators", () => {
     const strong = evaluateTransfer("32_km", "12 divided by 3 is 4, so multiply the 8 km by four.", 80);
     expect(strong).toMatchObject({ answerCorrect: true, submittedWithoutSupport: true });
     expect(strong.mechanismSignals).toEqual(expect.arrayContaining(["scale_factor", "calculation"]));
+    expect(isIndependentProportionalTransferDemonstrated(strong)).toBe(true);
 
     const lucky = evaluateTransfer("32_km", "I picked this answer from the list.", 25);
     expect(lucky.answerCorrect).toBe(true);
-    expect(lucky.mechanismSignals).toHaveLength(0);
+    expect(lucky.mechanismSignals).toEqual([]);
+    expect(isIndependentProportionalTransferDemonstrated(lucky)).toBe(false);
 
     expect(evaluateTransfer("24_km", "The relationship gives twenty four.", 70).answerCorrect).toBe(false);
   });
@@ -118,13 +121,13 @@ describe("proportional world transition policy", () => {
       initialPredictionId: null,
       initialConfidence: null,
       initialExplanation: "",
+      testPredictionId: null,
       experimentRun: false,
       experimentView: "parts",
       supportUsed: [],
       reconstruction: "",
       transferSubmitted: false,
       proof: null,
-      returnProofScheduled: false,
     });
   });
 
@@ -138,7 +141,7 @@ describe("proportional world transition policy", () => {
     });
   });
 
-  it("requires prediction and explanation commitments before revealing readings", () => {
+  it("requires initial and separating-test commitments before the exact comparison", () => {
     let state = createInitialRatioWorldState();
     state = advance(state, { type: "COMMIT_INITIAL", predictionId: "jug_b_stronger", confidence: 40 });
     expect(state.stage).toBe("EXPLAIN");
@@ -148,6 +151,12 @@ describe("proportional world transition policy", () => {
     });
     state = advance(state, { type: "COMMIT_EXPLANATION", explanation: "The jug has more concentrate in it." });
     expect(state.stage).toBe("COMPILER");
+    expect(transitionRatioWorld(state, { type: "RUN_EXPERIMENT" })).toMatchObject({
+      accepted: false,
+      reason: "invalid_event_for_stage",
+    });
+    state = advance(state, { type: "COMMIT_TEST_PREDICTION", predictionId: "jug_b_stronger" });
+    expect(state).toMatchObject({ stage: "EXPERIMENT", testPredictionId: "jug_b_stronger" });
   });
 
   it("will not open reconstruction until the exact comparison has run", () => {
@@ -208,19 +217,12 @@ describe("proportional world transition policy", () => {
     })).toMatchObject({ accepted: false, reason: "transfer_already_submitted" });
 
     expect(deriveRatioEvidence(state)).toMatchObject({
-      capabilityId: "proportional-reasoning.compare-and-scale",
+      capabilityId: "capability.proportional-reasoning.compare-and-scale",
       before: { predictionId: "same_strength", confidence: 65 },
-      separatingTest: { exactComparison: "2/3 < 5/6", commonWaterComparison: "4/6 < 5/6", observed: true },
+      separatingTest: { predictionId: "same_strength", exactComparison: "2/3 < 5/6", commonWaterComparison: "4/6 < 5/6", observed: true },
       assistance: { levelsUsed: [1], wasAvailableDuringProof: false },
-      independentTransfer: { choiceId: "32_km", answerCorrect: true, confidence: 85 },
+      independentTransfer: { choiceId: "32_km", answerCorrect: true, relationshipMechanismDemonstrated: true, confidence: 85 },
       returnProof: { scheduled: false, afterDays: 3 },
-    });
-
-    state = advance(state, { type: "SCHEDULE_RETURN_PROOF" });
-    expect(deriveRatioEvidence(state)?.returnProof.scheduled).toBe(true);
-    expect(transitionRatioWorld(state, { type: "SCHEDULE_RETURN_PROOF" })).toMatchObject({
-      accepted: false,
-      reason: "return_proof_already_scheduled",
     });
   });
 
@@ -234,6 +236,7 @@ describe("proportional world transition policy", () => {
     });
     const evidence = deriveRatioEvidence(state);
     expect(evidence?.independentTransfer.answerCorrect).toBe(true);
+    expect(evidence?.independentTransfer.relationshipMechanismDemonstrated).toBe(false);
     expect(evidence?.demonstrated).toContain("did not yet show");
     expect(evidence?.notYetTested).toContain("Delayed retention after assistance has faded");
   });

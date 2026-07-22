@@ -12,6 +12,13 @@ export type RatioStage =
 
 export type InitialPredictionId = "same_strength" | "glass_a_stronger" | "jug_b_stronger";
 
+/**
+ * This is a second, explicit commitment made after the two authored readings
+ * are visible. It is intentionally separate from the learner's initial taste
+ * prediction: the runtime must not invent a separating-test prediction.
+ */
+export type SeparatingTestPredictionId = "same_strength" | "jug_b_stronger";
+
 export type ExperimentView = "parts" | "common_water" | "table";
 
 export type TransferChoiceId = "18_km" | "24_km" | "32_km" | "96_km";
@@ -82,32 +89,35 @@ export interface RatioProof {
   readonly explanation: string;
   readonly confidence: number;
   readonly answerCorrect: boolean;
-  readonly mechanismSignals: readonly ("scale_factor" | "same_relationship" | "calculation")[];
+  readonly mechanismSignals: readonly RatioMechanismSignal[];
   readonly submittedWithoutSupport: true;
 }
+
+export type RatioMechanismSignal = "scale_factor" | "same_relationship" | "calculation";
 
 export interface RatioWorldState {
   readonly stage: RatioStage;
   readonly initialPredictionId: InitialPredictionId | null;
   readonly initialConfidence: number | null;
   readonly initialExplanation: string;
+  readonly testPredictionId: SeparatingTestPredictionId | null;
   readonly experimentRun: boolean;
   readonly experimentView: ExperimentView;
   readonly supportUsed: readonly (1 | 2 | 3)[];
   readonly reconstruction: string;
   readonly transferSubmitted: boolean;
   readonly proof: RatioProof | null;
-  readonly returnProofScheduled: boolean;
 }
 
 export interface RatioEvidenceRecord {
-  readonly capabilityId: "proportional-reasoning.compare-and-scale";
+  readonly capabilityId: "capability.proportional-reasoning.compare-and-scale";
   readonly before: {
     readonly predictionId: InitialPredictionId;
     readonly confidence: number;
     readonly explanation: string;
   };
   readonly separatingTest: {
+    readonly predictionId: SeparatingTestPredictionId;
     readonly exactComparison: "2/3 < 5/6";
     readonly commonWaterComparison: "4/6 < 5/6";
     readonly observed: boolean;
@@ -121,6 +131,7 @@ export interface RatioEvidenceRecord {
     readonly answerCorrect: boolean;
     readonly explanationProvided: boolean;
     readonly mechanismSignals: readonly ("scale_factor" | "same_relationship" | "calculation")[];
+    readonly relationshipMechanismDemonstrated: boolean;
     readonly confidence: number;
   };
   readonly demonstrated: string;
@@ -134,7 +145,7 @@ export interface RatioEvidenceRecord {
 export type RatioWorldEvent =
   | { readonly type: "COMMIT_INITIAL"; readonly predictionId: InitialPredictionId; readonly confidence: number }
   | { readonly type: "COMMIT_EXPLANATION"; readonly explanation: string }
-  | { readonly type: "ACCEPT_SEPARATING_TEST" }
+  | { readonly type: "COMMIT_TEST_PREDICTION"; readonly predictionId: SeparatingTestPredictionId }
   | { readonly type: "RUN_EXPERIMENT" }
   | { readonly type: "SET_EXPERIMENT_VIEW"; readonly view: ExperimentView }
   | { readonly type: "REQUEST_SUPPORT" }
@@ -147,12 +158,12 @@ export type RatioWorldEvent =
       readonly explanation: string;
       readonly confidence: number;
     }
-  | { readonly type: "SCHEDULE_RETURN_PROOF" }
   | { readonly type: "RESET" };
 
 export type RatioTransitionRejection =
   | "invalid_event_for_stage"
   | "invalid_prediction"
+  | "invalid_test_prediction"
   | "invalid_confidence"
   | "explanation_too_short"
   | "experiment_must_run_first"
@@ -160,10 +171,8 @@ export type RatioTransitionRejection =
   | "support_ceiling_reached"
   | "reconstruction_not_ready"
   | "invalid_transfer_choice"
-  | "transfer_already_submitted"
-  | "return_proof_already_scheduled";
+  | "transfer_already_submitted";
 
 export type RatioTransitionResult =
   | { readonly accepted: true; readonly state: RatioWorldState }
   | { readonly accepted: false; readonly state: RatioWorldState; readonly reason: RatioTransitionRejection };
-

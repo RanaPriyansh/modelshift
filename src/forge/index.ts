@@ -55,6 +55,7 @@ export {
   dispatchWorldRuntimeCommand,
   lintWorldRuntimePack,
   primarySourceWorldRuntimeAdapter,
+  proportionalReasoningWorldRuntimeAdapter,
 } from "./world-runtime";
 
 export type {

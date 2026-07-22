@@ -11,7 +11,10 @@ import {
   PRIMARY_SOURCE_WORLD_VERSION,
   validatePrimarySourceTransfer,
 } from "../worlds/primary-source-reasoning";
-import { evaluateTransfer } from "../worlds/proportional-reasoning/validator";
+import {
+  evaluateTransfer,
+  isIndependentProportionalTransferDemonstrated,
+} from "../worlds/proportional-reasoning/validator";
 import {
   deterministicValidationResultSchema,
   type AIActionBoundary,
@@ -20,6 +23,7 @@ import {
   type SourceProvenance,
 } from "./contracts";
 import { PRIMARY_SOURCE_RUNTIME_BINDING } from "./world-runtime/primary-source-binding";
+import { PROPORTIONAL_REASONING_RUNTIME_BINDING } from "./world-runtime/proportional-reasoning-binding";
 
 const AI_OFF = {
   mode: "off",
@@ -330,7 +334,7 @@ export const PROPORTIONAL_REASONING_WORLD = {
   manifest: {
     schemaVersion: "1.0",
     id: "world.proportional-reasoning",
-    version: "1.0.0",
+    version: "1.0.1",
     route: "/learn/proportional-reasoning",
     title: "Ratios that stay the same",
     summary:
@@ -346,7 +350,7 @@ export const PROPORTIONAL_REASONING_WORLD = {
     aiBoundary: AI_OFF,
     returnProof: {
       enabled: false,
-      reason: "The local ledger can schedule a return, but a reviewed delayed task family is not yet published.",
+      reason: "A reviewed delayed task family and scheduler are not yet published.",
       aiBoundary: AI_OFF,
     },
     safety: {
@@ -407,6 +411,7 @@ export const PROPORTIONAL_REASONING_WORLD = {
       outputContractVersion: "1.0.0",
     },
   ],
+  runtime: PROPORTIONAL_REASONING_RUNTIME_BINDING,
 } satisfies LearningWorldPack;
 
 export const PRIMARY_SOURCE_REASONING_WORLD = {
@@ -573,10 +578,11 @@ export const proportionalReasoningTransferValidator: DeterministicValidator = Ob
     }
 
     const result = evaluateTransfer(parsed.data.choiceId, parsed.data.explanation, parsed.data.confidence);
+    const demonstrated = isIndependentProportionalTransferDemonstrated(result);
     return deterministicValidationResultSchema.parse({
-      passed: result.answerCorrect,
-      score: result.answerCorrect ? 1 : 0,
-      code: result.answerCorrect ? "transfer.demonstrated" : "transfer.not-demonstrated",
+      passed: demonstrated,
+      score: demonstrated ? 1 : 0,
+      code: demonstrated ? "transfer.demonstrated" : "transfer.not-demonstrated",
       evidence: [
         `answer:${result.choiceId}`,
         `mechanism-signals:${result.mechanismSignals.join(",") || "none"}`,
