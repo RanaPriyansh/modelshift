@@ -12,7 +12,20 @@ describe("offline evaluation regression report", () => {
     expect(report.metrics.clear_primary_agreement_count).toBe(29);
     expect(report.execution_boundary).toEqual({ model_calls: false, network_access: false, learner_text_persisted: false, per_fixture_text_in_report: false });
     expect(report.live_model_evaluation.status).toBe("not_evaluated");
+    expect(report.pre_release_quality_status).toBe("PRE_RELEASE_QUALITY_PASS");
+    expect(report.release_closure_status).toBe("NOT_EVALUATED");
+    expect(report.release_identity.candidate_state).toBe("BUILT_LOCAL");
+    expect(report.release_identity.source_sha).toBe(SHA);
+    expect(report.release_identity.public_alias).toEqual({ status: "not_evaluated" });
     expect(JSON.stringify(report)).not.toContain(INTERPRETATION_FIXTURES[0]?.explanation);
+  });
+  it("keeps live evaluation as a separate fail-closed release gate", () => {
+    const failed = buildOfflineRegressionReport({ gitSha: SHA, liveEvaluationStatus: "fail" });
+    expect(failed.pre_release_quality_status).toBe("PRE_RELEASE_QUALITY_PASS");
+    expect(failed.release_closure_status).toBe("FAIL");
+    const passed = buildOfflineRegressionReport({ gitSha: SHA, liveEvaluationStatus: "pass", liveEvaluationArtifactId: "live-eval-approved-1" });
+    expect(passed.release_closure_status).toBe("PASS");
+    expect(passed.live_model_evaluation.artifact_id).toBe("live-eval-approved-1");
   });
   it("fails closed for an incomplete corpus and labels live evaluation honestly", () => {
     expect(buildOfflineRegressionReport({ fixtures: INTERPRETATION_FIXTURES.slice(0, 10), gitSha: SHA }).offline_regression_status).toBe("fail");
