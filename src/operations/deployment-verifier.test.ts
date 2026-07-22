@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { IANA_SPECIAL_PURPOSE_POLICY_VERSION, validateTargetUrl, verifyDeployment, type DeploymentVerificationReport } from "../../scripts/ops/deployment-verifier";
+import { IANA_IPV6_GLOBAL_UNICAST_POLICY_VERSION, IANA_SPECIAL_PURPOSE_POLICY_VERSION, validateTargetUrl, verifyDeployment, type DeploymentVerificationReport } from "../../scripts/ops/deployment-verifier";
 import { resolveDeploymentTarget } from "../../scripts/ops/deployment-target-policy";
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
@@ -51,8 +51,11 @@ describe("deployment verifier", () => {
     "192.175.48.1",
     "4000::1",
     "6000::1",
+    "2500::1",
+    "2700::1",
     "3fff::1",
     "3fff:0fff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "3fff:1000::1",
     "2001:30::1",
     "100:0:0:1::1",
     "2620:4f:8000::1",
@@ -65,7 +68,7 @@ describe("deployment verifier", () => {
     expect(report.checks.find((item) => item.id === "target.dns_policy")?.status).toBe("fail");
     expect(calls).toBe(0);
   });
-  it.each(["8.8.8.8", "2001:4860:4860::8888", "3fff:1000::1"])("accepts a general public address outside the versioned special-purpose table: %s", async (address) => {
+  it.each(["8.8.8.8", "2001:4860:4860::8888", "2400::1", "240f:ffff:ffff:ffff:ffff:ffff:ffff:ffff", "2600::1", "260f:ffff:ffff:ffff:ffff:ffff:ffff:ffff"])("accepts a currently allocated public address: %s", async (address) => {
     let calls = 0;
     const fetchImpl = async (input: string | URL | Request) => {
       calls += 1;
@@ -78,6 +81,7 @@ describe("deployment verifier", () => {
   });
   it("records the current IANA registry snapshot alongside the CIDR policy", () => {
     expect(IANA_SPECIAL_PURPOSE_POLICY_VERSION).toBe("2025-10-09");
+    expect(IANA_IPV6_GLOBAL_UNICAST_POLICY_VERSION).toBe("2025-10-10");
   });
   it("fails closed for DNS rebinding and redirect hops without issuing an unpinned request", async () => {
     let resolveCalls = 0;

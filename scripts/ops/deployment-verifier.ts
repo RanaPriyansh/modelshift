@@ -91,13 +91,16 @@ export type VerifyDeploymentOptions = {
 };
 
 // IANA IPv4/IPv6 Special-Purpose Address Registries, last updated 2025-10-09.
+// IANA IPv6 Global Unicast Address Space, last updated 2025-10-10.
 // The verifier is intentionally more conservative than "Globally Reachable":
 // every currently registered special-purpose range is denied, including rows
 // whose registry bit is true, because this read-only worker has no reason to
 // contact a protocol-specific anycast, translation, or infrastructure range.
-// Sources: https://www.iana.org/assignments/iana-ipv4-special-registry/ and
-// https://www.iana.org/assignments/iana-ipv6-special-registry/.
+// Sources: https://www.iana.org/assignments/iana-ipv4-special-registry/,
+// https://www.iana.org/assignments/iana-ipv6-special-registry/, and
+// https://www.iana.org/assignments/ipv6-unicast-address-assignments/.
 export const IANA_SPECIAL_PURPOSE_POLICY_VERSION = "2025-10-09";
+export const IANA_IPV6_GLOBAL_UNICAST_POLICY_VERSION = "2025-10-10";
 const IANA_IPV4_SPECIAL_PURPOSE_CIDRS = [
   "0.0.0.0/8", "0.0.0.0/32", "10.0.0.0/8", "100.64.0.0/10", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12",
   "192.0.0.0/24", "192.0.0.0/29", "192.0.0.8/32", "192.0.0.9/32", "192.0.0.10/32", "192.0.0.170/32", "192.0.0.171/32",
@@ -110,6 +113,13 @@ const IANA_IPV6_SPECIAL_PURPOSE_CIDRS = [
   "::1/128", "::/128", "::ffff:0:0/96", "64:ff9b::/96", "64:ff9b:1::/48", "100::/64", "100:0:0:1::/64",
   "2001::/23", "2001::/32", "2001:1::1/128", "2001:1::2/128", "2001:1::3/128", "2001:2::/48", "2001:3::/32", "2001:4:112::/48",
   "2001:10::/28", "2001:20::/28", "2001:30::/28", "2001:db8::/32", "2002::/16", "2620:4f:8000::/48", "3fff::/20", "5f00::/16", "fc00::/7", "fe80::/10",
+] as const;
+const IANA_IPV6_GLOBAL_UNICAST_ALLOCATED_CIDRS = [
+  "2001::/23", "2001:200::/23", "2001:400::/23", "2001:600::/23", "2001:800::/22", "2001:c00::/23", "2001:e00::/23",
+  "2001:1200::/23", "2001:1400::/22", "2001:1800::/23", "2001:1a00::/23", "2001:1c00::/22", "2001:2000::/19", "2001:4000::/23",
+  "2001:4200::/23", "2001:4400::/23", "2001:4600::/23", "2001:4800::/23", "2001:4a00::/23", "2001:4c00::/23", "2001:5000::/20",
+  "2001:8000::/19", "2001:a000::/20", "2001:b000::/20", "2002::/16", "2003::/18", "2400::/12", "2410::/12", "2600::/12",
+  "2610::/23", "2620::/23", "2630::/12", "2800::/12", "2a00::/12", "2a10::/12", "2c00::/12",
 ] as const;
 
 function matchesCidr(words: readonly number[], network: readonly number[], prefixLength: number, wordBits: number): boolean {
@@ -176,8 +186,8 @@ function isNonGlobalOrSpecialAddress(address: string): boolean {
   if (isIP(normalized) !== 6) return true;
   const words = parseIPv6Words(normalized);
   if (!words) return true;
-  const globalUnicastEnvelope = (words[0]! & 0xe000) === 0x2000;
-  return !globalUnicastEnvelope || IANA_IPV6_SPECIAL_PURPOSE_CIDRS.some((cidr) => matchesIPv6Cidr(words, cidr));
+  const allocatedGlobalUnicast = IANA_IPV6_GLOBAL_UNICAST_ALLOCATED_CIDRS.some((cidr) => matchesIPv6Cidr(words, cidr));
+  return !allocatedGlobalUnicast || IANA_IPV6_SPECIAL_PURPOSE_CIDRS.some((cidr) => matchesIPv6Cidr(words, cidr));
 }
 
 async function defaultResolveHostname(hostname: string): Promise<readonly string[]> {
