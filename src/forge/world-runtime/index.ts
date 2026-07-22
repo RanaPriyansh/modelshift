@@ -2,6 +2,7 @@ export { FORCE_AND_MOTION_RUNTIME_BINDING } from "./force-and-motion-binding";
 export { PRIMARY_SOURCE_RUNTIME_BINDING } from "./primary-source-binding";
 export { PROPORTIONAL_REASONING_RUNTIME_BINDING } from "./proportional-reasoning-binding";
 export { SOURCE_CORROBORATION_RUNTIME_BINDING } from "./source-corroboration-binding";
+export { ARGUMENT_EVIDENCE_RUNTIME_BINDING } from "./argument-evidence-binding";
 export { lintWorldRuntimePack, type WorldRuntimeLintResult } from "./linter";
 export {
   forceAndMotionWorldRuntimeAdapter,
@@ -18,6 +19,10 @@ export {
   sourceCorroborationWorldRuntimeAdapter,
   type SourceCorroborationRuntimeProof,
 } from "./source-corroboration";
+export {
+  argumentEvidenceWorldRuntimeAdapter,
+  type ArgumentEvidenceRuntimeProof,
+} from "./argument-evidence";
 export {
   deriveDefaultEvidenceDisposition,
   type AccessAccommodationEvent,

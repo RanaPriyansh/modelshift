@@ -24,10 +24,13 @@ describe("Learning world pack invariants", () => {
     expect(validateLearningWorldPack(SOURCE_CORROBORATION_WORLD).ok).toBe(true);
   });
 
-  it("enforces availability truth against the release state", () => {
+  it("requires a released package for public availability while allowing retained released-unavailable packages", () => {
     const pack = sourcePack();
     pack.release.status = "draft";
     expect(issueCodes(pack)).toContain("availability.mismatch");
+    const retained = sourcePack();
+    retained.manifest.availability = { status: "unavailable", reason: "Retained package awaiting public-release authority." };
+    expect(validateLearningWorldPack(retained).ok).toBe(true);
   });
 
   it("requires every manifest capability to exist in the pack", () => {

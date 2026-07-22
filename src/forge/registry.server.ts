@@ -103,7 +103,9 @@ export class TrustedWorldRegistry {
 
       this.#packsById.set(id, pack);
       allRoutes.add(route);
-      if (availability.status === "available") this.#availableWorldIdByRoute.set(route, id);
+      if (pack.release.status === "released" && availability.status === "available") {
+        this.#availableWorldIdByRoute.set(route, id);
+      }
       for (const definition of pack.deterministicValidators) declaredValidatorIds.add(definition.id);
       for (const source of pack.manifest.sources) {
         const existing = this.#sourcesById.get(source.id);
@@ -138,7 +140,10 @@ export class TrustedWorldRegistry {
   list(filter: WorldRegistryFilter = {}): readonly LearningWorldManifest[] {
     const manifests = [...this.#packsById.values()]
       .map((pack) => pack.manifest)
-      .filter((manifest) => filter.includeUnavailable || manifest.availability.status === "available")
+      .filter((manifest) => {
+        const pack = this.#packsById.get(manifest.id);
+        return filter.includeUnavailable || (pack?.release.status === "released" && manifest.availability.status === "available");
+      })
       .filter((manifest) => !filter.ageMode || manifest.ageModes.includes(filter.ageMode))
       .filter((manifest) => !filter.depthMode || manifest.depthModes.includes(filter.depthMode))
       .filter((manifest) => !filter.evidenceTier || manifest.evidenceTier === filter.evidenceTier)

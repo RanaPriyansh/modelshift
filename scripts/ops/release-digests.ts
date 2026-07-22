@@ -18,6 +18,7 @@ type RetainedBuiltInPack = {
     readonly id: string;
     readonly version: string;
     readonly route: string;
+    readonly availability?: { readonly status: string };
   };
   readonly release: {
     readonly status: string;
@@ -87,7 +88,9 @@ function assertNoDuplicates(values: readonly string[], label: string): void {
 }
 
 function publishedBuiltInPacks(packs: readonly RetainedBuiltInPack[]): readonly RetainedBuiltInPack[] {
-  return packs.filter((pack) => pack.release.status === "released");
+  return packs.filter(
+    (pack) => pack.release.status === "released" && pack.manifest.availability?.status === "available",
+  );
 }
 
 export function canonicalContentJson(value: unknown): string {

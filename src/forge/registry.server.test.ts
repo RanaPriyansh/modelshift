@@ -42,15 +42,16 @@ describe("TrustedWorldRegistry", () => {
       "world.proportional-reasoning",
       "world.source-corroboration",
       "world.primary-source-reasoning",
+      "world.argument-evidence",
     ]);
   });
 
   it("filters manifests by age, depth, tier, and kind", () => {
-    expect(trustedWorldRegistry.list({ includeUnavailable: true, ageMode: "18-plus" })).toHaveLength(4);
+    expect(trustedWorldRegistry.list({ includeUnavailable: true, ageMode: "18-plus" })).toHaveLength(5);
     expect(trustedWorldRegistry.list({ includeUnavailable: true, ageMode: "under-13" })).toHaveLength(2);
     expect(trustedWorldRegistry.list({ includeUnavailable: true, depthMode: "advanced" })).toHaveLength(1);
     expect(trustedWorldRegistry.list({ evidenceTier: "verified" })).toHaveLength(2);
-    expect(trustedWorldRegistry.list({ includeUnavailable: true, kind: "evidence" })).toHaveLength(2);
+    expect(trustedWorldRegistry.list({ includeUnavailable: true, kind: "evidence" })).toHaveLength(3);
   });
 
   it("exposes the reviewed canonical source chain used by every built-in World", () => {
@@ -73,6 +74,7 @@ describe("TrustedWorldRegistry", () => {
     expect(trustedWorldRegistry.resolveAvailableRoute("/learn/primary-source-reasoning")?.manifest.id).toBe(
       "world.primary-source-reasoning",
     );
+    expect(trustedWorldRegistry.resolveAvailableRoute("/learn/argument-evidence")).toBeUndefined();
   });
 
   it("exposes immutable trusted snapshots", () => {

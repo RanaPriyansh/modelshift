@@ -8,6 +8,10 @@ import {
   validatePrimarySourceTransfer,
 } from "../worlds/primary-source-reasoning";
 import {
+  ARGUMENT_EVIDENCE_VALIDATOR_ID,
+  validateArgumentEvidenceTransfer,
+} from "../worlds/argument-evidence";
+import {
   evaluateTransfer,
   isIndependentProportionalTransferDemonstrated,
 } from "../worlds/proportional-reasoning/validator";
@@ -141,11 +145,19 @@ export const primarySourceReasoningTransferValidator: DeterministicValidator = O
   },
 });
 
+export const argumentEvidenceTransferValidator: DeterministicValidator = Object.freeze({
+  id: ARGUMENT_EVIDENCE_VALIDATOR_ID,
+  validate(input: unknown) {
+    return deterministicValidationResultSchema.parse(validateArgumentEvidenceTransfer(input));
+  },
+});
+
 export const CANONICAL_DETERMINISTIC_VALIDATORS = Object.freeze([
   forceAndMotionTransferValidator,
   sourceCorroborationTransferValidator,
   proportionalReasoningTransferValidator,
   primarySourceReasoningTransferValidator,
+  argumentEvidenceTransferValidator,
 ] as const);
 
 export interface CanonicalDeterministicValidatorRegistration {

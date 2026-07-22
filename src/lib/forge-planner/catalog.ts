@@ -1,9 +1,9 @@
 import type { LearnerAgeMode, LearnerDepthMode, SourceProvenance } from "../../forge/contracts";
 import { trustedWorldRegistry } from "../../forge/registry.server";
 import {
-  BUILT_IN_SOURCE_IDS,
-  BUILT_IN_WORLD_IDS,
-  BUILT_IN_WORLD_ROUTES,
+  PUBLIC_SOURCE_IDS,
+  PUBLIC_WORLD_IDS,
+  PUBLIC_WORLD_ROUTES,
 } from "../../forge/worlds";
 
 export const TOPIC_IDS = [
@@ -12,9 +12,9 @@ export const TOPIC_IDS = [
   "ai_learning",
   "primary_source_reasoning",
 ] as const;
-export const WORLD_IDS = BUILT_IN_WORLD_IDS;
-export const WORLD_ROUTES = BUILT_IN_WORLD_ROUTES;
-export const SOURCE_IDS = BUILT_IN_SOURCE_IDS;
+export const WORLD_IDS = PUBLIC_WORLD_IDS;
+export const WORLD_ROUTES = PUBLIC_WORLD_ROUTES;
+export const SOURCE_IDS = PUBLIC_SOURCE_IDS;
 
 export type TopicId = (typeof TOPIC_IDS)[number];
 export type WorldId = (typeof WORLD_IDS)[number];
