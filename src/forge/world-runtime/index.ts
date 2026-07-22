@@ -43,3 +43,14 @@ export {
   type WorldRuntimeConfigurationErrorCode,
   type WorldRuntimeSession,
 } from "./runtime";
+export {
+  compileWorldRuntimeReceiptToAdr001,
+  releasedWorldRuntimeIdentity,
+  WORLD_RUNTIME_ADR001_COMPILER_VERSION,
+} from "./adr001-event-compiler";
+export type {
+  ReleasedWorldRuntimeIdentity,
+  WorldRuntimeAdr001CompileResult,
+  WorldRuntimeAdr001CompilerErrorCode,
+  WorldRuntimeAdr001CompilerInput,
+} from "./adr001-event-compiler";
