@@ -124,14 +124,14 @@ type CurriculumGraphPackageV1 = {
     packageId: string;
     packageVersion: string;
     packageDigest: `sha256:${string}`;
-    evaluatedAsOf: string;
+    minimumEvaluatedAsOf: string;
   }[];
   nodes: readonly CurriculumNodeV1[];
   gaps: readonly CurriculumGapV1[];
 };
 ```
 
-The digest covers the entire canonical payload except `digest`. Identity strings alone are never sufficient. The validator must freshly compute the graph digest and policy digest and reject a mismatch before evaluating coverage. `sourceAuthorityRefs` is a canonical semantic set: it may be empty for a legacy-only graph and must contain every exact bound source package referenced by any node without allowing one evaluation to authorize another package.
+The digest covers the entire canonical payload except `digest`. Identity strings alone are never sufficient. The validator must freshly compute the graph digest and policy digest and reject a mismatch before evaluating coverage. `sourceAuthorityRefs` is a canonical semantic set: it may be empty for a legacy-only graph and must contain every exact bound source package referenced by any node without allowing one evaluation to authorize another package. `minimumEvaluatedAsOf` is a temporal floor, not an exact replay timestamp: the single supplied evaluation for that exact package must be at or after the floor. This lets a later append-only correction, expiry, or withdrawal invalidate only its exact dependents without rewriting the immutable graph package; an earlier, missing, extra, or ambiguous evaluation fails closed.
 
 Canonicalization uses the repository's canonical JSON rules and an explicit code-unit comparator. Arrays that are mathematical sets are sorted before hashing: entitlement areas, positions, age modes, depth modes, source refs, evidence event types, untested claim codes, access-route IDs, and alternative capability IDs. Prerequisite edges and explanatory text remain records with stable IDs and are sorted by those IDs. An array is treated as ordered only if the schema names the ordering as semantic.
 
@@ -280,7 +280,7 @@ type SourceRequirementV1 =
     };
 ```
 
-For `bound-source-authority`, the source-authority replay result supplied to graph validation must match the exact package reference and evaluation time. A complete source review candidate still establishes no external authenticity, durable storage, accountable human identity, rights clearance, or publication. Release requires a separate accepted publication authority input; the graph must not infer that authority from source completeness.
+For `bound-source-authority`, the source-authority replay result supplied to graph validation must match the exact package reference and meet its minimum evaluation time. A complete source review candidate still establishes no external authenticity, durable storage, accountable human identity, rights clearance, or publication. Release requires a separate accepted publication authority input; the graph must not infer that authority from source completeness.
 
 `legacy-metadata-only` exists to report the current released system truth. The four current Worlds are already released and available, but their runtime source bindings explicitly say that ADR-007 authority is incomplete. The graph must not retroactively call those routes unavailable without a package lifecycle decision, and it must not call their source metadata reviewed authority. Their derived node may therefore be `released` while separately projecting `sourceAuthorityStatus: "legacy-incomplete"` and the fixed limitation. A new publication candidate cannot use this mode to satisfy an ADR-007 publication gate.
 
