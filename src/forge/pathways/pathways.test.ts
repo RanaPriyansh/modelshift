@@ -395,6 +395,18 @@ describe("FORGE Packet C pathway review", () => {
     expect(issueCodes(packet)).not.toContain("evidence.claim-overreach");
   });
 
+  it.each([
+    "This is not a school replacement, but it functions as one.",
+    "This does not establish mastery, but it does prove it.",
+    "This does not establish mastery — except for every learner.",
+    "This is not a school replacement—except in practice.",
+    "This is not a school replacement. It functions as one.",
+  ])("rejects a retracted or anaphoric limitation: %s", (statement) => {
+    const packet = packetFor();
+    packet.evidenceClaims[0] = { ...packet.evidenceClaims[0], statement };
+    expect(issueCodes(packet)).toContain("evidence.claim-overreach");
+  });
+
   it("fails closed on undeclared LMS state through the strict packet schema", () => {
     const packet = packetFor() as PathwayReviewPacket & { streak?: number };
     packet.streak = 3;
