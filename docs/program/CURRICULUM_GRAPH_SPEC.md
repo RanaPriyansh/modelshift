@@ -120,18 +120,18 @@ type CurriculumGraphPackageV1 = {
   version: string;
   digest: `sha256:${string}`;
   policyRef: { id: string; version: string; digest: `sha256:${string}` };
-  sourceAuthorityRef: {
+  sourceAuthorityRefs: readonly {
     packageId: string;
     packageVersion: string;
     packageDigest: `sha256:${string}`;
     evaluatedAsOf: string;
-  };
+  }[];
   nodes: readonly CurriculumNodeV1[];
   gaps: readonly CurriculumGapV1[];
 };
 ```
 
-The digest covers the entire canonical payload except `digest`. Identity strings alone are never sufficient. The validator must freshly compute the graph digest and policy digest and reject a mismatch before evaluating coverage.
+The digest covers the entire canonical payload except `digest`. Identity strings alone are never sufficient. The validator must freshly compute the graph digest and policy digest and reject a mismatch before evaluating coverage. `sourceAuthorityRefs` is a canonical semantic set: it may be empty for a legacy-only graph and must contain every exact bound source package referenced by any node without allowing one evaluation to authorize another package.
 
 Canonicalization uses the repository's canonical JSON rules and an explicit code-unit comparator. Arrays that are mathematical sets are sorted before hashing: entitlement areas, positions, age modes, depth modes, source refs, evidence event types, untested claim codes, access-route IDs, and alternative capability IDs. Prerequisite edges and explanatory text remain records with stable IDs and are sorted by those IDs. An array is treated as ordered only if the schema names the ordering as semantic.
 
@@ -329,7 +329,7 @@ type CurriculumGapV1 = {
 };
 ```
 
-Every area without a released node has at least one gap. Candidate nodes do not erase their area's gap; the public projection may say a candidate exists, but status remains `identified-gap` until release authority matches.
+Every area without a released node has at least one gap. An area may have multiple named construct gaps; gap identity, not entitlement area, is unique. Candidate nodes do not erase their area's gaps; the public projection may say a candidate exists, but status remains `identified-gap` until release authority matches.
 
 ## 14. Deterministic projections
 
@@ -394,10 +394,12 @@ At minimum, focused tests must prove:
 16. explanation output contains only authored deterministic reasons and no recommendation language;
 17. all four current released bindings derive release only at their exact retained identities while retaining `legacy-incomplete` source authority;
 18. the proposed Argument & Evidence binding remains non-routable until separately released;
-19. source correction/expiry/withdrawal invalidates the dependent node without rewriting the graph package;
+19. source correction/expiry/withdrawal invalidates only exact dependent nodes without rewriting the graph package or authorizing unrelated source packages;
 20. all invalid outputs retain the curriculum-sufficiency and homeschool-readiness non-claims.
 21. source review-candidate completeness alone cannot derive publication or release;
 22. `legacy-metadata-only` cannot satisfy a new publication candidate even though an already released registry record remains truthfully visible.
+23. cloned object identities fail for nodes, edges, alternatives, access routes, gaps, release authorities, and source evaluations;
+24. multiple gaps may remain visible in one entitlement area while the projection still returns exactly nine area entries.
 
 ## 17. Acceptance and handoff
 
