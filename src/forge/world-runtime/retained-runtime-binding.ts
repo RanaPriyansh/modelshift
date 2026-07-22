@@ -15,7 +15,7 @@ const RETAINED_UNAVAILABLE_RUNTIME_IDENTITIES = [
     version: "1.0.0",
     route: "/learn/argument-evidence",
     runtimeBindingDigest: "sha256:a38c116d6b81e0e30f2f5d711c0f19346eefc76504859b3fc929c317731ab9fc",
-    packageIntegrityHash: "sha256:cde90129ada8d9d2b6a6a7a3036e61ceac61e53dbbe37d81e372419395f8ad9c",
+    packageIntegrityHash: "sha256:6529ad6571852c31eadd49a30b7889c7da46ff1268dfa9bc4579bb69ba4d07d1",
   },
 ] as const;
 

@@ -2,17 +2,28 @@ import { z } from "zod";
 
 import {
   ARGUMENT_EVIDENCE_TRANSFER_TASK_ID,
+  ARGUMENT_EVIDENCE_AUTHORED_FIXTURE,
   TRANSFER_EVIDENCE_IDS,
   TRANSFER_LIMITATION_IDS,
   TRANSFER_MECHANISM_IDS,
 } from "./content";
-import type { ArgumentEvidenceTransferEvaluation, ArgumentEvidenceTransferSubmission } from "./types";
+import type {
+  ArgumentEvidenceTransferEvaluation,
+  ArgumentEvidenceTransferSubmission,
+  TransferEvidenceItemId,
+  TransferLimitationId,
+  TransferMechanismId,
+} from "./types";
+
+function memberSchema<T extends string>(values: readonly T[]) {
+  return z.custom<T>((value) => typeof value === "string" && values.includes(value as T));
+}
 
 const transferInputSchema = z.strictObject({
   taskId: z.literal(ARGUMENT_EVIDENCE_TRANSFER_TASK_ID),
-  evidenceItemId: z.enum(TRANSFER_EVIDENCE_IDS as [string, ...string[]]),
-  mechanismId: z.enum(TRANSFER_MECHANISM_IDS),
-  limitationId: z.enum(TRANSFER_LIMITATION_IDS),
+  evidenceItemId: memberSchema<TransferEvidenceItemId>(TRANSFER_EVIDENCE_IDS),
+  mechanismId: memberSchema<TransferMechanismId>(TRANSFER_MECHANISM_IDS),
+  limitationId: memberSchema<TransferLimitationId>(TRANSFER_LIMITATION_IDS),
 });
 
 export function validateArgumentEvidenceTransfer(input: unknown): ArgumentEvidenceTransferEvaluation {
@@ -21,9 +32,9 @@ export function validateArgumentEvidenceTransfer(input: unknown): ArgumentEviden
     return { inputStatus: "invalid", passed: false, score: 0, code: "invalid.transfer-input", evidence: [] };
   }
   const result = parsed.data;
-  const evidencePass = result.evidenceItemId === "bus.outcome-linked";
-  const mechanismPass = result.mechanismId === "compares_named_outcome";
-  const limitationPass = result.limitationId === "other_changes_not_ruled_out";
+  const evidencePass = result.evidenceItemId === ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.transfer.expected.evidenceItemId;
+  const mechanismPass = result.mechanismId === ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.transfer.expected.mechanismId;
+  const limitationPass = result.limitationId === ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.transfer.expected.limitationId;
   const passed = evidencePass && mechanismPass && limitationPass;
   return {
     inputStatus: "valid",

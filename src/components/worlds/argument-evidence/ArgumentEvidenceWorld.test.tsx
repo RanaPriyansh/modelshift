@@ -3,11 +3,12 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { ARGUMENT_EVIDENCE_AUTHORED_FIXTURE } from "../../../worlds/argument-evidence";
 import { ArgumentEvidenceWorld } from "./ArgumentEvidenceWorld";
 
 afterEach(cleanup);
 
-function reachTransfer() {
+function reachSupport() {
   fireEvent.click(screen.getByLabelText(/An item counts as evidence when it is about the same subject/i));
   fireEvent.click(screen.getByTestId("argument-evidence-commit-initial"));
   fireEvent.change(screen.getByLabelText("Initial explanation"), { target: { value: "I think evidence must bear on the exact claim outcome rather than just share a topic." } });
@@ -16,9 +17,13 @@ function reachTransfer() {
   fireEvent.click(screen.getByRole("button", { name: "Name the disagreement" }));
   fireEvent.click(screen.getByLabelText("outcome linked changes credibility"));
   fireEvent.click(screen.getByRole("button", { name: "Compare the cards" }));
-  fireEvent.click(screen.getByLabelText("Outcome-linked comparison"));
+  fireEvent.click(screen.getByLabelText(/At 15:00 on six clear days/i));
   fireEvent.click(screen.getByLabelText("Supports with a limit"));
   fireEvent.click(screen.getByRole("button", { name: "Check the comparison" }));
+}
+
+function reachTransfer() {
+  reachSupport();
   fireEvent.click(screen.getByRole("button", { name: "Reconstruct the rule" }));
   fireEvent.change(screen.getByLabelText("Reconstruction"), { target: { value: "A card counts when it compares the exact named outcome and can change the claim's credibility." } });
   fireEvent.click(screen.getByRole("button", { name: "Commit reconstruction" }));
@@ -43,11 +48,40 @@ describe("ArgumentEvidenceWorld", () => {
       "Credibility relation",
     ]);
     expect(screen.getByRole("button", { name: "Commit my correction" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Reject these readings" })).toBeTruthy();
+  });
+
+  it("accepts rejection of the compiler readings and reveals the level-three worked table only on request", () => {
+    render(<ArgumentEvidenceWorld />);
+    fireEvent.click(screen.getByLabelText(/An item counts as evidence when it is about the same subject/i));
+    fireEvent.click(screen.getByTestId("argument-evidence-commit-initial"));
+    fireEvent.change(screen.getByLabelText("Initial explanation"), { target: { value: "A detail should bear on the named outcome instead of merely sharing the topic." } });
+    fireEvent.click(screen.getByRole("button", { name: "Continue to two readings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reject these readings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Name the disagreement" }));
+    expect(screen.getByText("Commit a prediction")).toBeTruthy();
+
+    cleanup();
+    render(<ArgumentEvidenceWorld />);
+    reachSupport();
+    expect(screen.queryByTestId("argument-evidence-worked-support-table")).toBeNull();
+    fireEvent.click(screen.getByTestId("argument-evidence-support"));
+    fireEvent.click(screen.getByTestId("argument-evidence-support"));
+    expect(screen.queryByTestId("argument-evidence-worked-support-table")).toBeNull();
+    fireEvent.click(screen.getByTestId("argument-evidence-support"));
+    const table = screen.getByTestId("argument-evidence-worked-support-table");
+    expect(table.textContent).toContain(ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.worked.claim);
+    for (const itemId of ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.worked.selectableItemIds) {
+      expect(table.textContent).toContain(ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.worked.items.find((item) => item.id === itemId)!.text);
+    }
+    expect(table.textContent).not.toContain(ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.worked.expected.relationId);
+    expect(table.textContent).not.toContain(ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.worked.items[1].why);
   });
 
   it("keeps the access-preserving proof scene free of instructional tools and emits one bounded receipt", async () => {
     const onRuntimeReceipt = vi.fn();
     render(<ArgumentEvidenceWorld onRuntimeReceipt={onRuntimeReceipt} />);
+    fireEvent.change(screen.getByLabelText("Initial confidence"), { target: { value: "73" } });
     reachTransfer();
     const transfer = screen.getByTestId("argument-evidence-stage-transfer");
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("main")));
@@ -64,6 +98,7 @@ describe("ArgumentEvidenceWorld", () => {
     fireEvent.click(screen.getByLabelText(/The centre logged 31 late arrivals/i));
     fireEvent.click(screen.getByLabelText("Compares named outcome"));
     fireEvent.click(screen.getByLabelText("Other changes not ruled out"));
+    fireEvent.change(screen.getByLabelText("Transfer confidence"), { target: { value: "87" } });
     fireEvent.click(screen.getByTestId("argument-evidence-submit-transfer"));
     expect(screen.getByTestId("argument-evidence-stage-result").textContent).toContain("Demonstrated on this one task");
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
@@ -75,7 +110,16 @@ describe("ArgumentEvidenceWorld", () => {
     expect(screen.getByRole("status").textContent).toContain("Bounded result");
     fireEvent.click(screen.getByRole("button", { name: "Start this world again" }));
     expect(screen.getByTestId("argument-evidence-stage-mystery")).toBeTruthy();
+    expect((screen.getByLabelText("Initial confidence") as HTMLInputElement).value).toBe(String(ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.defaults.initialConfidence));
     expect(onRuntimeReceipt).toHaveBeenCalledTimes(1);
+    reachTransfer();
+    expect((screen.getByLabelText("Transfer confidence") as HTMLInputElement).value).toBe(String(ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.defaults.transferConfidence));
+    fireEvent.click(screen.getByLabelText(/The centre logged 31 late arrivals/i));
+    fireEvent.click(screen.getByLabelText("Compares named outcome"));
+    fireEvent.click(screen.getByLabelText("Other changes not ruled out"));
+    fireEvent.click(screen.getByTestId("argument-evidence-submit-transfer"));
+    await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(2));
+    expect(onRuntimeReceipt.mock.calls[1]?.[0].attemptId).not.toBe(onRuntimeReceipt.mock.calls[0]?.[0].attemptId);
   });
 
   it("emits a bounded failed receipt without leaking internal rejection labels", async () => {

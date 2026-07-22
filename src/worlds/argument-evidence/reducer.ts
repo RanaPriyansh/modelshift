@@ -1,10 +1,13 @@
 import {
   ARGUMENT_EVIDENCE_CAPABILITY_ID,
+  ARGUMENT_EVIDENCE_AUTHORED_FIXTURE,
   ARGUMENT_EVIDENCE_PROOF_CLAIM_ID,
   ARGUMENT_EVIDENCE_RESULT_BOUNDARIES,
   ARGUMENT_EVIDENCE_VALIDATOR_ID,
   ARGUMENT_EVIDENCE_WORLD_ID,
   ARGUMENT_EVIDENCE_WORLD_VERSION,
+  parseArgumentEvidenceWorldEvent,
+  SUPPORT_LEVELS,
 } from "./content";
 import type {
   ArgumentEvidenceProofRecord,
@@ -80,14 +83,16 @@ function proofFor(state: ArgumentEvidenceWorldState): ArgumentEvidenceProofRecor
     demonstrated: evaluation.passed
       ? ARGUMENT_EVIDENCE_RESULT_BOUNDARIES.demonstrated
       : ARGUMENT_EVIDENCE_RESULT_BOUNDARIES.notDemonstrated,
-    notYetTested: ARGUMENT_EVIDENCE_RESULT_BOUNDARIES.notYetTested,
+    notYetTested: ARGUMENT_EVIDENCE_RESULT_BOUNDARIES.remainsUntested,
   };
 }
 
 export function transitionArgumentEvidenceWorld(
   state: ArgumentEvidenceWorldState,
-  event: ArgumentEvidenceWorldEvent,
+  candidate: ArgumentEvidenceWorldEvent,
 ): ArgumentEvidenceTransitionResult {
+  const event = parseArgumentEvidenceWorldEvent(candidate);
+  if (!event) return reject(state, "invalid_event_shape");
   if (event.type === "RESET") return accept(createInitialArgumentEvidenceState());
 
   if (state.stage === "MYSTERY" && event.type === "COMMIT_INITIAL") {
@@ -127,21 +132,26 @@ export function transitionArgumentEvidenceWorld(
     if (!state.comparisonRevealed) return reject(state, "comparison_not_revealed");
     if (!state.workedEvidenceItemId || !state.workedRelationId) return reject(state, "worked_classification_incomplete");
     const attempts = state.workedTestAttempts + 1;
-    if (state.workedEvidenceItemId !== "roof.outcome-linked" || state.workedRelationId !== "supports_with_limit") {
+    if (
+      state.workedEvidenceItemId !== ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.worked.expected.evidenceItemId
+      || state.workedRelationId !== ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.worked.expected.relationId
+    ) {
       return reject({ ...state, workedTestAttempts: attempts }, "worked_classification_mismatch");
     }
     return accept({ ...state, stage: "SUPPORT", workedTestAttempts: attempts });
   }
   if (state.stage === "SUPPORT" && event.type === "CONSUME_AUTHORED_SUPPORT") {
-    const nextLevel = state.supportUsed.length + 1;
-    if (event.level !== nextLevel || event.level > 3) return reject(state, "support_level_out_of_order");
+    const nextLevel = SUPPORT_LEVELS[state.supportUsed.length];
+    if (event.level !== nextLevel) return reject(state, "support_level_out_of_order");
     return accept({ ...state, supportUsed: [...state.supportUsed, event.level] as const });
   }
   if (state.stage === "SUPPORT" && event.type === "CONTINUE_TO_RECONSTRUCTION") {
     return accept({ ...state, stage: "RECONSTRUCT" });
   }
   if (state.stage === "RECONSTRUCT" && event.type === "SUBMIT_RECONSTRUCTION") {
-    if (event.ruleId !== "outcome_relation") return reject(state, "reconstruction_mismatch");
+    if (event.ruleId !== ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.reconstruction.expectedRuleId) {
+      return reject(state, "reconstruction_mismatch");
+    }
     if (event.text.trim().length < 12) return reject(state, "reconstruction_too_short");
     return accept({ ...state, stage: "WITHDRAWAL", reconstructionRuleId: event.ruleId, reconstructionText: event.text.trim() });
   }

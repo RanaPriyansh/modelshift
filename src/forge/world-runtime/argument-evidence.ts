@@ -3,6 +3,7 @@ import type { DeterministicValidationResult, WorldRuntimeActionKind, WorldRuntim
 import {
   createInitialArgumentEvidenceState,
   makeArgumentEvidenceTransferSubmission,
+  parseArgumentEvidenceWorldEvent,
   transitionArgumentEvidenceWorld,
   type ArgumentEvidenceProofRecord,
   type ArgumentEvidenceStage,
@@ -61,7 +62,9 @@ export const argumentEvidenceWorldRuntimeAdapter: WorldRuntimeAdapter<
   },
   stage: (state: ArgumentEvidenceWorldState) => STAGE_MAP[state.stage],
   initialSemanticStage: () => "encounter",
-  semanticStages(event: ArgumentEvidenceWorldEvent): readonly WorldRuntimeStage[] {
+  semanticStages(candidate: ArgumentEvidenceWorldEvent): readonly WorldRuntimeStage[] {
+    const event = parseArgumentEvidenceWorldEvent(candidate);
+    if (!event) return [];
     switch (event.type) {
       case "COMMIT_INITIAL": return ["commit_model"] as const;
       case "RESPOND_TO_TWO_READINGS": return ["interpret_two_readings"] as const;
@@ -75,11 +78,15 @@ export const argumentEvidenceWorldRuntimeAdapter: WorldRuntimeAdapter<
       default: return [];
     }
   },
-  classify(event: ArgumentEvidenceWorldEvent): WorldRuntimeActionKind {
+  classify(candidate: ArgumentEvidenceWorldEvent): WorldRuntimeActionKind {
+    const event = parseArgumentEvidenceWorldEvent(candidate);
+    if (!event) return "learner_operation";
     if (event.type === "CONSUME_AUTHORED_SUPPORT") return "instructional_support";
     return event.type === "RESET" ? "reset" : "learner_operation";
   },
-  supportEvent(event: ArgumentEvidenceWorldEvent): CanonicalSupportEvent | null {
+  supportEvent(candidate: ArgumentEvidenceWorldEvent): CanonicalSupportEvent | null {
+    const event = parseArgumentEvidenceWorldEvent(candidate);
+    if (!event) return null;
     return event.type === "CONSUME_AUTHORED_SUPPORT" ? supportEvent(event.level) : null;
   },
   proof,
