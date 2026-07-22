@@ -232,13 +232,20 @@ const requiredReceiptStages: readonly WorldRuntimeStage[] = [
   "encounter", "commit_model", "interpret_two_readings", "name_disagreement", "commit_test_prediction",
   "run_separating_experience", "reconstruct", "withdraw_instructional_ai", "cold_transfer", "bounded_result",
 ];
+const governedSupportReceiptIndex = requiredReceiptStages.indexOf("reconstruct");
+const receiptStagesWithGovernedSupport: readonly WorldRuntimeStage[] = [
+  ...requiredReceiptStages.slice(0, governedSupportReceiptIndex),
+  "governed_support",
+  ...requiredReceiptStages.slice(governedSupportReceiptIndex),
+];
 
 function hasCompleteReceiptTrace(trace: readonly unknown[]): boolean {
-  const core = trace.filter((stage): stage is WorldRuntimeStage =>
-    typeof stage === "string" && requiredReceiptStages.includes(stage as WorldRuntimeStage),
-  );
-  return core.length === requiredReceiptStages.length &&
-    requiredReceiptStages.every((stage, index) => core[index] === stage);
+  const equals = (expected: readonly WorldRuntimeStage[]) =>
+    trace.length === expected.length && trace.every((stage, index) => stage === expected[index]);
+  // A bounded attempt receipt is emitted at bounded_result and is immutable.
+  // return_or_apply is therefore never part of this receipt. Governed support
+  // is the only optional trace stage and has one canonical pre-proof slot.
+  return equals(requiredReceiptStages) || equals(receiptStagesWithGovernedSupport);
 }
 
 function isBoundedMetadataId(value: unknown): value is string {
