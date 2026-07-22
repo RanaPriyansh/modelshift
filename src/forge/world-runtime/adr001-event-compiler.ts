@@ -19,6 +19,7 @@ import {
   isBoundedLocalWorldRuntimeReceipt,
   type BoundedLocalWorldRuntimeReceipt,
   type RuntimeSourceBindingReceipt,
+  WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION,
 } from "./protocol";
 import { lintWorldRuntimePack } from "./linter";
 import { retainedRuntimeIdentityFor } from "./retained-runtime-binding";
@@ -89,6 +90,36 @@ function reject(
 
 function sameCanonicalJson(left: unknown, right: unknown): boolean {
   return canonicalJson(left) === canonicalJson(right);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isNonemptyBoundedLimitationList(value: unknown): value is readonly string[] {
+  return Array.isArray(value)
+    && value.length >= 1
+    && value.length <= 16
+    && value.every((item) => typeof item === "string" && item.length > 0 && item.length <= 240);
+}
+
+/**
+ * Preserve the exact receipt gate while giving a recognizable envelope's
+ * package-owned limitation field its dedicated rejection code. The repaired
+ * copy is only used for classification; it never types or admits the caller's
+ * original value.
+ */
+function hasInvalidRemainsUntestedInRecognizableReceipt(value: unknown): boolean {
+  if (
+    !isRecord(value)
+    || value.kind !== "forge.runtime.bounded-local-attempt"
+    || value.schemaVersion !== WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION
+    || isNonemptyBoundedLimitationList(value.remainsUntested)
+  ) return false;
+  return isBoundedLocalWorldRuntimeReceipt({
+    ...value,
+    remainsUntested: ["package-owned-limitation-placeholder"],
+  });
 }
 
 function receiptSourceBindings(runtime: WorldRuntimeBinding): readonly RuntimeSourceBindingReceipt[] {
@@ -276,6 +307,9 @@ export async function compileWorldRuntimeReceiptToAdr001(
   input: WorldRuntimeAdr001CompilerInput,
 ): Promise<WorldRuntimeAdr001CompileResult> {
   if (!isBoundedLocalWorldRuntimeReceipt(input.receipt)) {
+    if (hasInvalidRemainsUntestedInRecognizableReceipt(input.receipt)) {
+      return reject("remains_untested_mismatch", "Receipt limitations must be a nonempty bounded list before exact released-list comparison.");
+    }
     return reject("malformed_receipt", "The compiler accepts only an exact bounded-local runtime receipt shape.");
   }
   const receipt = input.receipt;
