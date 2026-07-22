@@ -41,7 +41,18 @@ const FORBIDDEN_CLIENT_PATTERNS = [
 const MAX_HTML = 1_500_000;
 const MAX_HEALTH = 32_000;
 const MAX_ASSET = 2_000_000;
-const MAX_ASSETS = 24;
+/**
+ * Hard cap for the distinct, same-origin Next.js scripts referenced by the
+ * initial HTML of every canonical route. Wave 4 currently emits 25 such
+ * chunks across the nine inspected routes; 32 leaves seven deliberate slots
+ * for reviewed top-level product growth while keeping the read-only scan
+ * bounded. This does not enumerate hydration-only chunks.
+ *
+ * Raise this only with a new observed-count measurement, this boundary-test
+ * update, and a release-operations contract review. The verifier must still
+ * fetch and secret-scan every admitted initial asset.
+ */
+export const INITIAL_HTML_CLIENT_ASSET_BUDGET = 32;
 const BLOCKED_HOSTNAMES = new Set(["localhost", "metadata", "metadata.google.internal", "instance-data.ec2.internal"]);
 const DIGEST = /^[0-9a-f]{64}$/i;
 type FetchLike = typeof fetch;
@@ -398,8 +409,8 @@ export async function verifyDeployment(options: VerifyDeploymentOptions): Promis
       const found = scripts(html, origin); record(checks, `${route.id}.script_origins`, found.rejected === 0, "client scripts are same-origin versioned Next.js assets"); for (const url of found.urls) assets.set(url.href, url);
     } catch { record(checks, `${route.id}.request`, false, `${route.path} failed or exceeded a verification bound`); }
   }
-  record(checks, "client_assets.bounded_count", assets.size > 0 && assets.size <= MAX_ASSETS, `client asset set is non-empty and no larger than ${MAX_ASSETS}`);
-  if (assets.size <= MAX_ASSETS) for (const [index, url] of [...assets.values()].sort((a, b) => a.href.localeCompare(b.href)).entries()) {
+  record(checks, "client_assets.bounded_count", assets.size > 0 && assets.size <= INITIAL_HTML_CLIENT_ASSET_BUDGET, `initial HTML client asset set contains ${assets.size} distinct assets and is non-empty and no larger than ${INITIAL_HTML_CLIENT_ASSET_BUDGET}`);
+  if (assets.size <= INITIAL_HTML_CLIENT_ASSET_BUDGET) for (const [index, url] of [...assets.values()].sort((a, b) => a.href.localeCompare(b.href)).entries()) {
     try { const response = await get(fetchImpl, url, timeoutMs, targetAddresses, resolver, fetchImpl === fetch, MAX_ASSET); const body = await readBounded(response, MAX_ASSET); const leaks = forbidden(body); record(checks, `client_asset.${index + 1}`, response.status === 200 && leaks.length === 0, leaks.length === 0 ? "client asset is reachable and contains no forbidden secret pattern" : `client asset contains forbidden pattern categories: ${leaks.join(", ")}`); } catch { record(checks, `client_asset.${index + 1}`, false, "client asset failed or exceeded a verification bound"); }
   }
   let passed = checks.filter((item) => item.status === "pass").length; let failed = checks.length - passed;
