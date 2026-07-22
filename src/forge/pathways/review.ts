@@ -125,7 +125,31 @@ function capabilityFor(
   return catalog.capabilities.find((candidate) => candidate.capabilityId === entitlement.capabilityId);
 }
 
-const CLAIM_OVERREACH = /\b(master(?:y|ed)?|certif(?:y|ied|ication)|accredit(?:ed|ation)|legal(?:ly)? compliant|safe(?:ty)? proven|guarantee(?:d)?|ready for enrollment|homeschool[- ]?ready|(?:homeschool|education|school) solutions?|suitab(?:le|ility)|replaces? (?:school|education)|(?:school|education) replacement|replacement for (?:school|education)|universal replacement|lifelong (?:capability|learning)|(?:delayed[- ]?)?retention|(?:broad|far)[- ]?transfer)\b/i;
+const CLAIM_OVERREACH_TERM = /\b(master(?:y|ed)?|certif(?:y|ied|ication)|accredit(?:ed|ation)|legal(?:ly)? compliant|safe(?:ty)? proven|guarantee(?:d)?|ready for enrollment|homeschool[- ]?ready|(?:homeschool|education|school) solutions?|suitab(?:le|ility)|replaces? (?:school|education)|(?:school|education) replacement|replacement for (?:school|education)|universal replacement|lifelong (?:capability|learning)|(?:delayed[- ]?)?retention|(?:broad|far)[- ]?transfer)\b/gi;
+
+const EXPLICIT_LIMITATION_PREFIXES = [
+  /\b(?:does\s+not|doesn't|cannot|can't|will\s+not|won't|never)\s+(?:establish|prove|demonstrate|show|guarantee|certify|confirm|validate|support)\s+([\s\S]*)$/i,
+  /\b(?:is|are|was|were|be)\s+(?:not|never)\s+(?:an?\s+|the\s+)?([\s\S]*)$/i,
+] as const;
+
+const POSITIVE_CONTINUATION = /(?:\b(?:but|however|yet|although|instead|rather|not\s+only)\b|[;:]|\b(?:prove|establish|demonstrate|show|guarantee|certif(?:y|ies|ied)|confirm|validate|support)(?:s|d|ing)?\b)/i;
+
+function hasExplicitLimitationScope(statement: string, termIndex: number): boolean {
+  const lastBoundary = Math.max(
+    statement.lastIndexOf(".", termIndex - 1),
+    statement.lastIndexOf("!", termIndex - 1),
+    statement.lastIndexOf("?", termIndex - 1),
+  );
+  const prefix = statement.slice(lastBoundary + 1, termIndex);
+  return EXPLICIT_LIMITATION_PREFIXES.some((pattern) => {
+    const match = pattern.exec(prefix);
+    return match !== null && !POSITIVE_CONTINUATION.test(match[1]);
+  });
+}
+
+function isClaimOverreach(statement: string): boolean {
+  return [...statement.matchAll(CLAIM_OVERREACH_TERM)].some((match) => !hasExplicitLimitationScope(statement, match.index ?? 0));
+}
 
 const CLAIM_KIND_EVENT_TYPES = {
   "participation-recorded": ["world_run.started", "attempt.committed"],
@@ -248,7 +272,7 @@ function reviewPacket(packet: PathwayReviewPacket, catalog: PathwayCapabilityCat
       add(issues, "evidence.claim-event-mismatch", `evidenceClaims.${claim.id}.eventType`, "Claim kind and event type must have a compatible bounded meaning.");
     }
     if (claim.sourceIds.some((sourceId) => !capability.sourceIds.includes(sourceId))) add(issues, "evidence.source-mismatch", `evidenceClaims.${claim.id}.sourceIds`, "Evidence source IDs must come from the released World manifest.");
-    if (CLAIM_OVERREACH.test(claim.statement)) add(issues, "evidence.claim-overreach", `evidenceClaims.${claim.id}.statement`, "Event evidence records a bounded observation, not a broad learner or pathway conclusion.");
+    if (isClaimOverreach(claim.statement)) add(issues, "evidence.claim-overreach", `evidenceClaims.${claim.id}.statement`, "Event evidence records a bounded observation, not a broad learner or pathway conclusion.");
   }
 
   return issues;
