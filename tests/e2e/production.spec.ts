@@ -17,6 +17,9 @@ const FALLBACK_INTERPRETATION = {
   abstain_reason: "model_uncertain",
   source: "fallback",
   fallback_reason: "missing_key",
+  providerId: null,
+  modelId: null,
+  policyId: "policy.force-and-motion.interpretation.v1",
 };
 
 const ADAPTIVE_INTERPRETATION = {
@@ -38,6 +41,9 @@ const ADAPTIVE_INTERPRETATION = {
   abstain: false,
   abstain_reason: "none",
   source: "model",
+  providerId: "openai",
+  modelId: "test-model",
+  policyId: "policy.force-and-motion.interpretation.v1",
 };
 
 const EXPLANATION = "The craft may slow because I think motion needs a continuing push.";
@@ -177,7 +183,7 @@ test.describe("FORGE force-and-motion World journey", () => {
     await expect(page.getByRole("link", { name: "Skip to learning world" })).toBeFocused();
     await tabTo(page, page.getByRole("link", { name: "Skip to the experiment" }));
     await page.keyboard.press("Enter");
-    await expect(page.locator("#main-content")).toBeFocused();
+    await expect(page.locator('main[id^="force-motion-main-"]')).toBeFocused();
 
     await keyboardActivate(page, page.getByRole("radio", { name: "Stops immediately" }));
     await page.keyboard.press("ArrowDown");
@@ -255,7 +261,7 @@ test.describe("FORGE force-and-motion World journey", () => {
     await expect(page.getByRole("heading", { name: "The test that separates the models" })).toBeVisible();
     await expect(page.getByText("Friction or no friction?", { exact: true })).toBeVisible();
     await page.getByText("How this test was chosen").click();
-    await expect(page.getByText(/Validated model interpretation, after schema and semantic validation/)).toBeVisible();
+    await expect(page.getByText(/openai \/ test-model, after schema and semantic validation/)).toBeVisible();
 
     await page.getByRole("radio", { name: /The no-resistance puck/ }).press("Space");
     await page.getByRole("button", { name: /Commit and open the test/ }).click();

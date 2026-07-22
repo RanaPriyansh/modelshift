@@ -22,6 +22,9 @@ const FALLBACK_INTERPRETATION = {
   abstain_reason: "model_uncertain",
   source: "fallback",
   fallback_reason: "missing_key",
+  providerId: null,
+  modelId: null,
+  policyId: "policy.force-and-motion.interpretation.v1",
 } as const;
 
 type RouteCase = {
