@@ -11,7 +11,7 @@ import type { PrimarySourceWorldEvent } from "../../worlds/primary-source-reason
 import type { ArgumentEvidenceWorldEvent } from "../../worlds/argument-evidence";
 import type { RatioWorldEvent } from "../../worlds/proportional-reasoning";
 import { packageIntegrityHash, runtimeBindingDigest } from "../../../scripts/ops/release-digests";
-import { BUILT_IN_WORLD_PACKS } from "../worlds";
+import { INTERNAL_BUILT_IN_WORLD_PACKS as BUILT_IN_WORLD_PACKS } from "../worlds.internal";
 import type { WorldRuntimeActionKind, WorldRuntimeStage } from "../contracts";
 import {
   isBoundedLocalWorldRuntimeReceipt,
@@ -25,7 +25,11 @@ import { primarySourceWorldRuntimeAdapter } from "./primary-source";
 import { argumentEvidenceWorldRuntimeAdapter } from "./argument-evidence";
 import { proportionalReasoningWorldRuntimeAdapter } from "./proportional-reasoning";
 import { createWorldRuntimeSession, dispatchWorldRuntimeCommand } from "./runtime";
-import { retainedRuntimeIdentityFor } from "./retained-runtime-binding";
+import {
+  createInternalWorldRuntimeSession,
+  dispatchInternalWorldRuntimeCommand,
+} from "./runtime.internal";
+import { retainedRuntimeIdentityForInternal } from "./retained-runtime-binding.internal";
 import { sourceCorroborationWorldRuntimeAdapter } from "./source-corroboration";
 
 const EXACT_RECEIPT_TRACE = [
@@ -115,11 +119,21 @@ interface FixtureDefinition<State, Event, Proof> {
   readonly instructionalSupportEvent?: Event;
   readonly rawLearnerProse: readonly string[];
   readonly expectedCognitiveSupport: readonly CanonicalSupportEvent[];
+  readonly internalAuthority?: boolean;
 }
 
 function defineFixture<State, Event, Proof>(definition: FixtureDefinition<State, Event, Proof>): ConformanceFixture {
+  const createSession = (attemptId?: string) => definition.internalAuthority
+    ? createInternalWorldRuntimeSession(definition.adapter, attemptId)
+    : createWorldRuntimeSession(definition.adapter, attemptId);
+  const dispatch = (
+    session: ReturnType<typeof createSession>,
+    command: RuntimeCommand<Event>,
+  ) => definition.internalAuthority
+    ? dispatchInternalWorldRuntimeCommand(definition.adapter, session, command)
+    : dispatchWorldRuntimeCommand(definition.adapter, session, command);
   const runEvents = (events: readonly Event[], attemptId?: string): TerminalObservation => {
-    let runtime = createWorldRuntimeSession(definition.adapter, attemptId);
+    let runtime = createSession(attemptId);
     let domainState = definition.adapter.createInitialState();
     for (const event of events) {
       const domain = definition.adapter.reduce(domainState, event);
@@ -127,7 +141,7 @@ function defineFixture<State, Event, Proof>(definition: FixtureDefinition<State,
       if (!domain.accepted) throw new Error(`${definition.name} domain fixture rejected: ${domain.reason}`);
       domainState = domain.state;
 
-      const dispatched = dispatchWorldRuntimeCommand(definition.adapter, runtime, { kind: "domain", event });
+      const dispatched = dispatch(runtime, { kind: "domain", event });
       expect(dispatched.accepted, dispatched.accepted ? undefined : dispatched.reason).toBe(true);
       if (!dispatched.accepted) throw new Error(`${definition.name} runtime fixture rejected: ${dispatched.reason}`);
       runtime = dispatched.session;
@@ -144,9 +158,9 @@ function defineFixture<State, Event, Proof>(definition: FixtureDefinition<State,
   };
 
   const runToProof = () => {
-    let runtime = createWorldRuntimeSession(definition.adapter);
+    let runtime = createSession();
     for (const event of definition.toProof) {
-      const dispatched = dispatchWorldRuntimeCommand(definition.adapter, runtime, { kind: "domain", event });
+      const dispatched = dispatch(runtime, { kind: "domain", event });
       if (!dispatched.accepted) throw new Error(`${definition.name} proof fixture rejected: ${dispatched.reason}`);
       runtime = dispatched.session;
     }
@@ -171,7 +185,7 @@ function defineFixture<State, Event, Proof>(definition: FixtureDefinition<State,
     },
     runMalformed() {
       const runtime = runToProof();
-      const rejected = dispatchWorldRuntimeCommand(definition.adapter, runtime, {
+      const rejected = dispatch(runtime, {
         kind: "domain",
         event: definition.malformedSubmission,
       });
@@ -190,7 +204,7 @@ function defineFixture<State, Event, Proof>(definition: FixtureDefinition<State,
 
       let supportReason: string | null = null;
       if (definition.instructionalSupportEvent !== undefined) {
-        const support = dispatchWorldRuntimeCommand(definition.adapter, runtime, {
+        const support = dispatch(runtime, {
           kind: "domain",
           event: definition.instructionalSupportEvent,
         });
@@ -204,12 +218,12 @@ function defineFixture<State, Event, Proof>(definition: FixtureDefinition<State,
       ];
       const protectedReasons: Array<string | null> = [];
       for (const command of protectedCommands) {
-        const rejected = dispatchWorldRuntimeCommand(definition.adapter, runtime, command);
+        const rejected = dispatch(runtime, command);
         protectedReasons.push(rejected.accepted ? null : rejected.reason);
         runtime = rejected.session;
       }
 
-      const access = dispatchWorldRuntimeCommand(definition.adapter, runtime, {
+      const access = dispatch(runtime, {
         kind: "access_accommodation",
         accommodationId: definition.accessAccommodationId,
       });
@@ -230,13 +244,13 @@ function defineFixture<State, Event, Proof>(definition: FixtureDefinition<State,
     },
     resetCompletedAttempt() {
       const completed = runEvents([...definition.toProof, ...definition.passSubmission]);
-      let runtime = createWorldRuntimeSession(definition.adapter, completed.attemptId);
+      let runtime = createSession(completed.attemptId);
       for (const event of [...definition.toProof, ...definition.passSubmission]) {
-        const dispatched = dispatchWorldRuntimeCommand(definition.adapter, runtime, { kind: "domain", event });
+        const dispatched = dispatch(runtime, { kind: "domain", event });
         if (!dispatched.accepted) throw new Error(`${definition.name} reset fixture rejected: ${dispatched.reason}`);
         runtime = dispatched.session;
       }
-      const reset = dispatchWorldRuntimeCommand(definition.adapter, runtime, {
+      const reset = dispatch(runtime, {
         kind: "domain",
         event: definition.resetEvent,
       });
@@ -461,6 +475,7 @@ const FIXTURES: readonly ConformanceFixture[] = [
   }),
   defineFixture({
     name: "Argument & Evidence",
+    internalAuthority: true,
     adapter: argumentEvidenceWorldRuntimeAdapter,
     toProof: argumentEvidenceToProof,
     passSubmission: [
@@ -604,15 +619,19 @@ describe.each(FIXTURES)("$name shared-runtime conformance", (fixture) => {
 });
 
 describe("all released runtime World receipt projection and release identity", () => {
-  it("accepts each canonical receipt once and rejects its deterministic duplicate", () => {
+  it("projects only public canonical receipts and rejects the retained unavailable receipt", () => {
     const storage = new MemoryStorage();
     vi.stubGlobal("window", { localStorage: storage });
 
     for (const [index, fixture] of FIXTURES.entries()) {
       const receipt = fixture.runTerminal("pass", `attempt.conformance-${index}-${fixture.worldId.replaceAll(".", "-")}`).receipt;
       if (!receipt) throw new Error(`${fixture.name} did not emit a receipt.`);
-      expect(recordWorldRuntimeReceipt(receipt)).toMatchObject({ ok: true });
-      expect(recordWorldRuntimeReceipt(receipt)).toMatchObject({ ok: false, reason: "duplicate_entry" });
+      if (fixture.pack.manifest.availability.status === "available") {
+        expect(recordWorldRuntimeReceipt(receipt)).toMatchObject({ ok: true });
+        expect(recordWorldRuntimeReceipt(receipt)).toMatchObject({ ok: false, reason: "duplicate_entry" });
+      } else {
+        expect(recordWorldRuntimeReceipt(receipt)).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
+      }
     }
     const persistedLedgerJson = storage.snapshot();
     for (const fixture of FIXTURES) {
@@ -651,7 +670,7 @@ describe("all released runtime World receipt projection and release identity", (
         });
       } else {
         expect(retainedEntry).toBeUndefined();
-        expect(retainedRuntimeIdentityFor(fixture.pack)).toMatchObject({
+        expect(retainedRuntimeIdentityForInternal(fixture.pack)).toMatchObject({
           runtimeBindingDigest: runtimeBindingDigest(fixture.pack.runtime),
           packageIntegrityHash: packageIntegrityHash(fixture.pack),
         });

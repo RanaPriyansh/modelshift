@@ -6,18 +6,9 @@ import {
   PRIMARY_SOURCE_WORLD_VERSION,
 } from "../worlds/primary-source-reasoning";
 import {
-  ARGUMENT_EVIDENCE_CAPABILITY_ID,
-  ARGUMENT_EVIDENCE_CONTENT_VERSION,
-  ARGUMENT_EVIDENCE_PROOF_CLAIM_ID,
-  ARGUMENT_EVIDENCE_VALIDATOR_ID,
-  ARGUMENT_EVIDENCE_WORLD_ID,
-  ARGUMENT_EVIDENCE_WORLD_VERSION,
-} from "../worlds/argument-evidence";
-import {
   FORCE_AND_MOTION_VALIDATOR_ID,
   PROPORTIONAL_REASONING_VALIDATOR_ID,
   SOURCE_CORROBORATION_VALIDATOR_ID,
-  argumentEvidenceTransferValidator,
   forceAndMotionTransferValidator,
   primarySourceReasoningTransferValidator,
   proportionalReasoningTransferValidator,
@@ -32,7 +23,6 @@ import { FORCE_AND_MOTION_RUNTIME_BINDING } from "./world-runtime/force-and-moti
 import { PRIMARY_SOURCE_RUNTIME_BINDING } from "./world-runtime/primary-source-binding";
 import { PROPORTIONAL_REASONING_RUNTIME_BINDING } from "./world-runtime/proportional-reasoning-binding";
 import { SOURCE_CORROBORATION_RUNTIME_BINDING } from "./world-runtime/source-corroboration-binding";
-import { ARGUMENT_EVIDENCE_RUNTIME_BINDING } from "./world-runtime/argument-evidence-binding";
 
 const AI_OFF = {
   mode: "off",
@@ -50,7 +40,6 @@ export {
   primarySourceReasoningTransferValidator,
   proportionalReasoningTransferValidator,
   sourceCorroborationTransferValidator,
-  argumentEvidenceTransferValidator,
 } from "./deterministic-validators";
 
 export const OPENSTAX_NEWTONS_FIRST_LAW_SOURCE = {
@@ -160,19 +149,6 @@ export const LOC_WASHINGTON_STREET_SOURCE = {
     reviewedBy: "Forge curriculum source review",
     reviewedAt: "2026-07-22T00:00:00.000Z",
   },
-} as const satisfies SourceProvenance;
-
-/** A local authored-fixture identity, deliberately pending rather than a reviewed source authority. */
-export const ARGUMENT_EVIDENCE_AUTHORED_FIXTURE_SOURCE = {
-  id: "source.argument-evidence.authored-fixture",
-  title: "Argument & Evidence fictional authored fixture",
-  publisher: "FORGE authored fixture",
-  kind: "expert-authored",
-  url: "forge-internal:source.argument-evidence.authored-fixture",
-  contentVersion: ARGUMENT_EVIDENCE_CONTENT_VERSION,
-  accessedAt: "2026-07-22T00:00:00.000Z",
-  license: "FORGE internal authored curriculum candidate",
-  review: { status: "pending" },
 } as const satisfies SourceProvenance;
 
 export const FORCE_AND_MOTION_WORLD = {
@@ -533,102 +509,23 @@ export const PRIMARY_SOURCE_REASONING_WORLD = {
   runtime: PRIMARY_SOURCE_RUNTIME_BINDING,
 } satisfies LearningWorldPack;
 
-/**
- * Retained executable package only. It is not curriculum/public release:
- * no public catalog, planner, pathway, child surface, or static learner route
- * may be derived from this unavailable package.
- */
-export const ARGUMENT_EVIDENCE_WORLD = {
-  manifest: {
-    schemaVersion: "1.0",
-    id: ARGUMENT_EVIDENCE_WORLD_ID,
-    version: ARGUMENT_EVIDENCE_WORLD_VERSION,
-    route: "/learn/argument-evidence",
-    title: "Argument & evidence",
-    summary: "A retained authored-fixture package that separates topical detail from outcome-linked evidence in one bounded transfer task.",
-    kind: "evidence",
-    evidenceTier: "exploratory",
-    ageModes: ["13-17", "18-plus"],
-    depthModes: ["introductory", "core"],
-    availability: {
-      status: "unavailable",
-      reason: "Retained package only: source, access, curriculum, independent review, and publication authority remain incomplete.",
-    },
-    capabilityIds: [ARGUMENT_EVIDENCE_CAPABILITY_ID],
-    sources: [ARGUMENT_EVIDENCE_AUTHORED_FIXTURE_SOURCE],
-    deterministicValidatorId: ARGUMENT_EVIDENCE_VALIDATOR_ID,
-    aiBoundary: AI_OFF,
-    returnProof: {
-      enabled: false,
-      reason: "No reviewed delayed task family or scheduler is published.",
-      aiBoundary: AI_OFF,
-    },
-    safety: {
-      guardianManaged: false,
-      retrievalMode: "none",
-      inputModeration: false,
-      outputModeration: false,
-      escalationMessage: "This authored World stays on its bounded claim-to-evidence task and does not provide real-world fact-checking or advice.",
-      data: { collectPreciseLocation: false, trainOnLearnerContent: false, rawMediaRetention: "none" },
-      prohibitedPhysicalRisks: ["chemicals", "flames", "roads", "heights", "weapons", "mains-electricity", "stranger-contact"],
-    },
-  },
-  release: { status: "released", contentVersion: ARGUMENT_EVIDENCE_CONTENT_VERSION },
-  capabilities: [
-    {
-      id: ARGUMENT_EVIDENCE_CAPABILITY_ID,
-      version: "1.0.0",
-      title: "Relate evidence to an exact claim",
-      description: "Distinguish topical detail from an outcome-linked comparison and name one limitation in an authored claim-to-evidence task.",
-      domain: "language and literacy",
-      learnerCan: ["identify the authored item that bears on an exact claim", "name a bounded relation and limitation in one unfamiliar authored task"],
-      prerequisites: [],
-      representations: ["authored claim card", "paired evidence comparison", "claim-evidence-relation table", "cold-transfer table"],
-      proofClaimIds: [ARGUMENT_EVIDENCE_PROOF_CLAIM_ID],
-    },
-  ],
-  proofClaims: [
-    {
-      id: ARGUMENT_EVIDENCE_PROOF_CLAIM_ID,
-      capabilityId: ARGUMENT_EVIDENCE_CAPABILITY_ID,
-      statement: "On one unfamiliar authored bus-route task, the learner independently selects the outcome-linked item, relation, and named limitation after supports are withdrawn.",
-      successCriteria: ["selects the authored outcome-linked transfer item", "names the authored outcome-comparison relation", "names the authored limitation in one assistance-free submission"],
-      minimumEvidenceRecords: 1,
-      aiBoundary: AI_OFF,
-    },
-  ],
-  deterministicValidators: [
-    {
-      id: ARGUMENT_EVIDENCE_VALIDATOR_ID,
-      capabilityId: ARGUMENT_EVIDENCE_CAPABILITY_ID,
-      description: "Checks one authored claim-to-evidence cold-transfer selection without model judgment.",
-      inputContractVersion: "1.0.0",
-      outputContractVersion: "1.0.0",
-    },
-  ],
-  runtime: ARGUMENT_EVIDENCE_RUNTIME_BINDING,
-} satisfies LearningWorldPack;
-
 export const BUILT_IN_WORLD_PACKS = [
   FORCE_AND_MOTION_WORLD,
   PROPORTIONAL_REASONING_WORLD,
   SOURCE_CORROBORATION_WORLD,
   PRIMARY_SOURCE_REASONING_WORLD,
-  ARGUMENT_EVIDENCE_WORLD,
 ] as const;
 export const BUILT_IN_WORLD_IDS = [
   FORCE_AND_MOTION_WORLD.manifest.id,
   PROPORTIONAL_REASONING_WORLD.manifest.id,
   SOURCE_CORROBORATION_WORLD.manifest.id,
   PRIMARY_SOURCE_REASONING_WORLD.manifest.id,
-  ARGUMENT_EVIDENCE_WORLD.manifest.id,
 ] as const;
 export const BUILT_IN_WORLD_ROUTES = [
   FORCE_AND_MOTION_WORLD.manifest.route,
   PROPORTIONAL_REASONING_WORLD.manifest.route,
   SOURCE_CORROBORATION_WORLD.manifest.route,
   PRIMARY_SOURCE_REASONING_WORLD.manifest.route,
-  ARGUMENT_EVIDENCE_WORLD.manifest.route,
 ] as const;
 export const BUILT_IN_SOURCE_IDS = [
   OPENSTAX_NEWTONS_FIRST_LAW_SOURCE.id,
@@ -638,7 +535,6 @@ export const BUILT_IN_SOURCE_IDS = [
   LOC_PRIMARY_SOURCE_ANALYSIS_SOURCE.id,
   LOC_PHILADELPHIA_STREET_SOURCE.id,
   LOC_WASHINGTON_STREET_SOURCE.id,
-  ARGUMENT_EVIDENCE_AUTHORED_FIXTURE_SOURCE.id,
 ] as const;
 
 /** Explicit public projection: released packages become visible only after availability/publication review. */
@@ -689,5 +585,4 @@ export const BUILT_IN_DETERMINISTIC_VALIDATORS = [
   proportionalReasoningTransferValidator,
   sourceCorroborationTransferValidator,
   primarySourceReasoningTransferValidator,
-  argumentEvidenceTransferValidator,
 ] as const;

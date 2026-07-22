@@ -8,10 +8,10 @@ import {
   type ForgeAggregateProjection,
 } from "../event-journal";
 import {
-  getCanonicalDeterministicValidatorRegistration,
   validateCanonicalDeterministicResult,
 } from "../deterministic-validators";
-import { BUILT_IN_WORLD_PACKS } from "../worlds";
+import { getInternalCanonicalDeterministicValidatorRegistration } from "../deterministic-validators.internal";
+import { INTERNAL_BUILT_IN_WORLD_PACKS } from "../worlds.internal";
 import type { LearningWorldPack, WorldRuntimeBinding } from "../contracts";
 import {
   deriveCanonicalValidatorOutcome,
@@ -22,10 +22,10 @@ import {
   WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION,
 } from "./protocol";
 import { lintWorldRuntimePack } from "./linter";
-import { retainedRuntimeIdentityFor } from "./retained-runtime-binding";
+import { retainedRuntimeIdentityForInternal } from "./retained-runtime-binding.internal";
 
 /**
- * The compiler is deliberately an in-memory, client-safe boundary. It turns a
+ * The compiler is deliberately an in-memory internal compilation boundary. It turns a
  * receipt plus the transient canonical validator input into an ADR-001 v2
  * chain; it does not authenticate a learner, persist an event, or make the
  * local receipt independent evidence.
@@ -153,7 +153,7 @@ function receiptSourceBindings(runtime: WorldRuntimeBinding): readonly RuntimeSo
 }
 
 function releasedRuntimePack(worldId: string): (LearningWorldPack & { readonly runtime: WorldRuntimeBinding }) | null {
-  const candidate = BUILT_IN_WORLD_PACKS.find((pack) => pack.manifest.id === worldId);
+  const candidate = INTERNAL_BUILT_IN_WORLD_PACKS.find((pack) => pack.manifest.id === worldId);
   if (!candidate || candidate.release.status !== "released" || !candidate.runtime) return null;
   const lint = lintWorldRuntimePack(candidate);
   // The runtime linter has already checked the exact candidate. Keep this
@@ -353,7 +353,7 @@ export async function compileWorldRuntimeReceiptToAdr001(
     return reject("remains_untested_mismatch", "Receipt limitations must be the exact ordered nonempty released runtime limitation list.");
   }
 
-  const retainedIdentity = retainedRuntimeIdentityFor(pack);
+  const retainedIdentity = retainedRuntimeIdentityForInternal(pack);
   if (!retainedIdentity) {
     return reject("runtime_binding_digest_mismatch", "The released World has no retained runtime and package identity digests.");
   }
@@ -361,7 +361,7 @@ export async function compileWorldRuntimeReceiptToAdr001(
   const validatorDefinition = pack.deterministicValidators.find(
     (validator) => validator.id === runtime.proof.validatorId,
   );
-  const registration = getCanonicalDeterministicValidatorRegistration(runtime.proof.validatorId);
+  const registration = getInternalCanonicalDeterministicValidatorRegistration(runtime.proof.validatorId);
   if (
     !validatorDefinition
     || !registration

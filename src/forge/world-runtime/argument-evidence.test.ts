@@ -1,13 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import { argumentEvidenceTransferValidator } from "../deterministic-validators";
-import { ARGUMENT_EVIDENCE_WORLD } from "../worlds";
+import { argumentEvidenceTransferValidator } from "../deterministic-validators.internal";
+import { ARGUMENT_EVIDENCE_WORLD } from "../worlds.internal";
 import {
   ARGUMENT_EVIDENCE_AUTHORED_FIXTURE,
   type ArgumentEvidenceWorldEvent,
 } from "../../worlds/argument-evidence";
 import { argumentEvidenceWorldRuntimeAdapter } from "./argument-evidence";
-import { createWorldRuntimeSession, dispatchWorldRuntimeCommand } from "./runtime";
+import {
+  createInternalWorldRuntimeSession as createWorldRuntimeSession,
+  dispatchInternalWorldRuntimeCommand as dispatchWorldRuntimeCommand,
+} from "./runtime.internal";
+import {
+  createWorldRuntimeSession as createPublicWorldRuntimeSession,
+  WorldRuntimeConfigurationError,
+} from "./runtime";
 
 const toProof: readonly ArgumentEvidenceWorldEvent[] = [
   { type: "COMMIT_INITIAL", ruleId: ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.compiler.readings[0].id, confidence: 65 },
@@ -38,6 +45,12 @@ function run(events: readonly ArgumentEvidenceWorldEvent[]) {
 }
 
 describe("Argument & Evidence runtime adapter", () => {
+  it("cannot obtain retained authority through the public runtime entrypoint", () => {
+    expect(() => createPublicWorldRuntimeSession(argumentEvidenceWorldRuntimeAdapter)).toThrowError(
+      expect.objectContaining<Partial<WorldRuntimeConfigurationError>>({ code: "retained_runtime_binding_missing" }),
+    );
+  });
+
   it("emits canonical stages, only bounded validator input, and the three exact support facts", () => {
     const expected = ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.transfer.expected;
     const runtime = run([

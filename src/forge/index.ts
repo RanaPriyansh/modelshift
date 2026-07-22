@@ -68,19 +68,6 @@ export type {
 } from "./world-runtime";
 
 export {
-  compileWorldRuntimeReceiptToAdr001,
-  releasedWorldRuntimeIdentity,
-  WORLD_RUNTIME_ADR001_COMPILER_VERSION,
-} from "./world-runtime";
-
-export type {
-  ReleasedWorldRuntimeIdentity,
-  WorldRuntimeAdr001CompileResult,
-  WorldRuntimeAdr001CompilerErrorCode,
-  WorldRuntimeAdr001CompilerInput,
-} from "./world-runtime";
-
-export {
   WORLD_INVARIANT_CODES,
   WorldContractError,
   parseLearningWorldPack,
