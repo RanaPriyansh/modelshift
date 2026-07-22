@@ -15,6 +15,19 @@ import {
 import type { CanonicalValidatorProjection, WorldRuntimeAdapter } from "./protocol";
 import { createWorldRuntimeSession, dispatchWorldRuntimeCommand } from "./runtime";
 
+const REQUIRED_RECEIPT_TRACE = [
+  "encounter",
+  "commit_model",
+  "interpret_two_readings",
+  "name_disagreement",
+  "commit_test_prediction",
+  "run_separating_experience",
+  "reconstruct",
+  "withdraw_instructional_ai",
+  "cold_transfer",
+  "bounded_result",
+] as const;
+
 const WORKED_ASSIGNMENTS = [
   ["philadelphia-visible-detail", "observation"],
   ["philadelphia-catalog-fact", "catalog_fact"],
@@ -151,19 +164,19 @@ describe("Primary Source World runtime adapter", () => {
   });
 
   it("derives disposition in the runtime even if an adapter injects an incoherent value", () => {
-    type State = { readonly finished: boolean };
-    type Event = { readonly type: "FINISH" };
+    type State = { readonly step: number };
+    type Event = { readonly type: "ADVANCE" };
     const maliciousAdapter: WorldRuntimeAdapter<State, Event, { readonly attempt: "bounded" }> = {
       pack: primarySourceWorldRuntimeAdapter.pack,
-      createInitialState: () => ({ finished: false }),
-      reduce: () => ({ accepted: true, state: { finished: true } }),
-      phase: (state) => state.finished ? "bounded_result" : "learning",
+      createInitialState: () => ({ step: 0 }),
+      reduce: (state) => ({ accepted: true, state: { step: state.step + 1 } }),
+      phase: (state) => state.step === REQUIRED_RECEIPT_TRACE.length - 1 ? "bounded_result" : "learning",
       initialSemanticStage: () => "encounter",
-      semanticStages: () => ["bounded_result"],
-      stage: (state) => state.finished ? "bounded_result" : "encounter",
+      semanticStages: (_event, _priorState, nextState) => [REQUIRED_RECEIPT_TRACE[nextState.step]!],
+      stage: (state) => REQUIRED_RECEIPT_TRACE[state.step] ?? "bounded_result",
       classify: () => "learner_operation",
       supportEvent: () => null,
-      proof: (state) => state.finished ? { attempt: "bounded" } : null,
+      proof: (state) => state.step === REQUIRED_RECEIPT_TRACE.length - 1 ? { attempt: "bounded" } : null,
       projectValidator: () => ({
         outcome: "fail",
         criteria: ["criterion.synthetic"],
@@ -171,15 +184,136 @@ describe("Primary Source World runtime adapter", () => {
       } as unknown as CanonicalValidatorProjection),
       remainsUntested: () => [],
     };
-    const submitted = dispatchWorldRuntimeCommand(
-      maliciousAdapter,
-      createWorldRuntimeSession(maliciousAdapter),
-      { kind: "domain", event: { type: "FINISH" } },
-    );
+    let runtime = createWorldRuntimeSession(maliciousAdapter);
+    for (let step = 1; step < REQUIRED_RECEIPT_TRACE.length; step += 1) {
+      const dispatched = dispatchWorldRuntimeCommand(maliciousAdapter, runtime, { kind: "domain", event: { type: "ADVANCE" } });
+      expect(dispatched.accepted).toBe(true);
+      if (!dispatched.accepted) return;
+      runtime = dispatched.session;
+    }
+    const submitted = { accepted: true as const, session: runtime };
     expect(submitted).toMatchObject({
       accepted: true,
       session: { receipt: { validator: { outcome: "fail", disposition: "not_demonstrated" } } },
     });
+  });
+
+  it("requires the exact core trace before emitting a receipt, with governed support optional", () => {
+    let runtime = createWorldRuntimeSession(primarySourceWorldRuntimeAdapter);
+    const events = [
+      ...completeToProof(),
+      ...TRANSFER_ASSIGNMENTS.map(([statementId, category]) => ({ type: "SET_TRANSFER_ASSIGNMENT" as const, statementId, category })),
+      transferEvent(),
+    ];
+
+    for (const event of events) {
+      const dispatched = dispatchWorldRuntimeCommand(primarySourceWorldRuntimeAdapter, runtime, { kind: "domain", event });
+      expect(dispatched.accepted).toBe(true);
+      if (!dispatched.accepted) return;
+      runtime = dispatched.session;
+    }
+
+    expect(runtime.semanticTrace).toEqual(REQUIRED_RECEIPT_TRACE);
+    expect(runtime.cognitiveSupport).toEqual([]);
+    expect(runtime.receipt).toMatchObject({
+      authority: { proofAuthority: "honour_based", persistence: "not_persisted", isDurable: false },
+      protocol: { semanticTrace: REQUIRED_RECEIPT_TRACE },
+    });
+    expect(JSON.stringify(runtime.receipt)).not.toContain("The photograph, the catalog");
+
+    const reset = dispatchWorldRuntimeCommand(primarySourceWorldRuntimeAdapter, runtime, {
+      kind: "domain",
+      event: { type: "RESET" },
+    });
+    expect(reset).toMatchObject({
+      accepted: true,
+      session: {
+        phase: "learning",
+        semanticTrace: ["encounter"],
+        cognitiveSupport: [],
+        accessAccommodations: [],
+        proofBlockedActions: [],
+        receipt: null,
+        proof: null,
+      },
+    });
+  });
+
+  it("records a pre-compiler explanation sample as commit-model support without fabricating governed support", () => {
+    let runtime = createWorldRuntimeSession(primarySourceWorldRuntimeAdapter);
+    const initial = dispatchWorldRuntimeCommand(primarySourceWorldRuntimeAdapter, runtime, {
+      kind: "domain",
+      event: { type: "COMMIT_INITIAL", choiceId: "visible_detail", confidence: 70 },
+    });
+    expect(initial.accepted).toBe(true);
+    if (!initial.accepted) return;
+    runtime = initial.session;
+
+    const sample = dispatchWorldRuntimeCommand(primarySourceWorldRuntimeAdapter, runtime, {
+      kind: "domain",
+      event: { type: "USE_EXPLANATION_SAMPLE" },
+    });
+    expect(sample.accepted).toBe(true);
+    if (!sample.accepted) return;
+    expect(sample.session.semanticTrace).toEqual(["encounter", "commit_model"]);
+    expect(sample.session.cognitiveSupport).toEqual([
+      expect.objectContaining({ stage: "commit_model", source: "authored", tier: "example" }),
+    ]);
+  });
+
+  it("allows repeated governed-support actions without duplicating the semantic stage", () => {
+    let runtime = createWorldRuntimeSession(primarySourceWorldRuntimeAdapter);
+    const events = completeToProof([
+      { type: "REQUEST_SUPPORT" },
+      { type: "REQUEST_SUPPORT" },
+    ]);
+
+    for (const event of events) {
+      const dispatched = dispatchWorldRuntimeCommand(primarySourceWorldRuntimeAdapter, runtime, { kind: "domain", event });
+      expect(dispatched.accepted).toBe(true);
+      if (!dispatched.accepted) return;
+      runtime = dispatched.session;
+    }
+
+    expect(runtime.semanticTrace.filter((stage) => stage === "governed_support")).toHaveLength(1);
+    expect(runtime.cognitiveSupport).toHaveLength(2);
+  });
+
+  it("rejects skipped, reordered, and fabricated core semantic traces before applying the transition", () => {
+    type State = { readonly finished: boolean };
+    type Event = { readonly type: "FINISH" };
+    const traces = [
+      ["bounded_result"],
+      ["commit_model", "interpret_two_readings", "name_disagreement", "run_separating_experience"],
+      REQUIRED_RECEIPT_TRACE,
+    ] as const;
+
+    for (const semanticStages of traces) {
+      const maliciousAdapter: WorldRuntimeAdapter<State, Event, { readonly attempt: "forged" }> = {
+        pack: primarySourceWorldRuntimeAdapter.pack,
+        createInitialState: () => ({ finished: false }),
+        reduce: () => ({ accepted: true, state: { finished: true } }),
+        phase: (state) => state.finished ? "bounded_result" : "learning",
+        initialSemanticStage: () => "encounter",
+        semanticStages: () => semanticStages,
+        stage: (state) => state.finished ? "bounded_result" : "encounter",
+        classify: () => "learner_operation",
+        supportEvent: () => null,
+        proof: (state) => state.finished ? { attempt: "forged" } : null,
+        projectValidator: () => ({ outcome: "pass", criteria: ["criterion.synthetic"] }),
+        remainsUntested: () => [],
+      };
+      const initial = createWorldRuntimeSession(maliciousAdapter);
+      const dispatched = dispatchWorldRuntimeCommand(maliciousAdapter, initial, {
+        kind: "domain",
+        event: { type: "FINISH" },
+      });
+      expect(dispatched).toMatchObject({
+        accepted: false,
+        reason: "runtime_trace_invalid",
+        session: { state: initial.state, receipt: null, semanticTrace: ["encounter"] },
+      });
+    }
   });
 
   it("preserves a stateful rejected domain transition for a retry", () => {

@@ -37,6 +37,7 @@ export type RuntimeDispatchResult<State, DomainProof> =
         | "runtime_action_unavailable"
         | "unknown_runtime_action"
         | "access_not_construct_preserving"
+        | "runtime_trace_invalid"
         | "domain_rejected";
       readonly domainReason?: string;
     };
@@ -45,11 +46,69 @@ function appendOnce<T>(items: readonly T[], item: T): readonly T[] {
   return items.includes(item) ? items : [...items, item];
 }
 
-function appendSemanticStages(
+const REQUIRED_RECEIPT_SEMANTIC_STAGES = [
+  "encounter",
+  "commit_model",
+  "interpret_two_readings",
+  "name_disagreement",
+  "commit_test_prediction",
+  "run_separating_experience",
+  "reconstruct",
+  "withdraw_instructional_ai",
+  "cold_transfer",
+  "bounded_result",
+] as const satisfies readonly WorldRuntimeStage[];
+
+const OPTIONAL_SEMANTIC_STAGES = new Set<WorldRuntimeStage>([
+  "governed_support",
+  "return_or_apply",
+]);
+
+/**
+ * The adapter maps domain transitions to semantic stages, but it cannot vouch
+ * for its own trace. Keep the ordering policy here, before a transition is
+ * accepted into the runtime session or can emit a receipt.
+ */
+function appendValidatedSemanticStages(
   trace: readonly WorldRuntimeStage[],
   stages: readonly WorldRuntimeStage[],
-): readonly WorldRuntimeStage[] {
-  return stages.reduce(appendOnce, trace);
+): readonly WorldRuntimeStage[] | null {
+  let nextTrace = trace;
+  let newCoreStages = 0;
+
+  for (const stage of stages) {
+    if (nextTrace.includes(stage)) continue;
+
+    if (OPTIONAL_SEMANTIC_STAGES.has(stage)) {
+      if (stage === "governed_support") {
+        const hasRunSeparatingExperience = nextTrace.includes("run_separating_experience");
+        const hasWithdrawnInstruction = nextTrace.includes("withdraw_instructional_ai");
+        if (!hasRunSeparatingExperience || hasWithdrawnInstruction) return null;
+      } else if (!REQUIRED_RECEIPT_SEMANTIC_STAGES.every((required) => nextTrace.includes(required))) {
+        return null;
+      }
+      nextTrace = appendOnce(nextTrace, stage);
+      continue;
+    }
+
+    const expected = REQUIRED_RECEIPT_SEMANTIC_STAGES.find((required) => !nextTrace.includes(required));
+    if (stage !== expected) return null;
+
+    // A display transition may legitimately cross withdrawal into cold
+    // transfer, but a single adapter event cannot fabricate a whole journey.
+    newCoreStages += 1;
+    if (newCoreStages > 2) return null;
+    nextTrace = appendOnce(nextTrace, stage);
+  }
+
+  return nextTrace;
+}
+
+function hasCompletedReceiptTrace(trace: readonly WorldRuntimeStage[]): boolean {
+  const coreTrace = trace.filter((stage): stage is (typeof REQUIRED_RECEIPT_SEMANTIC_STAGES)[number] =>
+    REQUIRED_RECEIPT_SEMANTIC_STAGES.includes(stage as (typeof REQUIRED_RECEIPT_SEMANTIC_STAGES)[number]),
+  );
+  return REQUIRED_RECEIPT_SEMANTIC_STAGES.every((stage, index) => coreTrace[index] === stage);
 }
 
 function receiptFor<State, DomainEvent, DomainProof>(
@@ -236,16 +295,23 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
   if (commandKind === "reset") {
     return { accepted: true, session: createWorldRuntimeSession(adapter), effects: [] };
   }
+  const semanticTrace = appendValidatedSemanticStages(
+    session.semanticTrace,
+    adapter.semanticStages(command.event, session.state, transition.state),
+  );
+  if (!semanticTrace) {
+    return { accepted: false, session, reason: "runtime_trace_invalid" };
+  }
   const support = adapter.supportEvent(command.event, transition.state);
   const proof = adapter.proof(transition.state);
+  if (proof && !session.receipt && (phase !== "bounded_result" || !hasCompletedReceiptTrace(semanticTrace))) {
+    return { accepted: false, session, reason: "runtime_trace_invalid" };
+  }
   let nextSession: WorldRuntimeSession<State, DomainProof> = Object.freeze({
     ...session,
     state: transition.state,
     phase,
-    semanticTrace: appendSemanticStages(
-      session.semanticTrace,
-      adapter.semanticStages(command.event, session.state, transition.state),
-    ),
+    semanticTrace,
     cognitiveSupport: support ? [...session.cognitiveSupport, support] : session.cognitiveSupport,
     proof,
   });

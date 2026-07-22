@@ -105,9 +105,13 @@ export const primarySourceWorldRuntimeAdapter: WorldRuntimeAdapter<
         return ["commit_test_prediction"];
       case "OPEN_CATALOG":
         return ["run_separating_experience"];
-      case "USE_EXPLANATION_SAMPLE":
       case "REQUEST_SUPPORT":
         return ["governed_support"];
+      case "USE_EXPLANATION_SAMPLE":
+        // This is cognitive support consumed while the learner is still
+        // committing their model. It must be recorded as such without
+        // pretending the later governed-support protocol stage occurred.
+        return [];
       case "SUBMIT_RECONSTRUCTION":
         return ["reconstruct"];
       case "ACKNOWLEDGE_WITHDRAWAL":
