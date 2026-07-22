@@ -49,14 +49,14 @@ describe("ProportionalReasoningWorld", () => {
     expect(screen.getByTestId("ratio-stage-evidence").textContent).toContain("What this attempt actually showed.");
     expect(screen.queryByTestId("ratio-submit-proof")).toBeNull();
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
-    expect(onRuntimeReceipt.mock.calls[0]?.[0].receipt).toMatchObject({
+    expect(onRuntimeReceipt.mock.calls[0]?.[0]).toMatchObject({
       authority: { proofAuthority: "honour_based", persistence: "not_persisted", isDurable: false },
       validator: { outcome: "pass", disposition: "demonstrated" },
       sourceProvenanceStatus: "incomplete",
       world: { version: "1.0.2", contentVersion: "1.0.0" },
     });
-    expect(JSON.stringify(onRuntimeReceipt.mock.calls[0]?.[0].receipt)).not.toContain("12 is four times 3");
-    expect(onRuntimeReceipt.mock.calls[0]?.[0].validatorInput).toMatchObject({ choiceId: "32_km" });
+    expect(onRuntimeReceipt.mock.calls[0]?.[0]).not.toHaveProperty("validatorInput");
+    expect(JSON.stringify(onRuntimeReceipt.mock.calls[0]?.[0])).not.toContain("12 is four times 3");
     expect(screen.getByText(/No reviewed delayed task or scheduler is published/i)).toBeTruthy();
     expect(screen.queryByTestId("ratio-schedule-return")).toBeNull();
   });
@@ -100,7 +100,7 @@ describe("ProportionalReasoningWorld", () => {
     expect(evidence.textContent).toContain("Not demonstrated on this attempt");
     expect(evidence.textContent).toContain("More independent evidence needed");
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
-    expect(onRuntimeReceipt.mock.calls[0]?.[0].receipt).toMatchObject({
+    expect(onRuntimeReceipt.mock.calls[0]?.[0]).toMatchObject({
       validator: { outcome: "fail", disposition: "not_demonstrated" },
     });
   });

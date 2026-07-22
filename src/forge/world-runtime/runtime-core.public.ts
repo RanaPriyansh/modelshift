@@ -25,6 +25,10 @@ import {
   retainedRuntimeIdentityFor,
   type RetainedRuntimeIdentity,
 } from "./retained-runtime-binding";
+import { forceAndMotionWorldRuntimeAdapter } from "./force-and-motion";
+import { primarySourceWorldRuntimeAdapter } from "./primary-source";
+import { proportionalReasoningWorldRuntimeAdapter } from "./proportional-reasoning";
+import { sourceCorroborationWorldRuntimeAdapter } from "./source-corroboration";
 
 /** @internal Resolver available only to fixed-authority runtime facades. */
 interface WorldRuntimeAuthority {
@@ -36,6 +40,57 @@ const PUBLIC_WORLD_RUNTIME_AUTHORITY: WorldRuntimeAuthority = Object.freeze({
   canonicalValidatorRegistration: getCanonicalDeterministicValidatorRegistration,
   retainedRuntimeIdentity: retainedRuntimeIdentityFor,
 });
+
+const canonicalPublicRuntimeAdapters = new WeakSet<object>([
+  forceAndMotionWorldRuntimeAdapter,
+  proportionalReasoningWorldRuntimeAdapter,
+  sourceCorroborationWorldRuntimeAdapter,
+  primarySourceWorldRuntimeAdapter,
+]);
+
+interface PublicReceiptAttestation {
+  readonly validatorId: string;
+  readonly validatorVersion: string;
+  readonly code: string;
+  readonly outcome: BoundedLocalWorldRuntimeReceipt["validator"]["outcome"];
+  readonly disposition: BoundedLocalWorldRuntimeReceipt["validator"]["disposition"];
+  readonly criteria: readonly string[];
+}
+
+const publicReceiptAttestations = new WeakMap<BoundedLocalWorldRuntimeReceipt, PublicReceiptAttestation>();
+
+function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
+  if (value === null || typeof value !== "object") return value;
+  const object = value as object;
+  if (seen.has(object)) return value;
+  seen.add(object);
+  for (const nested of Object.values(value as Record<string, unknown>)) deepFreeze(nested, seen);
+  return Object.freeze(value);
+}
+
+function sameOrderedStrings(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((entry, index) => entry === right[index]);
+}
+
+/**
+ * Verifies only exact receipt objects emitted and privately attested by this
+ * public runtime module. It exposes neither validator input nor a registration
+ * surface, so reconstructed receipts cannot acquire public-ledger authority.
+ */
+export function verifyPublicWorldRuntimeReceiptAttestation(
+  receipt: BoundedLocalWorldRuntimeReceipt,
+): boolean {
+  const attestation = publicReceiptAttestations.get(receipt);
+  return attestation !== undefined
+    && Object.isFrozen(receipt)
+    && Object.isFrozen(receipt.validator)
+    && receipt.validator.id === attestation.validatorId
+    && receipt.validator.version === attestation.validatorVersion
+    && receipt.validator.code === attestation.code
+    && receipt.validator.outcome === attestation.outcome
+    && receipt.validator.disposition === attestation.disposition
+    && sameOrderedStrings(receipt.validator.criteria, attestation.criteria);
+}
 
 export interface WorldRuntimeSession<State, DomainProof> {
   /** Local idempotency key only; never identity or authentication. */
@@ -246,9 +301,7 @@ function receiptFor<State, DomainEvent, DomainProof>(
   const proofClaim = adapter.pack.proofClaims.find((claim) => claim.id === runtime.proof.proofClaimId);
   if (!proofClaim) throw new Error(`Runtime proof claim ${runtime.proof.proofClaimId} is absent from its package.`);
 
-  return {
-    ok: true,
-    receipt: Object.freeze({
+  const receipt = deepFreeze({
     schemaVersion: WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION,
     kind: "forge.runtime.bounded-local-attempt",
     attemptId: session.attemptId,
@@ -292,8 +345,18 @@ function receiptFor<State, DomainEvent, DomainProof>(
     // result can change the limitation list carried by a receipt.
     remainsUntested: [...runtime.evidence.remainsUntested],
     responseDigest: null,
-    }),
-  };
+  } satisfies BoundedLocalWorldRuntimeReceipt);
+  if (canonicalPublicRuntimeAdapters.has(adapter)) {
+    publicReceiptAttestations.set(receipt, deepFreeze({
+      validatorId: receipt.validator.id,
+      validatorVersion: receipt.validator.version,
+      code: receipt.validator.code,
+      outcome: receipt.validator.outcome,
+      disposition: receipt.validator.disposition,
+      criteria: [...receipt.validator.criteria],
+    } satisfies PublicReceiptAttestation));
+  }
+  return { ok: true, receipt };
 }
 
 function createRuntimeAttemptId(): string {

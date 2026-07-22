@@ -91,7 +91,6 @@ interface TerminalObservation {
   readonly phase: string;
   readonly semanticTrace: readonly WorldRuntimeStage[];
   readonly receipt: BoundedLocalWorldRuntimeReceipt | null;
-  readonly validatorInput: unknown;
   readonly attemptId: string;
   readonly transitions: readonly { readonly accepted: boolean; readonly reason: string | null }[];
 }
@@ -207,7 +206,6 @@ function defineFixture<State, Event, Proof>(definition: FixtureDefinition<State,
       phase: runtime.phase,
       semanticTrace: runtime.semanticTrace,
       receipt: runtime.receipt,
-      validatorInput: runtime.proof === null ? null : definition.adapter.validatorInput(runtime.proof),
       attemptId: runtime.attemptId,
       transitions,
     };
@@ -789,10 +787,9 @@ describe("all released runtime World receipt projection and release identity", (
       session: { phase: "proof", receipt: null },
     });
 
-    const recorded = recordWorldRuntimeReceipt({
-      receipt: rejected.session.receipt as unknown as BoundedLocalWorldRuntimeReceipt,
-      validatorInput: { forged: true },
-    });
+    const recorded = recordWorldRuntimeReceipt(
+      rejected.session.receipt as unknown as BoundedLocalWorldRuntimeReceipt,
+    );
     expect(recorded).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
     expect(recorded.ledger.entries).toEqual([]);
 
@@ -829,10 +826,7 @@ describe("all released runtime World receipt projection and release identity", (
         criteria: ["forged"],
       },
     };
-    const manualRecording = recordWorldRuntimeReceipt({
-      receipt: manualForgedPass,
-      validatorInput: proportionalReasoningWorldRuntimeAdapter.validatorInput(wrongAnswerRuntime.proof),
-    });
+    const manualRecording = recordWorldRuntimeReceipt(manualForgedPass);
     expect(manualRecording).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
     expect(manualRecording.ledger.entries).toEqual([]);
     expect(storage.snapshot()).not.toContain('"outcome":"proved"');
@@ -847,10 +841,10 @@ describe("all released runtime World receipt projection and release identity", (
       const receipt = terminal.receipt;
       if (!receipt) throw new Error(`${fixture.name} did not emit a receipt.`);
       if (fixture.pack.manifest.availability.status === "available") {
-        expect(recordWorldRuntimeReceipt({ receipt, validatorInput: terminal.validatorInput })).toMatchObject({ ok: true });
-        expect(recordWorldRuntimeReceipt({ receipt, validatorInput: terminal.validatorInput })).toMatchObject({ ok: false, reason: "duplicate_entry" });
+        expect(recordWorldRuntimeReceipt(receipt)).toMatchObject({ ok: true });
+        expect(recordWorldRuntimeReceipt(receipt)).toMatchObject({ ok: false, reason: "duplicate_entry" });
       } else {
-        expect(recordWorldRuntimeReceipt({ receipt, validatorInput: terminal.validatorInput })).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
+        expect(recordWorldRuntimeReceipt(receipt)).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
       }
     }
     const persistedLedgerJson = storage.snapshot();
