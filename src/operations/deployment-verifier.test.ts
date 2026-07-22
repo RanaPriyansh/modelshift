@@ -46,6 +46,8 @@ describe("deployment verifier", () => {
     "::ffff:8.8.8.8",
     "64:ff9b::7f00:1",
     "192.0.2.10",
+    "4000::1",
+    "6000::1",
   ])("rejects non-global or special resolver answer %s before any request", async (address) => {
     let calls = 0;
     const fetchImpl = async () => { calls += 1; return new Response("unexpected"); };
@@ -53,6 +55,17 @@ describe("deployment verifier", () => {
     expect(report.status).toBe("fail");
     expect(report.checks.find((item) => item.id === "target.dns_policy")?.status).toBe("fail");
     expect(calls).toBe(0);
+  });
+  it("accepts a globally routable IPv6 answer inside the public-unicast envelope", async () => {
+    let calls = 0;
+    const fetchImpl = async (input: string | URL | Request) => {
+      calls += 1;
+      return mockFetch()(input);
+    };
+    const report = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:00.000Z", deploymentId: "dpl-candidate", deploymentUrl: "https://forge.example/deploy", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["2001:4860:4860::8888"] });
+    expect(report.checks.find((item) => item.id === "target.dns_policy")?.status).toBe("pass");
+    expect(report.status).toBe("pass");
+    expect(calls).toBeGreaterThan(0);
   });
   it("fails closed for DNS rebinding and redirect hops without issuing an unpinned request", async () => {
     let resolveCalls = 0;
