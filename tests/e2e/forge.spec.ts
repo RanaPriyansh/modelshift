@@ -196,7 +196,8 @@ async function reachRatioProof(page: Page): Promise<void> {
     "I compared how much concentrate there is for each cup of water.",
   );
   await page.getByTestId("ratio-commit-explanation").click();
-  await page.getByTestId("ratio-open-experiment").click();
+  await page.getByRole("radio", { name: "The drinks should taste equally strong." }).press("Space");
+  await page.getByTestId("ratio-commit-test-prediction").click();
   await page.getByTestId("ratio-run-experiment").click();
   await page.getByTestId("ratio-begin-reconstruction").click();
   await page.getByRole("textbox", { name: "Your proportional rule" }).fill(
