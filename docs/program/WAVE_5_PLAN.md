@@ -131,12 +131,12 @@ Owned files:
 
 Required behavior:
 
-1. Add strict SQL validation for every ADR-001 v2 event payload and envelope field used by the TypeScript compiler.
-2. Preserve version-1 rows and reject v1/v2 mixing within one aggregate.
-3. Enforce append-only aggregate versions, correlation/causation coherence, idempotency equivalence, event-ID collision rejection, exact integrity, and transactionally coupled outbox rows.
-4. Bind owner visibility and mutation to authenticated adult identity only; service-role/BYPASSRLS must not bypass semantic validation.
+1. Add strict SQL validation for every ADR-001 v2 event payload and envelope field used by the TypeScript compiler, including the exact runtime-binding commitment in run start and evidence.
+2. Preserve version-1 rows and reject v1/v2 mixing within one aggregate; use one global claim/lock boundary so the same event UUID cannot race into both histories even with different aggregate and idempotency identities.
+3. Enforce append-only aggregate versions, correlation/causation coherence, idempotency equivalence, event-ID collision rejection, exact integrity, transactionally coupled outbox rows, and immutable outbox event documents.
+4. Bind owner visibility and mutation to authenticated adult identity only; the direct appender accepts learner actors only and rejects corrections/privileged actors until a separate trusted validator/reviewer path exists. Service-role/BYPASSRLS must not bypass semantic validation.
 5. Reject forbidden learner/model text keys recursively and bound event/document sizes.
-6. Prove fresh install and legacy upgrade, two-owner isolation, duplicate retry, conflicting retry, out-of-order append, partial failure rollback, malformed payload, tampered digest, mixed schema, and retired-consent refusal.
+6. Prove fresh install and legacy upgrade, two-owner isolation, duplicate retry, conflicting retry, two-session cross-version aggregate/idempotency/event-ID races in both orders, out-of-order append, partial failure rollback, malformed payload, tampered digest, forged privileged actor/correction refusal, immutable outbox identity/document, mixed schema, and retired-consent refusal.
 7. Keep the public health feature flags disabled until configured-project, backup/restore, concurrency, deletion/export, abuse-control, and recovery evidence exists.
 
 Acceptance evidence:

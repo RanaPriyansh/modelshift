@@ -83,6 +83,19 @@ The bounded local receipt and its ADR-001 compiler use a closed, canonical input
 
 The local receipt remains honour-based and non-durable. These bindings prevent accidental semantic promotion inside the local compiler; they do not turn a client-controlled run into server-enforced proof.
 
+### Version-2 persistence authority amendment
+
+The first adult-owned PostgreSQL appender persists only the current compiler-produced learner event chain. An authenticated adult owner does not thereby become a validator, reviewer, policy actor, or system actor:
+
+- the direct appender accepts `actor.type = learner` only and retains the authenticated adult as the separate row owner;
+- it rejects `world_run.corrected` and every `validator`, `human`, `policy`, or `system` actor until a separately reviewed server-owned authority path binds an authenticated actor, decision scope, target event, and policy version;
+- TypeScript retains correction shape and replay semantics, but schema availability is not durable correction authority;
+- `runtime_binding_digest` is present in the v2 run start and evidence payload, retained in the aggregate head, and required to equal across the chain;
+- one global event-ID claim/lock boundary spans version-1 and version-2 histories. Different aggregate or idempotency keys cannot race the same event UUID into both journals;
+- the outbox event document and event identity are immutable. Delivery state may change only through a narrow operation that cannot rewrite the copied event.
+
+These are persistence admission rules, not a claim that the current local receipt is server-enforced evidence. Public persistence remains disabled until the wider configured-project, concurrency, backup/restore, deletion/export, abuse-control, and recovery gates pass.
+
 ### Cognitive support and access
 
 - `SupportTier` describes instructional intensity. `solution` is recordable during learning but always contaminates the current proof task.
