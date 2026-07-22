@@ -1,0 +1,547 @@
+/*
+ * FORGE experience system layer.
+ *
+ * Feature and World styles retain ownership of their deterministic behavior.
+ * This layer owns shared shell tokens, presentation primitives, and access
+ * affordances across the question-led routes.
+ */
+
+.forge-shell,
+.forge-world-frame {
+  --forge-bg: #f7f4ed;
+  --forge-bg-deep: #f7f4ed;
+  --forge-surface: #fffdf8;
+  --forge-surface-strong: #ece8df;
+  --forge-line: #d4cfc5;
+  --forge-line-strong: #aaa59b;
+  --forge-ink: #111714;
+  --forge-muted: #5e635f;
+  --forge-dim: #737970;
+  --forge-amber: #e8b94e;
+  --forge-amber-deep: #7b561a;
+  --forge-violet: #7458bb;
+  --forge-violet-deep: #544092;
+  --forge-cyan: #287f82;
+  --forge-cyan-deep: #185e62;
+  --forge-paper: #f7f4ed;
+  --forge-paper-line: #d4cfc5;
+  --forge-paper-ink: #111714;
+  --forge-space-1: 4px;
+  --forge-space-2: 8px;
+  --forge-space-3: 12px;
+  --forge-space-4: 16px;
+  --forge-space-5: 24px;
+  --forge-space-6: 32px;
+  --forge-space-7: 48px;
+  --forge-space-8: 64px;
+  --forge-radius-sm: 6px;
+  --forge-radius-md: 12px;
+  color-scheme: light;
+}
+
+.forge-shell :is(button, input, textarea, select),
+.forge-world-frame :is(button, input, textarea, select) {
+  font-size: max(1rem, 16px) !important;
+}
+
+.forge-shell :is(a, button),
+.forge-world-frame :is(a, button) {
+  min-height: 44px;
+}
+
+.forge-shell label:has(input[type="radio"]),
+.forge-shell label:has(input[type="checkbox"]),
+.forge-world-frame label:has(input[type="radio"]),
+.forge-world-frame label:has(input[type="checkbox"]) {
+  min-height: 44px;
+}
+
+.forge-shell :is(a, button, input, textarea, select):focus-visible,
+.forge-world-frame :is(a, button, input, textarea, select):focus-visible {
+  outline: 3px solid var(--forge-cyan-deep);
+  outline-offset: 3px;
+}
+
+.forge-shell :is(section, article, main)[id],
+.forge-world-frame :is(section, article, main)[id] {
+  scroll-margin-top: 96px;
+}
+
+.forge-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+
+.forge-kicker,
+.forge-status {
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.forge-status {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.forge-status > i {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  rotate: 45deg;
+  background: currentColor;
+}
+
+.forge-status[data-tone="learner"] { color: var(--forge-amber-deep); }
+.forge-status[data-tone="ai"] { color: var(--forge-violet); }
+.forge-status[data-tone="evidence"] { color: var(--forge-cyan-deep); }
+.forge-status[data-tone="human"] { color: #a84f27; }
+.forge-status[data-tone="quiet"] { color: var(--forge-dim); }
+
+/* The paper shell holds calm navigation while instruments keep their own work. */
+.forge-topbar,
+.forge-worldbar {
+  width: min(1380px, calc(100% - 64px));
+  min-height: 82px;
+  border-color: var(--forge-line);
+  background: color-mix(in srgb, var(--forge-bg) 94%, transparent);
+}
+
+.forge-mark {
+  width: 38px;
+  height: 38px;
+  display: inline-grid;
+  border: 0;
+  padding: 0;
+  color: var(--forge-ink);
+}
+
+.forge-mark svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: square;
+  stroke-width: 1.15;
+}
+
+.forge-brand { min-height: 44px; }
+
+.forge-brand strong {
+  font-family: var(--forge-sans);
+  font-size: 18px;
+  font-weight: 820;
+  letter-spacing: 0.18em;
+}
+
+.forge-primary-nav a {
+  min-height: 44px;
+  color: var(--forge-muted);
+  font-size: 14px;
+}
+
+.forge-primary-nav a:hover,
+.forge-primary-nav a[aria-current="page"] { color: var(--forge-ink); }
+
+.forge-topbar-disclosure { color: var(--forge-dim); }
+
+.forge-worldbar-title,
+.forge-exit-world { color: var(--forge-muted) !important; }
+
+.forge-exit-world:hover { color: var(--forge-cyan-deep) !important; }
+
+/* Question-led home */
+.forge-hero {
+  width: min(1352px, calc(100% - 64px));
+  min-height: auto;
+  grid-template-columns: minmax(350px, 0.8fr) minmax(620px, 1.2fr);
+  gap: 64px 6vw;
+  padding: 92px 0 56px;
+}
+
+.forge-hero-heading {
+  align-self: start;
+  padding-top: 54px;
+}
+
+.forge-hero-heading .forge-kicker { color: var(--forge-cyan-deep); }
+
+.forge-hero-heading h1 {
+  max-width: 610px;
+  font-family: var(--forge-sans);
+  font-size: clamp(64px, 7.3vw, 104px);
+  font-weight: 570;
+  line-height: 0.91;
+  letter-spacing: -0.07em;
+}
+
+.forge-hero-heading > p:last-child {
+  color: var(--forge-muted);
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+.forge-intake {
+  --forge-surface: #0c141b;
+  --forge-surface-strong: #111c24;
+  --forge-line: #26343e;
+  --forge-line-strong: #43515a;
+  --forge-ink: #f1ede4;
+  --forge-muted: #abb3b5;
+  --forge-dim: #7d888d;
+  align-self: start;
+  border: 1px solid var(--forge-line);
+  background: #080d12;
+  color: var(--forge-ink);
+  padding: 46px 48px 42px;
+}
+
+.forge-question-field textarea {
+  min-height: 132px;
+  border-bottom-color: var(--forge-line-strong);
+  background: transparent;
+  font-family: var(--forge-sans);
+  font-size: clamp(28px, 2.5vw, 38px) !important;
+  font-weight: 560;
+  letter-spacing: -0.04em;
+}
+
+.forge-question-field textarea:focus { border-bottom-color: var(--forge-amber); }
+
+.forge-choice-group label { border-left-width: 1px; }
+
+.forge-choice-group label.is-selected {
+  border-left-width: 3px;
+  background: #151a1a;
+}
+
+.forge-primary-action,
+.forge-secondary-action {
+  min-height: 52px;
+  border-radius: var(--forge-radius-sm);
+}
+
+.forge-intake-actions > a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.forge-section {
+  width: min(1352px, calc(100% - 64px));
+  padding: 112px 0;
+}
+
+.forge-section-heading span,
+.forge-contract-statement > span { color: var(--forge-cyan-deep); }
+
+.forge-section-heading h2 {
+  font-family: var(--forge-sans);
+  font-weight: 570;
+  letter-spacing: -0.055em;
+}
+
+.forge-world-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  border: 0;
+}
+
+.forge-world-row {
+  min-height: 330px;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 20px 12px;
+  align-items: start;
+  border: 1px solid var(--forge-line);
+  border-top: 4px solid var(--forge-cyan);
+  border-radius: var(--forge-radius-md);
+  background: var(--forge-surface);
+  padding: 24px;
+}
+
+.forge-world-row--planned {
+  border-top-color: var(--forge-line-strong);
+  color: var(--forge-muted);
+}
+
+.forge-world-row--ready:hover {
+  border-color: var(--forge-cyan);
+  background: #fff;
+}
+
+.forge-world-index {
+  grid-column: 1;
+  padding: 1px 0 0;
+}
+
+.forge-world-copy { display: contents; }
+
+.forge-world-copy > .forge-status {
+  grid-column: 2;
+  justify-self: end;
+  margin: 0;
+}
+
+.forge-world-copy h3,
+.forge-world-copy p { grid-column: 1 / -1; }
+
+.forge-world-copy h3 {
+  align-self: end;
+  font-family: var(--forge-sans);
+  font-size: clamp(28px, 2.4vw, 38px);
+  font-weight: 560;
+  letter-spacing: -0.05em;
+}
+
+.forge-world-copy p {
+  align-self: start;
+  margin-top: -8px;
+}
+
+.forge-world-detail {
+  grid-column: 1 / -1;
+  min-height: 48px;
+  border-top: 1px solid var(--forge-line);
+  padding-top: 14px;
+}
+
+.forge-world-link {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  min-height: 44px;
+  justify-content: space-between;
+}
+
+.forge-continuity-actions a { min-height: 210px; }
+
+.forge-contract {
+  --forge-surface-strong: #080d12;
+  --forge-line: #26343e;
+  --forge-line-strong: #43515a;
+  --forge-ink: #f1ede4;
+  --forge-muted: #aeb5b5;
+  --forge-dim: #79858a;
+  background: #080d12;
+  color: var(--forge-ink);
+}
+
+.forge-contract-statement h2,
+.forge-contract li strong,
+.forge-two-rails h3,
+.forge-projects h3 { font-family: var(--forge-sans); }
+
+.forge-footer { min-height: 170px; }
+
+/* Studio remains an instrument; its shell and form affordances now use the same scale. */
+.lesson-studio-page { min-height: calc(100svh - 82px); }
+
+.lesson-studio-heading h1,
+.lesson-studio-empty h2,
+.lesson-draft > header h2 { font-family: var(--forge-sans); }
+
+.lesson-studio-form :is(input, select, textarea) { font-size: 16px !important; }
+
+.lesson-studio-form label:has(input[type="checkbox"]) { min-height: 44px; }
+
+/* Device-only and cloud access use paper surfaces without changing their actions. */
+.forge-account-page {
+  --account-bg: #f7f4ed;
+  --account-surface: #fffdf8;
+  --account-line: #d4cfc5;
+  --account-ink: #111714;
+  --account-muted: #5e635f;
+  --account-amber: #a36c10;
+  --account-cyan: #185e62;
+  min-height: calc(100svh - 82px);
+}
+
+.forge-account-heading h1,
+.forge-device-access h2,
+.forge-cloud-access h2 { font-family: var(--forge-sans); }
+
+.forge-account-banner { background: #f2eadb; }
+
+.forge-cloud-form > input { background: #fffdf8; }
+
+.forge-device-access fieldset label:has(input:checked) {
+  border-color: var(--account-amber);
+  background: #fff8e7;
+}
+
+.forge-account-page .forge-account-primary {
+  border-color: var(--account-cyan);
+  background: var(--account-cyan);
+  color: #fffdf8;
+}
+
+.forge-account-page :is(input, select, textarea) { font-size: 16px !important; }
+
+/* Trails and evidence inherit the paper shell; keep bounded record surfaces flat. */
+.forge-info-hero h1,
+.forge-world-placeholder h1,
+.forge-proof-sheet h2,
+.forge-live-ledger h2,
+.forge-example-record h2,
+.forge-evidence-rules h2 { font-family: var(--forge-sans); }
+
+.forge-live-ledger,
+.forge-proof-sheet,
+.forge-prototype-notice { border-radius: var(--forge-radius-md); }
+
+.forge-live-ledger button { min-height: 44px; }
+
+@media (max-width: 1120px) {
+  .forge-hero { grid-template-columns: 1fr; }
+  .forge-hero-heading { max-width: 760px; padding-top: 0; }
+  .forge-world-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .forge-shell { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+
+  .forge-topbar,
+  .forge-worldbar {
+    width: calc(100% - 32px);
+    min-height: 68px;
+  }
+
+  .forge-brand small { display: none; }
+
+  .forge-mobile-nav {
+    min-height: 68px;
+    border-color: var(--forge-line);
+    background: color-mix(in srgb, var(--forge-bg) 96%, transparent);
+  }
+
+  .forge-mobile-nav a {
+    min-width: 44px;
+    min-height: 44px;
+    color: var(--forge-dim);
+    font-size: 10px;
+  }
+
+  .forge-mobile-nav a[aria-current="page"] { color: var(--forge-cyan-deep); }
+
+  .forge-hero {
+    width: 100%;
+    gap: 48px;
+    padding: 60px 0 32px;
+  }
+
+  .forge-hero-heading,
+  .forge-loop-line { margin-inline: 16px; }
+
+  .forge-hero-heading h1 {
+    font-size: clamp(52px, 16.5vw, 68px);
+    line-height: 0.9;
+  }
+
+  .forge-intake {
+    border-right: 0;
+    border-left: 0;
+    padding: 36px 16px;
+  }
+
+  .forge-question-field textarea { min-height: 150px; }
+
+  .forge-intake-choices,
+  .forge-choice-group > div { grid-template-columns: 1fr; }
+
+  .forge-choice-group label { min-height: 56px; }
+
+  .forge-loop-line {
+    overflow: visible;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .forge-loop-line i {
+    width: 1px;
+    height: 12px;
+    margin-left: 4px;
+  }
+
+  .forge-section {
+    width: calc(100% - 32px);
+    padding: 82px 0;
+  }
+
+  .forge-section-heading h2 { font-size: clamp(40px, 12.5vw, 52px); }
+
+  .forge-world-list { grid-template-columns: 1fr; }
+
+  .forge-world-row {
+    min-height: 306px;
+    grid-template-columns: auto 1fr;
+    padding: 22px;
+  }
+
+  .forge-world-copy > .forge-status { grid-column: 2; }
+
+  .forge-world-copy h3,
+  .forge-world-copy p,
+  .forge-world-detail,
+  .forge-world-link { grid-column: 1 / -1; }
+
+  .lesson-studio-page { min-height: calc(100svh - 136px); }
+  .forge-account-page { min-height: calc(100svh - 136px); }
+}
+
+@media (prefers-contrast: more) {
+  .forge-shell,
+  .forge-world-frame {
+    --forge-line: #77746e;
+    --forge-line-strong: #343532;
+    --forge-muted: #343a36;
+    --forge-dim: #454a45;
+  }
+
+  .forge-shell :is(a, button, input, textarea, select):focus-visible,
+  .forge-world-frame :is(a, button, input, textarea, select):focus-visible { outline-width: 4px; }
+}
+
+@media (forced-colors: active) {
+  .forge-shell,
+  .forge-world-frame,
+  .forge-intake,
+  .forge-contract,
+  .forge-mobile-nav,
+  .forge-account-page,
+  .lesson-studio-page {
+    forced-color-adjust: auto;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .forge-status > i { background: CanvasText; }
+
+  .forge-world-row,
+  .forge-live-ledger,
+  .forge-proof-sheet,
+  .forge-device-access,
+  .forge-cloud-access { border: 1px solid CanvasText; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forge-shell *,
+  .forge-shell *::before,
+  .forge-shell *::after,
+  .forge-world-frame *,
+  .forge-world-frame *::before,
+  .forge-world-frame *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

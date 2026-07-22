@@ -7,7 +7,7 @@ test.describe("FORGE expanded learning system", () => {
     await page.goto("/");
 
     await expect(page.getByRole("heading", { name: "What can a photograph prove?" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Open world" })).toHaveCount(4);
+    await expect(page.locator('.forge-world-row a[href^="/learn/"]')).toHaveCount(4);
     await expect(page.locator('a[href="/account"]')).toHaveCount(2);
     expect(await page.locator("html").evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
   });
@@ -47,7 +47,9 @@ test.describe("FORGE expanded learning system", () => {
 
     await expect(page.getByTestId("stage-mystery")).toBeVisible();
     await expect(page.getByRole("heading", { name: "What can this photograph prove?" })).toBeVisible();
-    const sourceImage = page.getByRole("img");
+    const sourceImage = page.getByRole("img", {
+      name: "A sepia stereograph card containing two near-identical views of a crowded street with horse-drawn vehicles, a streetcar, pedestrians, and storefront signs.",
+    });
     await expect(sourceImage).toHaveCount(1);
     await expect.poll(() => sourceImage.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
     expect(await page.locator("html").evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import "./globals.css";
+import "./forge.css";
+import "./forge-system.css";
 
 export const metadata: Metadata = {
   title: "FORGE — Learn anything. Prove what changed.",
@@ -14,7 +16,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   // Next can attach the same nonce to its framework and hydration scripts.
   await headers();
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body>{children}</body>
     </html>
   );
