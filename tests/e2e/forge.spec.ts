@@ -55,7 +55,7 @@ const ROUTES: readonly RouteCase[] = [
     world: true,
   },
   {
-    path: "/learn/proportional-reasoning",
+    path: "/learn/proportional-reasoning?audience=teen",
     slug: "proportional-reasoning",
     title: /Proportional reasoning — FORGE/i,
     heading: /The two citrus mixes/i,
@@ -167,7 +167,7 @@ async function reachEvidenceWorldProof(page: Page): Promise<void> {
 }
 
 async function reachRatioProof(page: Page): Promise<void> {
-  await page.goto("/learn/proportional-reasoning");
+  await page.goto("/learn/proportional-reasoning?audience=teen");
   await page.getByRole("radio", { name: "Jug B tastes stronger" }).press("Space");
   await page.getByTestId("ratio-commit-initial").click();
   await page.getByRole("textbox", { name: "Your exact words" }).fill(
@@ -345,9 +345,12 @@ test.describe("FORGE cross-route release contract", () => {
   test("direct under-13 ratio route holds the World behind a grown-up gate", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "The direct-route safety gate is viewport-independent.");
     await page.goto("/learn/proportional-reasoning?audience=child_with_grown_up");
+    await expect(page.getByTestId("world-guardian-route-gate")).toBeVisible();
+    await expect(page.getByTestId("ratio-stage-mystery")).toHaveCount(0);
+    await page.getByRole("link", { name: "Continue to local grown-up confirmation" }).click();
     await expect(page.getByRole("heading", { name: "A grown-up needs to join this learning session." })).toBeVisible();
     await expect(page.getByTestId("ratio-stage-mystery")).toHaveCount(0);
-    await expect(page.getByText(/does not verify identity or legal consent/i)).toBeVisible();
+    await expect(page.getByText(/does not verify identity/i)).toBeVisible();
 
     await page.getByRole("button", { name: "I’m the grown-up managing this session" }).click();
     await expect(page.getByTestId("ratio-stage-mystery")).toBeVisible();
@@ -368,7 +371,7 @@ test.describe("FORGE cross-route release contract", () => {
     await page.getByRole("textbox", { name: "Your explanation" }).fill("The engine stopped, so I expect the push to end.");
     await expect(physicsExplanation).toBeEnabled();
 
-    await page.goto("/learn/proportional-reasoning");
+    await page.goto("/learn/proportional-reasoning?audience=teen");
     const ratioCommit = page.getByTestId("ratio-commit-initial");
     await expect(ratioCommit).toBeDisabled();
     await page.getByRole("radio", { name: "Jug B tastes stronger" }).press("Space");
@@ -548,7 +551,7 @@ test.describe("FORGE cross-route release contract", () => {
     test.skip(testInfo.project.name !== "desktop", "Reduced-motion styles are shared across viewport projects.");
     await page.emulateMedia({ reducedMotion: "reduce" });
 
-    for (const path of ["/", "/learn/ai-and-learning", "/learn/proportional-reasoning"]) {
+    for (const path of ["/", "/learn/ai-and-learning", "/learn/proportional-reasoning?audience=teen"]) {
       await page.goto(path);
       const motion = await page.evaluate(() => {
         const milliseconds = (raw: string) => raw.split(",").map((part) => {

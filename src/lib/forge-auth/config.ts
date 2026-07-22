@@ -2,6 +2,10 @@ import "server-only";
 
 import { z } from "zod";
 
+// This module is imported by the request proxy. Keep Zod from using its
+// Function-constructor fast path so the nonce CSP stays meaningful.
+z.config({ jitless: true });
+
 const httpsUrlSchema = z.string().url().refine((value) => value.startsWith("https://"), {
   message: "FORGE cloud auth requires HTTPS.",
 });
@@ -22,6 +26,8 @@ const authEnvironmentSchema = z.strictObject({
   enabled: z.literal("true"),
   url: httpsUrlSchema,
   publishableKey: z.string().min(20).max(512).refine((value) => !isPrivilegedSupabaseKey(value)),
+  abuseControls: z.literal("reviewed"),
+  liveIntegration: z.literal("two_account_isolation_verified"),
 });
 
 export interface ForgeCloudAuthConfig {
@@ -35,6 +41,8 @@ export function readForgeCloudAuthConfig(): ForgeCloudAuthConfig | null {
     enabled: process.env.FORGE_CLOUD_ACCOUNTS_ENABLED,
     url: process.env.FORGE_SUPABASE_URL,
     publishableKey: process.env.FORGE_SUPABASE_PUBLISHABLE_KEY,
+    abuseControls: process.env.FORGE_CLOUD_AUTH_ABUSE_CONTROLS,
+    liveIntegration: process.env.FORGE_CLOUD_AUTH_LIVE_INTEGRATION,
   });
 
   if (!parsed.success) return null;
