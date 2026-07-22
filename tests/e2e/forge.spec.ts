@@ -30,6 +30,7 @@ type RouteCase = {
   title: RegExp;
   heading: RegExp;
   world: boolean;
+  deviceProfile?: "child_with_grown_up" | "teen" | "adult";
 };
 
 const ROUTES: readonly RouteCase[] = [
@@ -55,11 +56,12 @@ const ROUTES: readonly RouteCase[] = [
     world: true,
   },
   {
-    path: "/learn/proportional-reasoning?audience=teen",
+    path: "/learn/proportional-reasoning",
     slug: "proportional-reasoning",
     title: /Proportional reasoning — FORGE/i,
     heading: /The two citrus mixes/i,
     world: true,
+    deviceProfile: "teen",
   },
   {
     path: "/trail",
@@ -119,6 +121,18 @@ async function installPhysicsFallback(page: Page): Promise<void> {
   });
 }
 
+async function seedDeviceProfile(page: Page, ageMode: "child_with_grown_up" | "teen" | "adult"): Promise<void> {
+  await page.addInitScript((mode) => {
+    localStorage.setItem("forge.device-profile:v1", JSON.stringify({
+      schemaVersion: 1,
+      profileId: "9be711de-d7a6-4911-b903-f2d829da83d5",
+      ageMode: mode,
+      guardianPresent: mode === "child_with_grown_up",
+      createdAt: "2026-07-22T00:00:00.000Z",
+    }));
+  }, ageMode);
+}
+
 async function reachPhysicsProof(page: Page): Promise<void> {
   await installPhysicsFallback(page);
   await page.goto("/learn/force-and-motion");
@@ -167,7 +181,8 @@ async function reachEvidenceWorldProof(page: Page): Promise<void> {
 }
 
 async function reachRatioProof(page: Page): Promise<void> {
-  await page.goto("/learn/proportional-reasoning?audience=teen");
+  await seedDeviceProfile(page, "teen");
+  await page.goto("/learn/proportional-reasoning");
   await page.getByRole("radio", { name: "Jug B tastes stronger" }).press("Space");
   await page.getByTestId("ratio-commit-initial").click();
   await page.getByRole("textbox", { name: "Your exact words" }).fill(
@@ -189,6 +204,7 @@ test.describe("FORGE cross-route release contract", () => {
   for (const route of ROUTES) {
     test(`${route.slug} renders cleanly without horizontal overflow`, async ({ page }, testInfo) => {
       const failures = capturePageFailures(page);
+      if (route.deviceProfile) await seedDeviceProfile(page, route.deviceProfile);
       const response = await page.goto(route.path);
 
       expect(response?.ok(), `${route.path} should return a successful document`).toBe(true);
@@ -342,12 +358,13 @@ test.describe("FORGE cross-route release contract", () => {
     expect(plannerRequests).toBe(1);
   });
 
-  test("direct under-13 ratio route holds the World behind a grown-up gate", async ({ page }, testInfo) => {
+  test("direct under-13 ratio route needs a local child profile and a grown-up confirmation", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "The direct-route safety gate is viewport-independent.");
-    await page.goto("/learn/proportional-reasoning?audience=child_with_grown_up");
-    await expect(page.getByTestId("world-guardian-route-gate")).toBeVisible();
+    await page.goto("/learn/proportional-reasoning?audience=child_with_grown_up&guardianManaged=true");
+    await expect(page.getByTestId("world-device-profile-gate")).toBeVisible();
     await expect(page.getByTestId("ratio-stage-mystery")).toHaveCount(0);
-    await page.getByRole("link", { name: "Continue to local grown-up confirmation" }).click();
+    await seedDeviceProfile(page, "child_with_grown_up");
+    await page.goto("/learn/proportional-reasoning?audience=teen&guardianManaged=true");
     await expect(page.getByRole("heading", { name: "A grown-up needs to join this learning session." })).toBeVisible();
     await expect(page.getByTestId("ratio-stage-mystery")).toHaveCount(0);
     await expect(page.getByText(/does not verify identity/i)).toBeVisible();
@@ -371,7 +388,8 @@ test.describe("FORGE cross-route release contract", () => {
     await page.getByRole("textbox", { name: "Your explanation" }).fill("The engine stopped, so I expect the push to end.");
     await expect(physicsExplanation).toBeEnabled();
 
-    await page.goto("/learn/proportional-reasoning?audience=teen");
+    await seedDeviceProfile(page, "teen");
+    await page.goto("/learn/proportional-reasoning");
     const ratioCommit = page.getByTestId("ratio-commit-initial");
     await expect(ratioCommit).toBeDisabled();
     await page.getByRole("radio", { name: "Jug B tastes stronger" }).press("Space");
@@ -551,7 +569,8 @@ test.describe("FORGE cross-route release contract", () => {
     test.skip(testInfo.project.name !== "desktop", "Reduced-motion styles are shared across viewport projects.");
     await page.emulateMedia({ reducedMotion: "reduce" });
 
-    for (const path of ["/", "/learn/ai-and-learning", "/learn/proportional-reasoning?audience=teen"]) {
+    await seedDeviceProfile(page, "teen");
+    for (const path of ["/", "/learn/ai-and-learning", "/learn/proportional-reasoning"]) {
       await page.goto(path);
       const motion = await page.evaluate(() => {
         const milliseconds = (raw: string) => raw.split(",").map((part) => {

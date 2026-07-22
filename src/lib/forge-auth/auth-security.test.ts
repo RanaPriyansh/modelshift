@@ -12,7 +12,7 @@ import {
 import { refreshForgeAuth } from "./proxy";
 import { forgeContentSecurityPolicy } from "./security-headers";
 
-function configureCloudAuth(key = "sb_publishable_test_key_1234567890") {
+function configureRetiredCloudEnvironment(key = "sb_publishable_test_key_1234567890") {
   vi.stubEnv("FORGE_CLOUD_ACCOUNTS_ENABLED", "true");
   vi.stubEnv("FORGE_SUPABASE_URL", "https://forge-test.supabase.co");
   vi.stubEnv("FORGE_SUPABASE_PUBLISHABLE_KEY", key);
@@ -26,29 +26,12 @@ afterEach(() => {
 });
 
 describe("FORGE auth security boundary", () => {
-  it("fails closed until the production abuse and live-isolation gates are recorded", () => {
-    configureCloudAuth();
-    vi.stubEnv("FORGE_CLOUD_AUTH_ABUSE_CONTROLS", "");
+  it("keeps cloud auth structurally disabled even when retired release-token values are supplied", () => {
+    configureRetiredCloudEnvironment();
     expect(readForgeCloudAuthConfig()).toBeNull();
 
-    configureCloudAuth();
-    vi.stubEnv("FORGE_CLOUD_AUTH_LIVE_INTEGRATION", "not-a-live-test");
+    configureRetiredCloudEnvironment("sb_secret_test_key_123456789012345");
     expect(readForgeCloudAuthConfig()).toBeNull();
-  });
-
-  it("rejects secret and service-role keys from the public client configuration", () => {
-    configureCloudAuth("sb_secret_test_key_123456789012345");
-    expect(readForgeCloudAuthConfig()).toBeNull();
-
-    const servicePayload = Buffer.from(JSON.stringify({ role: "service_role" })).toString("base64url");
-    configureCloudAuth(`header.${servicePayload}.signature-long-enough`);
-    expect(readForgeCloudAuthConfig()).toBeNull();
-
-    configureCloudAuth();
-    expect(readForgeCloudAuthConfig()).toMatchObject({
-      url: "https://forge-test.supabase.co",
-      publishableKey: "sb_publishable_test_key_1234567890",
-    });
   });
 
   it("uses server-only session-cookie attributes", () => {
@@ -61,32 +44,13 @@ describe("FORGE auth security boundary", () => {
     });
   });
 
-  it("preserves every anti-cache header supplied with refreshed auth cookies", async () => {
-    configureCloudAuth();
-    createServerClient.mockImplementation((_url, _key, options) => ({
-      auth: {
-        getClaims: async () => {
-          options.cookies.setAll(
-            [{ name: "sb-session", value: "opaque-token", options: { path: "/", httpOnly: true } }],
-            {
-              "Cache-Control": "private, no-cache, no-store, must-revalidate, max-age=0",
-              Expires: "0",
-              Pragma: "no-cache",
-            },
-          );
-          return { data: { claims: { sub: "user" } }, error: null };
-        },
-      },
-    }));
-
+  it("does not instantiate a cloud client from retired environment values", async () => {
+    configureRetiredCloudEnvironment();
     const request = new NextRequest("https://forge.example/account");
     const response = await refreshForgeAuth(request, new Headers({ "x-nonce": "testnonce" }));
 
-    expect(response.headers.get("cache-control")).toBe("private, no-cache, no-store, must-revalidate, max-age=0");
-    expect(response.headers.get("expires")).toBe("0");
-    expect(response.headers.get("pragma")).toBe("no-cache");
-    expect(response.headers.get("set-cookie")).toContain("sb-session=opaque-token");
-    expect(createServerClient.mock.calls[0]?.[2]?.cookieOptions).toMatchObject({ httpOnly: true, sameSite: "lax", path: "/" });
+    expect(response.status).toBe(200);
+    expect(createServerClient).not.toHaveBeenCalled();
   });
 
   it("uses a request nonce and never permits arbitrary inline script", () => {
