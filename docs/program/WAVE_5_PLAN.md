@@ -102,11 +102,11 @@ Owned files:
 
 Required behavior:
 
-1. Accept only a structurally valid receipt bound to an exact released built-in World package, content version, runtime protocol, validator, task family, source tuple, and runtime-binding digest.
-2. Derive, never trust, validator outcome, disposition, assistance provenance, access provenance, remains-untested claims, and event ordering.
+1. Accept only a structurally valid receipt bound to an exact released built-in World package, content version, runtime protocol, validator, task family, source tuple, and runtime-binding digest; require the receipt digest, retained content-manifest digest, and fresh current-binding digest to agree.
+2. Re-run the released validator and require exact canonical validation code, outcome, and ordered criteria/evidence equality; derive, never trust, disposition, closed-catalog assistance provenance, access provenance, remains-untested claims, task identity, and event ordering.
 3. Emit an exact v2 chain with stable aggregate identity, correlation, causation, aggregate versions, idempotency keys, integrity hashes, and deterministic event references.
 4. Represent current authority as `honour_based`; a proof nonce stays absent until a server-owned attempt exists.
-5. Reject forged pass/disposition, stale package/runtime identity, duplicate or reordered stages, source-status inflation, proof contamination, malformed canonical validation, raw prose, and mixed v1/v2 replay.
+5. Reject forged pass/disposition/support, stale package/runtime identity, lossy task-code fallback, duplicate or reordered stages, source-status inflation, proof contamination, malformed canonical validation, raw prose, and mixed v1/v2 replay. Solution-revealing or out-of-policy support cannot produce demonstrated evidence.
 6. Replay the result through `ForgeEventJournal` and the ADR-001 projector; no event sequence is accepted only because individual event schemas pass.
 7. Cover all four released Worlds with pass, fail, malformed, duplicate, contamination, and reset cases.
 
@@ -115,6 +115,7 @@ Acceptance evidence:
 - parameterized all-World compiler and replay tests;
 - exact event count/type/order and integrity assertions;
 - explicit proof that no raw learner response enters events;
+- adversarial proof that alternate validator results, stale runtime bindings, forged support facts, and exact validator task codes cannot collide or be strengthened;
 - no claim of durability, authentication, trusted pathway evidence, or server-enforced proof.
 
 ## 6. Packet W5-C — Additive v2 persistence contract

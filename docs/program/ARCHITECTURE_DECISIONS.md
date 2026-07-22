@@ -70,6 +70,19 @@ Every evidence record also names:
 
 An invalid or contaminated attempt remains a learning attempt but cannot become independent evidence. Corrections append a new event; they never rewrite the original.
 
+### Runtime compiler binding amendment
+
+The bounded local receipt and its ADR-001 compiler use a closed, canonical input surface. The compiler does not infer authority from an adapter-supplied receipt:
+
+- the receipt carries the retained `runtime_binding_digest`; compilation succeeds only when the receipt value, the released content-manifest value, and a fresh digest of the current runtime binding are identical;
+- the compiler re-runs the released validator and requires exact canonical equality for validator ID/version, validation code, outcome, and ordered criteria/evidence before deriving disposition;
+- the exact validator identity and validation code are committed into a stable opaque task ID; a display task-family ID is never substituted for an invalid or lossy task code;
+- each runtime binding owns a closed support-action policy catalog. The compiler derives or validates action, stage, source, tier, policy, provider/model permission, and fallback permission from that catalog rather than trusting receipt fields;
+- `solution` support or any out-of-policy, protected-phase, answer-exposing, or model provenance mismatch invalidates independent evidence; unsupported support facts fail closed;
+- deterministic event identity derives only from these canonical, receipt-bound facts. Two transient inputs with the same canonical validation result may compile identically; inputs with different canonical results cannot share an accepted chain.
+
+The local receipt remains honour-based and non-durable. These bindings prevent accidental semantic promotion inside the local compiler; they do not turn a client-controlled run into server-enforced proof.
+
 ### Cognitive support and access
 
 - `SupportTier` describes instructional intensity. `solution` is recordable during learning but always contaminates the current proof task.
@@ -219,6 +232,8 @@ Each pack adds a versioned runtime binding to:
 - access/accommodation alternatives and focus/motion hooks;
 - source bindings using ADR-003;
 - device projection adapter derived from canonical events.
+
+The runtime binding is an integrity-bearing release artifact. Its digest is retained in the content package manifest and copied into each bounded receipt. Its support references are a closed per-action policy catalog, not a single descriptive policy label. Any change to validator identity, task mapping, support permissions, proof lock, source binding, or access semantics changes the digest and requires the receipt/compiler version contract to move with it.
 
 The runtime owns common state sequencing, policy decisions, authorized side effects, event append, proof lock, and evidence projection. Domain plugins own truth, correct answers, task construction, representations, and validators. UI components render runtime/domain state; they do not write evidence directly.
 
