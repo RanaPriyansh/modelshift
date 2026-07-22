@@ -1,4 +1,5 @@
 import type { WorldRuntimeBinding } from "../contracts";
+import { ARGUMENT_EVIDENCE_AUTHORED_FIXTURE } from "../../worlds/argument-evidence";
 
 export const ARGUMENT_EVIDENCE_RUNTIME_BINDING = {
   protocolVersion: "1.1.0",
@@ -39,14 +40,7 @@ export const ARGUMENT_EVIDENCE_RUNTIME_BINDING = {
     receiptSchemaVersion: "1.1.0",
     proofAuthority: "honour_based",
     persistence: "not_persisted",
-    remainsUntested: [
-      "Whether this single bus-route classification transfers to other claims or contexts.",
-      "Whether the learner can evaluate real-world truth, source authenticity, bias, statistical significance, or causal attribution.",
-      "Whether the learner can write, revise, or evaluate persuasive arguments.",
-      "Whether the distinction is retained over time or across repeated unaided attempts.",
-      "Whether the authored fixture and its access routes are valid for representative learners.",
-      "Whether a local, honour-based, non-persisted receipt establishes durable or independent evidence.",
-    ],
+    remainsUntested: ARGUMENT_EVIDENCE_AUTHORED_FIXTURE.results.remainsUntested,
   },
   returnProof: { enabled: false, policyId: "policy.argument-evidence.return-proof.unavailable.v1" },
   access: {

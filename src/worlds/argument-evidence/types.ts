@@ -119,6 +119,7 @@ export type ArgumentEvidenceWorldEvent =
   | { readonly type: "RESET" };
 
 export type ArgumentEvidenceTransitionRejectReason =
+  | "invalid_event_shape"
   | "invalid_event_for_stage"
   | "invalid_confidence"
   | "explanation_too_short"

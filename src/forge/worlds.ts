@@ -168,7 +168,7 @@ export const ARGUMENT_EVIDENCE_AUTHORED_FIXTURE_SOURCE = {
   title: "Argument & Evidence fictional authored fixture",
   publisher: "FORGE authored fixture",
   kind: "expert-authored",
-  url: "forge-asset:/worlds/argument-evidence/authored-fixture.json",
+  url: "forge-internal:source.argument-evidence.authored-fixture",
   contentVersion: ARGUMENT_EVIDENCE_CONTENT_VERSION,
   accessedAt: "2026-07-22T00:00:00.000Z",
   license: "FORGE internal authored curriculum candidate",
