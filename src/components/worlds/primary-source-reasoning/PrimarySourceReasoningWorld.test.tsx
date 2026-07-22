@@ -8,7 +8,6 @@ import { describe, expect, it, vi } from "vitest";
 import {
   TRANSFER_STATEMENTS,
   WORKED_STATEMENTS,
-  type PrimarySourceProofRecord,
 } from "../../../worlds/primary-source-reasoning";
 import { PrimarySourceReasoningWorld } from "./PrimarySourceReasoningWorld";
 
@@ -23,6 +22,8 @@ function advanceToWorkedClassification() {
   fireEvent.click(screen.getByTestId("commit-explanation"));
   chooseRadio("At least one reading is plausible enough to test.");
   fireEvent.click(screen.getByTestId("accept-compiler"));
+  chooseRadio("The catalog will distinguish claims the photograph alone cannot establish.");
+  fireEvent.click(screen.getByTestId("commit-test-prediction"));
   fireEvent.click(screen.getByTestId("open-catalog"));
 }
 
@@ -33,10 +34,9 @@ function assignAll(selects: HTMLElement[], categories: string[]) {
 }
 
 describe("PrimarySourceReasoningWorld", () => {
-  it("runs mystery through one-shot proof and emits only the bounded record", async () => {
-    const onEvidence = vi.fn<(record: PrimarySourceProofRecord) => void>();
+  it("runs mystery through one-shot proof and emits only the bounded local receipt", async () => {
     const onRuntimeReceipt = vi.fn();
-    render(<PrimarySourceReasoningWorld onEvidence={onEvidence} onRuntimeReceipt={onRuntimeReceipt} />);
+    render(<PrimarySourceReasoningWorld onRuntimeReceipt={onRuntimeReceipt} />);
 
     expect(screen.getByTestId("stage-mystery")).toBeInTheDocument();
     expect(screen.getByAltText(/sepia stereograph card/i)).toBeInTheDocument();
@@ -100,22 +100,9 @@ describe("PrimarySourceReasoningWorld", () => {
     expect(screen.getByText("Pattern held once")).toBeInTheDocument();
     expect(screen.getByText(/does not claim mastery or delayed retention/i)).toBeInTheDocument();
     expect(screen.getByText(/Whether the learner can corroborate conflicting sources/)).toBeInTheDocument();
-    await waitFor(() => expect(onEvidence).toHaveBeenCalledTimes(1));
-    expect(onEvidence.mock.calls[0]?.[0]).toMatchObject({
-      worldId: "world.primary-source-reasoning",
-      validatorId: "validator.primary-source-reasoning-transfer.v1",
-      assistance: {
-        explanationSampleUsed: true,
-        levelsUsed: [1],
-        wasAvailableDuringProof: false,
-      },
-      independentTransfer: { correctCount: 4, passed: true, confidence: 85 },
-    });
-    expect(JSON.stringify(onEvidence.mock.calls[0]?.[0])).not.toContain(
-      "The visible scene, the source record",
-    );
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
     expect(onRuntimeReceipt.mock.calls[0]?.[0]).toMatchObject({
+      kind: "forge.runtime.bounded-local-attempt",
       authority: { proofAuthority: "honour_based", persistence: "not_persisted", isDurable: false },
       validator: { outcome: "pass", disposition: "demonstrated" },
       sourceProvenanceStatus: "incomplete",
@@ -123,6 +110,7 @@ describe("PrimarySourceReasoningWorld", () => {
     expect(JSON.stringify(onRuntimeReceipt.mock.calls[0]?.[0])).not.toContain(
       "The visible scene, the source record",
     );
+    expect(JSON.stringify(onRuntimeReceipt.mock.calls[0]?.[0])).not.toContain("independentTransfer");
   });
 
   it("keeps classification feedback bounded and permits a retry before proof", () => {
@@ -135,6 +123,7 @@ describe("PrimarySourceReasoningWorld", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent(/not separated yet/i);
     expect(screen.getByTestId("stage-test")).toBeInTheDocument();
+    expect(screen.getByTestId("stage-test")).toHaveAttribute("data-worked-test-attempts", "1");
     expect(screen.queryByText(/correct answer/i)).not.toBeInTheDocument();
 
     assignAll(selects, ["observation", "catalog_fact", "inference", "open_question"]);

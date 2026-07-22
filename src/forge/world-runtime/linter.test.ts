@@ -12,6 +12,25 @@ function lintCodes(candidate: unknown): readonly string[] {
   return lintWorldRuntimePack(candidate).issues.map((issue) => issue.code);
 }
 
+function sourceFields(pack: LearningWorldPack): Record<string, unknown> {
+  return pack.runtime!.sourceBindings[0] as unknown as Record<string, unknown>;
+}
+
+function makeCompleteBoundSource(pack: LearningWorldPack): Record<string, unknown> {
+  const source = sourceFields(pack);
+  Object.assign(source, {
+    provenanceStatus: "bound",
+    sourcePackageId: "package.loc.primary-source-review",
+    sourcePackageVersion: "1.0.0",
+    sourceSnapshotDigest: `sha256:${"a".repeat(64)}`,
+    locatorIds: ["locator.loc.primary-source-analysis"],
+    claimIds: ["claim.loc.primary-source-analysis"],
+    rightsRecordId: "rights.loc.primary-source-analysis",
+    reviewDecisionIds: ["review.loc.primary-source-analysis"],
+  });
+  return source;
+}
+
 describe("World runtime package linter", () => {
   it("accepts the Primary Source binding on the existing package identity", () => {
     const result = lintWorldRuntimePack(PRIMARY_SOURCE_REASONING_WORLD);
@@ -67,14 +86,50 @@ describe("World runtime package linter", () => {
     expect(lintCodes(duplicateSourceBinding)).toContain("schema.invalid");
   });
 
-  it("does not let legacy source metadata pretend to be a reviewed snapshot", () => {
-    const fakeSnapshot = primarySourcePack();
-    fakeSnapshot.runtime!.sourceBindings[0]!.sourceSnapshotDigest = `sha256:${"a".repeat(64)}`;
-    expect(lintCodes(fakeSnapshot)).toContain("schema.invalid");
-
+  it("fails reviewer fake-bound sources without every ADR-003 authority field", () => {
     const incompleteBoundSource = primarySourcePack();
-    incompleteBoundSource.runtime!.sourceBindings[0]!.provenanceStatus = "bound";
+    sourceFields(incompleteBoundSource).provenanceStatus = "bound";
     expect(lintCodes(incompleteBoundSource)).toContain("schema.invalid");
+
+    const requiredTupleFailures: ReadonlyArray<readonly [string, unknown]> = [
+      ["sourcePackageId", null],
+      ["sourcePackageVersion", null],
+      ["sourceSnapshotDigest", null],
+      ["locatorIds", []],
+      ["claimIds", []],
+      ["rightsRecordId", null],
+      ["reviewDecisionIds", []],
+    ];
+    for (const [_field, value] of requiredTupleFailures) {
+      const candidate = primarySourcePack();
+      const source = makeCompleteBoundSource(candidate);
+      source[_field] = value;
+      expect(lintCodes(candidate)).toContain("schema.invalid");
+    }
+
+    for (const field of ["locatorIds", "claimIds", "reviewDecisionIds"] as const) {
+      const candidate = primarySourcePack();
+      const source = makeCompleteBoundSource(candidate);
+      source[field] = [`${field}.duplicate`, `${field}.duplicate`];
+      expect(lintCodes(candidate)).toContain("schema.invalid");
+    }
+  });
+
+  it("does not let explicitly incomplete legacy metadata carry authority fields", () => {
+    const forgedLegacyFields: ReadonlyArray<readonly [string, unknown]> = [
+      ["sourcePackageId", "package.forged"],
+      ["sourcePackageVersion", "1.0.0"],
+      ["sourceSnapshotDigest", `sha256:${"b".repeat(64)}`],
+      ["locatorIds", ["locator.forged"]],
+      ["claimIds", ["claim.forged"]],
+      ["rightsRecordId", "rights.forged"],
+      ["reviewDecisionIds", ["review.forged"]],
+    ];
+    for (const [field, value] of forgedLegacyFields) {
+      const candidate = primarySourcePack();
+      sourceFields(candidate)[field] = value;
+      expect(lintCodes(candidate)).toContain("schema.invalid");
+    }
 
     const durableClaim = primarySourcePack() as unknown as {
       runtime: { evidence: { persistence: string } };
