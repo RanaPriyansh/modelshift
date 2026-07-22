@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "dataset_version": "1.0.0",
+  "minimum_fixture_count": 54,
+  "minimum_clear_fixture_count": 38,
+  "minimum_ambiguous_fixture_count": 16,
+  "minimum_clear_agreement_count": 29,
+  "minimum_clear_agreement_rate": 0.75,
+  "required_probe_safety_rate": 1,
+  "live_evaluation_required_for_release": true
+}
