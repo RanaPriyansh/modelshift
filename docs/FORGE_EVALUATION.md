@@ -51,7 +51,7 @@ The same Zod schema validates all provider output. OpenAI uses Responses Structu
 
 ## Privacy and security checks
 
-- A BYOK credential is React component state only, is sent in one same-origin JSON request, and is cleared after success or failure.
+- If a future authority-gated BYOK request is approved, its credential must remain React component state only, travel in one same-origin JSON request, and clear after success or failure. The present public connector is unavailable.
 - No key is stored in local/session storage, returned in output, accepted in a URL, or sent to an arbitrary base URL.
 - The route rejects missing origin, cross-origin requests, JSON lookalikes, oversized bodies, extra fields, prompt-injection markers, restricted requests, and unmanaged child sessions.
 - Public Studio provider use is structurally locked: a request-only key or retired Studio flag cannot authorize it. It remains unavailable until active adult server-owned authority and separately approved quota, abuse, privacy, and review controls exist.
