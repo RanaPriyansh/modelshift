@@ -20,6 +20,7 @@ import {
   PRIMARY_SOURCE_CONTENT,
   RECONSTRUCTION_CHOICES,
   SUPPORT_LADDER,
+  TEST_PREDICTIONS,
   TRANSFER_STATEMENTS,
   WASHINGTON_CATALOG,
   WORKED_STATEMENTS,
@@ -30,6 +31,7 @@ import {
   type PrimarySourceStage,
   type PrimarySourceWorldEvent,
   type ReconstructionChoiceId,
+  type TestPredictionId,
   type TransferStatementId,
   type TransitionRejectReason,
   type WorkedStatementId,
@@ -38,7 +40,7 @@ import {
   createWorldRuntimeSession,
   dispatchWorldRuntimeCommand,
   primarySourceWorldRuntimeAdapter,
-  type TrustedWorldRuntimeReceipt,
+  type BoundedLocalWorldRuntimeReceipt,
 } from "../../../forge/world-runtime";
 import styles from "./PrimarySourceReasoningWorld.module.css";
 
@@ -562,23 +564,33 @@ function TestStage({
   error,
   instanceId,
   onAssign,
+  onCommitPrediction,
   onOpenCatalog,
+  onPredictionChange,
   onRequestSupport,
   onSubmit,
+  prediction,
+  predictionCommitted,
   supportUsed,
+  workedTestAttempts,
 }: {
   assignments: AssignmentMap<WorkedStatementId>;
   catalogOpened: boolean;
   error: TransitionRejectReason | null;
   instanceId: string;
   onAssign: (statementId: WorkedStatementId, category: EvidenceCategory) => void;
+  onCommitPrediction: () => void;
   onOpenCatalog: () => void;
+  onPredictionChange: (prediction: TestPredictionId) => void;
   onRequestSupport: () => void;
   onSubmit: () => void;
+  prediction: TestPredictionId | null;
+  predictionCommitted: TestPredictionId | null;
   supportUsed: readonly (1 | 2 | 3)[];
+  workedTestAttempts: number;
 }) {
   return (
-    <section data-testid="stage-test">
+    <section data-testid="stage-test" data-worked-test-attempts={workedTestAttempts}>
       <StageHeader
         eyebrow="Synchronized source comparison"
         title="Separate what the image shows from what the record supplies."
@@ -599,7 +611,7 @@ function TestStage({
             <span aria-hidden="true">+</span>
             <h2>Bring in the catalog layer</h2>
             <p>Opening it does not replace the photograph. It adds recorded provenance beside it.</p>
-            <ActionButton onClick={onOpenCatalog} testId="open-catalog">
+            <ActionButton disabled={!predictionCommitted} onClick={onOpenCatalog} testId="open-catalog">
               Open catalog record
             </ActionButton>
           </aside>
@@ -638,7 +650,29 @@ function TestStage({
           </div>
         </>
       ) : (
-        <ErrorNotice reason={error} />
+        <>
+          <fieldset className={styles.ruleChoices}>
+            <legend>Before opening the catalog, commit a prediction</legend>
+            {TEST_PREDICTIONS.map((item, index) => (
+              <label key={item.id} className={classes(prediction === item.id && styles.ruleSelected)}>
+                <input
+                  checked={prediction === item.id}
+                  name={`${instanceId}-test-prediction`}
+                  onChange={() => onPredictionChange(item.id)}
+                  type="radio"
+                />
+                <span aria-hidden="true">{String.fromCharCode(65 + index)}</span>
+                <strong>{item.label}</strong>
+              </label>
+            ))}
+          </fieldset>
+          <div className={styles.endAction}>
+            <ActionButton disabled={!prediction} onClick={onCommitPrediction} testId="commit-test-prediction">
+              Commit this prediction
+            </ActionButton>
+          </div>
+          <ErrorNotice reason={error} />
+        </>
       )}
     </section>
   );
@@ -951,16 +985,13 @@ function ResultStage({
 }
 
 export function PrimarySourceReasoningWorld({
-  onEvidence,
   onRuntimeReceipt,
 }: {
-  onEvidence?: (record: PrimarySourceProofRecord) => void;
-  onRuntimeReceipt?: (receipt: TrustedWorldRuntimeReceipt) => void;
+  onRuntimeReceipt?: (receipt: BoundedLocalWorldRuntimeReceipt) => void;
 }) {
   const instanceId = useId();
   const mainRef = useRef<HTMLElement>(null);
-  const emittedProofRef = useRef<PrimarySourceProofRecord | null>(null);
-  const emittedReceiptRef = useRef<TrustedWorldRuntimeReceipt | null>(null);
+  const emittedReceiptRef = useRef<BoundedLocalWorldRuntimeReceipt | null>(null);
   const [runtime, setRuntime] = useState(() => createWorldRuntimeSession(primarySourceWorldRuntimeAdapter));
   const runtimeRef = useRef(runtime);
   const state = runtime.state;
@@ -971,6 +1002,7 @@ export function PrimarySourceReasoningWorld({
   const [initialExplanation, setInitialExplanation] = useState("");
   const [interpretationResponse, setInterpretationResponse] = useState<"accepted" | "corrected" | null>(null);
   const [compilerCorrection, setCompilerCorrection] = useState("");
+  const [testPrediction, setTestPrediction] = useState<TestPredictionId | null>(null);
   const [reconstructionChoice, setReconstructionChoice] = useState<ReconstructionChoiceId | null>(null);
   const [reconstructionText, setReconstructionText] = useState("");
   const [transferConfidence, setTransferConfidence] = useState(65);
@@ -982,9 +1014,9 @@ export function PrimarySourceReasoningWorld({
         kind: "domain",
         event,
       });
+      runtimeRef.current = result.session;
+      setRuntime(result.session);
       if (result.accepted) {
-        runtimeRef.current = result.session;
-        setRuntime(result.session);
         setError(null);
         return true;
       }
@@ -999,13 +1031,6 @@ export function PrimarySourceReasoningWorld({
   }, [state.stage]);
 
   useEffect(() => {
-    if (state.proof && emittedProofRef.current !== state.proof) {
-      emittedProofRef.current = state.proof;
-      onEvidence?.(state.proof);
-    }
-  }, [onEvidence, state.proof]);
-
-  useEffect(() => {
     if (runtime.receipt && emittedReceiptRef.current !== runtime.receipt) {
       emittedReceiptRef.current = runtime.receipt;
       onRuntimeReceipt?.(runtime.receipt);
@@ -1014,13 +1039,13 @@ export function PrimarySourceReasoningWorld({
 
   function resetWorld() {
     send({ type: "RESET" });
-    emittedProofRef.current = null;
     emittedReceiptRef.current = null;
     setMysteryChoice(null);
     setInitialConfidence(65);
     setInitialExplanation("");
     setInterpretationResponse(null);
     setCompilerCorrection("");
+    setTestPrediction(null);
     setReconstructionChoice(null);
     setReconstructionText("");
     setTransferConfidence(65);
@@ -1089,10 +1114,18 @@ export function PrimarySourceReasoningWorld({
         onAssign={(statementId, category) =>
           send({ type: "SET_WORKED_ASSIGNMENT", statementId, category })
         }
+        onCommitPrediction={() => {
+          if (!testPrediction) return;
+          send({ type: "COMMIT_TEST_PREDICTION", predictionId: testPrediction });
+        }}
         onOpenCatalog={() => send({ type: "OPEN_CATALOG" })}
+        onPredictionChange={setTestPrediction}
         onRequestSupport={() => send({ type: "REQUEST_SUPPORT" })}
         onSubmit={() => send({ type: "SUBMIT_WORKED_TEST" })}
+        prediction={testPrediction}
+        predictionCommitted={state.testPredictionId}
         supportUsed={state.supportUsed}
+        workedTestAttempts={state.workedTestAttempts}
       />
     );
   } else if (state.stage === "RECONSTRUCT") {

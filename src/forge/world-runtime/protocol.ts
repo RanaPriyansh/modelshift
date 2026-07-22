@@ -1,12 +1,14 @@
 import type {
-  DeterministicValidationResult,
   LearningWorldPack,
+  WorldRuntimeAccessAccommodationKind,
+  WorldRuntimeAccessModality,
+  WorldRuntimeAccessRepresentation,
   WorldRuntimeActionKind,
   WorldRuntimeBinding,
   WorldRuntimeStage,
 } from "../contracts";
 
-export const WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION = "1.0.0" as const;
+export const WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION = "1.0.1" as const;
 
 export type RuntimePhase = "learning" | "proof" | "bounded_result";
 
@@ -29,10 +31,29 @@ export interface CanonicalSupportEvent {
 export interface AccessAccommodationEvent {
   readonly accommodationId: string;
   readonly stage: WorldRuntimeStage;
-  readonly constructPreserving: true;
+  readonly kind: WorldRuntimeAccessAccommodationKind;
+  readonly modality: WorldRuntimeAccessModality;
+  readonly representation: WorldRuntimeAccessRepresentation;
+  readonly constructPreservation: "preserves_construct";
+  readonly answerChanging: false;
+  readonly policyVersion: string;
+  readonly nonvisualAlternative: boolean;
 }
 
-export interface RuntimeSourceBindingReceipt {
+export type RuntimeSourceBindingReceipt =
+  | {
+      readonly domainSourceRef: string;
+      readonly sourcePackageId: string;
+      readonly sourcePackageVersion: string;
+      readonly sourceItemId: string;
+      readonly sourceSnapshotDigest: string;
+      readonly locatorIds: readonly string[];
+      readonly claimIds: readonly string[];
+      readonly rightsRecordId: string;
+      readonly reviewDecisionIds: readonly string[];
+      readonly status: "bound";
+    }
+  | {
   readonly domainSourceRef: string;
   readonly sourcePackageId: string | null;
   readonly sourcePackageVersion: string | null;
@@ -42,20 +63,20 @@ export interface RuntimeSourceBindingReceipt {
   readonly claimIds: readonly string[];
   readonly rightsRecordId: string | null;
   readonly reviewDecisionIds: readonly string[];
-  readonly status: "bound" | "legacy_metadata_only";
-}
+      readonly status: "legacy_metadata_only";
+    };
 
 /**
  * This is a protocol receipt, not a durable or server-authoritative evidence
  * record. The authority and provenance gaps are values in the receipt so a UI
  * or later projection cannot silently strengthen its claim.
  */
-export interface TrustedWorldRuntimeReceipt {
+export interface BoundedLocalWorldRuntimeReceipt {
   readonly schemaVersion: typeof WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION;
-  readonly kind: "forge.runtime.bounded-attempt";
+  readonly kind: "forge.runtime.bounded-local-attempt";
   readonly authority: {
-    readonly proofAuthority: "honour_based" | "server_enforced" | "human_observed";
-    readonly persistence: "not_persisted" | "device_projection" | "durable_event";
+    readonly proofAuthority: "honour_based";
+    readonly persistence: "not_persisted";
     readonly isDurable: false;
     readonly limitation: string;
   };
@@ -69,7 +90,7 @@ export interface TrustedWorldRuntimeReceipt {
   };
   readonly protocol: {
     readonly version: string;
-    readonly stagesObserved: readonly WorldRuntimeStage[];
+    readonly semanticTrace: readonly WorldRuntimeStage[];
     readonly instructionalActionsRejectedDuringProof: readonly WorldRuntimeActionKind[];
   };
   readonly validator: {
@@ -85,6 +106,11 @@ export interface TrustedWorldRuntimeReceipt {
   readonly sourceProvenanceStatus: "bound" | "incomplete";
   readonly remainsUntested: readonly string[];
   readonly responseDigest: null;
+}
+
+export interface CanonicalValidatorProjection {
+  readonly outcome: ValidatorOutcome;
+  readonly criteria: readonly string[];
 }
 
 export type RuntimeCommand<DomainEvent> =
@@ -111,20 +137,26 @@ export interface WorldRuntimeAdapter<State, DomainEvent, DomainProof> {
   createInitialState(): State;
   reduce(state: State, event: DomainEvent): DomainTransition<State>;
   phase(state: State): RuntimePhase;
+  initialSemanticStage(state: State): WorldRuntimeStage;
+  semanticStages(
+    event: DomainEvent,
+    priorState: State,
+    nextState: State,
+  ): readonly WorldRuntimeStage[];
   stage(state: State): WorldRuntimeStage;
   classify(event: DomainEvent): WorldRuntimeActionKind;
   supportEvent(event: DomainEvent, state: State): CanonicalSupportEvent | null;
   proof(state: State): DomainProof | null;
-  validateProof(proof: DomainProof): DeterministicValidationResult;
+  projectValidator(proof: DomainProof): CanonicalValidatorProjection;
   remainsUntested(proof: DomainProof): readonly string[];
 }
 
-export function deriveValidatorOutcome(result: DeterministicValidationResult): ValidatorOutcome {
-  if (result.code.startsWith("invalid.")) return "not_scored";
-  return result.passed ? "pass" : "fail";
-}
-
-export function deriveEvidenceDisposition(outcome: ValidatorOutcome): EvidenceDisposition {
+/**
+ * ADR-001's default derivation is intentionally owned by the shared runtime.
+ * Domain adapters can report only their authorized outcome and criteria; they
+ * cannot pair a failed result with a stronger evidence disposition.
+ */
+export function deriveDefaultEvidenceDisposition(outcome: ValidatorOutcome): Exclude<EvidenceDisposition, "invalidated"> {
   switch (outcome) {
     case "pass":
       return "demonstrated";

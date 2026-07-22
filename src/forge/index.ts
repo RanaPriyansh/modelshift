@@ -59,7 +59,7 @@ export {
 
 export type {
   RuntimeDispatchResult,
-  TrustedWorldRuntimeReceipt,
+  BoundedLocalWorldRuntimeReceipt,
   WorldRuntimeLintResult,
   WorldRuntimeSession,
 } from "./world-runtime";

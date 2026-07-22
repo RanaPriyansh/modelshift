@@ -2,18 +2,19 @@ export { PRIMARY_SOURCE_RUNTIME_BINDING } from "./primary-source-binding";
 export { lintWorldRuntimePack, type WorldRuntimeLintResult } from "./linter";
 export {
   primarySourceWorldRuntimeAdapter,
+  projectPrimarySourceTransferValidation,
   type PrimarySourceRuntimeProof,
 } from "./primary-source";
 export {
-  deriveEvidenceDisposition,
-  deriveValidatorOutcome,
+  deriveDefaultEvidenceDisposition,
   type AccessAccommodationEvent,
+  type BoundedLocalWorldRuntimeReceipt,
+  type CanonicalValidatorProjection,
   type CanonicalSupportEvent,
   type EvidenceDisposition,
   type RuntimeCommand,
   type RuntimePhase,
   type RuntimeSourceBindingReceipt,
-  type TrustedWorldRuntimeReceipt,
   type ValidatorOutcome,
   type WorldRuntimeAdapter,
   WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION,

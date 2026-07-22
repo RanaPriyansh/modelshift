@@ -21,6 +21,8 @@ async function reachPrimarySourceProof(page: Page): Promise<void> {
   await page.getByTestId("commit-explanation").click();
   await page.getByRole("radio", { name: "At least one reading is plausible enough to test." }).press("Space");
   await page.getByTestId("accept-compiler").click();
+  await page.getByRole("radio", { name: "The catalog will distinguish claims the photograph alone cannot establish." }).press("Space");
+  await page.getByTestId("commit-test-prediction").click();
   await page.getByTestId("open-catalog").click();
 
   const workedCategories = ["observation", "catalog_fact", "inference", "open_question"];

@@ -5,12 +5,13 @@ import type {
   MysteryChoiceId,
   ReconstructionChoiceId,
   SupportLevel,
+  TestPredictionId,
   TransferStatementId,
   WorkedStatementId,
 } from "./types";
 
 export const PRIMARY_SOURCE_WORLD_ID = "world.primary-source-reasoning" as const;
-export const PRIMARY_SOURCE_WORLD_VERSION = "1.0.0" as const;
+export const PRIMARY_SOURCE_WORLD_VERSION = "1.0.1" as const;
 export const PRIMARY_SOURCE_CAPABILITY_ID =
   "capability.historical-literacy.observation-inference" as const;
 export const PRIMARY_SOURCE_PROOF_CLAIM_ID =
@@ -91,6 +92,20 @@ export const DISAGREEMENT_POINT = Object.freeze({
   whyItSeparates:
     "If every fitting story is a fact, the layers collapse. If claims have evidence boundaries, the image, catalog, inference, and unanswered question must remain distinct.",
 });
+
+export const TEST_PREDICTIONS: ReadonlyArray<{
+  id: TestPredictionId;
+  label: string;
+}> = [
+  {
+    id: "catalog_distinguishes_evidence_layers",
+    label: "The catalog will distinguish claims the photograph alone cannot establish.",
+  },
+  {
+    id: "photograph_establishes_full_context",
+    label: "The photograph alone will establish the creator, date, and purpose.",
+  },
+];
 
 export const CATEGORIES: ReadonlyArray<CategoryDefinition> = [
   {
@@ -267,6 +282,8 @@ export const ERROR_MESSAGES = Object.freeze({
   explanation_too_short: "Add at least 24 characters explaining how you decided.",
   compiler_correction_too_short:
     "If neither reading fits, add at least 16 characters to correct the interpretation.",
+  invalid_test_prediction: "Choose one prediction about what the catalog comparison will show.",
+  test_prediction_required: "Commit a prediction before opening the catalog record.",
   catalog_must_open_first: "Open the catalog record before classifying the claims.",
   invalid_statement: "That statement does not belong to this source set.",
   invalid_category: "Choose one of the four evidence categories.",

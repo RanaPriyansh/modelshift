@@ -36,6 +36,10 @@ export type ReconstructionChoiceId =
   | "layers_bound_claims"
   | "catalog_is_only_inference";
 
+export type TestPredictionId =
+  | "catalog_distinguishes_evidence_layers"
+  | "photograph_establishes_full_context";
+
 export type SupportLevel = 1 | 2 | 3;
 
 export type AssignmentMap<StatementId extends string> = Partial<
@@ -79,7 +83,7 @@ export interface TransferEvaluation {
 
 export interface PrimarySourceProofRecord {
   worldId: "world.primary-source-reasoning";
-  worldVersion: "1.0.0";
+  worldVersion: "1.0.1";
   capabilityId: "capability.historical-literacy.observation-inference";
   proofClaimId: "proof.primary-source-reasoning.independent-transfer";
   validatorId: "validator.primary-source-reasoning-transfer.v1";
@@ -115,6 +119,7 @@ export interface PrimarySourceWorldState {
   explanationSampleUsed: boolean;
   interpretationResponse: "accepted" | "corrected" | null;
   compilerCorrection: string;
+  testPredictionId: TestPredictionId | null;
   catalogOpened: boolean;
   workedAssignments: AssignmentMap<WorkedStatementId>;
   workedTestPassed: boolean;
@@ -139,6 +144,7 @@ export type PrimarySourceWorldEvent =
       response: "accepted" | "corrected";
       correction?: string;
     }
+  | { type: "COMMIT_TEST_PREDICTION"; predictionId: TestPredictionId }
   | { type: "OPEN_CATALOG" }
   | {
       type: "SET_WORKED_ASSIGNMENT";
@@ -167,6 +173,8 @@ export type TransitionRejectReason =
   | "invalid_confidence"
   | "explanation_too_short"
   | "compiler_correction_too_short"
+  | "invalid_test_prediction"
+  | "test_prediction_required"
   | "catalog_must_open_first"
   | "invalid_statement"
   | "invalid_category"
