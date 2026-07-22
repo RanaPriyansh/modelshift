@@ -31,6 +31,20 @@ import {
 } from "./runtime.internal";
 import { retainedRuntimeIdentityForInternal } from "./retained-runtime-binding.internal";
 import { sourceCorroborationWorldRuntimeAdapter } from "./source-corroboration";
+import * as publicForgeBarrel from "../index";
+import * as publicRuntimeBarrel from "./index";
+import * as publicRuntimeModule from "./runtime";
+
+// These compile-time sentinels fail `pnpm typecheck` if an authority injection
+// seam is ever re-exported from the public runtime module.
+// @ts-expect-error Internal authority types must not be publicly importable.
+export type PublicRuntimeAuthorityMustRemainAbsent = import("./runtime").InternalWorldRuntimeAuthority;
+// @ts-expect-error The internal core authority type must not be publicly importable either.
+export type PublicRuntimeCoreAuthorityMustRemainAbsent = import("./runtime").WorldRuntimeAuthority;
+// @ts-expect-error Parametric session creation must not be publicly importable.
+export type PublicRuntimeCreateWithAuthorityMustRemainAbsent = typeof import("./runtime").createWorldRuntimeSessionWithAuthority;
+// @ts-expect-error Parametric dispatch must not be publicly importable.
+export type PublicRuntimeDispatchWithAuthorityMustRemainAbsent = typeof import("./runtime").dispatchWorldRuntimeCommandWithAuthority;
 
 const EXACT_RECEIPT_TRACE = [
   "encounter",
@@ -619,6 +633,65 @@ describe.each(FIXTURES)("$name shared-runtime conformance", (fixture) => {
 });
 
 describe("all released runtime World receipt projection and release identity", () => {
+  it("keeps arbitrary authority resolvers absent from every public runtime surface", () => {
+    const forbiddenRuntimeExports = [
+      "createWorldRuntimeSessionWithAuthority",
+      "dispatchWorldRuntimeCommandWithAuthority",
+    ];
+    for (const publicSurface of [publicRuntimeModule, publicRuntimeBarrel, publicForgeBarrel]) {
+      expect(Object.keys(publicSurface)).not.toEqual(expect.arrayContaining(forbiddenRuntimeExports));
+    }
+
+    for (const publicSource of [
+      resolve(process.cwd(), "src/forge/world-runtime/runtime.ts"),
+      resolve(process.cwd(), "src/forge/world-runtime/index.ts"),
+      resolve(process.cwd(), "src/forge/index.ts"),
+    ]) {
+      expect(readFileSync(publicSource, "utf8")).not.toMatch(
+        /export\s+(?:interface|type|function|\{[^}]*)(?:InternalWorldRuntimeAuthority|WorldRuntimeAuthority|createWorldRuntimeSessionWithAuthority|dispatchWorldRuntimeCommandWithAuthority)/s,
+      );
+    }
+  });
+
+  it("rejects forged public validator input before a proved receipt can reach the local ledger", () => {
+    const storage = new MemoryStorage();
+    vi.stubGlobal("window", { localStorage: storage });
+    const forgedAdapter = {
+      ...proportionalReasoningWorldRuntimeAdapter,
+      validatorInput: () => ({ forged: true }),
+    } satisfies typeof proportionalReasoningWorldRuntimeAdapter;
+    const successfulTransfer: RatioWorldEvent = {
+      type: "SUBMIT_TRANSFER",
+      choiceId: "32_km",
+      explanation: "12 is four times 3, so the real distance scales from 8 to 32 by the same factor.",
+      confidence: 85,
+    };
+
+    let runtime = createWorldRuntimeSession(forgedAdapter, "attempt.public-authority-forgery");
+    for (const event of ratioToProof) {
+      const dispatched = dispatchWorldRuntimeCommand(forgedAdapter, runtime, { kind: "domain", event });
+      expect(dispatched.accepted).toBe(true);
+      if (!dispatched.accepted) return;
+      runtime = dispatched.session;
+    }
+    const rejected = dispatchWorldRuntimeCommand(forgedAdapter, runtime, {
+      kind: "domain",
+      event: successfulTransfer,
+    });
+    expect(rejected).toMatchObject({
+      accepted: false,
+      reason: "canonical_validator_input_invalid",
+      session: { phase: "proof", receipt: null },
+    });
+
+    const recorded = recordWorldRuntimeReceipt(
+      rejected.session.receipt as unknown as BoundedLocalWorldRuntimeReceipt,
+    );
+    expect(recorded).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
+    expect(recorded.ledger.entries).toEqual([]);
+    expect(storage.snapshot()).not.toContain('"outcome":"proved"');
+  });
+
   it("projects only public canonical receipts and rejects the retained unavailable receipt", () => {
     const storage = new MemoryStorage();
     vi.stubGlobal("window", { localStorage: storage });

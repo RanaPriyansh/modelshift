@@ -4,12 +4,12 @@ import { retainedRuntimeIdentityForInternal } from "./retained-runtime-binding.i
 import {
   createWorldRuntimeSessionWithAuthority,
   dispatchWorldRuntimeCommandWithAuthority,
-  type InternalWorldRuntimeAuthority,
   type RuntimeDispatchResult,
+  type WorldRuntimeAuthority,
   type WorldRuntimeSession,
-} from "./runtime";
+} from "./runtime-core.internal";
 
-const INTERNAL_WORLD_RUNTIME_AUTHORITY: InternalWorldRuntimeAuthority = Object.freeze({
+const INTERNAL_WORLD_RUNTIME_AUTHORITY: WorldRuntimeAuthority = Object.freeze({
   canonicalValidatorRegistration: getInternalCanonicalDeterministicValidatorRegistration,
   retainedRuntimeIdentity: retainedRuntimeIdentityForInternal,
 });
