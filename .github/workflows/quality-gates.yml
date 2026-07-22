@@ -40,8 +40,12 @@ jobs:
         with:
           node-version: "22"
           package-manager-cache: false
+      - name: Capture immutable dependency identity before install
+        run: node scripts/operations/immutable-lockfile.mjs capture --source-ref "$GITHUB_SHA" --github-env "$GITHUB_ENV"
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
+      - name: Reject post-install lockfile mutation
+        run: node scripts/operations/immutable-lockfile.mjs verify --expected-digest "$FORGE_LOCKFILE_DIGEST"
       - name: Lint
         run: pnpm lint
       - name: Typecheck
@@ -53,7 +57,6 @@ jobs:
       - name: Capture immutable build identity
         run: |
           printf 'FORGE_BUILD_TIME=%s\n' "$(date -u -d "$(git show -s --format=%cI "$GITHUB_SHA")" +%Y-%m-%dT%H:%M:%S.000Z)" >> "$GITHUB_ENV"
-          printf 'FORGE_LOCKFILE_DIGEST=%s\n' "$(shasum -a 256 pnpm-lock.yaml | cut -d' ' -f1)" >> "$GITHUB_ENV"
           printf 'FORGE_CONTENT_MANIFEST_DIGEST=%s\n' "$(shasum -a 256 scripts/ops/content-package-manifest.json | cut -d' ' -f1)" >> "$GITHUB_ENV"
           printf 'FORGE_EVALUATOR_BASELINE_DIGEST=%s\n' "$(shasum -a 256 scripts/ops/evaluation-baseline.json | cut -d' ' -f1)" >> "$GITHUB_ENV"
           printf 'FORGE_DATABASE_MIGRATION_IDENTITY=not_configured\n' >> "$GITHUB_ENV"
