@@ -12,7 +12,7 @@
 
 This is a bounded post-release record for `c7d4011`. The documentation-only commit that follows it is not deployed and does not change this release tuple. The verifier classifies it as `DEPLOYED_CANDIDATE`, not terminal `PRODUCTION_VERIFIED`, because live-provider and rollback-rehearsal authority remain absent.
 
-**Current local main:** `29e1aaeccdb4df6e6893230ec8ee0fbaea9c73d0` is not deployed. It adds independently accepted immutable lock identity, exact all-World ADR-001 receipt compilation, pure source-authority replay, and a pure nine-area curriculum-graph contract. Its exact-main gate passed 18 focused curriculum tests, 592 application tests, 13 evaluator-contract tests, typecheck, lint, and diff checks. The graph reports only caller-asserted/unverified exact matches and cannot emit a routable route. SQL durability, a trusted registry/source adapter, the fifth World, browser/access integration, exact-SHA CI, and any later deployment remain incomplete.
+**Current accepted local code baseline:** `29e1aaeccdb4df6e6893230ec8ee0fbaea9c73d0` is not deployed; this later matrix amendment is documentation-only. The code baseline adds independently accepted immutable lock identity, exact all-World ADR-001 receipt compilation, pure source-authority replay, and a pure nine-area curriculum-graph contract. Its exact-SHA gate passed 18 focused curriculum tests, 592 application tests, 13 evaluator-contract tests, typecheck, lint, and diff checks. The graph reports only caller-asserted/unverified exact matches and cannot emit a routable route. SQL durability, a trusted registry/source adapter, the fifth World, browser/access integration, exact-SHA CI, and any later deployment remain incomplete.
 
 **Audit date:** 22 July 2026
 
