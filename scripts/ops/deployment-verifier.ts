@@ -1,4 +1,4 @@
-import { isIP } from "node:net";
+import { isIP, type LookupFunction } from "node:net";
 import { lookup } from "node:dns/promises";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
@@ -230,12 +230,31 @@ function scripts(html: string, origin: string): { urls: URL[]; rejected: number 
   return { urls: [...urls].map((url) => new URL(url)), rejected };
 }
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
+/**
+ * Return only the DNS answer already checked by safeResolvedAddresses. Node
+ * enables connection auto-selection by asking custom lookups for `all: true`,
+ * which requires the DNS lookup callback's array result shape.
+ */
+export function createPinnedLookup(address: string): LookupFunction {
+  const family = isIP(address);
+  if (family === 0) throw new Error("pinned target address must be an IP address");
+  return (_hostname, options, callback) => {
+    const requestedFamily = options.family === "IPv4" ? 4 : options.family === "IPv6" ? 6 : options.family ?? 0;
+    if (requestedFamily !== 0 && requestedFamily !== family) {
+      const error = Object.assign(new Error("pinned target address does not satisfy the requested address family"), { code: "ENOTFOUND" }) as NodeJS.ErrnoException;
+      callback(error, options.all ? [] : "", family);
+      return;
+    }
+    if (options.all) callback(null, [{ address, family }]);
+    else callback(null, address, family);
+  };
+}
 async function pinnedRequest(url: URL, timeoutMs: number, addresses: readonly string[], maximum: number): Promise<Response> {
   const address = addresses[0];
   if (!address) throw new Error("no validated target address");
   const requestFunction = url.protocol === "https:" ? httpsRequest : httpRequest;
   return new Promise((resolveResponse, reject) => {
-    const request = requestFunction({ hostname: url.hostname, port: url.port || (url.protocol === "https:" ? 443 : 80), path: `${url.pathname}${url.search}`, method: "GET", headers: { Accept: "text/html,application/json;q=0.9,*/*;q=0.1", "User-Agent": `FORGE-deployment-verifier/${DEPLOYMENT_VERIFIER_VERSION}` }, lookup: (_hostname, _options, callback) => callback(null, address, isIP(address)), servername: url.hostname, rejectUnauthorized: true });
+    const request = requestFunction({ hostname: url.hostname, port: url.port || (url.protocol === "https:" ? 443 : 80), path: `${url.pathname}${url.search}`, method: "GET", headers: { Accept: "text/html,application/json;q=0.9,*/*;q=0.1", "User-Agent": `FORGE-deployment-verifier/${DEPLOYMENT_VERIFIER_VERSION}` }, lookup: createPinnedLookup(address), servername: url.hostname, rejectUnauthorized: true });
     const chunks: Buffer[] = []; let bytes = 0;
     request.setTimeout(timeoutMs, () => request.destroy(new Error("verification request timed out")));
     request.on("error", reject);

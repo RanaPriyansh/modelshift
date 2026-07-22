@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { createServer, request as httpRequest } from "node:http";
+import type { AddressInfo, LookupFunction } from "node:net";
 
-import { IANA_IPV6_GLOBAL_UNICAST_POLICY_VERSION, IANA_SPECIAL_PURPOSE_POLICY_VERSION, validateTargetUrl, verifyDeployment, type DeploymentVerificationReport } from "../../scripts/ops/deployment-verifier";
+import { createPinnedLookup, IANA_IPV6_GLOBAL_UNICAST_POLICY_VERSION, IANA_SPECIAL_PURPOSE_POLICY_VERSION, validateTargetUrl, verifyDeployment, type DeploymentVerificationReport } from "../../scripts/ops/deployment-verifier";
 import { resolveDeploymentTarget } from "../../scripts/ops/deployment-target-policy";
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
@@ -26,6 +28,34 @@ function mockFetch(asset = "self.__next_f=[]") {
 }
 async function run(fetchImpl = mockFetch()): Promise<DeploymentVerificationReport> { return verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:00.000Z", deploymentId: "dpl-candidate", deploymentUrl: "https://deployment.example/", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["8.8.8.8"] }); }
 describe("deployment verifier", () => {
+  it("uses the Node all-address lookup shape while pinning the validated address", async () => {
+    const server = createServer((_request, response) => response.end("pinned"));
+    await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
+    try {
+      const port = (server.address() as AddressInfo).port;
+      let lookupOptions: Parameters<LookupFunction>[1] | undefined;
+      const response = await new Promise<string>((resolve, reject) => {
+        const lookup: LookupFunction = (hostname, options, callback) => {
+          lookupOptions = options;
+          createPinnedLookup("127.0.0.1")(hostname, options, callback);
+        };
+        // @types/node has not yet exposed this net connection option on http.RequestOptions.
+        const requestOptions: import("node:http").ClientRequestArgs & { autoSelectFamily: boolean } = { hostname: "pinned.example", port, autoSelectFamily: true, lookup };
+        const request = httpRequest(requestOptions, (incoming) => {
+          let body = "";
+          incoming.setEncoding("utf8");
+          incoming.on("data", (chunk: string) => { body += chunk; });
+          incoming.on("end", () => resolve(body));
+        });
+        request.once("error", reject);
+        request.end();
+      });
+      expect(lookupOptions?.all).toBe(true);
+      expect(response).toBe("pinned");
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
+  });
   it("verifies all four Worlds, Studio, device profile, CSP nonce, and disabled state", async () => { const report = await run(); expect(report.status).toBe("pass"); expect(report.observed_release_sha).toBe(SHA); expect(report.request_policy.methods).toEqual(["GET"]); expect(report.release_identity.candidate_state).toBe("DEPLOYED_CANDIDATE"); expect(report.release_identity.source_sha).toBe(SHA); expect(report.release_identity.tested_sha).toBe(SHA); expect(report.release_identity.database).toEqual({ status: "not_configured" }); expect(report.checks.some((item) => item.id === "world_primary_source_reasoning.marker" && item.status === "pass")).toBe(true); });
   it("rejects unsafe remote targets and fails without leaking asset secrets", async () => { expect(() => validateTargetUrl("http://forge.example", ["forge.example"])).toThrow(/HTTPS/); expect(() => validateTargetUrl("https://user:pass@forge.example", ["forge.example"])).toThrow(/credentials/); const secret = `sk-${"x".repeat(32)}`; const report = await run(mockFetch(`window.token=\"${secret}\"`)); expect(report.status).toBe("fail"); expect(JSON.stringify(report)).not.toContain(secret); });
   it("uses only the checked-in deployment target policy", () => { expect(resolveDeploymentTarget("forge_learning_os_project").origin).toMatch(/^https:\/\//); expect(() => resolveDeploymentTarget("caller-controlled-host")).toThrow(/allowlist/); expect(() => validateTargetUrl("https://192.0.2.1", ["192.0.2.1"])).toThrow(/IP-literal/); expect(() => validateTargetUrl("http://localhost")).toThrow(/allow-localhost/); });
