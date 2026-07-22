@@ -6,7 +6,7 @@ Workers implement bounded slices in isolated worktrees. They do not edit the pri
 
 **Wave 4 release boundary:** released source is `c7d401101791faa80ac0ba61c73044928a2da7b6`, public alias is `https://modelshift.vercel.app`, accepted production deployment is `dpl_6MUabxtnuMVzwxHf1vbM5Y1LxNfs`, and immutable URL is `https://forge-learning-2sh2loxy1-ranapriyanshs-projects.vercel.app`. Exact-main CI `29944461461`, pre-main CI `29944088585`, local/public browser 70 pass / 22 intentional skips / 0 fail, all-World conformance 18/18, terminal routed conformance 8/8, and final local/public bound verifier 187/187 passed. The bound verifier status is `DEPLOYED_CANDIDATE`; live evaluation and rollback rehearsal remain `NOT_EVALUATED`. This later documentation-only amendment is not deployed. No lane may describe the release as durable authority, live provider operation, cloud auth, broad curriculum, certification, or homeschool readiness.
 
-**Wave 5 dispatch boundary:** [`WAVE_5_PLAN.md`](./WAVE_5_PLAN.md) is the active architecture and ownership packet on principal base `eca9c3b`. Workers may implement only their assigned packet in isolated worktrees. W5-A owns immutable dependency identity; W5-B owns receipt-to-ADR-001 compilation; W5-C owns additive v2 SQL fixtures. W5-D source/curriculum authority and W5-E Argument & Evidence remain sequenced after those contracts. No worker may enable cloud/provider features, migrate a live database, publish a World, push shared main, deploy, or edit principal program documents.
+**Wave 5 current boundary:** [`WAVE_5_PLAN.md`](./WAVE_5_PLAN.md) remains the active architecture packet. Principal local main `de84fcbc6dab0b5774f658e7efc2b635fcfef169` includes independently accepted W5-A immutable lock identity, W5-B all-World receipt compilation, and the source-authority half of W5-D. On that exact local SHA, 82 focused integration tests, 574 application tests, 13 evaluator-contract tests, typecheck, lint, retained release-digest validation, and diff checks passed. It is not deployed. W5-C SQL correction and the W5-D curriculum graph are active in isolated worktrees; W5-E remains blocked on their acceptance. No worker may enable cloud/provider features, migrate a live database, publish a World, push shared main, deploy, or edit principal program documents.
 
 ## Active lane map
 
@@ -20,6 +20,17 @@ Workers implement bounded slices in isolated worktrees. They do not edit the pri
 | AI Lesson Intelligence | `019f8973-f2d9-7710-ba01-451d892f767a` | `gpt-5.6-terra` xhigh | `IDLE`; Packet F `ACCEPTED_ON_MAIN` | Replay `b07d577` → `fa634ea`; integrated as `1e95a15` → `15a7531` | Add a durable human-review queue/source service only after identity, quota, abuse, privacy, and publication authority are separately approved |
 
 The principal remains the architecture/integration/red-team lane and uses `ultra` only when the user explicitly returns for review or a worker requests a cross-lane decision.
+
+## Wave 5 accepted and active chain
+
+| Order | Slice | Integrated or candidate chain | Status | Boundary retained |
+| --- | --- | --- | --- | --- |
+| 1 | Immutable dependency identity | integrated through `e0fae60` | `ACCEPTED_ON_MAIN` | Canonical lock identity is the exact Git blob and install mutation fails closed; no deployment or public-state claim follows. |
+| 2 | All-World ADR-001 compiler | source `7f4806f` → `abc1ce0` → `3c50542` → `2de212d`; integrated as `bfaa9ee` → `98037c3` → `92966b9` → `de84fcb` | `ACCEPTED_ON_MAIN` for client/honour-based compilation | Receipt, retained manifest, fresh package/runtime digests, validator result, task code, support/access/source facts, and package-owned limitations are exact. Contradictory same-attempt results share identities and conflict on append. No persistence, authentication, or trusted-evidence claim follows. |
+| 3 | Source authority contract/replay | source `bcae23c` → `a4920d3`; integrated as `b939ae1` → `07f5f28` | `ACCEPTED_ON_MAIN` for a pure local candidate boundary | Content-addressed policy/package identity, temporal replay, exact locators, lifecycle invalidation, and non-authority result fields passed independent review. It establishes no authenticity, rights clearance, durable human review, or publication. |
+| 4 | Additive ADR-001 v2 SQL correction | new candidate from `de84fcb`; original `0689309` remains rejected evidence | `IN_PROGRESS` | Must close global cross-version event-ID races, learner-only direct append, runtime/compiler parity, and immutable outbox documents on disposable databases. |
+| 5 | Nine-area curriculum graph | new candidate from `de84fcb` against [`CURRICULUM_GRAPH_SPEC.md`](./CURRICULUM_GRAPH_SPEC.md) | `IN_PROGRESS` | Must report released/candidate/gap and source-authority quality separately; no recommendation, schedule, coverage sufficiency, or homeschool claim. |
+| 6 | Argument & Evidence World readiness | read-only red team against [`ARGUMENT_EVIDENCE_WORLD_SPEC.md`](./ARGUMENT_EVIDENCE_WORLD_SPEC.md) | `REVIEW_IN_PROGRESS`; implementation not dispatched | The fifth World cannot enter the registry or route until runtime, source, curriculum, content/proof, and access gates pass separately. |
 
 ## Wave 2 agent and review chain
 
