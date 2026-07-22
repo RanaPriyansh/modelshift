@@ -111,6 +111,10 @@ export interface InterpretationPayload {
 export interface ValidatedInterpretation extends InterpretationPayload {
   source: InterpretationSource;
   fallback_reason?: FallbackReason;
+  /** Server-owned transport metadata, never model-authored schema fields. */
+  providerId?: "openai" | null;
+  modelId?: string | null;
+  policyId?: "policy.force-and-motion.interpretation.v1";
 }
 
 export interface InterpretationRequest {

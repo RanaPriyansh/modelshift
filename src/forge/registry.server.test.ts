@@ -83,12 +83,24 @@ describe("TrustedWorldRegistry", () => {
     expect(Object.isFrozen(trustedWorldRegistry.list())).toBe(true);
   });
 
-  it("keeps the Primary Source runtime binding under the existing package identity", () => {
+  it("keeps Force and Primary Source runtime bindings under their existing package identities", () => {
+    expect(trustedWorldRegistry.getPack("world.force-and-motion")).toMatchObject({
+      manifest: { version: "1.0.1" },
+      release: { contentVersion: "1.0.0" },
+    });
+    expect(trustedWorldRegistry.getRuntimeBinding("world.force-and-motion")).toMatchObject({
+      protocolVersion: "1.0.1",
+      evidence: { receiptSchemaVersion: "1.0.1" },
+      proof: {
+        proofClaimId: "proof.force-motion.independent-transfer",
+        validatorId: "validator.force-motion-transfer.v1",
+        accessAllowed: true,
+      },
+    });
     expect(trustedWorldRegistry.getPack("world.primary-source-reasoning")).toMatchObject({
       manifest: { version: "1.0.2" },
       release: { contentVersion: "1.0.1" },
     });
-    expect(trustedWorldRegistry.getRuntimeBinding("world.force-and-motion")).toBeUndefined();
     expect(trustedWorldRegistry.getRuntimeBinding("world.primary-source-reasoning")).toMatchObject({
       protocolVersion: "1.0.2",
       evidence: { receiptSchemaVersion: "1.0.2" },

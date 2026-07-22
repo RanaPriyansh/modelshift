@@ -58,6 +58,28 @@ describe("recordWorldProof", () => {
     expect(JSON.stringify(persisted)).not.toMatch(/question|explanation|confidence|identity|raw/i);
   });
 
+  it("keeps authored representation support distinct from hints and model interpretation", () => {
+    const storage = new MemoryStorage();
+    vi.stubGlobal("window", { localStorage: storage });
+
+    const result = recordWorldProof({
+      capabilityId: "capability.force-motion.zero-net-force",
+      conditionId: "proof.force-motion.independent-transfer",
+      sourceRefId: "world.force-and-motion",
+      outcome: "proved",
+      assistance: [{ kind: "authored_representation", sourceId: "support.force-motion.authored-interpretation" }],
+      recordedAt: "2026-07-22T00:00:00.000Z",
+    });
+
+    expect(result.ok).toBe(true);
+    const persisted = createEvidenceLedgerStore(
+      createLocalStorageEvidenceLedgerAdapter({ storage }),
+    ).read().ledger;
+    expect(persisted.entries[0]?.assistance).toEqual([
+      { kind: "authored_representation", sourceId: "support.force-motion.authored-interpretation" },
+    ]);
+  });
+
   it("schedules a proved attempt only when it receives valid explicit intervals", () => {
     const storage = new MemoryStorage();
     vi.stubGlobal("window", { localStorage: storage });
