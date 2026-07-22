@@ -376,6 +376,10 @@ function FoundationsAndFrontier() {
           </ul>
         </article>
       </div>
+      <Link className="forge-secondary-action forge-foundations-link" href="/pathways">
+        See current availability and gaps
+        <ForgeArrow />
+      </Link>
     </section>
   );
 }

@@ -15,3 +15,8 @@ export {
   type PathwayReviewOutcome,
   type PathwayReviewStatus,
 } from "./review";
+export { getCurrentPathwayAvailability } from "./public-availability";
+export type {
+  PublicPathwayAgeMode,
+  PublicPathwayAvailability,
+} from "./public-availability";
