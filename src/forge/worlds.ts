@@ -19,6 +19,7 @@ import {
   type LearningWorldPack,
   type SourceProvenance,
 } from "./contracts";
+import { PRIMARY_SOURCE_RUNTIME_BINDING } from "./world-runtime/primary-source-binding";
 
 const AI_OFF = {
   mode: "off",
@@ -493,6 +494,7 @@ export const PRIMARY_SOURCE_REASONING_WORLD = {
       outputContractVersion: "1.0.0",
     },
   ],
+  runtime: PRIMARY_SOURCE_RUNTIME_BINDING,
 } satisfies LearningWorldPack;
 
 const forceMotionTransferInputSchema = z.strictObject({
