@@ -26,6 +26,7 @@ const ROUTES = [
   { id: "world_ai_learning", path: "/learn/ai-and-learning", marker: /AI & learning|ai-and-learning/i },
   { id: "world_proportional_reasoning", path: "/learn/proportional-reasoning", marker: /Proportional|proportional-reasoning/i },
   { id: "world_primary_source_reasoning", path: "/learn/primary-source-reasoning", marker: /Primary source|primary-source-reasoning/i },
+  { id: "pathway_availability", path: "/pathways", marker: /What FORGE can(?:—|&mdash;|&#x2014;)and cannot(?:—|&mdash;|&#x2014;)offer today|Availability map only/i },
   { id: "studio", path: "/studio", marker: /Lesson Studio|provider-neutral|learning question/i },
   { id: "device_profile_login", path: "/login", marker: /device profile|Cloud identity · not configured|Pick where your learning trail lives/i },
   { id: "device_profile_account", path: "/account", marker: /device evidence|No cloud account active|Your access/i },
