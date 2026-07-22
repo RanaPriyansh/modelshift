@@ -141,7 +141,9 @@ PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
 
 The complete application requires a Next.js/Node-compatible host because it includes server routes. Vercel is the intended deployment target for this foundation; a static-site host can publish design or research artifacts but cannot replace the planner and interpretation APIs without a separate backend.
 
-No public FORGE release is claimed by this README until the exact commit, environment, browser verification, and allowed claim are recorded. The existing [modelshift.vercel.app](https://modelshift.vercel.app) URL and [RanaPriyansh/modelshift](https://github.com/RanaPriyansh/modelshift) repository are historical ModelShift v1 release references unless a new FORGE deployment is separately verified.
+The current bounded FORGE engineering release is source `c7d401101791faa80ac0ba61c73044928a2da7b6` at [modelshift.vercel.app](https://modelshift.vercel.app), production deployment `dpl_6MUabxtnuMVzwxHf1vbM5Y1LxNfs`, and immutable URL `https://forge-learning-2sh2loxy1-ranapriyanshs-projects.vercel.app`. Exact-main CI `29944461461` and pre-main `workflow_dispatch` CI `29944088585` passed; local/public browser evidence was 70 pass / 22 intentional skips / 0 fail; all-World conformance was 18/18, terminal routed conformance 8/8, and the final local/public bound verifier was 187/187. Runtime is `fallback_only`; BYOK is request-only; cloud accounts, evidence sync, and managed providers are disabled. Public error-level and 5xx scans were empty.
+
+This is `DEPLOYED_CANDIDATE`, never `PRODUCTION_VERIFIED`: live-provider operation, durable cloud evidence, manual assistive-technology/Safari/Firefox/representative-learner sessions, efficacy/retention, broad curriculum, homeschool readiness, certification, and rollback rehearsal are not proven. The prior deployment `dpl_4eY4F3vMV1hado7TG1BZN11Mgzvt` was replaced rather than accepted because its build time and digests were unknown. The documentation-only commit containing this record is not deployed.
 
 ## What is not yet claimed
 

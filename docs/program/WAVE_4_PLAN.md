@@ -1,12 +1,12 @@
 # FORGE Wave 4 All-World Runtime Plan
 
 - **Principal baseline:** `e6254648089dfb98d92c3fdf8439ec9047a03f72`
-- **Public baseline:** `98687eaac20f956698000467cd01ea1da9b7fd6e`
+- **Public baseline:** `c7d401101791faa80ac0ba61c73044928a2da7b6`
 - **Public release state:** `DEPLOYED_CANDIDATE`
-- **Wave status:** `IMPLEMENTATION_IN_PROGRESS`
+- **Wave status:** `RELEASE_RECORDED`
 - **Scope:** Force and Motion migration, AI & Learning canonical-flow repair and migration, all-World conformance, exact candidate verification
 
-This is an implementation plan, not release evidence. It does not change the public deployment or upgrade any product, curriculum, evidence, source, accessibility, or homeschool claim.
+The implementation sections below remain the Wave 4 plan. The post-release amendment records one bounded engineering deployment; neither section upgrades any product, curriculum, evidence, source, accessibility, or homeschool claim.
 
 ## North star
 
@@ -197,6 +197,26 @@ This is bounded local candidate evidence from branch `agent/world-runtime-confor
 - live provider/model evaluation is `NOT_RUN`; no provider credential or paid request was used;
 - no deploy, push, database operation, cloud identity/evidence operation, or external write was performed;
 - source bindings remain `legacy_metadata_only`, receipts remain honour-based and non-durable, and no efficacy, mastery, retention, broad curriculum, homeschool-readiness, certification, or universal-World claim follows.
+
+## Wave 4 post-release amendment - 22 July 2026
+
+This is the accepted public engineering tuple for source `c7d401101791faa80ac0ba61c73044928a2da7b6`:
+
+| Field | Recorded value |
+| --- | --- |
+| Public alias | `https://modelshift.vercel.app` |
+| Accepted production deployment | `dpl_6MUabxtnuMVzwxHf1vbM5Y1LxNfs` |
+| Immutable deployment | `https://forge-learning-2sh2loxy1-ranapriyanshs-projects.vercel.app` |
+| Exact CI | pre-main `workflow_dispatch` run `29944088585` PASS; exact-main CI run `29944461461` PASS |
+| Local gates | 529 application tests, 13 evaluator-contract tests, 54 offline fixtures, lint, typecheck, and optimized build PASS |
+| Browser and conformance | local/public full browser 70 pass, 22 intentional skips, 0 fail; all-World conformance 18/18; terminal routed conformance 8/8; final local/public bound verifier 187/187 PASS |
+| Observability and feature state | public error-level and 5xx scans empty; runtime `fallback_only`; request-only BYOK; cloud accounts, evidence sync, and managed providers disabled |
+
+The rejected deployment `dpl_4eY4F3vMV1hado7TG1BZN11Mgzvt` at immutable URL prefix `https://forge-learning-9i0915bo1...` was replaced and is not an accepted release: its health data had unknown `build_time` and digests. The read-only unbound workflow `29945127093` failed `184/187` because the committed/public lock digest `12f19d...` differed from the runner post-install digest `f43d90...`, retained metadata was empty, and the result was `DEPLOYMENT_BLOCKED`. That is a lock-digest reproducibility follow-up, not a product or public bound-verifier failure.
+
+Rollback target `dpl_pLpQmuCP43Mc3tNt1nErf8MRH2v2` at source `98687ea` remains recorded; rollback rehearsal is `NOT_EVALUATED`. Live provider use, manual assistive-technology sessions, Safari, Firefox, representative learner sessions, efficacy/retention studies, durable cloud evidence, broad curriculum, homeschool readiness, and certification remain `NOT_RUN` or unproven. The release state remains `DEPLOYED_CANDIDATE`, never `PRODUCTION_VERIFIED`.
+
+This documentation-only amendment is not deployed.
 
 ## Integration order
 
