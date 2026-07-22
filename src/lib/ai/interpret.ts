@@ -50,6 +50,7 @@ export async function interpretExplanation(
   if (!apiKey && !options.client) return neutralFallback("missing_key");
 
   const client = options.client ?? new OpenAI({ apiKey });
+  const selectedModel = options.model ?? process.env.OPENAI_MODEL ?? "gpt-5.6-sol";
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), INTERPRETATION_TIMEOUT_MS);
 
@@ -57,7 +58,7 @@ export async function interpretExplanation(
     // Current OpenAI SDK 6.48.0 Responses Structured Outputs API. No tools or streaming.
     const response = await client.responses.parse(
       {
-        model: options.model ?? process.env.OPENAI_MODEL ?? "gpt-5.6-sol",
+        model: selectedModel,
         instructions: INTERPRETATION_INSTRUCTIONS,
         input: buildInterpretationInput(request),
         text: { format: zodTextFormat(interpretationSchema, "modelshift_interpretation") },
@@ -69,7 +70,14 @@ export async function interpretExplanation(
 
     if (response.output_parsed === undefined || response.output_parsed === null) return neutralFallback("refusal");
     const validation = validateInterpretation(response.output_parsed, request.explanation);
-    return validation.ok ? validation.value : neutralFallback(validation.reason);
+    return validation.ok
+      ? {
+        ...validation.value,
+        providerId: "openai",
+        modelId: selectedModel,
+        policyId: "policy.force-and-motion.interpretation.v1",
+      }
+      : neutralFallback(validation.reason);
   } catch (error) {
     return fallbackForError(error);
   } finally {

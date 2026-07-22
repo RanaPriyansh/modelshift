@@ -3,6 +3,7 @@ import { generateTrajectory, getScenario, trajectoryToSvgPath } from "@/src/doma
 
 interface TransferGraphChoiceProps {
   id: TransferChoiceId;
+  name: string;
   selected: boolean;
   onSelect: (id: TransferChoiceId) => void;
 }
@@ -62,10 +63,10 @@ export function ForceTimeGraph() {
   );
 }
 
-export function TransferGraphChoice({ id, selected, onSelect }: TransferGraphChoiceProps) {
+export function TransferGraphChoice({ id, name, selected, onSelect }: TransferGraphChoiceProps) {
   return (
     <label className={["transfer-choice", selected ? "transfer-choice--selected" : ""].join(" ")}>
-      <input type="radio" name="transfer-graph" value={id} checked={selected} onChange={() => onSelect(id)} />
+      <input type="radio" name={name} value={id} checked={selected} onChange={() => onSelect(id)} />
       <span className="transfer-choice__letter" aria-hidden="true">{id === "returns_to_zero" ? "A" : id === "stays_constant_after_force" ? "B" : "C"}</span>
       <svg viewBox="0 0 290 108" role="img" aria-label={LABELS[id]}>
         <g className="graph-grid" aria-hidden="true">

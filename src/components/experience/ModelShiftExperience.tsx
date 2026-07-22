@@ -1,19 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { EXPLICIT_UNCERTAINTY, LEVEL_1_QUESTIONS, LEVEL_2_CONTRASTS, LEVEL_3_PRINCIPLE, MYSTERY, PROBES, TRANSFER } from "@/src/content";
 import { HYPOTHESES } from "@/src/content/hypotheses";
 import { ExperimentWorld } from "@/src/components/simulation/ExperimentWorld";
 import { MysteryWorld } from "@/src/components/simulation/MysteryWorld";
 import { ForceTimeGraph, TransferGraphChoice } from "@/src/components/simulation/TransferGraphs";
 import {
-  createInitialLearningState,
   deriveEvidenceCard,
-  transitionLearningState,
   type EvidenceCard,
+  type LearningEvent,
+  type LearningInterpretation,
   type LearningState,
 } from "@/src/domain/learning";
-import { recordWorldProof } from "@/src/lib/forge-evidence";
+import {
+  createWorldRuntimeSession,
+  dispatchWorldRuntimeCommand,
+  forceAndMotionWorldRuntimeAdapter,
+  type BoundedLocalWorldRuntimeReceipt,
+  type ForceAndMotionRuntimeProof,
+  type WorldRuntimeSession,
+} from "@/src/forge/world-runtime";
+import { recordWorldProof, type RecordWorldProofInput } from "@/src/lib/forge-evidence";
 import type {
   FallbackReason,
   LearningStage,
@@ -61,7 +69,55 @@ function fallbackInterpretation(reason: FallbackReason): ValidatedInterpretation
     abstain_reason: "model_uncertain",
     source: "fallback",
     fallback_reason: reason,
+    providerId: null,
+    modelId: null,
+    policyId: "policy.force-and-motion.interpretation.v1",
   };
+}
+
+function compilerHypotheses(interpretation: LearningInterpretation) {
+  return interpretation.hypothesisIds.map((id) => HYPOTHESES[id]);
+}
+
+function receiptOutcome(receipt: BoundedLocalWorldRuntimeReceipt): "proved" | "not_proved" | "open_question" {
+  if (receipt.validator.disposition === "demonstrated") return "proved";
+  if (receipt.validator.disposition === "not_demonstrated") return "not_proved";
+  return "open_question";
+}
+
+function receiptAssistance(receipt: BoundedLocalWorldRuntimeReceipt): NonNullable<RecordWorldProofInput["assistance"]> {
+  const assistance: NonNullable<RecordWorldProofInput["assistance"]>[number][] = [];
+  for (const support of receipt.cognitiveSupport) {
+    if (support.source === "model") {
+      assistance.push({ kind: "model_interpretation", sourceId: "model.interpretation.force-motion" });
+      continue;
+    }
+    if (support.actionId === "action.force-and-motion.interpretation" && support.tier === "representation") {
+      assistance.push({ kind: "authored_representation", sourceId: "support.force-motion.authored-interpretation" });
+      continue;
+    }
+    if (support.tier === "attention") {
+      assistance.push({ kind: "authored_hint", sourceId: "support.force-motion.level-1" });
+      continue;
+    }
+    if (support.tier === "representation") {
+      assistance.push({ kind: "authored_contrast", sourceId: "support.force-motion.level-2" });
+      continue;
+    }
+    if (support.tier === "repair") {
+      assistance.push({ kind: "authored_principle", sourceId: "support.force-motion.level-3" });
+    }
+  }
+  return assistance;
+}
+
+function createStartedRuntimeSession(): WorldRuntimeSession<LearningState, ForceAndMotionRuntimeProof> {
+  const initial = createWorldRuntimeSession(forceAndMotionWorldRuntimeAdapter);
+  const started = dispatchWorldRuntimeCommand(forceAndMotionWorldRuntimeAdapter, initial, {
+    kind: "domain",
+    event: { type: "START" },
+  });
+  return started.session;
 }
 
 function stageIndex(stage: ActiveStage) {
@@ -107,12 +163,14 @@ function SecondaryButton({ children, onClick, disabled, testId }: { children: Re
   return <button className="button button--secondary" onClick={onClick} disabled={disabled} type="button" data-testid={testId}>{children}</button>;
 }
 
-function PredictionStage({ prediction, confidence, onPrediction, onConfidence, onCommit }: {
+function PredictionStage({ prediction, confidence, onPrediction, onConfidence, onCommit, predictionName, confidenceId }: {
   prediction: PredictionId | null;
   confidence: number;
   onPrediction: (id: PredictionId) => void;
   onConfidence: (value: number) => void;
   onCommit: () => void;
+  predictionName: string;
+  confidenceId: string;
 }) {
   return (
     <section className="stage stage--predict" data-testid="stage-predict">
@@ -123,7 +181,7 @@ function PredictionStage({ prediction, confidence, onPrediction, onConfidence, o
           <legend>Choose the best prediction.</legend>
           {MYSTERY.predictions.map((choice) => (
             <label key={choice.id} className={["choice-row", prediction === choice.id ? "choice-row--selected" : ""].join(" ")}>
-              <input type="radio" name="initial-prediction" value={choice.id} checked={prediction === choice.id} onChange={() => onPrediction(choice.id)} />
+              <input type="radio" name={predictionName} value={choice.id} checked={prediction === choice.id} onChange={() => onPrediction(choice.id)} />
               <span className="choice-row__control" aria-hidden="true" />
               <span className="choice-row__label">{choice.label}</span>
               <span className={`mini-trace mini-trace--${choice.graphHint}`} aria-hidden="true" />
@@ -131,9 +189,9 @@ function PredictionStage({ prediction, confidence, onPrediction, onConfidence, o
           ))}
         </fieldset>
         <div className="confidence-panel">
-          <label htmlFor="confidence">How confident are you?</label>
-          <output htmlFor="confidence">{confidence}%</output>
-          <input id="confidence" type="range" min="0" max="100" step="5" value={confidence} onChange={(event) => onConfidence(Number(event.target.value))} />
+          <label htmlFor={confidenceId}>How confident are you?</label>
+          <output htmlFor={confidenceId}>{confidence}%</output>
+          <input id={confidenceId} type="range" min="0" max="100" step="5" value={confidence} onChange={(event) => onConfidence(Number(event.target.value))} />
           <div className="range-labels" aria-hidden="true"><span>Not sure</span><span>Somewhat sure</span><span>Very sure</span></div>
           <PrimaryButton disabled={!prediction} onClick={onCommit} testId="commit-prediction">Commit prediction</PrimaryButton>
         </div>
@@ -142,12 +200,13 @@ function PredictionStage({ prediction, confidence, onPrediction, onConfidence, o
   );
 }
 
-function ExplanationStage({ prediction, explanation, onExplanation, onSubmit, onDontKnow }: {
+function ExplanationStage({ prediction, explanation, onExplanation, onSubmit, onDontKnow, explanationId }: {
   prediction: PredictionId;
   explanation: string;
   onExplanation: (value: string) => void;
   onSubmit: () => void;
   onDontKnow: () => void;
+  explanationId: string;
 }) {
   return (
     <section className="stage stage--explain" data-testid="stage-explain">
@@ -157,9 +216,9 @@ function ExplanationStage({ prediction, explanation, onExplanation, onSubmit, on
           <span>Prediction locked</span>
           <strong>{MYSTERY.predictions.find((item) => item.id === prediction)?.label ?? "Your prediction"}</strong>
         </div>
-        <label className="textarea-field" htmlFor="explanation">
+        <label className="textarea-field" htmlFor={explanationId}>
           <span>Your explanation</span>
-          <textarea id="explanation" value={explanation} maxLength={600} rows={7} onChange={(event) => onExplanation(event.target.value)} placeholder="For example: What happens when the engine is no longer pushing? Is any other force present?" autoFocus />
+          <textarea id={explanationId} value={explanation} maxLength={600} rows={7} onChange={(event) => onExplanation(event.target.value)} placeholder="For example: What happens when the engine is no longer pushing? Is any other force present?" />
           <small>{explanation.length} / 600</small>
         </label>
         <p className="privacy-note">
@@ -175,13 +234,14 @@ function ExplanationStage({ prediction, explanation, onExplanation, onSubmit, on
   );
 }
 
-function InterpretationStage({ interpretation, explanation, loading, probePrediction, onProbePrediction, onContinue }: {
-  interpretation: ValidatedInterpretation | null;
+function InterpretationStage({ interpretation, explanation, loading, probePrediction, onProbePrediction, onContinue, probePredictionName }: {
+  interpretation: LearningInterpretation | undefined;
   explanation: string;
   loading: boolean;
   probePrediction: string | null;
   onProbePrediction: (id: string) => void;
   onContinue: () => void;
+  probePredictionName: string;
 }) {
   if (loading || !interpretation) {
     return (
@@ -192,9 +252,14 @@ function InterpretationStage({ interpretation, explanation, loading, probePredic
     );
   }
 
-  const probe = PROBES[interpretation.recommended_probe_id];
-  const evidence = interpretation.hypotheses.flatMap((item) => item.evidence_spans)[0] ?? explanation.slice(0, 120);
-  const hypotheses = interpretation.source === "fallback" ? [HYPOTHESES.mixed_or_unclear] : interpretation.hypotheses.slice(0, 2).map((item) => HYPOTHESES[item.id]);
+  const probe = PROBES[interpretation.recommendedProbeId];
+  const evidence = explanation.slice(0, 120);
+  const hypotheses = compilerHypotheses(interpretation);
+  const interpretationSource = interpretation.source === "model"
+    ? interpretation.providerId && interpretation.modelId
+      ? `${interpretation.providerId} / ${interpretation.modelId}, after schema and semantic validation`
+      : "Validated model interpretation, after schema and semantic validation"
+    : `Deterministic fallback (${interpretation.fallbackReason ?? "uncertain"})`;
 
   return (
     <section className="stage stage--interpret" data-testid="stage-interpret">
@@ -207,7 +272,7 @@ function InterpretationStage({ interpretation, explanation, loading, probePredic
         <div className="compiler-arrow" aria-hidden="true">→</div>
         <div className="hypothesis-stack" aria-label="Provisional models">
           {hypotheses.map((item, index) => (
-            <article key={item.id} className="hypothesis-card">
+            <article key={item.id} className="hypothesis-card" data-testid="compiler-reading">
               <span>{index === 0 ? "One model that fits" : "Another explanation"}</span>
               <strong>{item.learnerFacingName}</strong>
               <p>{item.learnerFacingSummary}</p>
@@ -216,7 +281,7 @@ function InterpretationStage({ interpretation, explanation, loading, probePredic
         </div>
         <div className="compiler-arrow" aria-hidden="true">→</div>
         <article className="selected-test">
-          <span>{interpretation.source === "model" ? "Validated selection" : "Safe baseline"}</span>
+          <span>{interpretation.source === "model" ? "Validated selection" : "Authored baseline"}</span>
           <strong>{probe.title}</strong>
           <p>{probe.purpose}</p>
         </article>
@@ -224,7 +289,7 @@ function InterpretationStage({ interpretation, explanation, loading, probePredic
       {interpretation.source === "fallback" ? <p className="fallback-notice" role="status">{FALLBACK_COPY}</p> : null}
       <details className="judge-lens">
         <summary>How this test was chosen</summary>
-        <div><p><strong>Source:</strong> {interpretation.source === "model" ? "GPT-5.6, after schema and semantic validation" : `Deterministic fallback (${interpretation.fallback_reason ?? "uncertain"})`}</p><p><strong>Boundary:</strong> The interpretation may choose an authored test. It cannot calculate motion, unlock help, or state the answer.</p></div>
+        <div><p><strong>Source:</strong> {interpretationSource}</p><p><strong>Boundary:</strong> The interpretation may choose an authored test. It cannot calculate motion, unlock help, or state the answer.</p></div>
       </details>
       <fieldset className="probe-prediction">
         <legend>{probe.predictionPrompt}</legend>
@@ -232,7 +297,7 @@ function InterpretationStage({ interpretation, explanation, loading, probePredic
         <div className="probe-prediction__choices">
           {probe.predictionChoices.map((choice) => (
             <label key={choice.id} className={probePrediction === choice.id ? "selected" : ""}>
-              <input type="radio" name="probe-prediction" value={choice.id} checked={probePrediction === choice.id} onChange={() => onProbePrediction(choice.id)} />
+              <input type="radio" name={probePredictionName} value={choice.id} checked={probePrediction === choice.id} onChange={() => onProbePrediction(choice.id)} />
               <strong>{choice.label}</strong><span>{choice.description}</span>
             </label>
           ))}
@@ -243,7 +308,7 @@ function InterpretationStage({ interpretation, explanation, loading, probePredic
   );
 }
 
-function ExperimentStage({ probeId, revealed, frictionStrength, reflection, supportLevel, questionId, onRun, onFriction, onReflection, onRequestSupport, onContinue, onDontKnow }: {
+function ExperimentStage({ probeId, revealed, frictionStrength, reflection, supportLevel, questionId, onRun, onFriction, onReflection, onRequestSupport, onContinue, onDontKnow, frictionId, reflectionId }: {
   probeId: ProbeId;
   revealed: boolean;
   frictionStrength: number;
@@ -256,19 +321,21 @@ function ExperimentStage({ probeId, revealed, frictionStrength, reflection, supp
   onRequestSupport: () => void;
   onContinue: () => void;
   onDontKnow: () => void;
+  frictionId: string;
+  reflectionId: string;
 }) {
   const probe = PROBES[probeId];
   return (
     <section className="stage stage--experiment" data-testid="stage-experiment">
       <StageHeading number="04" eyebrow="Deterministic world" title={probe.title} body={probe.connection} />
       {probe.adjustableControl === "friction" ? (
-        <label className="experiment-control" htmlFor="friction-strength"><span>Friction strength</span><output htmlFor="friction-strength">{frictionStrength}%</output><input id="friction-strength" type="range" min="25" max="100" value={frictionStrength} disabled={revealed} onChange={(event) => onFriction(Number(event.target.value))} /></label>
+        <label className="experiment-control" htmlFor={frictionId}><span>Friction strength</span><output htmlFor={frictionId}>{frictionStrength}%</output><input id={frictionId} type="range" min="25" max="100" value={frictionStrength} disabled={revealed} onChange={(event) => onFriction(Number(event.target.value))} /></label>
       ) : null}
       <ExperimentWorld revealed={revealed} frictionStrength={frictionStrength} probeId={probeId} />
       {!revealed ? <div className="run-panel"><p>The outcome comes from the same tested physics engine for every run.</p><PrimaryButton onClick={onRun} testId="run-experiment">Run experiment</PrimaryButton></div> : (
         <div className="reflection-panel">
           {supportLevel > 0 ? <div className="support-message" role="status"><span>Attention cue • Level {supportLevel}</span><p>{supportLevel === 1 ? LEVEL_1_QUESTIONS[questionId] : supportLevel === 2 ? LEVEL_2_CONTRASTS[probeId].text : LEVEL_3_PRINCIPLE.text}</p></div> : null}
-          <label className="textarea-field" htmlFor="reflection"><span>What do you notice after the push ends?</span><textarea id="reflection" rows={3} maxLength={300} value={reflection} onChange={(event) => onReflection(event.target.value)} placeholder="Compare the force and velocity in both cases." /><small>{reflection.length} / 300</small></label>
+          <label className="textarea-field" htmlFor={reflectionId}><span>What do you notice after the push ends?</span><textarea id={reflectionId} rows={3} maxLength={300} value={reflection} onChange={(event) => onReflection(event.target.value)} placeholder="Compare the force and velocity in both cases." /><small>{reflection.length} / 300</small></label>
           <div className="stage-actions">
             {supportLevel === 0 ? <SecondaryButton onClick={onRequestSupport} testId="request-support">I&apos;m stuck — ask one question</SecondaryButton> : null}
             <SecondaryButton onClick={onDontKnow}>I genuinely don&apos;t know</SecondaryButton>
@@ -280,7 +347,7 @@ function ExperimentStage({ probeId, revealed, frictionStrength, reflection, supp
   );
 }
 
-function ReconstructionStage({ value, supportLevel, probeId, questionId, onChange, onRequestSupport, onContinue, onDontKnow }: {
+function ReconstructionStage({ value, supportLevel, probeId, questionId, onChange, onRequestSupport, onContinue, onDontKnow, reconstructionId }: {
   value: string;
   supportLevel: SupportLevel;
   probeId: ProbeId;
@@ -289,6 +356,7 @@ function ReconstructionStage({ value, supportLevel, probeId, questionId, onChang
   onRequestSupport: () => void;
   onContinue: () => void;
   onDontKnow: () => void;
+  reconstructionId: string;
 }) {
   const nextLabel = supportLevel === 0 ? "Use one attention cue" : supportLevel === 1 ? "Show one contrast" : supportLevel === 2 ? "Show the principle" : null;
   const supportText = supportLevel === 1 ? LEVEL_1_QUESTIONS[questionId] : supportLevel === 2 ? LEVEL_2_CONTRASTS[probeId].text : supportLevel === 3 ? LEVEL_3_PRINCIPLE.text : null;
@@ -300,7 +368,7 @@ function ReconstructionStage({ value, supportLevel, probeId, questionId, onChang
           <div><span>cause</span><strong>net force</strong></div><b aria-hidden="true">→</b><div><span>effect</span><strong>acceleration</strong></div><b aria-hidden="true">→</b><div><span>changes</span><strong>velocity</strong></div>
         </div>
         {supportText ? <div className="support-message"><span>Authored support • Level {supportLevel}</span><p>{supportText}</p></div> : null}
-        <label className="textarea-field" htmlFor="reconstruction"><span>Your causal rule</span><textarea id="reconstruction" rows={5} maxLength={400} value={value} onChange={(event) => onChange(event.target.value)} placeholder="When net force is zero…" /><small>{value.length} / 400</small></label>
+        <label className="textarea-field" htmlFor={reconstructionId}><span>Your causal rule</span><textarea id={reconstructionId} rows={5} maxLength={400} value={value} onChange={(event) => onChange(event.target.value)} placeholder="When net force is zero…" /><small>{value.length} / 400</small></label>
         <div className="stage-actions">
           {nextLabel ? <SecondaryButton onClick={onRequestSupport}>{nextLabel}</SecondaryButton> : <span className="support-ceiling">Maximum authored support reached</span>}
           <SecondaryButton onClick={onDontKnow}>I genuinely don&apos;t know</SecondaryButton>
@@ -311,7 +379,7 @@ function ReconstructionStage({ value, supportLevel, probeId, questionId, onChang
   );
 }
 
-function ProofStage({ choice, explanation, submitted, onChoice, onExplanation, onSubmit, onDontKnow }: {
+function ProofStage({ choice, explanation, submitted, onChoice, onExplanation, onSubmit, onDontKnow, transferName, transferExplanationId }: {
   choice: TransferChoiceId | null;
   explanation: string;
   submitted: boolean;
@@ -319,6 +387,8 @@ function ProofStage({ choice, explanation, submitted, onChoice, onExplanation, o
   onExplanation: (value: string) => void;
   onSubmit: () => void;
   onDontKnow: () => void;
+  transferName: string;
+  transferExplanationId: string;
 }) {
   return (
     <section className="stage stage--proof" data-testid="stage-proof" data-proof-locked="true">
@@ -328,23 +398,24 @@ function ProofStage({ choice, explanation, submitted, onChoice, onExplanation, o
         <ForceTimeGraph />
         <fieldset className="transfer-choices">
           <legend>{TRANSFER.prompt}</legend>
-          {TRANSFER.choices.map((item) => <TransferGraphChoice key={item.id} id={item.id} selected={choice === item.id} onSelect={onChoice} />)}
+          {TRANSFER.choices.map((item) => <TransferGraphChoice key={item.id} id={item.id} name={transferName} selected={choice === item.id} onSelect={onChoice} />)}
         </fieldset>
       </div>
-      <label className="textarea-field textarea-field--proof" htmlFor="transfer-explanation"><span>Explain your choice in one or two sentences.</span><textarea id="transfer-explanation" rows={3} maxLength={300} value={explanation} onChange={(event) => onExplanation(event.target.value)} placeholder="What does zero net force mean for acceleration and velocity?" disabled={submitted} /><small>{explanation.length} / 300</small></label>
+      <label className="textarea-field textarea-field--proof" htmlFor={transferExplanationId}><span>Explain your choice in one or two sentences.</span><textarea id={transferExplanationId} rows={3} maxLength={300} value={explanation} onChange={(event) => onExplanation(event.target.value)} placeholder="What does zero net force mean for acceleration and velocity?" disabled={submitted} /><small>{explanation.length} / 300</small></label>
       <div className="stage-actions stage-actions--end"><SecondaryButton onClick={onDontKnow} disabled={submitted}>I don&apos;t know</SecondaryButton><PrimaryButton disabled={submitted || !choice || explanation.trim().length < 8} onClick={onSubmit} testId="submit-proof">Submit once</PrimaryButton></div>
     </section>
   );
 }
 
-function ResultStage({ evidence, interpretation, onRestart }: {
+function ResultStage({ evidence, interpretation, receipt, onRestart }: {
   evidence: EvidenceCard;
-  interpretation: ValidatedInterpretation;
+  interpretation: LearningInterpretation;
+  receipt: BoundedLocalWorldRuntimeReceipt;
   onRestart: () => void;
 }) {
   const initial = MYSTERY.predictions.find((item) => item.id === evidence.before.predictionId);
-  const probe = PROBES[interpretation.recommended_probe_id];
-  const correct = evidence.alone.correct === true;
+  const probe = PROBES[interpretation.recommendedProbeId];
+  const correct = receipt.validator.outcome === "pass";
   const support = evidence.support.kind === "none" ? "No conceptual help" : evidence.support.kind === "attention_cue" ? "One attention cue" : evidence.support.kind === "contrast" ? "An authored contrast" : "The authored principle";
   return (
     <section className="stage stage--result" data-testid="stage-result">
@@ -356,21 +427,34 @@ function ResultStage({ evidence, interpretation, onRestart }: {
         <article data-result={correct ? "matched" : "different"}><span>Alone</span><strong>{correct ? "Matched the new representation" : evidence.alone.dontKnow ? "Recorded uncertainty" : "A different model appeared"}</strong><p>{correct ? "You chose constant velocity after net force became zero." : evidence.alone.dontKnow ? "You chose I don't know rather than guessing." : "Your transfer choice did not yet match the deterministic graph."}</p></article>
         <article><span>Later</span><strong>Not tested yet</strong><p>This immediate task does not establish delayed retention.</p></article>
       </div>
-      <aside className="result-boundary"><strong>What this evidence means</strong><p>{correct ? "You applied the force–acceleration–velocity distinction once, without assistance, in a changed context and representation." : "The experiment exposed the distinction, but this new representation still needs another unaided attempt later."} It does not measure intelligence, broad physics mastery, or long-term learning.</p></aside>
+      <aside className="result-boundary"><strong>What this evidence means</strong><p>{correct ? "On this task, you selected the authored constant-velocity continuation in one assistance-free submission." : "This authored choice did not yet match the constant-velocity continuation."} Causal explanation quality was not evaluated by the current validator. This does not measure intelligence, broad physics mastery, delayed retention, or long-term learning.</p></aside>
+      <aside className="result-boundary" data-testid="force-runtime-receipt">
+        <strong>Bounded local receipt</strong>
+        <p>Authority: {receipt.authority.proofAuthority}. Persistence: {receipt.authority.persistence}. Durable: {String(receipt.authority.isDurable)}.</p>
+        <p>Source provenance: {receipt.sourceProvenanceStatus === "incomplete" ? "incomplete legacy metadata" : receipt.sourceProvenanceStatus}.</p>
+      </aside>
       <div className="stage-actions stage-actions--between"><SecondaryButton onClick={onRestart}>Start a fresh session</SecondaryButton><span className="privacy-note">No account or learner profile. Only bounded proof metadata remains in this browser; raw explanations stay out of the ledger.</span></div>
     </section>
   );
 }
 
-export function ModelShiftExperience() {
-  const [learningState, setLearningState] = useState<LearningState>(() => {
-    const started = transitionLearningState(createInitialLearningState(), { type: "START" });
-    return started.accepted ? started.state : createInitialLearningState();
-  });
+export interface ModelShiftExperienceProps {
+  /** Test/compatibility observation only; the receipt remains local and non-durable. */
+  readonly onRuntimeReceipt?: (receipt: BoundedLocalWorldRuntimeReceipt) => void;
+}
+
+export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceProps) {
+  const rawInstanceId = useId();
+  const instanceId = rawInstanceId.replaceAll(":", "");
+  const mainId = "main-content";
+  const mainRef = useRef<HTMLElement>(null);
+  const hasOpenedInitialStage = useRef(false);
+  const [runtime, setRuntime] = useState(createStartedRuntimeSession);
+  const runtimeRef = useRef(runtime);
+  const learningState = runtime.state;
   const [prediction, setPrediction] = useState<PredictionId | null>(null);
   const [confidence, setConfidence] = useState(70);
   const [explanation, setExplanation] = useState("");
-  const [interpretation, setInterpretation] = useState<ValidatedInterpretation | null>(null);
   const [interpreting, setInterpreting] = useState(false);
   const [probePrediction, setProbePrediction] = useState<string | null>(null);
   const [experimentRevealed, setExperimentRevealed] = useState(false);
@@ -379,62 +463,63 @@ export function ModelShiftExperience() {
   const [reconstruction, setReconstruction] = useState("");
   const [transferChoice, setTransferChoice] = useState<TransferChoiceId | null>(null);
   const [transferExplanation, setTransferExplanation] = useState("");
-  const evidenceRecordedRef = useRef(false);
+  const emittedReceiptRef = useRef<BoundedLocalWorldRuntimeReceipt | null>(null);
 
   const stage = learningState.stage === "HOOK" ? "PREDICT" : learningState.stage;
-  const probeId = interpretation?.recommended_probe_id ?? "neutral_core_probe";
-  const questionId = interpretation?.recommended_level_1_question_id ?? "neutral_observation_prompt";
+  const interpretation = learningState.context.interpretation;
+  const probeId = interpretation?.recommendedProbeId ?? "neutral_core_probe";
+  const questionId = interpretation?.recommendedLevel1QuestionId ?? "neutral_observation_prompt";
   const supportLevel = learningState.context.consumedSupport.reduce<SupportLevel>((highest, item) => Math.max(highest, item.level) as SupportLevel, 0);
   const stageLabel = useMemo(() => STAGE_STEPS.find((item) => item.id === stage)?.label ?? stage, [stage]);
 
   useEffect(() => {
+    if (!hasOpenedInitialStage.current) {
+      hasOpenedInitialStage.current = true;
+      return;
+    }
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+    mainRef.current?.focus({ preventScroll: true });
   }, [stage]);
 
   useEffect(() => {
-    if (stage !== "PROOF_RESULT" || !interpretation || evidenceRecordedRef.current) return;
-    evidenceRecordedRef.current = true;
-    const evidence = deriveEvidenceCard(learningState);
-    const assistance: Array<{
-      kind: "authored_hint" | "authored_contrast" | "authored_principle" | "model_interpretation";
-      sourceId: string;
-    }> = [];
-    if (interpretation.source === "model") {
-      assistance.push({ kind: "model_interpretation", sourceId: "model.interpretation.force-motion" });
-    }
-    for (const item of learningState.context.consumedSupport) {
-      assistance.push({
-        kind: item.level === 1 ? "authored_hint" : item.level === 2 ? "authored_contrast" : "authored_principle",
-        sourceId: `support.force-motion.level-${item.level}`,
-      });
-    }
+    const receipt = runtime.receipt;
+    if (!receipt || emittedReceiptRef.current === receipt) return;
+    emittedReceiptRef.current = receipt;
     recordWorldProof({
-      capabilityId: "capability.force-motion.zero-net-force",
-      conditionId: "proof.force-motion.independent-transfer",
-      sourceRefId: "world.force-and-motion",
-      outcome: evidence.alone.correct === true ? "proved" : "not_proved",
-      assistance,
+      capabilityId: receipt.world.capabilityId,
+      conditionId: receipt.world.proofClaimId,
+      sourceRefId: receipt.world.id,
+      outcome: receiptOutcome(receipt),
+      assistance: receiptAssistance(receipt),
     });
-  }, [interpretation, learningState, stage]);
+    onRuntimeReceipt?.(receipt);
+  }, [onRuntimeReceipt, runtime.receipt]);
+
+  function send(event: LearningEvent) {
+    const result = dispatchWorldRuntimeCommand(forceAndMotionWorldRuntimeAdapter, runtimeRef.current, {
+      kind: "domain",
+      event,
+    });
+    runtimeRef.current = result.session;
+    setRuntime(result.session);
+    return result;
+  }
 
   async function submitExplanation(nextExplanation = explanation) {
     if (!prediction) return;
     const explicitUncertainty = nextExplanation === EXPLICIT_UNCERTAINTY;
-    const committed = transitionLearningState(learningState, {
+    const committed = send({
       type: "COMMIT_EXPLANATION",
       explanation: nextExplanation,
       dontKnow: explicitUncertainty,
     });
     if (!committed.accepted) return;
-    setLearningState(committed.state);
     if (explicitUncertainty) {
-      const nextInterpretation = fallbackInterpretation("ambiguous_input");
-      setInterpretation(nextInterpretation);
-      const resolved = transitionLearningState(committed.state, { type: "RESOLVE_INTERPRETATION", interpretation: nextInterpretation });
-      if (resolved.accepted) setLearningState(resolved.state);
+      send({ type: "RESOLVE_INTERPRETATION", interpretation: fallbackInterpretation("ambiguous_input") });
       return;
     }
+    if (runtimeRef.current.phase !== "learning" || runtimeRef.current.state.stage !== "INTERPRET") return;
     setInterpreting(true);
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), INTERPRETATION_CLIENT_TIMEOUT_MS);
@@ -455,93 +540,87 @@ export function ModelShiftExperience() {
       window.clearTimeout(timeout);
       setInterpreting(false);
     }
-    setInterpretation(nextInterpretation);
-    const resolved = transitionLearningState(committed.state, { type: "RESOLVE_INTERPRETATION", interpretation: nextInterpretation });
-    if (resolved.accepted) setLearningState(resolved.state);
+    if (runtimeRef.current.phase !== "learning" || runtimeRef.current.state.stage !== "INTERPRET") return;
+    // The runtime owns the accepted transition. A rejected provider payload
+    // leaves the session unchanged rather than widening the model boundary.
+    send({ type: "RESOLVE_INTERPRETATION", interpretation: nextInterpretation });
   }
 
   function resetSession() {
-    const started = transitionLearningState(createInitialLearningState(), { type: "START" });
-    setLearningState(started.accepted ? started.state : createInitialLearningState());
-    setPrediction(null); setConfidence(70); setExplanation(""); setInterpretation(null); setInterpreting(false);
+    const reset = send({ type: "RESET" });
+    if (reset.accepted) send({ type: "START" });
+    setPrediction(null); setConfidence(70); setExplanation(""); setInterpreting(false);
     setProbePrediction(null); setExperimentRevealed(false); setFrictionStrength(62); setReflection(""); setReconstruction("");
     setTransferChoice(null); setTransferExplanation("");
-    evidenceRecordedRef.current = false;
+    emittedReceiptRef.current = null;
   }
 
   function requestSupport() {
     const nextLevel = Math.min(3, supportLevel + 1) as Exclude<SupportLevel, 0>;
     const reason = nextLevel === 1 ? "stuck" : nextLevel === 2 ? "second_explicit_request" : "show_principle";
-    const requested = transitionLearningState(learningState, { type: "REQUEST_SUPPORT", level: nextLevel, reason });
+    const requested = send({ type: "REQUEST_SUPPORT", level: nextLevel, reason });
     if (!requested.accepted) return;
-    const consumed = transitionLearningState(requested.state, { type: "CONSUME_SUPPORT", level: nextLevel });
-    if (consumed.accepted) setLearningState(consumed.state);
+    send({ type: "CONSUME_SUPPORT", level: nextLevel });
   }
 
   function commitPrediction() {
     if (!prediction) return;
-    const result = transitionLearningState(learningState, { type: "COMMIT_PREDICTION", predictionId: prediction, confidence });
-    if (result.accepted) setLearningState(result.state);
+    send({ type: "COMMIT_PREDICTION", predictionId: prediction, confidence });
   }
 
   function commitProbePrediction() {
     if (!probePrediction) return;
-    const result = transitionLearningState(learningState, { type: "COMMIT_PROBE_PREDICTION", predictionId: probePrediction });
-    if (result.accepted) setLearningState(result.state);
+    send({ type: "COMMIT_PROBE_PREDICTION", predictionId: probePrediction });
   }
 
   function runExperiment() {
-    const ran = transitionLearningState(learningState, { type: "RUN_EXPERIMENT" });
+    const ran = send({ type: "RUN_EXPERIMENT" });
     if (!ran.accepted) return;
-    const observed = transitionLearningState(ran.state, { type: "OBSERVE_EXPERIMENT" });
+    const observed = send({ type: "OBSERVE_EXPERIMENT" });
     if (!observed.accepted) return;
     setExperimentRevealed(true);
-    setLearningState(observed.state);
   }
 
   function submitReflection() {
-    const result = transitionLearningState(learningState, {
+    send({
       type: "SUBMIT_REFLECTION",
       reflection,
       dontKnow: reflection === "I genuinely don't know yet.",
     });
-    if (result.accepted) setLearningState(result.state);
   }
 
   function enterProof(dontKnow = false, nextReconstruction = reconstruction) {
-    const submitted = transitionLearningState(learningState, { type: "SUBMIT_RECONSTRUCTION", reconstruction: nextReconstruction, dontKnow });
+    const submitted = send({ type: "SUBMIT_RECONSTRUCTION", reconstruction: nextReconstruction, dontKnow });
     if (!submitted.accepted) return;
-    const continued = transitionLearningState(submitted.state, { type: "CONTINUE_TO_COLD_TRANSFER" });
-    if (continued.accepted) setLearningState(continued.state);
+    send({ type: "CONTINUE_TO_COLD_TRANSFER" });
   }
 
   function submitTransfer(dontKnow = false) {
-    const result = transitionLearningState(learningState, {
+    send({
       type: "SUBMIT_TRANSFER",
       choiceId: dontKnow ? undefined : transferChoice ?? undefined,
       explanation: dontKnow ? "I don't know yet." : transferExplanation,
       dontKnow,
     });
-    if (result.accepted) setLearningState(result.state);
   }
 
   return (
     <div className={["app-shell", stage === "COLD_TRANSFER" ? "app-shell--proof" : ""].join(" ")}>
-      <a className="skip-link" href="#main-content">Skip to the experiment</a>
+      <a className="skip-link" href={`#${mainId}`}>Skip to the experiment</a>
       <header className="app-header">
-        <a className="wordmark" href="#main-content" aria-label="Force and motion learning world"><span>M</span><strong>Model World</strong><small>ModelShift protocol</small></a>
+        <a className="wordmark" href={`#${mainId}`} aria-label="Force and motion learning world"><span>M</span><strong>Model World</strong><small>ModelShift protocol</small></a>
         <div className="trust-strip"><span>13+ World</span><span>AI interprets language</span><span>Tested code owns physics</span></div>
       </header>
       <StageRail stage={stage} />
       <div className="sr-only" aria-live="polite">Current stage: {stageLabel}</div>
-      <main id="main-content" tabIndex={-1}>
-        {stage === "PREDICT" ? <PredictionStage prediction={prediction} confidence={confidence} onPrediction={setPrediction} onConfidence={setConfidence} onCommit={commitPrediction} /> : null}
-        {stage === "EXPLAIN" && prediction ? <ExplanationStage prediction={prediction} explanation={explanation} onExplanation={setExplanation} onSubmit={() => void submitExplanation()} onDontKnow={() => { setExplanation(EXPLICIT_UNCERTAINTY); void submitExplanation(EXPLICIT_UNCERTAINTY); }} /> : null}
-        {stage === "INTERPRET" || stage === "PROBE_PREDICT" ? <InterpretationStage interpretation={interpretation} explanation={explanation} loading={interpreting} probePrediction={probePrediction} onProbePrediction={setProbePrediction} onContinue={commitProbePrediction} /> : null}
-        {stage === "EXPERIMENT" || stage === "REFLECT" ? <ExperimentStage probeId={probeId} revealed={experimentRevealed} frictionStrength={frictionStrength} reflection={reflection} supportLevel={supportLevel} questionId={questionId} onRun={runExperiment} onFriction={setFrictionStrength} onReflection={setReflection} onRequestSupport={requestSupport} onDontKnow={() => setReflection("I genuinely don't know yet.")} onContinue={submitReflection} /> : null}
-        {stage === "RECONSTRUCT" ? <ReconstructionStage value={reconstruction} supportLevel={supportLevel} probeId={probeId} questionId={questionId} onChange={setReconstruction} onRequestSupport={requestSupport} onContinue={() => enterProof()} onDontKnow={() => { const text = "I genuinely don't know."; setReconstruction(text); enterProof(true, text); }} /> : null}
-        {stage === "COLD_TRANSFER" ? <ProofStage choice={transferChoice} explanation={transferExplanation} submitted={false} onChoice={setTransferChoice} onExplanation={setTransferExplanation} onDontKnow={() => submitTransfer(true)} onSubmit={() => submitTransfer(false)} /> : null}
-        {stage === "PROOF_RESULT" && interpretation ? <ResultStage evidence={deriveEvidenceCard(learningState)} interpretation={interpretation} onRestart={resetSession} /> : null}
+      <main id={mainId} ref={mainRef} tabIndex={-1}>
+        {stage === "PREDICT" ? <PredictionStage prediction={prediction} confidence={confidence} onPrediction={setPrediction} onConfidence={setConfidence} onCommit={commitPrediction} predictionName={`force-motion-prediction-${instanceId}`} confidenceId={`force-motion-confidence-${instanceId}`} /> : null}
+        {stage === "EXPLAIN" && prediction ? <ExplanationStage prediction={prediction} explanation={explanation} onExplanation={setExplanation} onSubmit={() => void submitExplanation()} onDontKnow={() => { setExplanation(EXPLICIT_UNCERTAINTY); void submitExplanation(EXPLICIT_UNCERTAINTY); }} explanationId={`force-motion-explanation-${instanceId}`} /> : null}
+        {stage === "INTERPRET" || stage === "PROBE_PREDICT" ? <InterpretationStage interpretation={interpretation} explanation={explanation} loading={interpreting} probePrediction={probePrediction} onProbePrediction={setProbePrediction} onContinue={commitProbePrediction} probePredictionName={`force-motion-probe-prediction-${instanceId}`} /> : null}
+        {stage === "EXPERIMENT" || stage === "REFLECT" ? <ExperimentStage probeId={probeId} revealed={experimentRevealed} frictionStrength={frictionStrength} reflection={reflection} supportLevel={supportLevel} questionId={questionId} onRun={runExperiment} onFriction={setFrictionStrength} onReflection={setReflection} onRequestSupport={requestSupport} onDontKnow={() => setReflection("I genuinely don't know yet.")} onContinue={submitReflection} frictionId={`force-motion-friction-${instanceId}`} reflectionId={`force-motion-reflection-${instanceId}`} /> : null}
+        {stage === "RECONSTRUCT" ? <ReconstructionStage value={reconstruction} supportLevel={supportLevel} probeId={probeId} questionId={questionId} onChange={setReconstruction} onRequestSupport={requestSupport} onContinue={() => enterProof()} onDontKnow={() => { const text = "I genuinely don't know."; setReconstruction(text); enterProof(true, text); }} reconstructionId={`force-motion-reconstruction-${instanceId}`} /> : null}
+        {stage === "COLD_TRANSFER" ? <ProofStage choice={transferChoice} explanation={transferExplanation} submitted={false} onChoice={setTransferChoice} onExplanation={setTransferExplanation} onDontKnow={() => submitTransfer(true)} onSubmit={() => submitTransfer(false)} transferName={`force-motion-transfer-${instanceId}`} transferExplanationId={`force-motion-transfer-explanation-${instanceId}`} /> : null}
+        {stage === "PROOF_RESULT" && interpretation && runtime.receipt ? <ResultStage evidence={deriveEvidenceCard(learningState)} interpretation={interpretation} receipt={runtime.receipt} onRestart={resetSession} /> : null}
       </main>
       <footer className="app-footer"><span>This World is currently reviewed for learners aged 13+.</span><span>AI interpretation can be wrong. The physics and primary answer checks are deterministic.</span></footer>
     </div>

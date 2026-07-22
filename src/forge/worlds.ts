@@ -19,6 +19,7 @@ import {
   type LearningWorldPack,
   type SourceProvenance,
 } from "./contracts";
+import { FORCE_AND_MOTION_RUNTIME_BINDING } from "./world-runtime/force-and-motion-binding";
 import { PRIMARY_SOURCE_RUNTIME_BINDING } from "./world-runtime/primary-source-binding";
 import { PROPORTIONAL_REASONING_RUNTIME_BINDING } from "./world-runtime/proportional-reasoning-binding";
 
@@ -153,7 +154,7 @@ export const FORCE_AND_MOTION_WORLD = {
   manifest: {
     schemaVersion: "1.0",
     id: "world.force-and-motion",
-    version: "1.0.0",
+    version: "1.0.1",
     route: "/learn/force-and-motion",
     title: "Force & motion",
     summary:
@@ -175,7 +176,7 @@ export const FORCE_AND_MOTION_WORLD = {
     },
     returnProof: {
       enabled: false,
-      reason: "The current routed product records a future check but does not yet schedule delayed return proof.",
+      reason: "No reviewed delayed task family or scheduler is published.",
       aiBoundary: AI_OFF,
     },
     safety: {
@@ -236,6 +237,7 @@ export const FORCE_AND_MOTION_WORLD = {
       outputContractVersion: "1.0.0",
     },
   ],
+  runtime: FORCE_AND_MOTION_RUNTIME_BINDING,
 } satisfies LearningWorldPack;
 
 export const SOURCE_CORROBORATION_WORLD = {
