@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { validateTargetUrl, verifyDeployment, type DeploymentVerificationReport } from "../../scripts/ops/deployment-verifier";
+import { IANA_SPECIAL_PURPOSE_POLICY_VERSION, validateTargetUrl, verifyDeployment, type DeploymentVerificationReport } from "../../scripts/ops/deployment-verifier";
 import { resolveDeploymentTarget } from "../../scripts/ops/deployment-target-policy";
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
@@ -46,8 +46,17 @@ describe("deployment verifier", () => {
     "::ffff:8.8.8.8",
     "64:ff9b::7f00:1",
     "192.0.2.10",
+    "192.31.196.1",
+    "192.52.193.1",
+    "192.175.48.1",
     "4000::1",
     "6000::1",
+    "3fff::1",
+    "3fff:0fff:ffff:ffff:ffff:ffff:ffff:ffff",
+    "2001:30::1",
+    "100:0:0:1::1",
+    "2620:4f:8000::1",
+    "5f00::1",
   ])("rejects non-global or special resolver answer %s before any request", async (address) => {
     let calls = 0;
     const fetchImpl = async () => { calls += 1; return new Response("unexpected"); };
@@ -56,16 +65,19 @@ describe("deployment verifier", () => {
     expect(report.checks.find((item) => item.id === "target.dns_policy")?.status).toBe("fail");
     expect(calls).toBe(0);
   });
-  it("accepts a globally routable IPv6 answer inside the public-unicast envelope", async () => {
+  it.each(["8.8.8.8", "2001:4860:4860::8888", "3fff:1000::1"])("accepts a general public address outside the versioned special-purpose table: %s", async (address) => {
     let calls = 0;
     const fetchImpl = async (input: string | URL | Request) => {
       calls += 1;
       return mockFetch()(input);
     };
-    const report = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:00.000Z", deploymentId: "dpl-candidate", deploymentUrl: "https://forge.example/deploy", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["2001:4860:4860::8888"] });
+    const report = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:00.000Z", deploymentId: "dpl-candidate", deploymentUrl: "https://forge.example/deploy", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => [address] });
     expect(report.checks.find((item) => item.id === "target.dns_policy")?.status).toBe("pass");
     expect(report.status).toBe("pass");
     expect(calls).toBeGreaterThan(0);
+  });
+  it("records the current IANA registry snapshot alongside the CIDR policy", () => {
+    expect(IANA_SPECIAL_PURPOSE_POLICY_VERSION).toBe("2025-10-09");
   });
   it("fails closed for DNS rebinding and redirect hops without issuing an unpinned request", async () => {
     let resolveCalls = 0;
