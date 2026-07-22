@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 
 import { containsAdversarialText, isRestrictedTopic } from "../../../../src/lib/forge-planner/safety";
 import {
   generateLessonDraft,
   LessonStudioError,
 } from "../../../../src/lib/lesson-studio/providers.server";
+import { compileLessonDraftPipeline } from "../../../../src/lib/lesson-studio/pipeline.server";
 import {
+  LESSON_STUDIO_BUDGETS,
   lessonStudioRequestSchema,
   lessonStudioResponseSchema,
 } from "../../../../src/lib/lesson-studio/schema";
@@ -18,29 +21,31 @@ export const MAX_LESSON_STUDIO_REQUEST_BYTES = 24 * 1024;
 const ERROR_MESSAGES = {
   bad_request: "The draft request is incomplete or invalid.",
   wrong_origin: "This endpoint accepts requests only from this FORGE site.",
-  guardian_required: "A child session requires grown-up management.",
   unsafe_topic: "FORGE cannot generate a lesson for that request.",
   adversarial_input: "The lesson request contains instructions FORGE cannot pass to a model.",
   missing_key: "Add a provider API key for this request.",
-  provider_rejected: "The provider rejected the request. Check the key, model, access, and credits.",
-  provider_unavailable: "The provider is unavailable. The key was discarded; try again later.",
-  invalid_provider_output: "The provider did not return a valid FORGE lesson draft.",
+  request_budget_exceeded: "This request exceeds FORGE's fixed time, output, or estimated-cost budget.",
+  provider_refusal: "The provider refused the draft request. The key was discarded.",
+  rate_limited: "The provider rate-limited this request. The key was discarded; try later.",
   timeout: "The provider took too long. The key was discarded; try again.",
+  malformed_provider_output: "The provider did not return a valid FORGE lesson draft.",
+  provider_error: "The provider could not complete the draft. The key was discarded; try again later.",
 } as const;
 
 type ErrorCode = keyof typeof ERROR_MESSAGES;
 
-function jsonHeaders() {
+function jsonHeaders(correlationId: string) {
   return {
     "Cache-Control": "no-store, max-age=0",
     "X-Content-Type-Options": "nosniff",
+    "X-FORGE-Correlation-Id": correlationId,
   };
 }
 
-function errorResponse(code: ErrorCode, status: number) {
+function errorResponse(code: ErrorCode, status: number, correlationId: string) {
   return NextResponse.json(
-    { schemaVersion: "1.0", error: { code, message: ERROR_MESSAGES[code] } },
-    { status, headers: jsonHeaders() },
+    { schemaVersion: "1.0", correlationId, error: { code, message: ERROR_MESSAGES[code] } },
+    { status, headers: jsonHeaders(correlationId) },
   );
 }
 
@@ -94,63 +99,74 @@ async function readBoundedBody(request: Request): Promise<string | null> {
 }
 
 export async function POST(request: Request) {
-  if (!isSameOrigin(request)) return errorResponse("wrong_origin", 403);
+  const correlationId = randomUUID();
+  if (!isSameOrigin(request)) return errorResponse("wrong_origin", 403, correlationId);
   const mediaType = request.headers.get("content-type")?.toLowerCase().split(";", 1)[0]?.trim();
   if (mediaType !== "application/json") {
-    return errorResponse("bad_request", 415);
+    return errorResponse("bad_request", 415, correlationId);
   }
 
   let rawBody: string | null;
   try {
     rawBody = await readBoundedBody(request);
   } catch {
-    return errorResponse("bad_request", 400);
+    return errorResponse("bad_request", 400, correlationId);
   }
-  if (rawBody === null) return errorResponse("bad_request", 413);
+  if (rawBody === null) return errorResponse("bad_request", 413, correlationId);
 
   let json: unknown;
   try {
     json = JSON.parse(rawBody);
   } catch {
-    return errorResponse("bad_request", 400);
+    return errorResponse("bad_request", 400, correlationId);
   }
 
   const parsed = lessonStudioRequestSchema.safeParse(json);
-  if (!parsed.success) return errorResponse("bad_request", 400);
+  if (!parsed.success) return errorResponse("bad_request", 400, correlationId);
   const input = parsed.data;
 
-  if (input.ageMode === "child" && !input.guardianManaged) {
-    return errorResponse("guardian_required", 403);
-  }
-  if (isRestrictedTopic(input.question)) return errorResponse("unsafe_topic", 403);
+  if (isRestrictedTopic(input.question)) return errorResponse("unsafe_topic", 403, correlationId);
   if (
     [input.question, input.startingPoint, input.successShape, input.sourceContext]
       .filter(Boolean)
       .some(containsAdversarialText)
   ) {
-    return errorResponse("adversarial_input", 403);
+    return errorResponse("adversarial_input", 403, correlationId);
   }
 
   try {
     const generated = await generateLessonDraft(input);
+    const budget = LESSON_STUDIO_BUDGETS[input.depth];
     const response = lessonStudioResponseSchema.parse({
       schemaVersion: "1.0",
       draft: generated.draft,
+      pipeline: compileLessonDraftPipeline(generated.draft),
       provenance: {
         provider: input.provider,
         model: generated.model,
         generatedAt: new Date().toISOString(),
+        correlationId,
         sourceStatus: "unverified_draft",
         keyHandling: generated.keyHandling,
+        budget: {
+          timeoutMs: budget.timeoutMs,
+          maxOutputTokens: generated.outputTokenBudget,
+          maxEstimatedCostMicros: budget.maxEstimatedCostMicros,
+          estimatedCostMicros: generated.estimatedCostMicros,
+        },
       },
       claimBoundary: "AI-generated draft. Not a reviewed World, verified source record, grade, or proof of learning.",
     });
-    return NextResponse.json(response, { status: 200, headers: jsonHeaders() });
+    return NextResponse.json(response, { status: 200, headers: jsonHeaders(correlationId) });
   } catch (error) {
     if (error instanceof LessonStudioError) {
-      const status = error.code === "missing_key" ? 400 : error.code === "provider_rejected" ? 422 : 502;
-      return errorResponse(error.code, status);
+      const status = error.code === "missing_key" ? 400
+        : error.code === "provider_refusal" ? 422
+          : error.code === "rate_limited" || error.code === "request_budget_exceeded" ? 429
+            : error.code === "timeout" ? 504
+              : 502;
+      return errorResponse(error.code, status, correlationId);
     }
-    return errorResponse("provider_unavailable", 502);
+    return errorResponse("provider_error", 502, correlationId);
   }
 }
