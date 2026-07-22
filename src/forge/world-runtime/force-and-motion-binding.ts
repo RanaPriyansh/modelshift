@@ -1,11 +1,12 @@
 import type { WorldRuntimeBinding } from "../contracts";
+import { deepFreeze } from "../deep-freeze";
 
 /**
  * The Force & Motion package predates durable source snapshots. Its OpenStax
  * reference is retained as explicitly incomplete legacy metadata, rather than
  * being promoted to reviewed source authority by this runtime binding.
  */
-export const FORCE_AND_MOTION_RUNTIME_BINDING = {
+export const FORCE_AND_MOTION_RUNTIME_BINDING = deepFreeze({
   protocolVersion: "1.1.0",
   semanticStages: [
     "encounter",
@@ -139,4 +140,4 @@ export const FORCE_AND_MOTION_RUNTIME_BINDING = {
       provenanceStatus: "legacy_metadata_only",
     },
   ],
-} as const satisfies WorldRuntimeBinding;
+} as const satisfies WorldRuntimeBinding);

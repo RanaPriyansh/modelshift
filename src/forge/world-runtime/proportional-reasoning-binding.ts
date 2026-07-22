@@ -1,4 +1,5 @@
 import type { WorldRuntimeBinding } from "../contracts";
+import { deepFreeze } from "../deep-freeze";
 
 /**
  * This binds the existing Ratio pack, validator, and manifest source identity
@@ -6,7 +7,7 @@ import type { WorldRuntimeBinding } from "../contracts";
  * its review metadata is not an ADR-003 snapshot, locator, claim, rights, or
  * named-review authority.
  */
-export const PROPORTIONAL_REASONING_RUNTIME_BINDING = {
+export const PROPORTIONAL_REASONING_RUNTIME_BINDING = deepFreeze({
   protocolVersion: "1.1.0",
   semanticStages: [
     "encounter",
@@ -116,4 +117,4 @@ export const PROPORTIONAL_REASONING_RUNTIME_BINDING = {
       provenanceStatus: "legacy_metadata_only",
     },
   ],
-} as const satisfies WorldRuntimeBinding;
+} as const satisfies WorldRuntimeBinding);

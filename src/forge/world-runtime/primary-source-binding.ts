@@ -1,11 +1,12 @@
 import type { WorldRuntimeBinding } from "../contracts";
+import { deepFreeze } from "../deep-freeze";
 
 /**
  * This is a binding to existing package, validator, and source IDs. It does
  * not duplicate subject content or make the source metadata look like a
  * durable reviewed snapshot.
  */
-export const PRIMARY_SOURCE_RUNTIME_BINDING = {
+export const PRIMARY_SOURCE_RUNTIME_BINDING = deepFreeze({
   protocolVersion: "1.1.0",
   semanticStages: [
     "encounter",
@@ -170,4 +171,4 @@ export const PRIMARY_SOURCE_RUNTIME_BINDING = {
       provenanceStatus: "legacy_metadata_only",
     },
   ],
-} as const satisfies WorldRuntimeBinding;
+} as const satisfies WorldRuntimeBinding);

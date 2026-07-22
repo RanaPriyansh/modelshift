@@ -7,6 +7,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { PRIMARY_SOURCE_RUNTIME_BINDING } from "../forge/world-runtime/primary-source-binding";
+import { retainedRuntimeIdentityFor } from "../forge/world-runtime/retained-runtime-binding";
 import { BUILT_IN_WORLD_PACKS } from "../forge/worlds";
 import {
   assertPrimarySourceContentPackageManifest,
@@ -93,6 +94,22 @@ describe("retained content package identity", () => {
         .sort(byId),
     );
     expect(retained.packages.map((entry) => entry.id)).not.toContain("world.argument-evidence");
+  });
+
+  it("keeps private runtime identity literals equal to the checked-in manifest and computed package graph", () => {
+    const retained = manifest();
+    for (const pack of BUILT_IN_WORLD_PACKS) {
+      const entry = packageById(retained, pack.manifest.id);
+      const expectedIdentity = {
+        runtimeBindingDigest: runtimeBindingDigest(pack.runtime),
+        packageIntegrityHash: packageIntegrityHash(pack),
+      };
+      expect(retainedRuntimeIdentityFor(pack)).toEqual(expectedIdentity);
+      expect({
+        runtimeBindingDigest: entry.runtime_binding_digest,
+        packageIntegrityHash: entry.package_integrity_hash,
+      }).toEqual(expectedIdentity);
+    }
   });
 
   it.each([

@@ -1,7 +1,8 @@
 import type { WorldRuntimeBinding } from "../contracts";
+import { deepFreeze } from "../deep-freeze";
 import { ARGUMENT_EVIDENCE_AUTHORED_FIXTURE } from "../../worlds/argument-evidence";
 
-export const ARGUMENT_EVIDENCE_RUNTIME_BINDING = {
+export const ARGUMENT_EVIDENCE_RUNTIME_BINDING = deepFreeze({
   protocolVersion: "1.1.0",
   semanticStages: [
     "encounter", "commit_model", "interpret_two_readings", "name_disagreement",
@@ -66,4 +67,4 @@ export const ARGUMENT_EVIDENCE_RUNTIME_BINDING = {
       provenanceStatus: "legacy_metadata_only",
     },
   ],
-} as const satisfies WorldRuntimeBinding;
+} as const satisfies WorldRuntimeBinding);
