@@ -8,6 +8,7 @@ import type { LearningEvent } from "../../domain/learning";
 import { recordWorldRuntimeReceipt } from "../../lib/forge-evidence";
 import type { EvidenceLearningAction } from "../../worlds/ai-learning";
 import type { PrimarySourceWorldEvent } from "../../worlds/primary-source-reasoning";
+import type { ArgumentEvidenceWorldEvent } from "../../worlds/argument-evidence";
 import type { RatioWorldEvent } from "../../worlds/proportional-reasoning";
 import { packageIntegrityHash, runtimeBindingDigest } from "../../../scripts/ops/release-digests";
 import { BUILT_IN_WORLD_PACKS } from "../worlds";
@@ -21,8 +22,10 @@ import {
 } from "./protocol";
 import { forceAndMotionWorldRuntimeAdapter } from "./force-and-motion";
 import { primarySourceWorldRuntimeAdapter } from "./primary-source";
+import { argumentEvidenceWorldRuntimeAdapter } from "./argument-evidence";
 import { proportionalReasoningWorldRuntimeAdapter } from "./proportional-reasoning";
 import { createWorldRuntimeSession, dispatchWorldRuntimeCommand } from "./runtime";
+import { retainedRuntimeIdentityFor } from "./retained-runtime-binding";
 import { sourceCorroborationWorldRuntimeAdapter } from "./source-corroboration";
 
 const EXACT_RECEIPT_TRACE = [
@@ -333,6 +336,21 @@ const sourceToProof: readonly EvidenceLearningAction[] = [
   { type: "ACKNOWLEDGE_WITHDRAWAL" },
 ];
 
+const argumentEvidenceToProof: readonly ArgumentEvidenceWorldEvent[] = [
+  { type: "COMMIT_INITIAL", ruleId: "same_topic_counts", confidence: 65 },
+  { type: "COMMIT_EXPLANATION", text: "An item needs to bear on the named outcome rather than only share the claim topic." },
+  { type: "RESPOND_TO_TWO_READINGS", response: "accept" },
+  { type: "NAME_DISAGREEMENT" },
+  { type: "COMMIT_TEST_PREDICTION", predictionId: "outcome_linked_changes_credibility" },
+  { type: "REVEAL_SEPARATING_COMPARISON" },
+  { type: "SET_WORKED_EVIDENCE_ITEM", evidenceItemId: "roof.outcome-linked" },
+  { type: "SET_WORKED_RELATION", relationId: "supports_with_limit" },
+  { type: "SUBMIT_WORKED_COMPARISON" },
+  { type: "CONTINUE_TO_RECONSTRUCTION" },
+  { type: "SUBMIT_RECONSTRUCTION", ruleId: "outcome_relation", text: "The evidence relation must compare the exact outcome named by the claim." },
+  { type: "ACKNOWLEDGE_WITHDRAWAL" },
+];
+
 const FIXTURES: readonly ConformanceFixture[] = [
   defineFixture({
     name: "Force and Motion",
@@ -439,6 +457,33 @@ const FIXTURES: readonly ConformanceFixture[] = [
       "A reader should separate visible detail from catalog fact and historical inference.",
       "The photograph, catalog record, inference, and open question have different evidence limits.",
     ],
+    expectedCognitiveSupport: [],
+  }),
+  defineFixture({
+    name: "Argument & Evidence",
+    adapter: argumentEvidenceWorldRuntimeAdapter,
+    toProof: argumentEvidenceToProof,
+    passSubmission: [
+      { type: "SET_TRANSFER_EVIDENCE_ITEM", evidenceItemId: "bus.outcome-linked" },
+      { type: "SET_TRANSFER_MECHANISM", mechanismId: "compares_named_outcome" },
+      { type: "SET_TRANSFER_LIMITATION", limitationId: "other_changes_not_ruled_out" },
+      { type: "SET_TRANSFER_CONFIDENCE", confidence: 82 },
+      { type: "SUBMIT_TRANSFER" },
+    ],
+    failSubmission: [
+      { type: "SET_TRANSFER_EVIDENCE_ITEM", evidenceItemId: "bus.same-topic" },
+      { type: "SET_TRANSFER_MECHANISM", mechanismId: "same_subject" },
+      { type: "SET_TRANSFER_LIMITATION", limitationId: "none" },
+      { type: "SET_TRANSFER_CONFIDENCE", confidence: 50 },
+      { type: "SUBMIT_TRANSFER" },
+    ],
+    malformedSubmission: { type: "SUBMIT_TRANSFER" },
+    resetEvent: { type: "RESET" },
+    accessAccommodationId: "access.argument-evidence.text-table",
+    modelActionId: "action.argument-evidence.model",
+    replayActionId: "action.argument-evidence.replay",
+    instructionalSupportEvent: { type: "CONSUME_AUTHORED_SUPPORT", level: 1 },
+    rawLearnerProse: ["An item needs to bear on the named outcome rather than only share the claim topic."],
     expectedCognitiveSupport: [],
   }),
 ];
@@ -575,7 +620,7 @@ describe("all released runtime World receipt projection and release identity", (
     }
   });
 
-  it("binds every conformance fixture to the exact retained manifest version, route, and runtime digest", () => {
+  it("binds every conformance fixture to its exact public-manifest or retained-executable identity", () => {
     const retained = JSON.parse(readFileSync(
       resolve(process.cwd(), "scripts/ops/content-package-manifest.json"),
       "utf8",
@@ -596,13 +641,21 @@ describe("all released runtime World receipt projection and release identity", (
     );
     for (const fixture of FIXTURES) {
       const retainedEntry = retained.packages.find((entry) => entry.id === fixture.worldId);
-      expect(retainedEntry).toEqual({
-        id: fixture.pack.manifest.id,
-        version: fixture.pack.manifest.version,
-        route: fixture.pack.manifest.route,
-        runtime_binding_digest: runtimeBindingDigest(fixture.pack.runtime),
-        package_integrity_hash: packageIntegrityHash(fixture.pack),
-      });
+      if (fixture.pack.manifest.availability.status === "available") {
+        expect(retainedEntry).toEqual({
+          id: fixture.pack.manifest.id,
+          version: fixture.pack.manifest.version,
+          route: fixture.pack.manifest.route,
+          runtime_binding_digest: runtimeBindingDigest(fixture.pack.runtime),
+          package_integrity_hash: packageIntegrityHash(fixture.pack),
+        });
+      } else {
+        expect(retainedEntry).toBeUndefined();
+        expect(retainedRuntimeIdentityFor(fixture.pack)).toMatchObject({
+          runtimeBindingDigest: runtimeBindingDigest(fixture.pack.runtime),
+          packageIntegrityHash: packageIntegrityHash(fixture.pack),
+        });
+      }
     }
   });
 });

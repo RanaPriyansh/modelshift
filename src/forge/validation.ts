@@ -63,13 +63,13 @@ function validateInvariants(pack: LearningWorldPack): readonly WorldInvariantIss
   const proofClaims = new Map(pack.proofClaims.map((claim) => [claim.id, claim]));
   const validators = new Map(pack.deterministicValidators.map((validator) => [validator.id, validator]));
 
-  const availabilityMatchesRelease =
-    (manifest.availability.status === "available") === (pack.release.status === "released");
-  if (!availabilityMatchesRelease) {
+  const availableWithoutReleasedPackage =
+    manifest.availability.status === "available" && pack.release.status !== "released";
+  if (availableWithoutReleasedPackage) {
     issues.push({
       code: "availability.mismatch",
       path: "manifest.availability",
-      message: "A world is available exactly when its pack release status is released.",
+      message: "A public available world requires a released package; a released package may remain unavailable as a retained executable artifact.",
     });
   }
 

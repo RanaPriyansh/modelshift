@@ -74,7 +74,7 @@ function runImmutableLockfile(root: string, args: readonly string[], environment
 }
 
 describe("retained content package identity", () => {
-  it("matches every released built-in package and assigns digests only to runtime-bound packs", () => {
+  it("matches every released available built-in package and excludes retained unavailable executables", () => {
     const retained = manifest();
     assertRetainedContentPackageManifest(retained);
     assertPrimarySourceContentPackageManifest(retained);
@@ -82,7 +82,7 @@ describe("retained content package identity", () => {
     const byId = <Entry extends { id: string }>(left: Entry, right: Entry) => left.id.localeCompare(right.id);
     expect(retained.packages.map(({ id, version, route, runtime_binding_digest, package_integrity_hash }) => ({ id, version, route, runtime_binding_digest, package_integrity_hash })).sort(byId)).toEqual(
       BUILT_IN_WORLD_PACKS
-        .filter((pack) => pack.release.status === "released")
+        .filter((pack) => pack.release.status === "released" && pack.manifest.availability.status === "available")
         .map((pack) => ({
           id: pack.manifest.id,
           version: pack.manifest.version,
@@ -92,6 +92,7 @@ describe("retained content package identity", () => {
         }))
         .sort(byId),
     );
+    expect(retained.packages.map((entry) => entry.id)).not.toContain("world.argument-evidence");
   });
 
   it.each([
