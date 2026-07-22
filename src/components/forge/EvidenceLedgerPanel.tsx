@@ -214,7 +214,7 @@ export function EvidenceLedgerPanel({ compact = false }: { compact?: boolean }) 
         <div className="forge-ledger-empty">
           <strong>No proof records yet.</strong>
           <p>Complete an unfamiliar transfer in a working World. FORGE will store the outcome and help used—not your raw explanation.</p>
-          <Link href="/learn/proportional-reasoning?audience=teen">Open a 10-minute World</Link>
+          <Link href="/learn/proportional-reasoning">Open a 10-minute World</Link>
         </div>
       ) : (
         <ol className="forge-ledger-list">

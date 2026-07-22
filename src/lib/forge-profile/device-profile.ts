@@ -3,6 +3,7 @@ import { z } from "zod";
 z.config({ jitless: true });
 
 export const FORGE_DEVICE_PROFILE_KEY = "forge.device-profile:v1";
+export const FORGE_DEVICE_PROFILE_EVENT = "forge:device-profile-changed";
 
 export const forgeDeviceProfileSchema = z.strictObject({
   schemaVersion: z.literal(1),
@@ -10,6 +11,15 @@ export const forgeDeviceProfileSchema = z.strictObject({
   ageMode: z.enum(["child_with_grown_up", "teen", "adult"]),
   guardianPresent: z.boolean(),
   createdAt: z.string().datetime({ offset: true }),
+}).superRefine((profile, context) => {
+  const expectedGuardianPresence = profile.ageMode === "child_with_grown_up";
+  if (profile.guardianPresent !== expectedGuardianPresence) {
+    context.addIssue({
+      code: "custom",
+      message: "guardian presence must match the selected local device mode",
+      path: ["guardianPresent"],
+    });
+  }
 });
 
 export type ForgeDeviceProfile = z.infer<typeof forgeDeviceProfileSchema>;

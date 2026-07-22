@@ -6,6 +6,7 @@ import { FormEvent, useState, useSyncExternalStore } from "react";
 import {
   clearForgeDeviceProfile,
   createForgeDeviceProfile,
+  FORGE_DEVICE_PROFILE_EVENT,
   readForgeDeviceProfile,
   type ForgeDeviceProfile,
 } from "@/src/lib/forge-profile/device-profile";
@@ -16,14 +17,12 @@ const DEVICE_MODES = [
   { id: "child_with_grown_up", label: "Child + grown-up", note: "A grown-up manages this session" },
 ] as const;
 
-const DEVICE_PROFILE_EVENT = "forge:device-profile-changed";
-
 function subscribeToDeviceProfile(onStoreChange: () => void) {
   window.addEventListener("storage", onStoreChange);
-  window.addEventListener(DEVICE_PROFILE_EVENT, onStoreChange);
+  window.addEventListener(FORGE_DEVICE_PROFILE_EVENT, onStoreChange);
   return () => {
     window.removeEventListener("storage", onStoreChange);
-    window.removeEventListener(DEVICE_PROFILE_EVENT, onStoreChange);
+    window.removeEventListener(FORGE_DEVICE_PROFILE_EVENT, onStoreChange);
   };
 }
 
@@ -48,7 +47,7 @@ export function DeviceProfileAccess({ compact = false }: { compact?: boolean }) 
     event.preventDefault();
     try {
       createForgeDeviceProfile(window.localStorage, ageMode, guardianPresent);
-      window.dispatchEvent(new Event(DEVICE_PROFILE_EVENT));
+      window.dispatchEvent(new Event(FORGE_DEVICE_PROFILE_EVENT));
       setStorageAvailable(true);
     } catch {
       setStorageAvailable(false);
@@ -57,7 +56,7 @@ export function DeviceProfileAccess({ compact = false }: { compact?: boolean }) 
 
   function reset() {
     clearForgeDeviceProfile(window.localStorage);
-    window.dispatchEvent(new Event(DEVICE_PROFILE_EVENT));
+    window.dispatchEvent(new Event(FORGE_DEVICE_PROFILE_EVENT));
   }
 
   if (profile) {
@@ -117,7 +116,7 @@ export function DeviceProfileAccess({ compact = false }: { compact?: boolean }) 
       <button className="forge-account-primary" type="submit">Use FORGE on this device</button>
       {!storageAvailable ? (
         <p className="forge-account-status" role="alert">
-          This browser did not allow local storage. You can still open a World, but evidence may not survive a reload.
+          This browser did not allow local storage. It cannot save a device preference, so child-capable Worlds stay closed.
         </p>
       ) : null}
     </form>

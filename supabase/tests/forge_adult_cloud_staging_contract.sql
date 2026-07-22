@@ -10,6 +10,21 @@ begin
     raise exception 'authenticated callers can manufacture or alter a learner age profile';
   end if;
 
+  if has_table_privilege('authenticated', 'forge.profiles', 'INSERT')
+     or has_table_privilege('authenticated', 'forge.profiles', 'UPDATE')
+     or has_column_privilege('authenticated', 'forge.profiles', 'account_status', 'UPDATE') then
+    raise exception 'authenticated callers can create, reactivate, or otherwise alter a server-owned account lifecycle';
+  end if;
+
+  if exists (
+    select 1 from pg_policies
+    where schemaname = 'forge'
+      and tablename = 'profiles'
+      and policyname in ('profiles_insert_self', 'profiles_update_self')
+  ) then
+    raise exception 'legacy self-service account lifecycle policy remains';
+  end if;
+
   if exists (
     select 1 from pg_policies
     where schemaname = 'forge'
@@ -19,13 +34,13 @@ begin
     raise exception 'legacy self-service learner-profile mutation policy remains';
   end if;
 
-  if not exists (
+  if exists (
     select 1 from pg_constraint as constraint_record
     where constraint_record.conrelid = 'forge.consent_records'::regclass
       and constraint_record.conname = 'consent_records_purpose_key_check'
       and pg_get_constraintdef(constraint_record.oid) like '%private_evidence_persistence%'
   ) then
-    raise exception 'adult private-evidence consent purpose is not bounded in the existing consent ledger';
+    raise exception 'private-evidence consent must stay deferred until its canonical persistence runtime exists';
   end if;
 
   if to_regclass('forge.adult_private_evidence_entries') is not null then

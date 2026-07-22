@@ -54,4 +54,31 @@ describe("adult cloud account actions", () => {
     expect(signOut).toHaveBeenCalledOnce();
     expect(revalidatePath).not.toHaveBeenCalled();
   });
+
+  it.each(["restricted", "closed"] as const)("does not let a %s account regain cloud access through direct action invocation", async (accountStatus) => {
+    const signOut = vi.fn().mockResolvedValue({ error: null });
+    createForgeSupabaseServerClient.mockResolvedValue({
+      auth: {
+        signInWithPassword: vi.fn().mockResolvedValue({ data: { user: { id: "adult-candidate" } }, error: null }),
+        signOut,
+      },
+      schema: vi.fn().mockReturnValue({
+        from: vi.fn((table: string) => ({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue(
+                table === "learner_profiles"
+                  ? { data: { age_band: "adult", onboarding_status: "active" }, error: null }
+                  : { data: { account_status: accountStatus }, error: null },
+              ),
+            }),
+          }),
+        })),
+      }),
+    });
+
+    await expect(signIn(credentials())).rejects.toThrow("redirect:/login?status=adult-account-required");
+    expect(signOut).toHaveBeenCalledOnce();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
 });

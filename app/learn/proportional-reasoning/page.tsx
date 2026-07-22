@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 
 import { ForgeWorldFrame } from "@/src/components/forge/ForgeShell";
-import { ProportionalWorldRoute } from "@/src/components/forge/ProportionalWorldRoute";
 import { resolveChildCapableWorldRouteAccess } from "@/src/lib/forge-auth/world-age-policy.server";
 
-import { LocalGrownUpConfirmation, WorldAgeRouteGate } from "../WorldAgeRouteGate";
+import { ChildCapableWorldRoute } from "../ChildCapableWorldRoute";
 
 export const metadata: Metadata = {
   title: "Proportional reasoning — FORGE",
@@ -20,13 +19,11 @@ export default async function ProportionalReasoningPage({
 
   return (
     <ForgeWorldFrame worldLabel="Proportional reasoning">
-      {access.status !== "allowed" ? <WorldAgeRouteGate worldPath="/learn/proportional-reasoning" worldTitle="Proportional reasoning" access={access} /> : null}
-      {access.status === "allowed" && access.audience !== "child_with_grown_up" ? <ProportionalWorldRoute audience={access.audience} /> : null}
-      {access.status === "allowed" && access.audience === "child_with_grown_up" ? (
-        <LocalGrownUpConfirmation worldTitle="Proportional reasoning">
-          <ProportionalWorldRoute audience={access.audience} />
-        </LocalGrownUpConfirmation>
-      ) : null}
+      <ChildCapableWorldRoute
+        suggestedAudience={access.suggestedAudience}
+        world="proportional_reasoning"
+        worldTitle="Proportional reasoning"
+      />
     </ForgeWorldFrame>
   );
 }

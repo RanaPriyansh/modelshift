@@ -2,6 +2,24 @@ import { expect, test } from "@playwright/test";
 
 import lessonDraftResponse from "../fixtures/lesson-draft-response.json";
 
+const DEVICE_PROFILE_KEY = "forge.device-profile:v1";
+
+async function seedDeviceProfile(page: import("@playwright/test").Page, ageMode: "child_with_grown_up" | "teen" | "adult") {
+  await page.addInitScript(({ key, mode }) => {
+    localStorage.setItem(key, JSON.stringify({
+      schemaVersion: 1,
+      profileId: "9be711de-d7a6-4911-b903-f2d829da83d5",
+      ageMode: mode,
+      guardianPresent: mode === "child_with_grown_up",
+      createdAt: "2026-07-22T00:00:00.000Z",
+    }));
+  }, { key: DEVICE_PROFILE_KEY, mode: ageMode });
+}
+
+async function seedCorruptDeviceProfile(page: import("@playwright/test").Page) {
+  await page.addInitScript((key) => localStorage.setItem(key, "not-json"), DEVICE_PROFILE_KEY);
+}
+
 test.describe("FORGE expanded learning system", () => {
   test("publishes four honest working Worlds and an account route", async ({ page }) => {
     await page.goto("/");
@@ -43,7 +61,8 @@ test.describe("FORGE expanded learning system", () => {
   });
 
   test("loads the historical primary-source instrument with authentic source images", async ({ page }) => {
-    await page.goto("/learn/primary-source-reasoning?audience=teen");
+    await seedDeviceProfile(page, "teen");
+    await page.goto("/learn/primary-source-reasoning");
 
     await expect(page.getByTestId("stage-mystery")).toBeVisible();
     await expect(page.getByRole("heading", { name: "What can this photograph prove?" })).toBeVisible();
@@ -55,16 +74,67 @@ test.describe("FORGE expanded learning system", () => {
     expect(await page.locator("html").evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
   });
 
-  test("holds child-capable World routes behind a server-rendered age boundary", async ({ page }) => {
+  test("does not let forged teen or adult URLs bypass the local device selection gate", async ({ page }) => {
     for (const route of ["/learn/proportional-reasoning", "/learn/primary-source-reasoning"]) {
-      await page.goto(route);
-      await expect(page.getByTestId("world-age-route-gate")).toBeVisible();
+      await page.goto(`${route}?audience=teen`);
+      await expect(page.getByTestId("world-device-profile-gate")).toBeVisible();
+      await expect(page.getByRole("radio", { name: /Teen/ })).toBeChecked();
       await expect(page.getByTestId(/(ratio-stage-mystery|stage-mystery)/)).toHaveCount(0);
 
-      await page.goto(`${route}?audience=child_with_grown_up`);
-      await expect(page.getByTestId("world-guardian-route-gate")).toBeVisible();
+      await page.goto(`${route}?audience=adult`);
+      await expect(page.getByTestId("world-device-profile-gate")).toBeVisible();
+      await expect(page.getByRole("radio", { name: /Adult/ })).toBeChecked();
       await expect(page.getByTestId(/(ratio-stage-mystery|stage-mystery)/)).toHaveCount(0);
     }
+  });
+
+  test("does not server-render either World from an audience query", async ({ request }) => {
+    const ratio = await request.get("/learn/proportional-reasoning?audience=teen");
+    expect(await ratio.text()).not.toContain("The two citrus mixes");
+
+    const primarySource = await request.get("/learn/primary-source-reasoning?audience=adult");
+    expect(await primarySource.text()).not.toContain("What can this photograph prove?");
+  });
+
+  test("holds guardianManaged deep links and corrupt device preferences at the same selection gate", async ({ page }) => {
+    await page.goto("/learn/primary-source-reasoning?audience=child_with_grown_up&guardianManaged=true");
+    await expect(page.getByTestId("world-device-profile-gate")).toBeVisible();
+    await expect(page.getByTestId("stage-mystery")).toHaveCount(0);
+
+    await seedCorruptDeviceProfile(page);
+    await page.goto("/learn/primary-source-reasoning?audience=adult");
+    await expect(page.getByTestId("world-device-profile-gate")).toBeVisible();
+    await expect(page.getByTestId("stage-mystery")).toHaveCount(0);
+  });
+
+  test("a child device preference overrides a forged teen query and survives reload behind confirmation", async ({ page }) => {
+    await seedDeviceProfile(page, "child_with_grown_up");
+    await page.goto("/learn/proportional-reasoning?audience=teen&guardianManaged=true");
+    await expect(page.getByTestId("local-grown-up-confirmation")).toBeVisible();
+    await expect(page.getByTestId("ratio-stage-mystery")).toHaveCount(0);
+
+    await page.reload();
+    await expect(page.getByTestId("local-grown-up-confirmation")).toBeVisible();
+    await expect(page.getByTestId("ratio-stage-mystery")).toHaveCount(0);
+  });
+
+  test("renders teen, adult, and child Worlds only from valid local device paths", async ({ page }) => {
+    await seedDeviceProfile(page, "teen");
+    await page.goto("/learn/proportional-reasoning");
+    await expect(page.getByTestId("world-local-profile-disclosure")).toContainText("Local Teen preference");
+    await expect(page.getByTestId("ratio-stage-mystery")).toBeVisible();
+
+    await seedDeviceProfile(page, "adult");
+    await page.goto("/learn/primary-source-reasoning");
+    await expect(page.getByTestId("world-local-profile-disclosure")).toContainText("Local Adult preference");
+    await expect(page.getByTestId("stage-mystery")).toBeVisible();
+
+    await seedDeviceProfile(page, "child_with_grown_up");
+    await page.goto("/learn/proportional-reasoning");
+    await expect(page.getByTestId("local-grown-up-confirmation")).toBeVisible();
+    await page.getByRole("button", { name: "I’m the grown-up managing this session" }).click();
+    await expect(page.getByTestId("world-local-profile-disclosure")).toContainText("Local Child + grown-up preference");
+    await expect(page.getByTestId("ratio-stage-mystery")).toBeVisible();
   });
 
   test("offers four provider adapters without retaining a BYOK credential", async ({ page }) => {
