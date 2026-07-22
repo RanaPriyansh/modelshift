@@ -128,9 +128,9 @@ function capabilityFor(
 const CLAIM_OVERREACH_TERM_SOURCE = "master(?:y|ed)?|certif(?:y|ied|ication)|accredit(?:ed|ation)|legal(?:ly)? compliant|safe(?:ty)? proven|guarantee(?:d)?|ready for enrollment|homeschool[- ]?ready|(?:homeschool|education|school) solutions?|suitab(?:le|ility)|replaces? (?:school|education)|(?:school|education) replacement|replacement for (?:school|education)|universal replacement|lifelong (?:capability|learning)|(?:delayed[- ]?)?retention|(?:broad|far)[- ]?transfer";
 const CLAIM_OVERREACH_TERM = new RegExp(`\\b(?:${CLAIM_OVERREACH_TERM_SOURCE})\\b`, "i");
 const LIMITATION_SUBJECT = "(?:(?:this|that)(?: (?:record|packet|evidence|event|observation|statement|claim))?|the (?:record|packet|evidence|event|observation|statement|claim))";
-const LIMITATION_TERM_LIST = `(?:${CLAIM_OVERREACH_TERM_SOURCE})(?:\\s*(?:,\\s*)?(?:and|or)\\s+(?:${CLAIM_OVERREACH_TERM_SOURCE}))*`;
+const LIMITATION_TERM_LIST = `(?:${CLAIM_OVERREACH_TERM_SOURCE})(?:\\s*,\\s*(?:${CLAIM_OVERREACH_TERM_SOURCE}))*(?:\\s*,?\\s+(?:and|or)\\s+(?:${CLAIM_OVERREACH_TERM_SOURCE}))?`;
 const EXPLICIT_LIMITATION = new RegExp(
-  `^(?:${LIMITATION_SUBJECT})\\s+(?:(?:does\\s+not|doesn't|cannot|can't|will\\s+not|won't|never)\\s+(?:establish|prove|demonstrate|show|guarantee|certify|confirm|validate|support)\\s+${LIMITATION_TERM_LIST}|(?:is|are|was|were)\\s+(?:not|never)\\s+(?:an?\\s+|the\\s+)?${LIMITATION_TERM_LIST})\\.$`,
+  `^(?:${LIMITATION_SUBJECT})\\s+(?:(?:does\\s+not|doesn't|cannot|can't|will\\s+not|won't|never)\\s+(?:establish|prove|demonstrate|show|guarantee|certify|confirm|validate|support)\\s+${LIMITATION_TERM_LIST}|(?:is|are|was|were)\\s+(?:not|never)\\s+(?:an?\\s+|the\\s+)?${LIMITATION_TERM_LIST})\\.?$`,
   "i",
 );
 
