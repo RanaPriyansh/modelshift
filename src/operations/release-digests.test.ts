@@ -15,6 +15,7 @@ import {
   readReleaseDigests,
   runtimeBindingDigest,
 } from "../../scripts/ops/release-digests";
+import { assertCanonicalLockfileDigest } from "../../scripts/ops/run-local-production-verification";
 
 type Manifest = {
   schema_version: string;
@@ -159,14 +160,14 @@ describe("retained content package identity", () => {
 });
 
 describe("immutable dependency identity", () => {
-  it("uses the committed source blob even when working-tree bytes differ", () => {
-    const { root, sha } = createLockfileRepository("lockfile: committed\n");
+  it.each(["lockfile: committed\n", "lockfile: committed"])("uses exact committed source bytes even when working-tree bytes differ: %j", (sourceBytes) => {
+    const { root, sha } = createLockfileRepository(sourceBytes);
     try {
       const environmentPath = resolve(root, "github-env");
-      writeFileSync(resolve(root, "pnpm-lock.yaml"), "lockfile: working-tree-only\n", "utf8");
+      writeFileSync(resolve(root, "pnpm-lock.yaml"), `${sourceBytes}\nworking-tree-only\n`, "utf8");
 
       const result = runImmutableLockfile(root, ["capture", "--source-ref", sha, "--github-env", environmentPath]);
-      const expected = createHash("sha256").update("lockfile: committed\n").digest("hex");
+      const expected = createHash("sha256").update(sourceBytes).digest("hex");
       expect(result.status).toBe(0);
       expect(result.stdout.trim()).toBe(expected);
       expect(readFileSync(environmentPath, "utf8")).toBe(`FORGE_LOCKFILE_DIGEST=${expected}\n`);
@@ -175,18 +176,35 @@ describe("immutable dependency identity", () => {
     }
   });
 
-  it("rejects missing or invalid immutable source refs and empty source blobs", () => {
+  it("rejects missing, revision-expression, malformed, and non-commit source refs", () => {
     const missingRef = createLockfileRepository();
     const invalidRef = createLockfileRepository();
-    const emptyBlob = createLockfileRepository("");
     try {
+      const tree = execFileSync("git", ["rev-parse", `${invalidRef.sha}^{tree}`], { cwd: invalidRef.root, encoding: "utf8" }).trim();
+      const blob = execFileSync("git", ["rev-parse", `${invalidRef.sha}:pnpm-lock.yaml`], { cwd: invalidRef.root, encoding: "utf8" }).trim();
       expect(runImmutableLockfile(missingRef.root, ["capture"], { GITHUB_SHA: "" }).status).toBe(1);
-      expect(runImmutableLockfile(invalidRef.root, ["capture", "--source-ref", "not-a-commit"]).stderr).toMatch(/git show could not read/);
-      expect(runImmutableLockfile(emptyBlob.root, ["capture", "--source-ref", emptyBlob.sha]).stderr).toMatch(/is empty/);
+      for (const ref of ["HEAD", `${invalidRef.sha}^{commit}`, invalidRef.sha.slice(0, 12), invalidRef.sha.toUpperCase(), "g".repeat(40)]) {
+        expect(runImmutableLockfile(invalidRef.root, ["capture", "--source-ref", ref]).stderr).toMatch(/exact lowercase 40-character Git commit SHA/);
+      }
+      for (const object of [tree, blob, "0".repeat(40)]) {
+        expect(runImmutableLockfile(invalidRef.root, ["capture", "--source-ref", object]).stderr).toMatch(/does not identify a Git commit object/);
+      }
     } finally {
       rmSync(missingRef.root, { recursive: true, force: true });
       rmSync(invalidRef.root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects empty committed blobs and missing working-tree lockfiles", () => {
+    const emptyBlob = createLockfileRepository("");
+    const missingWorkingTree = createLockfileRepository();
+    try {
+      expect(runImmutableLockfile(emptyBlob.root, ["capture", "--source-ref", emptyBlob.sha]).stderr).toMatch(/is empty/);
+      rmSync(resolve(missingWorkingTree.root, "pnpm-lock.yaml"));
+      expect(runImmutableLockfile(missingWorkingTree.root, ["verify", "--expected-digest", "0".repeat(64)]).stderr).toMatch(/is missing from the working tree/);
+    } finally {
       rmSync(emptyBlob.root, { recursive: true, force: true });
+      rmSync(missingWorkingTree.root, { recursive: true, force: true });
     }
   });
 
@@ -215,6 +233,21 @@ describe("immutable dependency identity", () => {
       expect(wrongDigest.stderr).toMatch(/digest differs from the immutable source digest/);
       expect(verify.status).toBe(0);
       expect(verify.stdout.trim()).toBe(capture.stdout.trim());
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("prevents local verification from replacing the preinstall digest after a later mutation", () => {
+    const root = copyReleaseDigestInputs();
+    try {
+      const canonicalDigest = readReleaseDigests(root).lockfile;
+      writeFileSync(resolve(root, "pnpm-lock.yaml"), "post-guard mutation\n", "utf8");
+      const mutatedDigest = readReleaseDigests(root).lockfile;
+
+      expect(() => assertCanonicalLockfileDigest(canonicalDigest, mutatedDigest)).toThrow(/changed after its canonical preinstall dependency identity/);
+      expect(() => assertCanonicalLockfileDigest(undefined, mutatedDigest)).toThrow(/--expected-lockfile-digest/);
+      expect(() => assertCanonicalLockfileDigest(canonicalDigest.toUpperCase(), mutatedDigest)).toThrow(/--expected-lockfile-digest/);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

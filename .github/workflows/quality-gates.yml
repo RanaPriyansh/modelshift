@@ -79,7 +79,7 @@ jobs:
         id: local_verify
         if: always()
         continue-on-error: true
-        run: pnpm exec tsx scripts/ops/run-local-production-verification.ts --expected-sha "$GITHUB_SHA" --output-dir test-results/release-ops
+        run: pnpm exec tsx scripts/ops/run-local-production-verification.ts --expected-sha "$GITHUB_SHA" --expected-lockfile-digest "$FORGE_LOCKFILE_DIGEST" --output-dir test-results/release-ops
       - name: Write bounded Playwright failure manifest
         if: always()
         continue-on-error: true
