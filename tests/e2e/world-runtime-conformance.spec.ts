@@ -141,21 +141,91 @@ async function reachPrimarySourceProof(page: Page): Promise<Locator> {
   return page.getByTestId("stage-transfer");
 }
 
+const FORCE_PROOF_EXPLANATION = "Zero net force means zero acceleration, so the existing velocity stays constant.";
+const RATIO_PROOF_EXPLANATION = "12 is four times 3, so I scale the real 8 km by four to get 32 km.";
+const PRIMARY_SOURCE_PROOF_EXPLANATION = "The photograph, catalog record, inference, and open question each have different evidence boundaries.";
+
 type RoutedWorldFixture = {
   readonly name: string;
+  readonly capabilityId: string;
   readonly reachProof: (page: Page) => Promise<Locator>;
+  readonly submitProof: (page: Page) => Promise<Locator>;
+  readonly rawProofExplanation: string | null;
+  readonly worldId: string;
 };
 
 const ROUTED_WORLDS: readonly RoutedWorldFixture[] = [
-  { name: "Force and Motion", reachProof: reachForceProof },
-  { name: "Source Corroboration", reachProof: reachSourceCorroborationProof },
-  { name: "Proportional Reasoning", reachProof: reachRatioProof },
-  { name: "Primary Source Reasoning", reachProof: reachPrimarySourceProof },
+  {
+    name: "Force and Motion",
+    capabilityId: "capability.force-motion.zero-net-force",
+    reachProof: reachForceProof,
+    async submitProof(page) {
+      await page.getByRole("radio", { name: /stays constant above zero/i }).press("Space");
+      await page.getByRole("textbox", { name: /Explain your choice in one or two sentences/i }).fill(FORCE_PROOF_EXPLANATION);
+      await page.getByTestId("submit-proof").click();
+      const result = page.getByTestId("stage-result");
+      await expect(result).toBeVisible();
+      await expect(result.getByTestId("force-runtime-receipt")).toBeVisible();
+      return result;
+    },
+    rawProofExplanation: FORCE_PROOF_EXPLANATION,
+    worldId: "world.force-and-motion",
+  },
+  {
+    name: "Source Corroboration",
+    capabilityId: "capability.ai-literacy.source-corroboration",
+    reachProof: reachSourceCorroborationProof,
+    async submitProof(page) {
+      await page.getByRole("radio", { name: /These sources do not warrant/i }).press("Space");
+      await page.getByRole("radio", { name: /when the study activity is held constant/i }).press("Space");
+      await page.getByTestId("submit-transfer").click();
+      const result = page.getByTestId("stage-result");
+      await expect(result).toBeVisible();
+      await expect(result.getByTestId("runtime-receipt-limits")).toBeVisible();
+      return result;
+    },
+    rawProofExplanation: null,
+    worldId: "world.source-corroboration",
+  },
+  {
+    name: "Proportional Reasoning",
+    capabilityId: "capability.proportional-reasoning.compare-and-scale",
+    reachProof: reachRatioProof,
+    async submitProof(page) {
+      await page.getByRole("radio", { name: "32 km" }).press("Space");
+      await page.getByRole("textbox", { name: "Show the relationship you used" }).fill(RATIO_PROOF_EXPLANATION);
+      await page.getByTestId("ratio-submit-proof").click();
+      const result = page.getByTestId("ratio-stage-evidence");
+      await expect(result).toBeVisible();
+      return result;
+    },
+    rawProofExplanation: RATIO_PROOF_EXPLANATION,
+    worldId: "world.proportional-reasoning",
+  },
+  {
+    name: "Primary Source Reasoning",
+    capabilityId: "capability.historical-literacy.observation-inference",
+    reachProof: reachPrimarySourceProof,
+    async submitProof(page) {
+      const transfer = page.getByTestId("stage-transfer");
+      for (const [index, category] of ["observation", "catalog_fact", "inference", "open_question"].entries()) {
+        await transfer.locator("select").nth(index).selectOption(category);
+      }
+      await transfer.getByLabel("Why do these boundaries fit?").fill(PRIMARY_SOURCE_PROOF_EXPLANATION);
+      await transfer.getByLabel("Confidence in this response").fill("85");
+      await transfer.getByTestId("submit-transfer").click();
+      const result = page.getByTestId("stage-result");
+      await expect(result).toBeVisible();
+      return result;
+    },
+    rawProofExplanation: PRIMARY_SOURCE_PROOF_EXPLANATION,
+    worldId: "world.primary-source-reasoning",
+  },
 ];
 
 test.describe("all released runtime World proof surfaces", () => {
   for (const world of ROUTED_WORLDS) {
-    test(`${world.name} preserves proof isolation, focus, access media, and viewport bounds`, async ({ page }, testInfo) => {
+    test(`${world.name} preserves proof isolation and projects one bounded terminal result`, async ({ page }, testInfo) => {
       const failures: string[] = [];
       page.on("console", (message) => {
         if (message.type() === "error") failures.push(`console: ${message.text()}`);
@@ -165,10 +235,12 @@ test.describe("all released runtime World proof surfaces", () => {
       const isCompact = testInfo.project.name === "mobile";
       await page.setViewportSize({ width: isCompact ? 320 : 1440, height: isCompact ? 800 : 900 });
       await page.emulateMedia({ reducedMotion: "reduce", forcedColors: "active" });
+      await page.addInitScript(() => localStorage.removeItem("forge.evidence-ledger"));
       const proof = await world.reachProof(page);
 
       await expect(proof).toBeVisible();
-      await expect(proof.getByRole("button", { name: /hint|help|support|replay|ask|contrast|principle|AI/i })).toHaveCount(0);
+      const instructionalControlName = /(?:hint|help|support|replay|ask|contrast|principle|\bAI\b)/i;
+      await expect(proof.getByRole("button", { name: instructionalControlName })).toHaveCount(0);
 
       const stageMain = page.locator('main[tabindex="-1"]').last();
       await expect(stageMain).toBeFocused();
@@ -196,6 +268,41 @@ test.describe("all released runtime World proof surfaces", () => {
         }).length;
       });
       expect(visibleMotion).toBe(0);
+
+      const result = await world.submitProof(page);
+      await expect(stageMain).toBeFocused();
+      await expect(result.getByRole("button", { name: instructionalControlName })).toHaveCount(0);
+      await expect.poll(async () => page.evaluate(() => {
+        const raw = localStorage.getItem("forge.evidence-ledger");
+        if (!raw) return 0;
+        const parsed = JSON.parse(raw) as { entries?: unknown[] };
+        return parsed.entries?.length ?? 0;
+      })).toBe(1);
+
+      const ledger = await page.evaluate(() => JSON.parse(localStorage.getItem("forge.evidence-ledger") ?? "null") as {
+        schemaVersion: number;
+        entries: Array<{
+          id: string;
+          capabilityId: string;
+          source: { kind: string; refId: string };
+          proof: { mode: string; assistanceAccess: string; outcome: string };
+          sharing: { status: string };
+          returnSchedule: unknown;
+        }>;
+      });
+      expect(ledger).toMatchObject({ schemaVersion: 1, entries: [expect.any(Object)] });
+      expect(ledger.entries[0]).toMatchObject({
+        id: expect.stringMatching(/^proof\.attempt\./),
+        capabilityId: world.capabilityId,
+        source: { kind: "authored_activity", refId: world.worldId },
+        proof: { mode: "independent_transfer", assistanceAccess: "removed", outcome: "proved" },
+        sharing: { status: "private" },
+        returnSchedule: null,
+      });
+      if (world.rawProofExplanation !== null) {
+        expect(JSON.stringify(ledger)).not.toContain(world.rawProofExplanation);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
       expect(failures).toEqual([]);
     });
   }
