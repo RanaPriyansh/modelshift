@@ -111,6 +111,50 @@ begin
 end;
 $$;
 
+-- service_role bypasses RLS and retains table privileges. The retirement
+-- trigger is therefore the elevated-path guard and must reject the same write.
+begin;
+set local role service_role;
+
+do $$
+declare
+  refused boolean := false;
+begin
+  begin
+    insert into forge.consent_records (
+      learner_user_id,
+      purpose_key,
+      decision,
+      actor_user_id,
+      actor_capacity,
+      policy_version
+    ) values (
+      '20000000-0000-4000-8000-000000000001',
+      'private_evidence_persistence',
+      'granted',
+      '20000000-0000-4000-8000-000000000001',
+      'learner',
+      'direct.service_role.fixture.2026.07'
+    );
+  exception
+    when check_violation then
+      refused := true;
+  end;
+
+  if not refused then
+    raise exception 'service_role can create retired private-evidence consent';
+  end if;
+
+  if (select count(*) from forge.consent_records
+      where learner_user_id = '20000000-0000-4000-8000-000000000001'
+        and purpose_key = 'private_evidence_persistence') <> 1 then
+    raise exception 'service_role refusal added a retired private-evidence consent row';
+  end if;
+end;
+$$;
+
+commit;
+
 -- Simulate the direct authenticated Data API insert after the correction. The
 -- purpose-aware WITH CHECK and role-independent trigger must reject it.
 begin;
