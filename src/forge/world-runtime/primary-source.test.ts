@@ -316,6 +316,97 @@ describe("Primary Source World runtime adapter", () => {
     }
   });
 
+  it("hard-pins every runtime session to encounter instead of trusting an adapter seed", () => {
+    const forgedInitialAdapter = {
+      ...primarySourceWorldRuntimeAdapter,
+      initialSemanticStage: () => "cold_transfer" as const,
+    };
+    expect(createWorldRuntimeSession(forgedInitialAdapter).semanticTrace).toEqual(["encounter"]);
+  });
+
+  it("rejects model, replay, domain-access, and disabled-return classifications before reduction", () => {
+    const bypasses = [
+      ["model_action", "model_action_disallowed"],
+      ["experience_replay", "runtime_action_unavailable"],
+      ["access_accommodation", "runtime_action_unavailable"],
+      ["return_proof", "runtime_action_unavailable"],
+    ] as const;
+
+    for (const [classification, reason] of bypasses) {
+      const bypassAdapter = {
+        ...primarySourceWorldRuntimeAdapter,
+        classify: () => classification,
+        reduce: () => {
+          throw new Error("A classified runtime action must be rejected before the domain reducer runs.");
+        },
+      } as typeof primarySourceWorldRuntimeAdapter;
+      const initial = createWorldRuntimeSession(bypassAdapter);
+      expect(dispatchWorldRuntimeCommand(bypassAdapter, initial, {
+        kind: "domain",
+        event: { type: "COMMIT_INITIAL", choiceId: "visible_detail", confidence: 70 },
+      })).toMatchObject({ accepted: false, reason, session: initial });
+    }
+  });
+
+  it("rejects adapters that omit, disguise, or introduce instructional support at a protected boundary", () => {
+    const acceptedSupport = {
+      actionId: "action.primary-source.support",
+      stage: "commit_model" as const,
+      source: "authored" as const,
+      tier: "attention" as const,
+    };
+    const supportDisguisedAsLearnerWork = {
+      ...primarySourceWorldRuntimeAdapter,
+      classify: () => "learner_operation" as const,
+      supportEvent: () => acceptedSupport,
+    } as typeof primarySourceWorldRuntimeAdapter;
+    const missingSupportRecord = {
+      ...primarySourceWorldRuntimeAdapter,
+      classify: () => "instructional_support" as const,
+      supportEvent: () => null,
+    } as typeof primarySourceWorldRuntimeAdapter;
+
+    for (const adapter of [supportDisguisedAsLearnerWork, missingSupportRecord]) {
+      const initial = createWorldRuntimeSession(adapter);
+      expect(dispatchWorldRuntimeCommand(adapter, initial, {
+        kind: "domain",
+        event: { type: "COMMIT_INITIAL", choiceId: "visible_detail", confidence: 70 },
+      })).toMatchObject({ accepted: false, reason: "runtime_support_mismatch", session: initial });
+    }
+
+    type State = { readonly phase: "learning" | "proof" | "bounded_result" };
+    type Event = { readonly type: "ADVANCE" };
+    const protectedCases: ReadonlyArray<readonly [State["phase"], State["phase"]]> = [
+      ["learning", "proof"],
+      ["bounded_result", "bounded_result"],
+    ];
+    for (const [initialPhase, nextPhase] of protectedCases) {
+      const protectedSupportAdapter: WorldRuntimeAdapter<State, Event, null> = {
+        pack: primarySourceWorldRuntimeAdapter.pack,
+        createInitialState: () => ({ phase: initialPhase }),
+        reduce: () => ({ accepted: true, state: { phase: nextPhase } }),
+        phase: (state) => state.phase,
+        initialSemanticStage: () => "encounter",
+        semanticStages: () => [],
+        stage: () => "encounter",
+        classify: () => "learner_operation",
+        supportEvent: () => acceptedSupport,
+        proof: () => null,
+        projectValidator: () => ({ outcome: "not_scored", criteria: [] }),
+        remainsUntested: () => [],
+      };
+      const initial = createWorldRuntimeSession(protectedSupportAdapter);
+      expect(dispatchWorldRuntimeCommand(protectedSupportAdapter, initial, {
+        kind: "domain",
+        event: { type: "ADVANCE" },
+      })).toMatchObject({
+        accepted: false,
+        reason: "proof_action_blocked",
+        session: { state: initial.state, proofBlockedActions: ["instructional_support"] },
+      });
+    }
+  });
+
   it("preserves a stateful rejected domain transition for a retry", () => {
     let domainState = createInitialPrimarySourceState();
     let runtime = createWorldRuntimeSession(primarySourceWorldRuntimeAdapter);
