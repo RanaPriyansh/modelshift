@@ -30,9 +30,9 @@ The earlier physics-specific `POST /api/interpret` route remains for the histori
 
 ### A provider-neutral Lesson Studio
 
-[`/studio`](http://127.0.0.1:3000/studio) can send one bounded lesson-draft request to OpenAI, Anthropic, Google Gemini, or OpenRouter. A key supplied by the user is held only in the current form and request, cleared after the response, sent through a fixed server adapter, and never returned in the draft. A managed OpenAI adapter is an explicit server-side opt-in and is off by default.
+[`/studio`](http://127.0.0.1:3000/studio) is a public explanation of the bounded lesson-draft workflow; its provider connector is structurally locked. Neither a request-only key, target-audience selection, nor page copy establishes authority. Public managed and BYOK Studio calls remain unavailable until active adult server-owned authority plus separately approved quota, abuse, privacy, and review controls exist. There is no managed Studio credential or environment switch.
 
-Every provider must return the same strict schema: opening phenomenon, exactly two plausible readings, a separating test, reconstruction, unfamiliar cold transfer, source-review needs, safety notes, and explicit limitations. Model output is always an **unverified editable draft**. It cannot publish a World, verify its own claims, select a correct proof answer, grade cold transfer, or create mastery evidence. Adapter tests are mocked; no live provider call has been verified in this release because no provider credential is available in the workspace.
+Any future authorized adapter must return the same strict schema: opening phenomenon, exactly two plausible readings, a separating test, reconstruction, unfamiliar cold transfer, source-review needs, safety notes, and explicit limitations. Its output is always an **unverified editable draft**. It cannot publish a World, verify its own claims, select a correct proof answer, grade cold transfer, or create mastery evidence. Adapter tests are mocked; no live provider call has been verified in this release because no provider credential is available in the workspace.
 
 ### A privacy-minimal local evidence ledger
 
@@ -129,7 +129,7 @@ PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
 | `/learn/proportional-reasoning` | Working exact-math Model World |
 | `/learn/ai-and-learning` | Working source/evidence World |
 | `/learn/primary-source-reasoning` | Working historical-literacy World using authentic archival images |
-| `/studio` | Provider-neutral compiler for unverified lesson drafts |
+| `/studio` | Public explanation of the provider-neutral unverified-draft workflow; connector locked |
 | `/login` and `/account` | Private device profile plus optional, separately configured cloud identity |
 | `/trail` | Local evidence summary plus the intended question-to-capability trail |
 | `/evidence` | Local evidence controls and the bounded evidence contract |

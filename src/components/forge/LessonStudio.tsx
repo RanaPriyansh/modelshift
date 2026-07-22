@@ -280,11 +280,11 @@ function LessonDraftView({ result, onDiscard }: { result: LessonStudioResponse; 
 
       <section className="lesson-draft-review">
         <div>
-          <h3>Source review required</h3>
+          <h3>Source reviewer required</h3>
           <ul>{draft.sourceNeeds.map((need, index) => <li key={index}><strong>{need.claim}</strong><span>{need.sourceType}</span></li>)}</ul>
         </div>
         <div>
-          <h3>Safety and limits</h3>
+          <h3>Safety reviewer and limits</h3>
           <ul>{[...draft.safetyNotes, ...draft.draftLimitations].map((note, index) => <li key={index}>{note}</li>)}</ul>
         </div>
       </section>
@@ -293,7 +293,7 @@ function LessonDraftView({ result, onDiscard }: { result: LessonStudioResponse; 
         <span>Review workflow · not publication</span>
         <h3>Generation → critique → source plan → revision</h3>
         <p>
-          The generated draft has a deterministic critique and unresolved source plan. Named human factual, pedagogy, access, and proof reviews are still required. Even an approved package is not a published World.
+          The generated draft has a deterministic critique and unresolved source plan. The staged human sequence is review coordinator, source reviewer, factual reviewer, pedagogy reviewer, access reviewer, safety reviewer, then proof reviewer. Even an approved package is not a published World.
         </p>
         <dl>
           <div><dt>Draft reference</dt><dd>{result.pipeline.generation.versionRef}</dd></div>

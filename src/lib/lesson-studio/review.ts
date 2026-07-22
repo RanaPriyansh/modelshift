@@ -47,7 +47,24 @@ const reviewVersionRefsSchema = z.strictObject({
   sourcePlan: immutableVersionRefSchema,
   revision: immutableVersionRefSchema,
   sourceBinding: immutableVersionRefSchema.optional(),
+  policy: immutableVersionRefSchema,
 });
+
+const draftSeedVersionRefsSchema = reviewVersionRefsSchema.omit({ sourceBinding: true });
+const sourceNeedIdsSchema = z.array(z.string().regex(/^source-need-[a-f0-9]{12}$/)).min(1).max(6).superRefine((value, context) => {
+  if (new Set(value).size !== value.length) {
+    context.addIssue({ code: "custom", message: "Source-need IDs must be unique." });
+  }
+});
+
+const reviewDraftSeedSchema = z.strictObject({
+  /** Immutable package references before any source-binding transition. */
+  versionRefs: draftSeedVersionRefsSchema,
+  /** Exact unresolved source-plan IDs frozen with the immutable candidate. */
+  sourceNeedIds: sourceNeedIdsSchema,
+});
+
+const reviewedVersionRefsSchema = reviewVersionRefsSchema.omit({ policy: true });
 
 const reviewMetadataSchema = z.strictObject({
   conflicts: z.strictObject({
@@ -66,7 +83,7 @@ const reviewMetadataSchema = z.strictObject({
       context.addIssue({ code: "custom", message: "Dissent summary must match its recorded state." });
     }
   }),
-  /** A replacement may name an earlier local decision; the transition validates that it exists. */
+  /** This append-only local machine records no replacement decisions; must be explicit null. */
   supersedesDecisionId: z.string().uuid().nullable(),
   /** The current source-review decision binds this exact package receipt digest. */
   sourceBindingReceiptDigest: immutableVersionRefSchema.nullable(),
@@ -77,8 +94,8 @@ export const lessonReviewDecisionSchema = z.strictObject({
   reviewer: reviewerSchema,
   policyVersionRef: immutableVersionRefSchema,
   /** The complete, immutable candidate inspected by this reviewer. */
-  reviewedVersionRefs: reviewVersionRefsSchema,
-  /** Declared states are checked against the live record and policy transition. */
+  reviewedVersionRefs: reviewedVersionRefsSchema,
+  /** Declared states are checked against the live replay state and policy transition. */
   fromState: z.enum(LESSON_REVIEW_STATES),
   toState: z.enum(LESSON_REVIEW_STATES),
   /** Required only while resolving `source-needed`; a digest alone is never a receipt. */
@@ -91,51 +108,20 @@ export const lessonReviewDecisionSchema = z.strictObject({
 
 export type LessonReviewDecision = z.infer<typeof lessonReviewDecisionSchema>;
 
-export const lessonReviewRecordSchema = z.strictObject({
+const lessonReviewRecordShapeSchema = z.strictObject({
   schemaVersion: z.literal("1.0"),
+  /** Derived only by replaying decisions from draftSeed. */
   state: z.enum(LESSON_REVIEW_STATES),
   /** Approval is an authoring result. A separate principal-controlled event publishes Worlds. */
   publication: z.literal("not-published"),
-  versionRefs: z.strictObject({
-    generation: immutableVersionRefSchema,
-    critique: immutableVersionRefSchema,
-    sourcePlan: immutableVersionRefSchema,
-    revision: immutableVersionRefSchema,
-    sourceBinding: immutableVersionRefSchema.optional(),
-    policy: immutableVersionRefSchema,
-  }),
-  /** Exact unresolved source-plan IDs frozen when this record was created. */
-  sourceNeedIds: z.array(z.string().regex(/^source-need-[a-f0-9]{12}$/)).min(1).max(6).superRefine((value, context) => {
-    if (new Set(value).size !== value.length) {
-      context.addIssue({ code: "custom", message: "Source-need IDs must be unique." });
-    }
-  }),
+  draftSeed: reviewDraftSeedSchema,
+  /** Materialized replay refs; cannot diverge from draftSeed + decisions. */
+  versionRefs: reviewVersionRefsSchema,
   sourceBindingReceipt: sourceBindingReceiptSchema.optional(),
   decisions: z.array(lessonReviewDecisionSchema).max(16),
-}).superRefine((record, context) => {
-  const ids = record.decisions.map((decision) => decision.decisionId);
-  if (new Set(ids).size !== ids.length) {
-    context.addIssue({ code: "custom", path: ["decisions"], message: "Decision IDs must be unique." });
-  }
-  if (Boolean(record.sourceBindingReceipt) !== Boolean(record.versionRefs.sourceBinding)) {
-    context.addIssue({ code: "custom", path: ["sourceBindingReceipt"], message: "Source receipt and immutable receipt digest must appear together." });
-  }
-  if (record.sourceBindingReceipt && record.versionRefs.sourceBinding !== record.sourceBindingReceipt.receiptDigest) {
-    context.addIssue({ code: "custom", path: ["versionRefs", "sourceBinding"], message: "Source binding reference must equal the receipt digest." });
-  }
-  if (record.sourceBindingReceipt) {
-    const resolvedSourceNeedIds = record.sourceBindingReceipt.sourceBindings.flatMap((binding) => binding.sourceNeedIds);
-    const exactPlan = new Set(record.sourceNeedIds);
-    if (record.sourceBindingReceipt.candidateReviewVersionRef !== record.versionRefs.revision
-      || resolvedSourceNeedIds.length !== exactPlan.size
-      || new Set(resolvedSourceNeedIds).size !== resolvedSourceNeedIds.length
-      || resolvedSourceNeedIds.some((id) => !exactPlan.has(id))) {
-      context.addIssue({ code: "custom", path: ["sourceBindingReceipt"], message: "Source receipt must resolve every frozen source need exactly once." });
-    }
-  }
 });
 
-export type LessonReviewRecord = z.infer<typeof lessonReviewRecordSchema>;
+export type LessonReviewRecord = z.infer<typeof lessonReviewRecordShapeSchema>;
 
 export class LessonReviewTransitionError extends Error {
   constructor(public readonly code:
@@ -172,22 +158,17 @@ const REQUIRED_AUTHORITY: Readonly<Partial<Record<LessonReviewState, { role: z.i
   "proof-review": { role: "proof-reviewer", scope: "proof" },
 };
 
-function exactReviewedRefs(record: LessonReviewRecord) {
-  return {
-    generation: record.versionRefs.generation,
-    critique: record.versionRefs.critique,
-    sourcePlan: record.versionRefs.sourcePlan,
-    revision: record.versionRefs.revision,
-    ...(record.versionRefs.sourceBinding ? { sourceBinding: record.versionRefs.sourceBinding } : {}),
-  };
-}
-
 function refsMatch(left: z.infer<typeof reviewVersionRefsSchema>, right: z.infer<typeof reviewVersionRefsSchema>): boolean {
   return left.generation === right.generation
     && left.critique === right.critique
     && left.sourcePlan === right.sourcePlan
     && left.revision === right.revision
-    && left.sourceBinding === right.sourceBinding;
+    && left.sourceBinding === right.sourceBinding
+    && left.policy === right.policy;
+}
+
+function receiptMatches(left: SourceBindingReceipt | undefined, right: SourceBindingReceipt | undefined): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 function expectedToState(record: LessonReviewRecord, decision: LessonReviewDecision): LessonReviewState {
@@ -217,8 +198,8 @@ function validateSourceBinding(record: LessonReviewRecord, decision: LessonRevie
   if (!decision.sourceBindingReceipt) throw new LessonReviewTransitionError("source-binding-required");
   const receipt = sourceBindingReceiptSchema.parse(decision.sourceBindingReceipt);
   const resolvedSourceNeedIds = receipt.sourceBindings.flatMap((binding) => binding.sourceNeedIds);
-  const exactPlan = new Set(record.sourceNeedIds);
-  if (receipt.candidateReviewVersionRef !== record.versionRefs.revision
+  const exactPlan = new Set(record.draftSeed.sourceNeedIds);
+  if (receipt.candidateReviewVersionRef !== record.draftSeed.versionRefs.revision
     || decision.metadata.sourceBindingReceiptDigest !== receipt.receiptDigest
     || resolvedSourceNeedIds.length !== exactPlan.size
     || new Set(resolvedSourceNeedIds).size !== resolvedSourceNeedIds.length
@@ -228,44 +209,24 @@ function validateSourceBinding(record: LessonReviewRecord, decision: LessonRevie
   return receipt;
 }
 
-export function createLessonReviewRecord(
-  pipeline: LessonDraftPipeline,
-  policyVersionRef: `sha256:${string}`,
-): LessonReviewRecord {
-  return lessonReviewRecordSchema.parse({
-    schemaVersion: "1.0",
-    state: "draft",
-    publication: "not-published",
-    versionRefs: {
-      generation: pipeline.generation.versionRef,
-      critique: pipeline.critique.versionRef,
-      sourcePlan: pipeline.sourcePlan.versionRef,
-      revision: pipeline.revision.versionRef,
-      policy: policyVersionRef,
-    },
-    sourceNeedIds: pipeline.sourcePlan.items.map((item) => item.id),
-    decisions: [],
-  });
-}
-
-/** A pure, local/staged transition. It writes nowhere and cannot publish or grade proof. */
-export function applyLessonReviewDecision(
-  recordCandidate: unknown,
-  decisionCandidate: unknown,
-): LessonReviewRecord {
-  // Parse both inputs at this boundary; callers cannot bypass record invariants with a typed cast.
-  const record = lessonReviewRecordSchema.parse(recordCandidate);
-  const decision = lessonReviewDecisionSchema.parse(decisionCandidate);
+/**
+ * Applies one already-parsed decision to an already-validated replay state.
+ * It intentionally does not call the public record schema so record replay is
+ * acyclic and can itself be used as the schema invariant.
+ */
+function applyParsedLessonReviewDecision(record: LessonReviewRecord, decision: LessonReviewDecision): LessonReviewRecord {
   if (["approved-package", "rejected", "withdrawn"].includes(record.state)) {
     throw new LessonReviewTransitionError("final-state");
   }
   if (record.decisions.some((existing) => existing.decisionId === decision.decisionId)) {
     throw new LessonReviewTransitionError("duplicate-decision");
   }
-  if (decision.metadata.supersedesDecisionId && !record.decisions.some((existing) => existing.decisionId === decision.metadata.supersedesDecisionId)) {
+  // Local decisions are append-only. A replacement requires a future explicit
+  // new-version contract, so arbitrary same- or cross-scope supersession fails.
+  if (decision.metadata.supersedesDecisionId !== null) {
     throw new LessonReviewTransitionError("invalid-supersession");
   }
-  if (decision.policyVersionRef !== record.versionRefs.policy || !refsMatch(decision.reviewedVersionRefs, exactReviewedRefs(record))) {
+  if (decision.policyVersionRef !== record.versionRefs.policy || !refsMatch({ ...decision.reviewedVersionRefs, policy: decision.policyVersionRef }, record.versionRefs)) {
     throw new LessonReviewTransitionError("version-ref-mismatch");
   }
   const toState = expectedToState(record, decision);
@@ -275,7 +236,7 @@ export function applyLessonReviewDecision(
   validateAuthority(record, decision);
   const sourceBindingReceipt = validateSourceBinding(record, decision);
 
-  return lessonReviewRecordSchema.parse({
+  return {
     ...record,
     state: toState,
     versionRefs: sourceBindingReceipt
@@ -283,5 +244,81 @@ export function applyLessonReviewDecision(
       : record.versionRefs,
     ...(sourceBindingReceipt ? { sourceBindingReceipt } : {}),
     decisions: [...record.decisions, decision],
+  };
+}
+
+function replayReviewRecord(record: LessonReviewRecord): LessonReviewRecord {
+  let replay: LessonReviewRecord = {
+    schemaVersion: "1.0",
+    state: "draft",
+    publication: "not-published",
+    draftSeed: record.draftSeed,
+    versionRefs: record.draftSeed.versionRefs,
+    decisions: [],
+  };
+  for (const decision of record.decisions) {
+    replay = applyParsedLessonReviewDecision(replay, decision);
+  }
+  return replay;
+}
+
+/**
+ * Ensures a persisted projection is exactly the deterministic result of its
+ * immutable draft seed and ordered decisions. It validates local completeness
+ * only; no source authenticity, durability, or publication authority exists.
+ */
+export const lessonReviewRecordSchema = lessonReviewRecordShapeSchema.superRefine((record, context) => {
+  try {
+    const replayed = replayReviewRecord(record);
+    if (record.state !== replayed.state) {
+      context.addIssue({ code: "custom", path: ["state"], message: "State must equal deterministic decision replay." });
+    }
+    if (record.publication !== replayed.publication) {
+      context.addIssue({ code: "custom", path: ["publication"], message: "Publication must equal deterministic decision replay." });
+    }
+    if (!refsMatch(record.versionRefs, replayed.versionRefs)) {
+      context.addIssue({ code: "custom", path: ["versionRefs"], message: "Version refs must equal deterministic decision replay." });
+    }
+    if (!receiptMatches(record.sourceBindingReceipt, replayed.sourceBindingReceipt)) {
+      context.addIssue({ code: "custom", path: ["sourceBindingReceipt"], message: "Source binding receipt must equal deterministic decision replay." });
+    }
+  } catch (error) {
+    const reason = error instanceof LessonReviewTransitionError ? error.code : "invalid-decision-history";
+    context.addIssue({ code: "custom", path: ["decisions"], message: `Decision history cannot replay: ${reason}.` });
+  }
+});
+
+export function createLessonReviewRecord(
+  pipeline: LessonDraftPipeline,
+  policyVersionRef: `sha256:${string}`,
+): LessonReviewRecord {
+  const draftSeed = {
+    versionRefs: {
+      generation: pipeline.generation.versionRef,
+      critique: pipeline.critique.versionRef,
+      sourcePlan: pipeline.sourcePlan.versionRef,
+      revision: pipeline.revision.versionRef,
+      policy: policyVersionRef,
+    },
+    sourceNeedIds: pipeline.sourcePlan.items.map((item) => item.id),
+  };
+  return lessonReviewRecordSchema.parse({
+    schemaVersion: "1.0",
+    state: "draft",
+    publication: "not-published",
+    draftSeed,
+    versionRefs: draftSeed.versionRefs,
+    decisions: [],
   });
+}
+
+/** A pure, local/staged transition. It writes nowhere and cannot publish or grade proof. */
+export function applyLessonReviewDecision(
+  recordCandidate: unknown,
+  decisionCandidate: unknown,
+): LessonReviewRecord {
+  // Parse the persisted candidate through deterministic replay before accepting a new transition.
+  const record = lessonReviewRecordSchema.parse(recordCandidate);
+  const decision = lessonReviewDecisionSchema.parse(decisionCandidate);
+  return lessonReviewRecordSchema.parse(applyParsedLessonReviewDecision(record, decision));
 }
