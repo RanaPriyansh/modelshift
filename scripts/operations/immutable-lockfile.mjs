@@ -21,6 +21,12 @@ function digest(bytes) {
 
 function gitShow(ref) {
   if (!ref) fail("a non-empty --source-ref (or GITHUB_SHA) is required.");
+  if (!/^[a-f0-9]{40}$/.test(ref)) fail("--source-ref (or GITHUB_SHA) must be an exact lowercase 40-character Git commit SHA.");
+  const commitCheck = spawnSync("git", ["cat-file", "-e", `${ref}^{commit}`], { encoding: "utf8" });
+  const objectType = spawnSync("git", ["cat-file", "-t", ref], { encoding: "utf8" });
+  if (commitCheck.error || objectType.error || commitCheck.status !== 0 || objectType.status !== 0 || objectType.stdout.trim() !== "commit") {
+    fail(`source SHA ${JSON.stringify(ref)} does not identify a Git commit object.`);
+  }
   const result = spawnSync("git", ["show", `${ref}:${LOCKFILE}`], {
     encoding: null,
     maxBuffer: 16 * 1024 * 1024,
