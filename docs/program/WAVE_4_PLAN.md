@@ -45,7 +45,7 @@ At the end of Wave 4, all four current Worlds should dispatch accepted domain tr
 | --- | --- | --- | --- |
 | `COMMIT_PREDICTION` | learner operation | none | The initial prediction remains part of encounter; it is not the mechanism model. |
 | `COMMIT_EXPLANATION` | learner operation | `commit_model` | Learner language remains domain state, not receipt content. |
-| accepted `RESOLVE_INTERPRETATION` | instructional support | `interpret_two_readings`, `name_disagreement` | Source is `model` for a real model result and `authored` for deterministic fallback; both are assistance before proof. Exactly two uncertain readings must be displayed. |
+| accepted `RESOLVE_INTERPRETATION` or `INTERPRETATION_FAILED` | instructional support | `interpret_two_readings`, `name_disagreement` | Source is `model` for a real model result and `authored` for deterministic fallback; both are assistance before proof. Exactly two uncertain readings must be displayed. The direct failure event must install the same authored neutral fallback instead of leaving a dead trace. |
 | `COMMIT_PROBE_PREDICTION` | learner operation | `commit_test_prediction` | This is distinct from the opening prediction. |
 | `RUN_EXPERIMENT` | learner operation | `run_separating_experience` | Motion, numbers, graphs, forces, and alternatives retain one deterministic state. |
 | `REPLAY_EXPERIMENT` | experience replay | none | Available only while learning; runtime proof lock rejects it. |
@@ -68,6 +68,8 @@ The bounded result must retain at least these untested questions:
 - reliability across repeated attempts;
 - causal explanation quality beyond the validator's signals;
 - representative learner and accessibility validity.
+
+The compatibility device ledger adds the backward-compatible `authored_representation` assistance kind so the deterministic compiler fallback is not silently omitted or mislabeled as a hint. Existing record kinds remain readable.
 
 ## AI & Learning contract
 
