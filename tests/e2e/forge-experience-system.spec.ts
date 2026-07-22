@@ -278,22 +278,26 @@ test.describe("FORGE Packet A experience system", () => {
         .toBeGreaterThanOrEqual(contrast.floor);
     }
 
+    for (const route of ["/", "/pathways"]) {
+      await page.goto(route);
+      const motion = await page.locator(".forge-shell").evaluate((shell) => {
+        const toMilliseconds = (raw: string) => raw.split(",").map((part) => {
+          const value = part.trim();
+          return value.endsWith("ms") ? Number.parseFloat(value) : Number.parseFloat(value) * 1_000;
+        });
+        return Array.from(shell.querySelectorAll("*")).flatMap((element) => {
+          const styles = getComputedStyle(element);
+          const durations = [...toMilliseconds(styles.animationDuration), ...toMilliseconds(styles.transitionDuration)];
+          return durations.some((duration) => Number.isFinite(duration) && duration > 20)
+            ? [`${element.tagName.toLowerCase()}.${element.className}`]
+            : [];
+        });
+      });
+      expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
+      expect(motion, `${route} should not retain motion above 20ms`).toEqual([]);
+    }
+
     await page.goto("/");
-    const motion = await page.locator(".forge-shell").evaluate((shell) => {
-      const toMilliseconds = (raw: string) => raw.split(",").map((part) => {
-        const value = part.trim();
-        return value.endsWith("ms") ? Number.parseFloat(value) : Number.parseFloat(value) * 1_000;
-      });
-      return Array.from(shell.querySelectorAll("*")).flatMap((element) => {
-        const styles = getComputedStyle(element);
-        const durations = [...toMilliseconds(styles.animationDuration), ...toMilliseconds(styles.transitionDuration)];
-        return durations.some((duration) => Number.isFinite(duration) && duration > 20)
-          ? [`${element.tagName.toLowerCase()}.${element.className}`]
-          : [];
-      });
-    });
-    expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
-    expect(motion).toEqual([]);
     await expect(page.locator(".forge-status").filter({ hasText: "Working model World" })).toHaveCount(2);
 
     await page.emulateMedia({ forcedColors: "active" });
