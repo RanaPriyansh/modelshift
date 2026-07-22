@@ -4,6 +4,7 @@ import {
   PATHWAY_ACCESS_REQUIREMENTS,
   PATHWAY_ENTITLEMENT_AREAS,
   PATHWAY_SOURCE_REFS,
+  pathwayCapabilityCatalogSchema,
   type PathwayReviewPacket,
 } from "./contracts";
 import { CURRENT_FORGE_PATHWAY_CATALOG } from "./catalog";
@@ -129,6 +130,18 @@ function packetFor(ageMode: PathwayReviewPacket["ageMode"] = "13-17"): PathwayRe
   };
 }
 
+function gapOnlyPacket(ageMode: PathwayReviewPacket["ageMode"] = "13-17"): PathwayReviewPacket {
+  const packet = packetFor(ageMode);
+  packet.entitlements = PATHWAY_ENTITLEMENT_AREAS.map((area) => ({
+    area,
+    state: "identified-gap" as const,
+    learnerPosition: "shared" as const,
+    limitationRef: `limit.${area}.not-published`,
+  }));
+  packet.evidenceClaims = [];
+  return packet;
+}
+
 function issueCodes(candidate: unknown): readonly string[] {
   return evaluatePathwayReviewPacket(candidate).issues.map((issue) => issue.code);
 }
@@ -150,15 +163,23 @@ describe("FORGE Packet C pathway review", () => {
     expect(CURRENT_FORGE_PATHWAY_CATALOG.capabilities.every((capability) => capability.evidenceEventTypes.includes("evidence.recorded"))).toBe(true);
   });
 
-  it.each(["under-13", "13-17", "18-plus"] as const)("allows a bounded review packet for %s", (ageMode) => {
+  it.each(["under-13", "13-17", "18-plus"] as const)("requires a trusted runtime receipt for published capabilities at %s", (ageMode) => {
     const result = evaluatePathwayReviewPacket(packetFor(ageMode));
-    expect(result.status).toBe("evidence-complete-for-independent-review");
-    expect(result.issues).toEqual([]);
+    expect(result.status).toBe("needs-evidence");
+    expect(result.issues.map((issue) => issue.code)).toContain("evidence.trusted-receipt-required");
+    expect(result.issues.map((issue) => issue.code)).not.toContain("evidence.claim-overreach");
     expect(result.claim).toMatchObject({
       level: "C0",
       certifiesLearningEfficacy: false,
       certifiesSafetyOrLegalCompliance: false,
       certifiesPathwayQuality: false,
+    });
+  });
+
+  it("can mark an explicit gap-only packet complete for independent review without self-asserted event evidence", () => {
+    expect(evaluatePathwayReviewPacket(gapOnlyPacket())).toMatchObject({
+      status: "evidence-complete-for-independent-review",
+      issues: [],
     });
   });
 
@@ -173,7 +194,6 @@ describe("FORGE Packet C pathway review", () => {
     ["foundations", (packet: PathwayReviewPacket) => { packet.foundations = { ...packet.foundations, status: "not-documented", benchmarkPlanRef: undefined }; }, "foundations.not-documented"],
     ["coercion", (packet: PathwayReviewPacket) => { packet.coercion = { ...packet.coercion, noPenaltyForPause: false }; }, "coercion.pause-penalty"],
     ["hidden gamification", (packet: PathwayReviewPacket) => { packet.interfaceSignals = { ...packet.interfaceSignals, hasStreaks: true }; }, "gamification.hidden-signal"],
-    ["invalid evidence claim", (packet: PathwayReviewPacket) => { packet.evidenceClaims[0] = { ...packet.evidenceClaims[0], statement: "This certifies the learner's mastery in every setting." }; }, "evidence.claim-overreach"],
   ])("returns needs-evidence for %s fixture", (_name, mutate, expectedCode) => {
     const packet = structuredClone(packetFor());
     mutate(packet);
@@ -194,13 +214,18 @@ describe("FORGE Packet C pathway review", () => {
     expect(issueCodes(packet)).toContain("consent.child-open-web-prohibited");
   });
 
-  it("rejects an invented capability binding and unsupported source claim", () => {
+  it("rejects an invented capability binding", () => {
     const packet = packetFor();
     const published = packet.entitlements.find((entry) => entry.state === "published-capability");
     if (!published || published.state !== "published-capability") throw new Error("Fixture needs a published capability.");
     published.capabilityId = "capability.invented.fixture";
+    expect(issueCodes(packet)).toEqual(expect.arrayContaining(["capability.unknown", "evidence.claim-unbound-capability"]));
+  });
+
+  it("rejects an unsupported source claim", () => {
+    const packet = packetFor();
     packet.evidenceClaims[0] = { ...packet.evidenceClaims[0], sourceIds: ["source.invented.fixture"] };
-    expect(issueCodes(packet)).toEqual(expect.arrayContaining(["capability.unknown", "evidence.source-mismatch"]));
+    expect(issueCodes(packet)).toContain("evidence.source-mismatch");
   });
 
   it("rejects entitlement substitution and duplicate capability reuse", () => {
@@ -240,25 +265,110 @@ describe("FORGE Packet C pathway review", () => {
     expect(issueCodes(packet)).toContain("evidence.claim-event-mismatch");
   });
 
+  it("rejects cloned duplicate catalog capability IDs at the schema boundary", () => {
+    const catalog = structuredClone(CURRENT_FORGE_PATHWAY_CATALOG);
+    catalog.capabilities.push(structuredClone(catalog.capabilities[0]));
+    expect(pathwayCapabilityCatalogSchema.safeParse(catalog).success).toBe(false);
+  });
+
   it.each([
-    ["catalog capability ID", () => ({
-      ...CURRENT_FORGE_PATHWAY_CATALOG,
-      capabilities: [...CURRENT_FORGE_PATHWAY_CATALOG.capabilities, structuredClone(CURRENT_FORGE_PATHWAY_CATALOG.capabilities[0])],
-    })],
     ["entitlement area", (packet: PathwayReviewPacket) => {
       packet.entitlements.push(structuredClone(packet.entitlements[0]));
-      return CURRENT_FORGE_PATHWAY_CATALOG;
     }],
     ["evidence claim ID", (packet: PathwayReviewPacket) => {
       packet.evidenceClaims.push(structuredClone(packet.evidenceClaims[0]));
-      return CURRENT_FORGE_PATHWAY_CATALOG;
     }],
   ])("rejects cloned duplicate %s objects", (_name, duplicate) => {
     const packet = packetFor();
-    const catalog = duplicate(packet);
-    const result = evaluatePathwayReviewPacket(packet, catalog);
+    duplicate(packet);
+    const result = evaluatePathwayReviewPacket(packet);
     expect(result.status).toBe("needs-evidence");
     expect(result.issues.map((issue) => issue.code)).toContain("schema.invalid");
+  });
+
+  it("binds production evaluation to the internal catalog even when called with a forged catalog argument", () => {
+    const packet = packetFor();
+    const forgedCatalog = structuredClone(CURRENT_FORGE_PATHWAY_CATALOG);
+    forgedCatalog.capabilities.push({
+      capabilityId: "capability.arts.forged",
+      worldId: "world.arts.forged",
+      entitlementAreas: ["arts-design"],
+      ageModes: ["13-17"],
+      evidenceTier: "grounded",
+      sourcePoliciesByAge: { "13-17": "curated" },
+      sourceIds: ["source.forged.fixture"],
+      evidenceEventTypes: ["evidence.recorded"],
+      guardianManaged: false,
+    });
+    const artsIndex = packet.entitlements.findIndex((entry) => entry.area === "arts-design");
+    if (artsIndex < 0) throw new Error("Fixture needs arts coverage.");
+    packet.entitlements[artsIndex] = {
+      area: "arts-design",
+      state: "published-capability",
+      capabilityId: "capability.arts.forged",
+      worldId: "world.arts.forged",
+      evidenceTier: "grounded",
+      sourcePolicy: "curated",
+      learnerPosition: "chosen",
+    };
+
+    const evaluateWithForgedCatalog = evaluatePathwayReviewPacket as unknown as (
+      candidate: unknown,
+      catalog: unknown,
+    ) => ReturnType<typeof evaluatePathwayReviewPacket>;
+    const result = evaluateWithForgedCatalog(packet, forgedCatalog);
+    expect(result.status).toBe("needs-evidence");
+    expect(result.issues.map((issue) => issue.code)).toContain("capability.unknown");
+  });
+
+  it("deep-freezes the catalog graph and rejects mutation attempts", () => {
+    const primarySource = CURRENT_FORGE_PATHWAY_CATALOG.capabilities.find(
+      (capability) => capability.capabilityId === "capability.historical-literacy.observation-inference",
+    );
+    if (!primarySource) throw new Error("Fixture needs the primary-source capability.");
+    expect(Object.isFrozen(CURRENT_FORGE_PATHWAY_CATALOG)).toBe(true);
+    expect(Object.isFrozen(CURRENT_FORGE_PATHWAY_CATALOG.capabilities)).toBe(true);
+    expect(Object.isFrozen(primarySource)).toBe(true);
+    expect(Object.isFrozen(primarySource.sourcePoliciesByAge)).toBe(true);
+    expect(Object.isFrozen(primarySource.entitlementAreas)).toBe(true);
+    expect(() => { primarySource.sourcePoliciesByAge["under-13"] = "open_web"; }).toThrow(TypeError);
+    expect(primarySource.sourcePoliciesByAge["under-13"]).toBe("guardian_curated");
+  });
+
+  it.each(["under-13", "13-17"] as const)("rejects %s open-web policy assertions regardless of the catalog", (ageMode) => {
+    const packet = packetFor(ageMode);
+    const primarySource = packet.entitlements.find((entry) => entry.area === "history-source-reasoning");
+    if (!primarySource || primarySource.state !== "published-capability") throw new Error("Fixture needs primary-source coverage.");
+    primarySource.sourcePolicy = "open_web";
+    expect(issueCodes(packet)).toContain("capability.underage-open-web-prohibited");
+  });
+
+  it.each([
+    ["nonexistent", (packet: PathwayReviewPacket) => { packet.evidenceClaims[0] = { ...packet.evidenceClaims[0], eventRef: "event.nonexistent.fixture" }; }, "evidence.trusted-receipt-required"],
+    ["mismatched", (packet: PathwayReviewPacket) => { packet.evidenceClaims[0] = { ...packet.evidenceClaims[0], eventType: "world_run.started" }; }, "evidence.claim-event-mismatch"],
+    ["cross-capability", (packet: PathwayReviewPacket) => { packet.evidenceClaims[0] = { ...packet.evidenceClaims[0], capabilityId: packet.evidenceClaims[1].capabilityId, eventRef: "event.cross-capability.fixture" }; }, "evidence.claim-missing"],
+  ])("does not treat a %s event declaration as a trusted receipt", (_name, mutate, expectedCode) => {
+    const packet = packetFor();
+    mutate(packet);
+    const result = evaluatePathwayReviewPacket(packet);
+    expect(result.status).toBe("needs-evidence");
+    expect(result.issues.map((issue) => issue.code)).toContain(expectedCode);
+    expect(result.issues.map((issue) => issue.code)).toContain("evidence.trusted-receipt-required");
+  });
+
+  it.each([
+    ["mastery", "This certifies the learner's mastery in every setting."],
+    ["homeschool readiness", "This packet is homeschool-ready."],
+    ["solution and suitability", "This is a homeschool solution suitable for every learner."],
+    ["school replacement", "This replaces school and education."],
+    ["universal replacement", "This is a universal replacement for education."],
+    ["lifelong capability", "This proves lifelong learning capability."],
+    ["retention", "This guarantees delayed retention."],
+    ["broad transfer", "This proves broad far transfer."],
+  ])("rejects %s overreach", (_name, statement) => {
+    const packet = packetFor();
+    packet.evidenceClaims[0] = { ...packet.evidenceClaims[0], statement };
+    expect(issueCodes(packet)).toContain("evidence.claim-overreach");
   });
 
   it("fails closed on undeclared LMS state through the strict packet schema", () => {
@@ -267,9 +377,4 @@ describe("FORGE Packet C pathway review", () => {
     expect(issueCodes(packet)).toContain("schema.invalid");
   });
 
-  it("fails closed when a caller supplies a malformed capability catalog", () => {
-    const result = evaluatePathwayReviewPacket(packetFor(), { schemaVersion: "1.0", generatedFrom: "released-world-packs", capabilities: [] });
-    expect(result.status).toBe("needs-evidence");
-    expect(result.issues.map((issue) => issue.code)).toContain("schema.invalid");
-  });
 });

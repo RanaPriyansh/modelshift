@@ -38,11 +38,19 @@ function entitlementAreasFor(capabilityId: string): readonly PathwayEntitlementA
   return areas;
 }
 
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === "object" && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const nested of Object.values(value as Record<string, unknown>)) deepFreeze(nested);
+  }
+  return value;
+}
+
 /**
  * Read-only projection of currently released manifests. It is not a curriculum,
  * identity lookup, consent service, or registry integration.
  */
-export const CURRENT_FORGE_PATHWAY_CATALOG: PathwayCapabilityCatalog = Object.freeze(
+export const CURRENT_FORGE_PATHWAY_CATALOG: PathwayCapabilityCatalog = deepFreeze(
   pathwayCapabilityCatalogSchema.parse({
     schemaVersion: "1.0",
     generatedFrom: "released-world-packs",

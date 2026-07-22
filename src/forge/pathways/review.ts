@@ -4,7 +4,6 @@ import {
   PATHWAY_ACCESS_REQUIREMENTS,
   PATHWAY_ENTITLEMENT_AREAS,
   PATHWAY_SOURCE_REFS,
-  pathwayCapabilityCatalogSchema,
   pathwayReviewPacketSchema,
   type PathwayCapability,
   type PathwayCapabilityCatalog,
@@ -23,6 +22,7 @@ export const PATHWAY_REVIEW_ISSUE_CODES = [
   "capability.duplicate-reuse",
   "capability.age-mode-ineligible",
   "capability.source-policy-ineligible",
+  "capability.underage-open-web-prohibited",
   "foundations.not-documented",
   "agency.position-missing",
   "agency.choice-missing",
@@ -54,6 +54,8 @@ export const PATHWAY_REVIEW_ISSUE_CODES = [
   "coercion.guilt-or-urgency",
   "gamification.hidden-signal",
   "evidence.claim-missing",
+  "evidence.trusted-receipt-required",
+  "evidence.claim-unbound-capability",
   "evidence.event-type-ineligible",
   "evidence.claim-event-mismatch",
   "evidence.source-mismatch",
@@ -123,7 +125,7 @@ function capabilityFor(
   return catalog.capabilities.find((candidate) => candidate.capabilityId === entitlement.capabilityId);
 }
 
-const CLAIM_OVERREACH = /\b(master(?:y|ed)?|certif(?:y|ied|ication)|accredit(?:ed|ation)|legal(?:ly)? compliant|safe(?:ty)? proven|guarantee(?:d)?|ready for enrollment)\b/i;
+const CLAIM_OVERREACH = /\b(master(?:y|ed)?|certif(?:y|ied|ication)|accredit(?:ed|ation)|legal(?:ly)? compliant|safe(?:ty)? proven|guarantee(?:d)?|ready for enrollment|homeschool[- ]?ready|(?:homeschool|education|school) solutions?|suitab(?:le|ility)|replaces? (?:school|education)|(?:school|education) replacement|replacement for (?:school|education)|universal replacement|lifelong (?:capability|learning)|(?:delayed[- ]?)?retention|(?:broad|far)[- ]?transfer)\b/i;
 
 const CLAIM_KIND_EVENT_TYPES = {
   "participation-recorded": ["world_run.started", "attempt.committed"],
@@ -170,6 +172,9 @@ function reviewPacket(packet: PathwayReviewPacket, catalog: PathwayCapabilityCat
     }
     if (capability.sourcePoliciesByAge[packet.ageMode] !== entitlement.sourcePolicy) {
       add(issues, "capability.source-policy-ineligible", `entitlements.${entitlement.area}.sourcePolicy`, "Source policy is not permitted by this released World.");
+    }
+    if (packet.ageMode !== "18-plus" && entitlement.sourcePolicy === "open_web") {
+      add(issues, "capability.underage-open-web-prohibited", `entitlements.${entitlement.area}.sourcePolicy`, "Open-web policy cannot be reviewed for an under-18 packet without verified authority.");
     }
   }
   for (const [capabilityId, areas] of entitlementAreasByCapability) {
@@ -230,10 +235,14 @@ function reviewPacket(packet: PathwayReviewPacket, catalog: PathwayCapabilityCat
     if (!packet.evidenceClaims.some((claim) => claim.capabilityId === entitlement.capabilityId)) {
       add(issues, "evidence.claim-missing", `entitlements.${entitlement.area}`, "A published capability needs an appropriately bounded evidence claim.");
     }
+    add(issues, "evidence.trusted-receipt-required", `entitlements.${entitlement.area}`, "Candidate-supplied event references cannot establish a trusted runtime or journal receipt.");
   }
   for (const claim of packet.evidenceClaims) {
-    const capability = publishedCapabilities.get(claim.capabilityId) ?? catalog.capabilities.find((candidate) => candidate.capabilityId === claim.capabilityId);
-    if (!capability) continue;
+    const capability = publishedCapabilities.get(claim.capabilityId);
+    if (!capability) {
+      add(issues, "evidence.claim-unbound-capability", `evidenceClaims.${claim.id}.capabilityId`, "An evidence claim must bind to a published capability in this packet.");
+      continue;
+    }
     if (!capability.evidenceEventTypes.includes(claim.eventType)) add(issues, "evidence.event-type-ineligible", `evidenceClaims.${claim.id}.eventType`, "Use only an event type accepted by the released capability contract.");
     if (!CLAIM_KIND_EVENT_TYPES[claim.claimKind].some((eventType) => eventType === claim.eventType)) {
       add(issues, "evidence.claim-event-mismatch", `evidenceClaims.${claim.id}.eventType`, "Claim kind and event type must have a compatible bounded meaning.");
@@ -247,11 +256,8 @@ function reviewPacket(packet: PathwayReviewPacket, catalog: PathwayCapabilityCat
 
 export function evaluatePathwayReviewPacket(
   candidate: unknown,
-  catalog: unknown = CURRENT_FORGE_PATHWAY_CATALOG,
 ): PathwayReviewOutcome {
-  const catalogResult = pathwayCapabilityCatalogSchema.safeParse(catalog);
-  if (!catalogResult.success) return outcome(schemaIssues(catalogResult.error));
   const parsed = pathwayReviewPacketSchema.safeParse(candidate);
   if (!parsed.success) return outcome(schemaIssues(parsed.error));
-  return outcome(reviewPacket(parsed.data, catalogResult.data));
+  return outcome(reviewPacket(parsed.data, CURRENT_FORGE_PATHWAY_CATALOG));
 }
