@@ -159,7 +159,11 @@ function isNonGlobalOrSpecialAddress(address: string): boolean {
   const special2001 = first === 0x2001 && (second === 0 || second === 0x0002 || (second! & 0xfff0) === 0x0010 || (second! & 0xfff0) === 0x0020);
   const deprecated6to4 = first === 0x2002;
   const nat64 = first === 0x0064 && second === 0xff9b && ((third === 0 && fourth === 0 && fifth === 0) || (third === 0x0001 && fourth === 0 && fifth === 0));
-  return allZero || loopback || ipv4Compatible || multicast || uniqueLocal || linkLocal || siteLocal || discardOnly || documentation || special2001 || deprecated6to4 || nat64;
+  // Public IPv6 DNS answers must sit inside the globally-routable unicast
+  // envelope. Everything outside 2000::/3 is either special-purpose,
+  // multicast, or unallocated/reserved and must not reach the request path.
+  const globalUnicastEnvelope = (first! & 0xe000) === 0x2000;
+  return !globalUnicastEnvelope || allZero || loopback || ipv4Compatible || multicast || uniqueLocal || linkLocal || siteLocal || discardOnly || documentation || special2001 || deprecated6to4 || nat64;
 }
 
 async function defaultResolveHostname(hostname: string): Promise<readonly string[]> {
