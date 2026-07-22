@@ -20,6 +20,9 @@ drop policy if exists learner_profiles_update_self on forge.learner_profiles;
 
 -- Consent is not an operative private-evidence persistence authority before
 -- Packet E has supplied the canonical runtime projector and persistence path.
+-- Keep the legacy enum value here: an already-immutable historical decision
+-- must survive this upgrade. The following corrective migration makes that
+-- value permanently non-operative for new writes.
 alter table forge.consent_records
   drop constraint if exists consent_records_purpose_key_check;
 
@@ -27,7 +30,8 @@ alter table forge.consent_records
   add constraint consent_records_purpose_key_check
   check (purpose_key in (
     'learning_service', 'guardian_access', 'research',
-    'sensitive_artifact_capture', 'model_improvement'
+    'sensitive_artifact_capture', 'model_improvement',
+    'private_evidence_persistence'
   ));
 
 commit;
