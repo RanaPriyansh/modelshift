@@ -113,13 +113,33 @@ const DATABASE_IDENTITY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 const VERIFICATION_STATUSES = new Set(["pass", "fail", "not_evaluated"]);
 const TERMINAL_STATES = new Set<ReleaseCandidateState>(["PRODUCTION_VERIFIED", "ROLLED_BACK"]);
 const SECRET_LIKE = /(?:api[_-]?key|secret|token|password|authorization|bearer|^sk-[A-Za-z0-9_-]{8,}$)/i;
+// These are worker-only handoff labels, not principal release decisions. Keep
+// this contract small and explicit so normal principal decision names remain valid.
+const RESERVED_TERMINAL_DECISION_NAMES = new Set([
+  "packet d worker handoff; promotion not authorized",
+  "packet d offline regression; promotion not authorized",
+]);
+const RESERVED_TERMINAL_DECISION_PREFIXES = ["packet d worker ", "packet d offline ", "worker ", "offline "] as const;
+const RESERVED_TERMINAL_DECISION_SUFFIXES = ["; promotion not authorized", "; not authorized"] as const;
 
 type RecordValue = Record<string, unknown>;
 type Deployment = { id: string; url: string };
 type Alias = { url: string; resolved_at: string };
+const IDENTITY_KEYS = ["candidate_state", "source_sha", "tested_sha", "retained_artifact_ids", "immutable_deployment", "public_alias", "build_runtime_mode", "cloud_provider_flags", "database", "critical_verification", "rollback", "named_release_decision"] as const;
+const CRITICAL_VERIFICATION_KEYS = ["browser", "csp", "console", "network", "packet_artifact_ids"] as const;
+const ROLLBACK_KEYS = ["deployment_id", "sha", "rehearsal"] as const;
+const DECISION_KEYS = ["name", "decided_at"] as const;
+const AUTHORITY_KEYS = ["immutable_deployment", "public_alias", "production_verification_artifact_id", "live_evaluation", "rollback_rehearsal", "named_release_decision"] as const;
+const AUTHORITY_ALIAS_KEYS = ["url", "resolved_at", "resolved_deployment_id"] as const;
+const LIVE_EVALUATION_KEYS = ["status", "artifact_id"] as const;
+const ROLLBACK_REHEARSAL_KEYS = ["deployment_id", "sha", "artifact_id"] as const;
 
 function isRecord(value: unknown): value is RecordValue {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasExactKeys(value: unknown, keys: readonly string[]): value is RecordValue {
+  return isRecord(value) && Object.keys(value).length === keys.length && Object.keys(value).every((key) => keys.includes(key));
 }
 
 function isCanonicalTimestamp(value: unknown): value is string {
@@ -156,26 +176,34 @@ function validDecisionName(value: unknown): value is string {
   return typeof value === "string" && DECISION_NAME_PATTERN.test(value) && !SECRET_LIKE.test(value) && !["unknown", "not_evaluated"].includes(value.toLowerCase());
 }
 
+function validTerminalDecisionName(value: unknown): value is string {
+  if (!validDecisionName(value)) return false;
+  const normalized = value.toLowerCase();
+  return !RESERVED_TERMINAL_DECISION_NAMES.has(normalized)
+    && !RESERVED_TERMINAL_DECISION_PREFIXES.some((prefix) => normalized.startsWith(prefix))
+    && !RESERVED_TERMINAL_DECISION_SUFFIXES.some((suffix) => normalized.endsWith(suffix));
+}
+
 function validVerificationStatus(value: unknown): value is "pass" | "fail" | "not_evaluated" {
   return typeof value === "string" && VERIFICATION_STATUSES.has(value);
 }
 
 function isNotEvaluated(value: unknown): value is { status: "not_evaluated" } {
-  return isRecord(value) && Object.keys(value).length === 1 && value.status === "not_evaluated";
+  return hasExactKeys(value, ["status"]) && value.status === "not_evaluated";
 }
 
 function isNotConfigured(value: unknown): value is { status: "not_configured" } {
-  return isRecord(value) && Object.keys(value).length === 1 && value.status === "not_configured";
+  return hasExactKeys(value, ["status"]) && value.status === "not_configured";
 }
 
 function parseDeployment(value: unknown): Deployment | null {
-  if (!isRecord(value) || Object.keys(value).sort().join(",") !== "id,url" || !validDeploymentId(value.id)) return null;
+  if (!hasExactKeys(value, ["id", "url"]) || !validDeploymentId(value.id)) return null;
   const url = canonicalHttpsOrigin(value.url);
   return url ? { id: value.id, url } : null;
 }
 
 function parseAlias(value: unknown): Alias | null {
-  if (!isRecord(value) || Object.keys(value).sort().join(",") !== "resolved_at,url" || !isCanonicalTimestamp(value.resolved_at)) return null;
+  if (!hasExactKeys(value, ["url", "resolved_at"]) || !isCanonicalTimestamp(value.resolved_at)) return null;
   const url = canonicalHttpsOrigin(value.url);
   return url ? { url, resolved_at: value.resolved_at } : null;
 }
@@ -216,22 +244,22 @@ function retained(identity: RecordValue, artifactId: unknown): artifactId is str
 }
 
 function parseAuthorityAlias(value: unknown): { alias: Alias; resolved_deployment_id: string } | null {
-  if (!isRecord(value) || Object.keys(value).sort().join(",") !== "resolved_at,resolved_deployment_id,url" || !validDeploymentId(value.resolved_deployment_id)) return null;
+  if (!hasExactKeys(value, AUTHORITY_ALIAS_KEYS) || !validDeploymentId(value.resolved_deployment_id)) return null;
   const alias = parseAlias({ url: value.url, resolved_at: value.resolved_at });
   return alias ? { alias, resolved_deployment_id: value.resolved_deployment_id } : null;
 }
 
 function terminalAuthorityValid(authority: unknown): authority is ReleaseIdentityVerificationAuthority {
-  if (!isRecord(authority) || Object.keys(authority).sort().join(",") !== "immutable_deployment,live_evaluation,named_release_decision,production_verification_artifact_id,public_alias,rollback_rehearsal") return false;
+  if (!hasExactKeys(authority, AUTHORITY_KEYS)) return false;
   const deployment = parseDeployment(authority.immutable_deployment);
   const alias = parseAuthorityAlias(authority.public_alias);
-  const rollback = isRecord(authority.rollback_rehearsal) ? authority.rollback_rehearsal : null;
-  const decision = isRecord(authority.named_release_decision) ? authority.named_release_decision : null;
-  const live = isRecord(authority.live_evaluation) ? authority.live_evaluation : null;
+  const rollback = hasExactKeys(authority.rollback_rehearsal, ROLLBACK_REHEARSAL_KEYS) ? authority.rollback_rehearsal : null;
+  const decision = hasExactKeys(authority.named_release_decision, DECISION_KEYS) ? authority.named_release_decision : null;
+  const live = hasExactKeys(authority.live_evaluation, LIVE_EVALUATION_KEYS) ? authority.live_evaluation : null;
   return Boolean(deployment && alias && validArtifactId(authority.production_verification_artifact_id)
     && live?.status === "pass" && validArtifactId(live.artifact_id)
     && rollback && validDeploymentId(rollback.deployment_id) && typeof rollback.sha === "string" && SHA_PATTERN.test(rollback.sha) && validArtifactId(rollback.artifact_id)
-    && decision && validDecisionName(decision.name) && isCanonicalTimestamp(decision.decided_at));
+    && decision && validTerminalDecisionName(decision.name) && isCanonicalTimestamp(decision.decided_at));
 }
 
 function terminalEvidenceMatches(identity: RecordValue, authority: ReleaseIdentityVerificationAuthority, state: ReleaseCandidateState): boolean {
@@ -239,9 +267,9 @@ function terminalEvidenceMatches(identity: RecordValue, authority: ReleaseIdenti
   const alias = parseAlias(identity.public_alias);
   const authorityDeployment = parseDeployment(authority.immutable_deployment);
   const authorityAlias = parseAuthorityAlias(authority.public_alias);
-  const critical = isRecord(identity.critical_verification) ? identity.critical_verification : null;
-  const rollback = isRecord(identity.rollback) ? identity.rollback : null;
-  const decision = isRecord(identity.named_release_decision) ? identity.named_release_decision : null;
+  const critical = hasExactKeys(identity.critical_verification, CRITICAL_VERIFICATION_KEYS) ? identity.critical_verification : null;
+  const rollback = hasExactKeys(identity.rollback, ROLLBACK_KEYS) ? identity.rollback : null;
+  const decision = hasExactKeys(identity.named_release_decision, DECISION_KEYS) ? identity.named_release_decision : null;
   const isRolledBack = state === "ROLLED_BACK";
   const aliasTarget = isRolledBack ? rollback?.deployment_id : deployment?.id;
   if (!deployment || !alias || !authorityDeployment || !authorityAlias || !critical || !rollback || !decision || !Array.isArray(critical.packet_artifact_ids) || typeof rollback.sha !== "string") return false;
@@ -262,6 +290,7 @@ function terminalEvidenceMatches(identity: RecordValue, authority: ReleaseIdenti
     && rollback.deployment_id === authority.rollback_rehearsal.deployment_id
     && rollback.sha.toLowerCase() === authority.rollback_rehearsal.sha.toLowerCase()
     && retained(identity, authority.rollback_rehearsal.artifact_id)
+    && validTerminalDecisionName(decision.name)
     && decision.name === authority.named_release_decision.name
     && decision.decided_at === authority.named_release_decision.decided_at
     && (!isRolledBack || (deployment.id === rollback.deployment_id && deployment.url === authorityDeployment.url));
@@ -270,6 +299,7 @@ function terminalEvidenceMatches(identity: RecordValue, authority: ReleaseIdenti
 export function validateReleaseIdentity(identity: unknown, options: ReleaseIdentityValidationOptions = {}): string[] {
   const failures: string[] = [];
   if (!isRecord(identity)) return ["identity"];
+  if (!hasExactKeys(identity, IDENTITY_KEYS)) failures.push("identity_schema");
   const state = typeof identity.candidate_state === "string" && RELEASE_CANDIDATE_STATES.includes(identity.candidate_state as ReleaseCandidateState)
     ? identity.candidate_state as ReleaseCandidateState
     : null;
@@ -289,13 +319,13 @@ export function validateReleaseIdentity(identity: unknown, options: ReleaseIdent
   if (typeof identity.build_runtime_mode !== "string" || identity.build_runtime_mode.length === 0 || identity.build_runtime_mode.length > 80 || SECRET_LIKE.test(identity.build_runtime_mode)) failures.push("build_runtime_mode");
   const flags = flagsAreExactProjection(identity.cloud_provider_flags) ? identity.cloud_provider_flags : null;
   if (!flags) failures.push("cloud_provider_flags");
-  if (!isNotConfigured(identity.database) && (!isRecord(identity.database) || Object.keys(identity.database).sort().join(",") !== "migration,project" || typeof identity.database.project !== "string" || typeof identity.database.migration !== "string" || !DATABASE_IDENTITY_PATTERN.test(identity.database.project) || !DATABASE_IDENTITY_PATTERN.test(identity.database.migration))) failures.push("database");
-  const critical = isRecord(identity.critical_verification) ? identity.critical_verification : null;
+  if (!isNotConfigured(identity.database) && (!hasExactKeys(identity.database, ["project", "migration"]) || typeof identity.database.project !== "string" || typeof identity.database.migration !== "string" || !DATABASE_IDENTITY_PATTERN.test(identity.database.project) || !DATABASE_IDENTITY_PATTERN.test(identity.database.migration))) failures.push("database");
+  const critical = hasExactKeys(identity.critical_verification, CRITICAL_VERIFICATION_KEYS) ? identity.critical_verification : null;
   if (!critical || !validVerificationStatus(critical.browser) || !validVerificationStatus(critical.csp) || !validVerificationStatus(critical.console) || !validVerificationStatus(critical.network) || !Array.isArray(critical.packet_artifact_ids) || critical.packet_artifact_ids.some((id) => !retained(identity, id))) failures.push("critical_verification");
-  const rollback = isRecord(identity.rollback) ? identity.rollback : null;
+  const rollback = hasExactKeys(identity.rollback, ROLLBACK_KEYS) ? identity.rollback : null;
   if (!rollback || !validVerificationStatus(rollback.rehearsal) || !((rollback.deployment_id === "not_evaluated") || validDeploymentId(rollback.deployment_id)) || !((rollback.sha === "not_evaluated") || (typeof rollback.sha === "string" && SHA_PATTERN.test(rollback.sha)))) failures.push("rollback");
-  const decision = isRecord(identity.named_release_decision) ? identity.named_release_decision : null;
-  if (!isRecord(decision) || !validDecisionName(decision.name) || !isCanonicalTimestamp(decision.decided_at)) failures.push("named_release_decision");
+  const decision = hasExactKeys(identity.named_release_decision, DECISION_KEYS) ? identity.named_release_decision : null;
+  if (!decision || !validDecisionName(decision.name) || !isCanonicalTimestamp(decision.decided_at)) failures.push("named_release_decision");
 
   if (state === "DEPLOYED_CANDIDATE" && (!hasDeployment || critical?.browser === "not_evaluated" || critical?.csp === "not_evaluated" || critical?.network === "not_evaluated" || !critical)) failures.push("deployed_candidate_evidence");
   if (state && TERMINAL_STATES.has(state)) {
