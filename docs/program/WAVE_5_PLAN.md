@@ -208,6 +208,11 @@ Product constraints:
 - proof permits keyboard, text scaling, forced colors, reduced motion, and equivalent textual/table representations, but no hints, answer-changing, replay, or repeated proof submission;
 - the World may remain a review candidate rather than public availability if source, access, or independent review evidence is incomplete.
 
+Research grounding candidate:
+
+- The U.S. Institute of Education Sciences / What Works Clearinghouse practice guide [Teaching Secondary Students to Write Effectively](https://ies.ed.gov/ncee/WWC/PracticeGuide/22/Published) is a candidate construct and pedagogy source because its source-based-writing material distinguishes selecting evidence from explaining how that evidence connects to a claim. It is not yet an ADR-007 binding: the exact snapshot, locators, rights record, claim review, population limits, and human review decisions must still be created.
+- The World must not turn a secondary-writing practice guide into an adult-literacy efficacy claim. Its authored transfer can establish only the exact evidence-to-claim classification criterion used by its deterministic validator.
+
 Acceptance evidence:
 
 - domain reducer/validator tests including invalid and ambiguous cases;
