@@ -316,6 +316,15 @@ Identity and lifecycle rules:
 - Correction, expiry, rights change, or withdrawal appends a new lifecycle fact. Historical snapshots and decisions remain immutable. Affected World releases become `review-required`, disabled, or superseded through separate package lifecycle authority; the source service never mutates a released binding in place.
 - Source text is always untrusted data. Prompt assembly must delimit it, exclude tool/policy instructions from it, and prevent it from selecting tools, URLs, credentials, publication state, or evidence outcomes.
 
+Interoperability mappings remain explicit and optional rather than inflating the internal contract:
+
+- snapshot, acquisition, transformation, and reviewer responsibility may export as W3C PROV-O Entity/Activity/Agent relationships;
+- locator kinds align where practical with W3C Web Annotation selectors such as fragment, text quote/position, data position, SVG region, and time state, but always target the immutable FORGE snapshot rather than mutable remote bytes;
+- a rights record may carry an SPDX license expression when that vocabulary applies, alongside product-use limitations that an SPDX identifier alone cannot express;
+- a validated C2PA Content Credential may be recorded as one provenance observation for supported media. It establishes a cryptographic content/history claim within that trust model; it does not establish factual truth, pedagogical quality, rights clearance, or FORGE publication authority.
+
+Normative external references for these mappings are [W3C PROV-O](https://www.w3.org/TR/prov-o/), the [W3C Web Annotation Data Model](https://www.w3.org/TR/annotation-model/), [SPDX 3.0.1 Licensing](https://spdx.github.io/spdx-spec/v3.0.1/model/Licensing/Licensing/), and the current [C2PA specification index](https://spec.c2pa.org/). FORGE stores the exact mapping/spec version with any exported or validated record.
+
 The first W5-D implementation is a pure contract/replay boundary. It may prove canonical identity, deterministic state, dependency invalidation, and fail-closed review completeness. It may not claim live acquisition, external authenticity, durable storage, accountable human review, or publication operation.
 
 ## ADR-008 — Curriculum breadth is an explicit capability graph, not a recommendation score
