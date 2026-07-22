@@ -9,12 +9,11 @@ Additional server variables:
 | Name | Required | Scope | Purpose |
 | --- | --- | --- | --- |
 | `OPENAI_FORGE_PLANNER_ENABLED` | Optional; default `false` | Server only | Allows the planner's bounded rephrase governor |
-| `FORGE_LESSON_STUDIO_OPENAI_ENABLED` | Optional; default `false` | Server only | Allows Studio to use the managed `OPENAI_API_KEY`; BYOK adapters do not require it |
 | `FORGE_CLOUD_ACCOUNTS_ENABLED` | Required for cloud auth | Server only | Explicit cloud-identity enable switch |
 | `FORGE_SUPABASE_URL` | Required for cloud auth | Server only | HTTPS project URL |
 | `FORGE_SUPABASE_PUBLISHABLE_KEY` | Required for cloud auth | Server only | Publishable/anon user-scoped key; secret/service-role keys fail closed |
 
-Do not enable cloud auth until the intended Supabase organization/project is approved and production abuse controls, email policy, redirects, RLS migrations, privacy operations, and smoke tests are in place. Device access remains operational without it. Do not enable the managed Studio key until provider disclosure, cost/rate controls, and adult/guardian release scope are approved.
+Do not enable cloud auth until the intended Supabase organization/project is approved and production abuse controls, email policy, redirects, RLS migrations, privacy operations, and smoke tests are in place. Device access remains operational without it. Public managed and BYOK Lesson Studio provider calls are locked: there is no managed Studio environment switch, and a request-only key cannot authorize the route. They remain unavailable until active adult server-owned authority and separate quota, abuse, privacy, and review controls are approved.
 
 ## Current release
 
