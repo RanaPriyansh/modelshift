@@ -1,6 +1,6 @@
 # Packet D reconciliation against the preserved release-operations history
 
-The old release-ops commit was inspected file by file and was not cherry-picked. `5b0bceb72d6768629dddecf07df07e964e9f6674` was this lane's dispatch baseline, not current `origin/main`. The preserved additive ancestry is `044efddca7499a98c0bc4bb07b1484efba20f542`, then `5607fc872e3b2f153967716e02922d747133749e`, then `bfa4ee6327340cb61623b298924cd529d71b9ccd`, then this correction. It consumes ADR-006 and the completion matrix from governance base `2789a66b97fc8250d108f3ac8ab0cc56e1c63fc3` and must be checked against current origin/main `c543e657b40f64db16e240583b5817acb77e29a6`. Later main deltas are authority/docs-only for this packet. Each owned path was reconciled as follows:
+The old release-ops commit was inspected file by file and was not cherry-picked. `5b0bceb72d6768629dddecf07df07e964e9f6674` was this lane's dispatch baseline, not current `origin/main`. The preserved additive ancestry is `044efddca7499a98c0bc4bb07b1484efba20f542`, then `5607fc872e3b2f153967716e02922d747133749e`, then `bfa4ee6327340cb61623b298924cd529d71b9ccd`, then `ee8a5771428e51cc0a226bc4c8ca277a102687cf`, then `20b6c0d9836d5be5c97791ef00b7e0aeeb230208`, then `dc615e34b90f570ff5653e8fd64844e84fc708a0`, then this allocation-policy correction. It consumes ADR-006 and the completion matrix from governance base `2789a66b97fc8250d108f3ac8ab0cc56e1c63fc3` and must be checked against current origin/main `baed8ab194672d26bd45e7725a1a1904768e49d9`. Later main deltas are authority/docs-only for this packet. Each owned path was reconciled as follows:
 
 | Old path | Current disposition |
 | --- | --- |
@@ -8,7 +8,7 @@ The old release-ops commit was inspected file by file and was not cherry-picked.
 | `.github/workflows/deployment-verification.yml` | Reworked: checked-in target ID policy, bounded read-only verifier only; no caller-controlled origin, target mutation, or credentials. |
 | `app/api/health/route.ts` | Reworked: expanded allowlisted source/runtime identity and cloud/provider-off contract; no secrets or learner state. |
 | `docs/operations/RELEASE_OPERATIONS_RUNBOOK.md` | Reworked: current program boundaries, privacy contract, four-World verifier, blocked Vercel evidence/remediation, and rollback boundary. |
-| `scripts/ops/deployment-verifier.ts` | Reworked: four Worlds, Studio, login/account profile routes, nonce continuity, script/form/connect CSP boundary, exact disabled state, strict target allowlist, pinned bounded GET-only evidence. |
+| `scripts/ops/deployment-verifier.ts` | Reworked: four Worlds, Studio, login/account profile routes, nonce continuity, script/form/connect CSP boundary, exact disabled state, strict target allowlist, pinned bounded GET-only evidence, and versioned IANA special-purpose plus allocated-global-unicast CIDR policy. |
 | `scripts/ops/evaluation-baseline.json` | Reconciled unchanged thresholds to the checked-in 54-fixture corpus; versioned as the current policy artifact. |
 | `scripts/ops/evaluation-report.ts` | Reworked evaluator version/report wording and shared health surface projection; the offline CLI is structurally unable to self-assert a live pass or artifact, so release closure stays unverified until a separately approved credentialed gate verifies retained redacted evidence. |
 | `scripts/ops/run-local-production-verification.ts` | Reworked local process isolation and safe build-time identity injection; bounded/redacted logs and no external requests. |
@@ -25,7 +25,7 @@ No old branch, commit, or user work was rewritten or deleted.
 
 ## Cherry-pick order and current-main verification
 
-For principal integration, preserve the exact four-commit ancestry named above; the handoff records this correction's immutable SHA after it is committed. Because Packet B and this packet overlap in `src/lib/forge-auth/config.ts`, principal integration must use a consolidated/current-base reconciliation after B rather than blindly replaying an intermediate parser version. The final four-commit chain must be applied to `c543e657b40f64db16e240583b5817acb77e29a6` in a disposable worktree and verified there; no principal-owned program files are changed by this lane.
+For principal integration, preserve the exact seven source commits named above plus this allocation-policy correction; the handoff records this correction's immutable SHA after it is committed. Apply that full ancestry to current base `baed8ab194672d26bd45e7725a1a1904768e49d9` in a disposable worktree. The intentional Packet B overlap in `src/lib/forge-auth/config.ts` is semantic, not a parser replay: retain Packet B's exact `ForgeCloudAuthEnvironment` type, public function signatures, and unconditional `null`/`false` behavior for every optional environment input; retain Packet D's separate framework-free `cloud-authority.ts` only for plain-`tsx` release health. No principal-owned program files are changed by this lane.
 
 ## Principal-matrix disposition
 
