@@ -7,6 +7,7 @@ vi.mock("@supabase/ssr", () => ({ createServerClient }));
 
 import {
   forgeAuthCookieOptions,
+  isForgeCloudAuthConfigured,
   readForgeCloudAuthConfig,
 } from "./config";
 import { refreshForgeAuth } from "./proxy";
@@ -32,6 +33,19 @@ describe("FORGE auth security boundary", () => {
 
     configureRetiredCloudEnvironment("sb_secret_test_key_123456789012345");
     expect(readForgeCloudAuthConfig()).toBeNull();
+  });
+
+  it("keeps the deterministic release-health environment argument fail-closed", () => {
+    const completeLookingSupabaseEnvironment = {
+      FORGE_CLOUD_ACCOUNTS_ENABLED: "true",
+      FORGE_SUPABASE_URL: "https://forge-release.supabase.co",
+      FORGE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_complete_1234567890",
+      FORGE_CLOUD_AUTH_ABUSE_CONTROLS: "reviewed",
+      FORGE_CLOUD_AUTH_LIVE_INTEGRATION: "two_account_isolation_verified",
+    } as const;
+
+    expect(readForgeCloudAuthConfig(completeLookingSupabaseEnvironment)).toBeNull();
+    expect(isForgeCloudAuthConfigured(completeLookingSupabaseEnvironment)).toBe(false);
   });
 
   it("uses server-only session-cookie attributes", () => {
