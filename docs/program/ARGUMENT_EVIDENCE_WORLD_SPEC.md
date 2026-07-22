@@ -273,6 +273,8 @@ If that external source is not accepted, the package may remain a local, unavail
 
 The canonical content bytes live only at `public/worlds/argument-evidence/authored-fixture.json`. Domain code parses and projects those bytes; it must not maintain a second hand-copied truth fixture. Exact byte length and digest are tested.
 
+Until the source schema gains a first-class bundled-asset locator, the manifest's required URL-shaped field uses the non-network canonical reference `forge-asset:/worlds/argument-evidence/authored-fixture.json`. It is not an HTTP URL, deployment claim, or acquisition proof; runtime code must not fetch it, and its review/provenance status remains incomplete.
+
 ## 12. File ownership for the implementation task
 
 Expected new files:
