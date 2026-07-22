@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+// This module is imported by the client World runtime. Disable Zod's runtime
+// JIT before defining schemas so strict CSP never requires dynamic evaluation.
+z.config({ jitless: true });
+
 export const LEARNER_AGE_MODES = ["under-13", "13-17", "18-plus"] as const;
 export const LEARNER_DEPTH_MODES = ["introductory", "core", "advanced"] as const;
 export const EVIDENCE_TIERS = ["verified", "grounded", "exploratory", "restricted"] as const;
@@ -47,6 +51,30 @@ export type EvidenceTier = (typeof EVIDENCE_TIERS)[number];
 export type WorldKind = (typeof WORLD_KINDS)[number];
 export type WorldRuntimeStage = (typeof WORLD_RUNTIME_STAGES)[number];
 export type WorldRuntimeActionKind = (typeof WORLD_RUNTIME_ACTION_KINDS)[number];
+
+export const WORLD_RUNTIME_ACCESS_ACCOMMODATION_KINDS = [
+  "text_alternative",
+  "keyboard_operation",
+  "motion_reduction",
+] as const;
+
+export const WORLD_RUNTIME_ACCESS_MODALITIES = [
+  "textual",
+  "keyboard",
+  "motion",
+] as const;
+
+export const WORLD_RUNTIME_ACCESS_REPRESENTATIONS = [
+  "text_description",
+  "native_control",
+  "reduced_motion",
+] as const;
+
+export type WorldRuntimeAccessAccommodationKind =
+  (typeof WORLD_RUNTIME_ACCESS_ACCOMMODATION_KINDS)[number];
+export type WorldRuntimeAccessModality = (typeof WORLD_RUNTIME_ACCESS_MODALITIES)[number];
+export type WorldRuntimeAccessRepresentation =
+  (typeof WORLD_RUNTIME_ACCESS_REPRESENTATIONS)[number];
 
 export const AI_ACTIONS = [
   "clarify-input",
@@ -271,19 +299,47 @@ export const worldRuntimeActionSchema = z.strictObject({
   label: shortTextSchema,
 });
 
-export const worldRuntimeSourceBindingSchema = z.strictObject({
-  /** Domain-authored reference preserved for compatibility with a legacy World. */
-  domainSourceRef: identifierSchema,
-  /** Existing manifest/registry source identity; this is not a new source ID. */
-  sourceItemId: identifierSchema,
-  sourcePackageId: identifierSchema.nullable(),
-  sourcePackageVersion: z.string().trim().min(1).max(120).nullable(),
-  sourceSnapshotDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/).nullable(),
-  locatorIds: uniqueIdentifiers(identifierSchema),
-  claimIds: uniqueIdentifiers(identifierSchema),
-  rightsRecordId: identifierSchema.nullable(),
-  reviewDecisionIds: uniqueIdentifiers(identifierSchema),
-  provenanceStatus: z.enum(["bound", "legacy_metadata_only"]),
+const sourceSnapshotDigestSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
+
+export const worldRuntimeSourceBindingSchema = z.discriminatedUnion("provenanceStatus", [
+  z.strictObject({
+    /** Domain-authored reference preserved for compatibility with a legacy World. */
+    domainSourceRef: identifierSchema,
+    /** Existing manifest/registry source identity; this is not a new source ID. */
+    sourceItemId: identifierSchema,
+    sourcePackageId: identifierSchema,
+    sourcePackageVersion: semverSchema,
+    sourceSnapshotDigest: sourceSnapshotDigestSchema,
+    locatorIds: uniqueIdentifiers(identifierSchema, 1),
+    claimIds: uniqueIdentifiers(identifierSchema, 1),
+    rightsRecordId: identifierSchema,
+    reviewDecisionIds: uniqueIdentifiers(identifierSchema, 1),
+    provenanceStatus: z.literal("bound"),
+  }),
+  z.strictObject({
+    /** Legacy source metadata is explicitly incomplete, never reviewed authority. */
+    domainSourceRef: identifierSchema,
+    sourceItemId: identifierSchema,
+    sourcePackageId: z.null(),
+    sourcePackageVersion: z.null(),
+    sourceSnapshotDigest: z.null(),
+    locatorIds: z.array(identifierSchema).length(0),
+    claimIds: z.array(identifierSchema).length(0),
+    rightsRecordId: z.null(),
+    reviewDecisionIds: z.array(identifierSchema).length(0),
+    provenanceStatus: z.literal("legacy_metadata_only"),
+  }),
+]);
+
+export const worldRuntimeAccessAccommodationSchema = z.strictObject({
+  id: identifierSchema,
+  kind: z.enum(WORLD_RUNTIME_ACCESS_ACCOMMODATION_KINDS),
+  modality: z.enum(WORLD_RUNTIME_ACCESS_MODALITIES),
+  representation: z.enum(WORLD_RUNTIME_ACCESS_REPRESENTATIONS),
+  constructPreservation: z.enum(["preserves_construct", "changes_construct"]),
+  answerChanging: z.boolean(),
+  policyVersion: semverSchema,
+  nonvisualAlternative: z.boolean(),
 });
 
 export const worldRuntimeBindingSchema = z
@@ -315,8 +371,7 @@ export const worldRuntimeBindingSchema = z
       policyId: identifierSchema,
     }),
     access: z.strictObject({
-      accommodationIds: uniqueIdentifiers(identifierSchema, 1),
-      nonvisualAlternativeIds: uniqueIdentifiers(identifierSchema, 1),
+      accommodations: uniqueIdentifiers(worldRuntimeAccessAccommodationSchema, 1),
       focusTargetId: identifierSchema,
       reducedMotionPolicyId: identifierSchema,
     }),
@@ -354,23 +409,6 @@ export const worldRuntimeBindingSchema = z
       }
       sourceItemIds.add(source.sourceItemId);
       domainSourceRefs.add(source.domainSourceRef);
-      if (
-        source.provenanceStatus === "bound" &&
-        (!source.sourceSnapshotDigest || !source.sourcePackageId || !source.sourcePackageVersion)
-      ) {
-        context.addIssue({
-          code: "custom",
-          path: ["sourceBindings"],
-          message: "A bound source requires package identity, version, and snapshot digest.",
-        });
-      }
-      if (source.provenanceStatus === "legacy_metadata_only" && source.sourceSnapshotDigest !== null) {
-        context.addIssue({
-          code: "custom",
-          path: ["sourceBindings"],
-          message: "Legacy metadata cannot claim a source snapshot digest.",
-        });
-      }
     }
   });
 

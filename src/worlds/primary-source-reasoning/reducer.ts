@@ -10,6 +10,7 @@ import {
   RESULT_BOUNDARIES,
   SUPPORT_LADDER,
   TRANSFER_STATEMENTS,
+  TEST_PREDICTIONS,
   WORKED_STATEMENTS,
 } from "./content";
 import {
@@ -38,6 +39,7 @@ export function createInitialPrimarySourceState(): PrimarySourceWorldState {
     explanationSampleUsed: false,
     interpretationResponse: null,
     compilerCorrection: "",
+    testPredictionId: null,
     catalogOpened: false,
     workedAssignments: {},
     workedTestPassed: false,
@@ -192,7 +194,16 @@ export function transitionPrimarySourceWorld(
   }
 
   if (state.stage === "TEST") {
+    if (event.type === "COMMIT_TEST_PREDICTION") {
+      if (state.catalogOpened) return reject(state, "invalid_event_for_stage");
+      if (!TEST_PREDICTIONS.some((prediction) => prediction.id === event.predictionId)) {
+        return reject(state, "invalid_test_prediction");
+      }
+      return accept({ ...state, testPredictionId: event.predictionId });
+    }
+
     if (event.type === "OPEN_CATALOG") {
+      if (!state.testPredictionId) return reject(state, "test_prediction_required");
       return accept({ ...state, catalogOpened: true });
     }
 

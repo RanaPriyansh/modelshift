@@ -84,9 +84,14 @@ describe("TrustedWorldRegistry", () => {
   });
 
   it("keeps the Primary Source runtime binding under the existing package identity", () => {
+    expect(trustedWorldRegistry.getPack("world.primary-source-reasoning")).toMatchObject({
+      manifest: { version: "1.0.1" },
+      release: { contentVersion: "1.0.1" },
+    });
     expect(trustedWorldRegistry.getRuntimeBinding("world.force-and-motion")).toBeUndefined();
     expect(trustedWorldRegistry.getRuntimeBinding("world.primary-source-reasoning")).toMatchObject({
-      protocolVersion: "1.0.0",
+      protocolVersion: "1.0.1",
+      evidence: { receiptSchemaVersion: "1.0.1" },
       proof: {
         proofClaimId: "proof.primary-source-reasoning.independent-transfer",
         validatorId: "validator.primary-source-reasoning-transfer.v1",

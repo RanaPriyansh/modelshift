@@ -48,6 +48,10 @@ function advanceToTest(): PrimarySourceWorldState {
     type: "ACCEPT_INTERPRETATIONS",
     response: "accepted",
   });
+  state = advance(state, {
+    type: "COMMIT_TEST_PREDICTION",
+    predictionId: "catalog_distinguishes_evidence_layers",
+  });
   return advance(state, { type: "OPEN_CATALOG" });
 }
 
@@ -188,9 +192,10 @@ describe("primary-source World transition policy", () => {
       confidence: null,
       initialExplanation: "",
       explanationSampleUsed: false,
-      interpretationResponse: null,
-      compilerCorrection: "",
-      catalogOpened: false,
+    interpretationResponse: null,
+    compilerCorrection: "",
+    testPredictionId: null,
+    catalogOpened: false,
       workedAssignments: {},
       workedTestPassed: false,
       workedTestAttempts: 0,
@@ -257,6 +262,14 @@ describe("primary-source World transition policy", () => {
     state = advance(state, {
       type: "ACCEPT_INTERPRETATIONS",
       response: "accepted",
+    });
+    expect(transitionPrimarySourceWorld(state, { type: "OPEN_CATALOG" })).toMatchObject({
+      accepted: false,
+      reason: "test_prediction_required",
+    });
+    state = advance(state, {
+      type: "COMMIT_TEST_PREDICTION",
+      predictionId: "catalog_distinguishes_evidence_layers",
     });
     expect(transitionPrimarySourceWorld(state, { type: "SUBMIT_WORKED_TEST" })).toMatchObject({
       accepted: false,
