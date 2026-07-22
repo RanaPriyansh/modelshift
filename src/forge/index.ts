@@ -56,12 +56,14 @@ export {
   lintWorldRuntimePack,
   primarySourceWorldRuntimeAdapter,
   proportionalReasoningWorldRuntimeAdapter,
+  WorldRuntimeConfigurationError,
 } from "./world-runtime";
 
 export type {
   RuntimeDispatchResult,
   BoundedLocalWorldRuntimeReceipt,
   WorldRuntimeLintResult,
+  WorldRuntimeConfigurationErrorCode,
   WorldRuntimeSession,
 } from "./world-runtime";
 

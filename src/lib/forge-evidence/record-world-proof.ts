@@ -13,7 +13,7 @@ export interface RecordWorldProofInput {
   sourceRefId: string;
   outcome: "proved" | "not_proved" | "open_question";
   assistance?: ReadonlyArray<{
-    kind: "authored_hint" | "authored_contrast" | "authored_principle" | "model_interpretation";
+    kind: "authored_hint" | "authored_contrast" | "authored_principle" | "authored_representation" | "model_interpretation" | "human_guidance";
     sourceId: string;
   }>;
   recordedAt?: string;

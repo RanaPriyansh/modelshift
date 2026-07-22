@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { PROPORTIONAL_REASONING_WORLD } from "../worlds";
+import { proportionalReasoningTransferValidator } from "../deterministic-validators";
 import {
   createInitialRatioWorldState,
   transitionRatioWorld,
@@ -9,9 +10,9 @@ import {
 } from "../../worlds/proportional-reasoning";
 import { lintWorldRuntimePack } from "./linter";
 import {
-  projectProportionalReasoningTransferValidation,
   proportionalReasoningWorldRuntimeAdapter,
 } from "./proportional-reasoning";
+import { deriveCanonicalValidatorOutcome } from "./protocol";
 import { createWorldRuntimeSession, dispatchWorldRuntimeCommand } from "./runtime";
 
 function advance(state: RatioWorldState, event: RatioWorldEvent): RatioWorldState {
@@ -50,7 +51,7 @@ describe("Proportional Reasoning World runtime adapter", () => {
     const lint = lintWorldRuntimePack(PROPORTIONAL_REASONING_WORLD);
     expect(lint.ok).toBe(true);
     if (!lint.ok) return;
-    expect(lint.pack?.manifest.version).toBe("1.0.1");
+    expect(lint.pack?.manifest.version).toBe("1.0.2");
     expect(lint.pack?.release.contentVersion).toBe("1.0.0");
     expect(lint.pack?.runtime.returnProof.enabled).toBe(false);
   });
@@ -97,7 +98,7 @@ describe("Proportional Reasoning World runtime adapter", () => {
       authority: { proofAuthority: "honour_based", persistence: "not_persisted", isDurable: false },
       world: {
         id: "world.proportional-reasoning",
-        version: "1.0.1",
+        version: "1.0.2",
         contentVersion: "1.0.0",
         capabilityId: "capability.proportional-reasoning.compare-and-scale",
         proofClaimId: "proof.proportional-reasoning.independent-transfer",
@@ -121,21 +122,24 @@ describe("Proportional Reasoning World runtime adapter", () => {
     expect(runtime.semanticTrace).not.toContain("return_or_apply");
   });
 
-  it("derives the runtime outcome from the domain validator, including lucky and malformed attempts", () => {
-    expect(projectProportionalReasoningTransferValidation({})).toEqual({
-      outcome: "not_scored",
-      criteria: ["The transfer payload did not match the authored map-scale task."],
+  it("derives the runtime outcome from the canonical validator, including lucky and malformed attempts", () => {
+    expect(proportionalReasoningTransferValidator.validate({})).toMatchObject({
+      inputStatus: "invalid",
+      passed: false,
+      score: 0,
+      evidence: [],
     });
-    expect(projectProportionalReasoningTransferValidation({
+    expect(deriveCanonicalValidatorOutcome(proportionalReasoningTransferValidator.validate({}))).toBe("not_scored");
+    expect(deriveCanonicalValidatorOutcome(proportionalReasoningTransferValidator.validate({
       choiceId: "24_km",
       explanation: "I preserved the same proportional relationship by scaling both quantities.",
       confidence: 70,
-    }).outcome).toBe("fail");
-    expect(projectProportionalReasoningTransferValidation({
+    }))).toBe("fail");
+    expect(deriveCanonicalValidatorOutcome(proportionalReasoningTransferValidator.validate({
       choiceId: "32_km",
       explanation: "I picked 32 from the list.",
       confidence: 20,
-    })).toMatchObject({ outcome: "fail" });
+    }))).toBe("fail");
   });
 
   it("blocks support, model action, and experience replay during proof while preserving typed access", () => {
@@ -198,6 +202,15 @@ describe("Proportional Reasoning World runtime adapter", () => {
     };
     const rejectedByDomain = transitionRatioWorld(domain, malformed);
     expect(rejectedByDomain).toMatchObject({ accepted: false, reason: "explanation_too_short", state: domain });
+    let runtime = createWorldRuntimeSession(proportionalReasoningWorldRuntimeAdapter, "attempt.ratio-malformed");
+    for (const event of completeToProof()) {
+      const advanced = dispatchWorldRuntimeCommand(proportionalReasoningWorldRuntimeAdapter, runtime, { kind: "domain", event });
+      expect(advanced.accepted).toBe(true);
+      if (!advanced.accepted) return;
+      runtime = advanced.session;
+    }
+    const rejectedByRuntime = dispatchWorldRuntimeCommand(proportionalReasoningWorldRuntimeAdapter, runtime, { kind: "domain", event: malformed });
+    expect(rejectedByRuntime).toMatchObject({ accepted: false, reason: "domain_rejected", session: { receipt: null } });
   });
 
   it("resets the complete runtime session without retaining proof or a receipt", () => {

@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "packages": [
     { "id": "world.force-and-motion", "version": "1.0.0", "route": "/learn/force-and-motion" },
-    { "id": "world.proportional-reasoning", "version": "1.0.1", "route": "/learn/proportional-reasoning", "runtime_binding_digest": "sha256:fa1b4cd1be4cfce67d37a59a6e892cc821022b1ced1007f8f9c27b9574961377" },
+    { "id": "world.proportional-reasoning", "version": "1.0.2", "route": "/learn/proportional-reasoning", "runtime_binding_digest": "sha256:cb3f795c0955d583005c7d7a9bda416476d9461ca7ced02bda54735965a3e9f2" },
     { "id": "world.source-corroboration", "version": "1.0.0", "route": "/learn/ai-and-learning" },
-    { "id": "world.primary-source-reasoning", "version": "1.0.1", "route": "/learn/primary-source-reasoning", "runtime_binding_digest": "sha256:e14f152652494c7fcbabc0c9745e017416ef5a6a78b03c4785d7085b522c6519" }
+    { "id": "world.primary-source-reasoning", "version": "1.0.2", "route": "/learn/primary-source-reasoning", "runtime_binding_digest": "sha256:4e4c91287aa341d69f8931bc5165a40835cd6788323c00394ffca5e8df3bc5f8" }
   ]
 }

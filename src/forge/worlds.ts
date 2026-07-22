@@ -1,24 +1,21 @@
-import { z } from "zod";
-
-import { TRANSFER } from "../content/scenarios";
-import { scoreColdTransfer } from "../worlds/ai-learning/validator";
 import {
   PRIMARY_SOURCE_CAPABILITY_ID,
   PRIMARY_SOURCE_PROOF_CLAIM_ID,
-  PRIMARY_SOURCE_TRANSFER_TASK_ID,
   PRIMARY_SOURCE_VALIDATOR_ID,
   PRIMARY_SOURCE_WORLD_ID,
   PRIMARY_SOURCE_WORLD_VERSION,
-  validatePrimarySourceTransfer,
 } from "../worlds/primary-source-reasoning";
 import {
-  evaluateTransfer,
-  isIndependentProportionalTransferDemonstrated,
-} from "../worlds/proportional-reasoning/validator";
+  FORCE_AND_MOTION_VALIDATOR_ID,
+  PROPORTIONAL_REASONING_VALIDATOR_ID,
+  SOURCE_CORROBORATION_VALIDATOR_ID,
+  forceAndMotionTransferValidator,
+  primarySourceReasoningTransferValidator,
+  proportionalReasoningTransferValidator,
+  sourceCorroborationTransferValidator,
+} from "./deterministic-validators";
 import {
-  deterministicValidationResultSchema,
   type AIActionBoundary,
-  type DeterministicValidator,
   type LearningWorldPack,
   type SourceProvenance,
 } from "./contracts";
@@ -33,9 +30,15 @@ const AI_OFF = {
   modelMayChangePolicy: false,
 } satisfies AIActionBoundary;
 
-export const FORCE_AND_MOTION_VALIDATOR_ID = "validator.force-motion-transfer.v1" as const;
-export const SOURCE_CORROBORATION_VALIDATOR_ID = "validator.source-corroboration-transfer.v1" as const;
-export const PROPORTIONAL_REASONING_VALIDATOR_ID = "validator.proportional-reasoning-transfer.v1" as const;
+export {
+  FORCE_AND_MOTION_VALIDATOR_ID,
+  PROPORTIONAL_REASONING_VALIDATOR_ID,
+  SOURCE_CORROBORATION_VALIDATOR_ID,
+  forceAndMotionTransferValidator,
+  primarySourceReasoningTransferValidator,
+  proportionalReasoningTransferValidator,
+  sourceCorroborationTransferValidator,
+} from "./deterministic-validators";
 
 export const OPENSTAX_NEWTONS_FIRST_LAW_SOURCE = {
   id: "source.openstax.newtons-first-law",
@@ -334,7 +337,7 @@ export const PROPORTIONAL_REASONING_WORLD = {
   manifest: {
     schemaVersion: "1.0",
     id: "world.proportional-reasoning",
-    version: "1.0.1",
+    version: "1.0.2",
     route: "/learn/proportional-reasoning",
     title: "Ratios that stay the same",
     summary:
@@ -418,7 +421,7 @@ export const PRIMARY_SOURCE_REASONING_WORLD = {
   manifest: {
     schemaVersion: "1.0",
     id: PRIMARY_SOURCE_WORLD_ID,
-    version: PRIMARY_SOURCE_WORLD_VERSION,
+    version: "1.0.2",
     route: "/learn/primary-source-reasoning",
     title: "What can a photograph prove?",
     summary:
@@ -501,113 +504,6 @@ export const PRIMARY_SOURCE_REASONING_WORLD = {
   ],
   runtime: PRIMARY_SOURCE_RUNTIME_BINDING,
 } satisfies LearningWorldPack;
-
-const forceMotionTransferInputSchema = z.strictObject({
-  taskId: z.literal("cargo_pod_force_graph"),
-  selectedAnswer: z.enum(["returns_to_zero", "stays_constant_after_force", "keeps_accelerating"]),
-});
-
-export const forceAndMotionTransferValidator: DeterministicValidator = Object.freeze({
-  id: FORCE_AND_MOTION_VALIDATOR_ID,
-  validate(input: unknown) {
-    const parsed = forceMotionTransferInputSchema.safeParse(input);
-    if (!parsed.success) {
-      return deterministicValidationResultSchema.parse({
-        passed: false,
-        score: 0,
-        code: "invalid.transfer-input",
-        evidence: [],
-      });
-    }
-
-    const passed = parsed.data.selectedAnswer === TRANSFER.correctChoiceId;
-    return deterministicValidationResultSchema.parse({
-      passed,
-      score: passed ? 1 : 0,
-      code: passed ? "transfer.demonstrated" : "transfer.not-demonstrated",
-      evidence: [`task:${parsed.data.taskId}`, `answer:${parsed.data.selectedAnswer}`],
-    });
-  },
-});
-
-const sourceCorroborationTransferInputSchema = z.strictObject({
-  choiceId: z.enum(["always-helps", "always-harms", "bounded-measures", "same-measure"]),
-  openQuestionId: z.enum(["color-choice", "held-constant", "reader-preference"]),
-});
-
-export const sourceCorroborationTransferValidator: DeterministicValidator = Object.freeze({
-  id: SOURCE_CORROBORATION_VALIDATOR_ID,
-  validate(input: unknown) {
-    const parsed = sourceCorroborationTransferInputSchema.safeParse(input);
-    if (!parsed.success) {
-      return deterministicValidationResultSchema.parse({
-        passed: false,
-        score: 0,
-        code: "invalid.transfer-input",
-        evidence: [],
-      });
-    }
-
-    const result = scoreColdTransfer(parsed.data.choiceId, parsed.data.openQuestionId);
-    return deterministicValidationResultSchema.parse({
-      passed: result.outcome === "held",
-      score: result.points / 2,
-      code: `transfer.${result.outcome}`,
-      evidence: [`choice:${parsed.data.choiceId}`, `open-question:${parsed.data.openQuestionId}`],
-    });
-  },
-});
-
-const proportionalReasoningTransferInputSchema = z.strictObject({
-  choiceId: z.enum(["18_km", "24_km", "32_km", "96_km"]),
-  explanation: z.string().trim().min(8).max(400),
-  confidence: z.number().int().min(0).max(100),
-});
-
-export const proportionalReasoningTransferValidator: DeterministicValidator = Object.freeze({
-  id: PROPORTIONAL_REASONING_VALIDATOR_ID,
-  validate(input: unknown) {
-    const parsed = proportionalReasoningTransferInputSchema.safeParse(input);
-    if (!parsed.success) {
-      return deterministicValidationResultSchema.parse({
-        passed: false,
-        score: 0,
-        code: "invalid.transfer-input",
-        evidence: [],
-      });
-    }
-
-    const result = evaluateTransfer(parsed.data.choiceId, parsed.data.explanation, parsed.data.confidence);
-    const demonstrated = isIndependentProportionalTransferDemonstrated(result);
-    return deterministicValidationResultSchema.parse({
-      passed: demonstrated,
-      score: demonstrated ? 1 : 0,
-      code: demonstrated ? "transfer.demonstrated" : "transfer.not-demonstrated",
-      evidence: [
-        `answer:${result.choiceId}`,
-        `mechanism-signals:${result.mechanismSignals.join(",") || "none"}`,
-      ],
-    });
-  },
-});
-
-export const primarySourceReasoningTransferValidator: DeterministicValidator = Object.freeze({
-  id: PRIMARY_SOURCE_VALIDATOR_ID,
-  validate(input: unknown) {
-    const result = validatePrimarySourceTransfer(input);
-    return deterministicValidationResultSchema.parse({
-      passed: result.passed,
-      score: result.score,
-      code: result.code,
-      evidence: result.valid
-        ? [
-            `task:${PRIMARY_SOURCE_TRANSFER_TASK_ID}`,
-            `correct-categories:${result.correctCount}/4`,
-          ]
-        : [],
-    });
-  },
-});
 
 export const BUILT_IN_WORLD_PACKS = [
   FORCE_AND_MOTION_WORLD,
