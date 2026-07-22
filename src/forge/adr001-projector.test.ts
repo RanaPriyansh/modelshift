@@ -7,7 +7,7 @@ import {
   type Adr001RuntimeProjectionInput,
 } from "./adr001-projector";
 import { ForgeEventJournal, replayForgeEvents } from "./event-journal";
-import { sealForgeEvent } from "./events";
+import { sealForgeEvent, type ForgeV2Event } from "./events";
 import {
   createWorldRuntimeSession,
   dispatchWorldRuntimeCommand,
@@ -99,7 +99,7 @@ function inputFor(receipt = completedReceipt()): Adr001RuntimeProjectionInput {
         evidence: "10000000-0000-4000-8000-000000000004",
         completed: "10000000-0000-4000-8000-000000000005",
       },
-      supportIds: ["support.primary-source.fixture.001"],
+      supportFacts: [{ supportId: "support.primary-source.fixture.001", protectedOperationOverlap: 0 }],
       evidenceId: "evidence.primary-source.fixture",
       proofNonceDigest: null,
       nextReviewAt: null,
@@ -110,7 +110,7 @@ function inputFor(receipt = completedReceipt()): Adr001RuntimeProjectionInput {
       contaminationReasonCodes: [],
       constructChangingAccommodation: false,
     },
-    failWithExplicitUncertaintyIsOpenQuestion: false,
+    authoredUncertaintyExceptionReference: null,
   };
 }
 
@@ -121,6 +121,68 @@ function receiptWithOutcome(
   return {
     ...receipt,
     validator: { ...receipt.validator, outcome, criteria: [`criterion.${outcome}`] },
+  };
+}
+
+function receiptWithAccess(): BoundedLocalWorldRuntimeReceipt {
+  const receipt = completedReceipt();
+  return {
+    ...receipt,
+    accessAccommodations: [
+      {
+        accommodationId: "alternative.primary-source.image-description",
+        stage: "cold_transfer",
+        kind: "text_alternative",
+        modality: "textual",
+        representation: "text_description",
+        constructPreservation: "preserves_construct",
+        answerChanging: false,
+        policyVersion: "1.0.0",
+        nonvisualAlternative: true,
+      },
+    ],
+  };
+}
+
+function unsigned(event: ForgeV2Event) {
+  const envelope = { ...event } as Record<string, unknown>;
+  delete envelope.integrity_hash;
+  return envelope;
+}
+
+async function reseal(event: ForgeV2Event, payload: unknown): Promise<ForgeV2Event> {
+  return (await sealForgeEvent({ ...unsigned(event), payload })) as ForgeV2Event;
+}
+
+function eventOf<Type extends ForgeV2Event["event_type"]>(events: readonly ForgeV2Event[], type: Type): Extract<ForgeV2Event, { event_type: Type }> {
+  const event = events.find((candidate) => candidate.event_type === type);
+  if (!event) throw new Error(`Missing ${type} fixture event.`);
+  return event as Extract<ForgeV2Event, { event_type: Type }>;
+}
+
+function correctionInput(completedEvents: readonly ForgeV2Event[]) {
+  return {
+    completedEvents,
+    actor: { type: "validator" as const, id: "validator.primary-source.review.1" },
+    authority: { policyVersion: "policy.primary-source.runtime.1", consentGrantIds: [] },
+    occurredAt: "2026-07-23T12:00:00.000Z",
+    recordedAt: "2026-07-23T12:00:01.000Z",
+    eventId: "10000000-0000-4000-8000-000000000006",
+    idempotencyKey: "idempotency.adr001.fixture.correction.1",
+    correctionId: "correction.primary-source.fixture.001",
+    reasonCode: "validator.rule-revised",
+    correctionReference: "review.primary-source.fixture.001",
+    replacementValidatorOutcome: "inconclusive" as const,
+    replacementDisposition: "open_question" as const,
+    replacementCriteria: ["criterion.revised"],
+    replacementExplicitUncertainty: false,
+    replacementAuthoredUncertaintyExceptionReference: null,
+    replacementValidity: {
+      packageIntegrityMatches: true,
+      proofAuthorityMatches: true,
+      contaminationReasonCodes: [],
+      constructChangingAccommodation: false,
+    },
   };
 }
 
@@ -141,7 +203,7 @@ describe("ADR-001 runtime attempt projector", () => {
     expect(result.events[3]?.payload).toMatchObject({
       source_provenance_status: "incomplete",
       cognitive_support_event_ids: ["10000000-0000-4000-8000-000000000002"],
-      access_accommodation_ids: [],
+      access_accommodations: [],
       proof_authority: "honour_based",
     });
     expect(JSON.stringify(result.events)).not.toContain("The photograph, the catalog");
@@ -162,7 +224,7 @@ describe("ADR-001 runtime attempt projector", () => {
     const uncertainty = await projectAdr001RuntimeAttempt({
       ...inputFor(receiptWithOutcome("fail")),
       attempt: { ...inputFor().attempt, explicitUncertainty: true },
-      failWithExplicitUncertaintyIsOpenQuestion: true,
+      authoredUncertaintyExceptionReference: "policy.primary-source.uncertainty-exception.1",
     });
     expect(uncertainty).toMatchObject({ ok: true, evidenceDisposition: "open_question" });
 
@@ -219,6 +281,147 @@ describe("ADR-001 runtime attempt projector", () => {
     expect(collision).toMatchObject({ ok: false, code: "duplicate_event_id" });
   });
 
+  it("rejects resealed outcome inflation, omitted support, and mismatched pinned proof facts", async () => {
+    const projected = await projectAdr001RuntimeAttempt(inputFor());
+    if (!projected.ok) return;
+    const started = eventOf(projected.events, "world_run.started");
+    const assistance = eventOf(projected.events, "assistance.recorded");
+    const proof = eventOf(projected.events, "proof.submitted");
+    const evidence = eventOf(projected.events, "evidence.recorded");
+
+    await expect(
+      sealForgeEvent({
+        ...unsigned(evidence),
+        payload: {
+          ...evidence.payload,
+          validator_outcome: "fail",
+          disposition: "demonstrated",
+          cognitive_support_event_ids: [],
+        },
+      }),
+    ).rejects.toThrow(/ADR-001 disposition/);
+
+    const omittedSupport = await reseal(evidence, { ...evidence.payload, cognitive_support_event_ids: [] });
+    const omittedSupportJournal = new ForgeEventJournal();
+    for (const event of [started, assistance, proof]) await omittedSupportJournal.append(event);
+    await expect(omittedSupportJournal.append(omittedSupport)).resolves.toMatchObject({
+      accepted: false,
+      reason: "invalid_event_reference",
+    });
+
+    const mismatchedProof = await reseal(proof, { ...proof.payload, task_id: "task.primary-source.other" });
+    const proofJournal = new ForgeEventJournal();
+    await proofJournal.append(started);
+    await proofJournal.append(assistance);
+    await expect(proofJournal.append(mismatchedProof)).resolves.toMatchObject({
+      accepted: false,
+      reason: "aggregate_identity_mismatch",
+    });
+  });
+
+  it("keeps source and typed access facts coherent and rejects demonstrated protected-operation overlap", async () => {
+    const projected = await projectAdr001RuntimeAttempt(inputFor());
+    if (!projected.ok) return;
+    const started = eventOf(projected.events, "world_run.started");
+    const assistance = eventOf(projected.events, "assistance.recorded");
+    const proof = eventOf(projected.events, "proof.submitted");
+    const evidence = eventOf(projected.events, "evidence.recorded");
+
+    await expect(
+      sealForgeEvent({
+        ...unsigned(started),
+        payload: { ...started.payload, source_provenance_status: "bound" },
+      }),
+    ).rejects.toThrow(/Source provenance status/);
+    await expect(
+      sealForgeEvent({
+        ...unsigned(started),
+        payload: { ...started.payload, source_bindings: [started.payload.source_bindings[0], started.payload.source_bindings[0]] },
+      }),
+    ).rejects.toThrow(/Source bindings must have unique/);
+    await expect(
+      sealForgeEvent({
+        ...unsigned(proof),
+        payload: { ...proof.payload, selection_ids: [], response_digest: null, explicit_uncertainty: false },
+      }),
+    ).rejects.toThrow(/ADR-001 proof requires/);
+    await expect(
+      sealForgeEvent({
+        ...unsigned(evidence),
+        payload: { ...evidence.payload, criteria: [] },
+      }),
+    ).rejects.toThrow();
+
+    const sourceMismatch = await reseal(evidence, {
+      ...evidence.payload,
+      source_bindings: evidence.payload.source_bindings.map((binding, index) =>
+        index === 0 ? { ...binding, domain_source_ref: "loc.primary-source-revised" } : binding,
+      ),
+    });
+    const sourceJournal = new ForgeEventJournal();
+    for (const event of [started, assistance, proof]) await sourceJournal.append(event);
+    await expect(sourceJournal.append(sourceMismatch)).resolves.toMatchObject({
+      accepted: false,
+      reason: "aggregate_identity_mismatch",
+    });
+
+    const overlapAssistance = await reseal(assistance, {
+      ...assistance.payload,
+      protected_operation_overlap: 0.25,
+    });
+    const overlapJournal = new ForgeEventJournal();
+    await overlapJournal.append(started);
+    await overlapJournal.append(overlapAssistance);
+    await overlapJournal.append(proof);
+    await expect(overlapJournal.append(evidence)).resolves.toMatchObject({
+      accepted: false,
+      reason: "invalid_event_reference",
+    });
+    await expect(
+      projectAdr001RuntimeAttempt({
+        ...inputFor(),
+        run: {
+          ...inputFor().run,
+          supportFacts: [{ supportId: "support.primary-source.fixture.001", protectedOperationOverlap: 0.25 }],
+        },
+      }),
+    ).resolves.toMatchObject({ ok: false, code: "event_chain_incoherent" });
+
+    const accessed = await projectAdr001RuntimeAttempt(inputFor(receiptWithAccess()));
+    if (!accessed.ok) return;
+    const accessedStarted = eventOf(accessed.events, "world_run.started");
+    const accessedAssistance = eventOf(accessed.events, "assistance.recorded");
+    const accessedProof = eventOf(accessed.events, "proof.submitted");
+    const accessedEvidence = eventOf(accessed.events, "evidence.recorded");
+    expect(accessedProof.payload.access_accommodations).toEqual([
+      {
+        accommodation_id: "alternative.primary-source.image-description",
+        stage_id: "cold_transfer",
+        kind: "text_alternative",
+        modality: "textual",
+        representation: "text_description",
+        construct_preservation: "preserves_construct",
+        answer_changing: false,
+        policy_version: "1.0.0",
+        nonvisual_alternative: true,
+      },
+    ]);
+    expect(accessedEvidence.payload.access_accommodations).toEqual(accessedProof.payload.access_accommodations);
+    const accessMismatch = await reseal(accessedEvidence, {
+      ...accessedEvidence.payload,
+      access_accommodations: accessedEvidence.payload.access_accommodations.map((accommodation) => ({
+        ...accommodation,
+        policy_version: "1.0.1",
+      })),
+    });
+    const accessJournal = new ForgeEventJournal();
+    for (const event of [accessedStarted, accessedAssistance, accessedProof]) await accessJournal.append(event);
+    await expect(accessJournal.append(accessMismatch)).resolves.toMatchObject({
+      accepted: false,
+      reason: "aggregate_identity_mismatch",
+    });
+  });
+
   it("rejects mixed v1/v2 streams and strict v2 raw-text fields", async () => {
     const projected = await projectAdr001RuntimeAttempt(inputFor());
     if (!projected.ok) return;
@@ -250,6 +453,9 @@ describe("ADR-001 runtime attempt projector", () => {
         proof_authority: "honour_based",
       },
     });
+    const v1Journal = new ForgeEventJournal();
+    await expect(v1Journal.append(v1)).resolves.toMatchObject({ accepted: true, disposition: "appended" });
+    await expect(replayForgeEvents([v1])).resolves.toMatchObject({ ok: true });
     await expect(journal.append(v1)).resolves.toMatchObject({ accepted: false, reason: "schema_version_mismatch" });
 
     const unsigned = structuredClone(projected.events[0]) as unknown as Record<string, unknown> & { payload: Record<string, unknown> };
@@ -263,21 +469,7 @@ describe("ADR-001 runtime attempt projector", () => {
   it("appends a correction without mutating the historical evidence event", async () => {
     const projected = await projectAdr001RuntimeAttempt(inputFor());
     if (!projected.ok) return;
-    const correction = await projectAdr001Correction({
-      completedEvents: projected.events,
-      actor: { type: "validator", id: "validator.primary-source.review.1" },
-      authority: { policyVersion: "policy.primary-source.runtime.1", consentGrantIds: [] },
-      occurredAt: "2026-07-23T12:00:00.000Z",
-      recordedAt: "2026-07-23T12:00:01.000Z",
-      eventId: "10000000-0000-4000-8000-000000000006",
-      idempotencyKey: "idempotency.adr001.fixture.correction.1",
-      correctionId: "correction.primary-source.fixture.001",
-      reasonCode: "validator.rule-revised",
-      correctionReference: "review.primary-source.fixture.001",
-      replacementValidatorOutcome: "inconclusive",
-      replacementDisposition: "open_question",
-      replacementCriteria: ["criterion.revised"],
-    });
+    const correction = await projectAdr001Correction(correctionInput(projected.events));
     expect(correction).toMatchObject({ ok: true, evidenceDisposition: "open_question" });
     if (!correction.ok) return;
 
@@ -290,5 +482,39 @@ describe("ADR-001 runtime attempt projector", () => {
       corrected_event_ids: ["10000000-0000-4000-8000-000000000004"],
       corrections: [{ replacement_disposition: "open_question" }],
     });
+  });
+
+  it("refuses incoherent correction input and correction outcome inflation", async () => {
+    const projected = await projectAdr001RuntimeAttempt(inputFor());
+    if (!projected.ok) return;
+    const evidence = eventOf(projected.events, "evidence.recorded");
+    const incoherentEvidence = await reseal(evidence, {
+      ...evidence.payload,
+      cognitive_support_event_ids: [],
+    });
+    const incoherentEvents = projected.events.map((event) =>
+      event.event_id === incoherentEvidence.event_id ? incoherentEvidence : event,
+    );
+    await expect(projectAdr001Correction(correctionInput(incoherentEvents))).resolves.toMatchObject({
+      ok: false,
+      code: "correction_not_appendable",
+    });
+
+    await expect(
+      projectAdr001Correction({
+        ...correctionInput(projected.events),
+        replacementValidatorOutcome: "fail",
+        replacementDisposition: "demonstrated",
+      }),
+    ).resolves.toMatchObject({ ok: false, code: "event_seal_failed" });
+
+    const correction = await projectAdr001Correction(correctionInput(projected.events));
+    if (!correction.ok) return;
+    await expect(
+      sealForgeEvent({
+        ...unsigned(correction.events[0]),
+        actor: { type: "learner", id: "learner.invalid-correction" },
+      }),
+    ).rejects.toThrow(/corrections require a validator or human actor/);
   });
 });

@@ -455,6 +455,30 @@ function isAdr001WorldRunProjection(value: ForgeAggregateProjection): value is A
   return value.aggregate_type === "world_run" && "schema_version" in value && value.schema_version === ADR001_FORGE_EVENT_SCHEMA_VERSION;
 }
 
+type Adr001StartedEvent = Extract<ForgeV2Event, { readonly event_type: "world_run.started" }>;
+type Adr001ProofEvent = Extract<ForgeV2Event, { readonly event_type: "proof.submitted" }>;
+
+function adr001StartedEvent(events: readonly ForgeEvent[]): Adr001StartedEvent | null {
+  const started = events[0];
+  return started
+    && started.schema_version === ADR001_FORGE_EVENT_SCHEMA_VERSION
+    && started.event_type === "world_run.started"
+    ? started
+    : null;
+}
+
+function adr001ProofEvent(events: readonly ForgeEvent[]): Adr001ProofEvent | null {
+  const proof = events.find(
+    (event): event is Adr001ProofEvent =>
+      event.schema_version === ADR001_FORGE_EVENT_SCHEMA_VERSION && event.event_type === "proof.submitted",
+  );
+  return proof ?? null;
+}
+
+function sameReferences(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value) => right.includes(value));
+}
+
 function projectAdr001WorldRunEvent(
   current: ForgeAggregateProjection | undefined,
   event: ForgeV2Event,
@@ -515,29 +539,80 @@ function projectAdr001WorldRunEvent(
       return { ok: true, projection: { ...base, status: "active" } };
     case "proof.submitted":
       if (current.status !== "active") return forbiddenFrom(current.status, event.event_type);
+      {
+        const started = adr001StartedEvent(aggregateEvents);
+        if (
+          !started
+          || event.payload.task_id !== started.payload.task_id
+          || event.payload.task_version !== started.payload.task_version
+          || event.payload.task_family_id !== started.payload.task_family_id
+          || event.payload.representation_id !== started.payload.representation_id
+          || event.payload.context_id !== started.payload.context_id
+        ) {
+          return {
+            ok: false,
+            reason: "aggregate_identity_mismatch",
+            message: "ADR-001 proof task, representation, and context facts must match the run start.",
+          };
+        }
+      }
       return { ok: true, projection: { ...base, status: "proof_submitted", proof_event_id: event.event_id } };
     case "evidence.recorded": {
       if (current.status !== "proof_submitted") return forbiddenFrom(current.status, event.event_type);
-      const assistanceIds = new Set(current.assistance_event_ids);
-      if (event.payload.cognitive_support_event_ids.some((eventId) => !assistanceIds.has(eventId))) {
+      if (!sameReferences(event.payload.cognitive_support_event_ids, current.assistance_event_ids)) {
         return {
           ok: false,
           reason: "invalid_event_reference",
-          message: "ADR-001 evidence may reference only cognitive support events recorded in the same run.",
+          message: "ADR-001 evidence must reference every and only cognitive support event recorded in the same run.",
         };
       }
-      const started = aggregateEvents[0];
+      const started = adr001StartedEvent(aggregateEvents);
+      const proof = adr001ProofEvent(aggregateEvents);
       if (
         !started
-        || started.schema_version !== ADR001_FORGE_EVENT_SCHEMA_VERSION
-        || started.event_type !== "world_run.started"
+        || !proof
         || event.payload.validator_id !== started.payload.validator_id
         || event.payload.validator_version !== started.payload.validator_version
+        || event.payload.proof_authority !== started.payload.proof_authority
+        || event.payload.task_id !== started.payload.task_id
+        || event.payload.task_version !== started.payload.task_version
+        || event.payload.task_family_id !== started.payload.task_family_id
+        || event.payload.representation_id !== started.payload.representation_id
+        || event.payload.context_id !== started.payload.context_id
+        || event.payload.task_id !== proof.payload.task_id
+        || event.payload.task_version !== proof.payload.task_version
+        || event.payload.task_family_id !== proof.payload.task_family_id
+        || event.payload.representation_id !== proof.payload.representation_id
+        || event.payload.context_id !== proof.payload.context_id
+        || event.payload.response_digest !== proof.payload.response_digest
+        || event.payload.explicit_uncertainty !== proof.payload.explicit_uncertainty
+        || !sameReferences(
+          event.payload.access_accommodations.map((accommodation) => accommodation.accommodation_id),
+          proof.payload.access_accommodations.map((accommodation) => accommodation.accommodation_id),
+        )
+        || canonicalJson(event.payload.access_accommodations) !== canonicalJson(proof.payload.access_accommodations)
+        || event.payload.source_provenance_status !== started.payload.source_provenance_status
+        || canonicalJson(event.payload.source_bindings) !== canonicalJson(started.payload.source_bindings)
       ) {
         return {
           ok: false,
           reason: "aggregate_identity_mismatch",
-          message: "ADR-001 evidence validator identity must match the version pinned when the run started.",
+          message: "ADR-001 evidence must preserve the validator, task, proof, access, and source facts pinned by the run.",
+        };
+      }
+      if (
+        event.payload.disposition === "demonstrated"
+        && aggregateEvents.some(
+          (candidate) =>
+            candidate.schema_version === ADR001_FORGE_EVENT_SCHEMA_VERSION
+            && candidate.event_type === "assistance.recorded"
+            && candidate.payload.protected_operation_overlap > 0,
+        )
+      ) {
+        return {
+          ok: false,
+          reason: "invalid_event_reference",
+          message: "Demonstrated evidence cannot follow cognitive support that overlaps a protected operation.",
         };
       }
       return {
@@ -569,6 +644,13 @@ function projectAdr001WorldRunEvent(
       return { ok: true, projection: { ...base, status: "completed", completion_event_id: event.event_id } };
     case "world_run.corrected": {
       if (current.status !== "completed") return forbiddenFrom(current.status, event.event_type);
+      if (event.actor.type !== "validator" && event.actor.type !== "human") {
+        return {
+          ok: false,
+          reason: "invalid_event",
+          message: "ADR-001 corrections require a validator or human actor.",
+        };
+      }
       const target = aggregateEvents.find((candidate) => candidate.event_id === event.payload.supersedes_event_id);
       if (!target || target.schema_version !== ADR001_FORGE_EVENT_SCHEMA_VERSION || target.event_type !== "evidence.recorded") {
         return {

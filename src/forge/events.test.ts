@@ -86,6 +86,28 @@ describe("FORGE event envelope", () => {
         recorded_at: "2026-07-22T07:59:59.000Z",
       }),
     ).rejects.toThrow(/recorded_at cannot precede occurred_at/);
+
+    await expect(
+      sealForgeEvent({
+        event_id: "00000000-0000-4000-8000-000000000002",
+        event_type: "world_package.published",
+        schema_version: 2,
+        aggregate: { type: "world_package", id: "package.fixture.001", version: 1 },
+        actor: { type: "system", id: "system.fixture.001" },
+        authority: { policy_version: "policy.2026.07", consent_grant_ids: [] },
+        occurred_at: "2026-07-22T08:00:00.000Z",
+        recorded_at: "2026-07-22T08:00:01.000Z",
+        correlation_id: "correlation.package.fixture.001",
+        causation_id: null,
+        idempotency_key: "idempotency.package.fixture.0002",
+        payload: {
+          world_id: "world.force-and-motion",
+          world_version: "1.0.0",
+          content_version: "1.0.0",
+          bundle_integrity_hash: DIGEST_A,
+        },
+      }),
+    ).rejects.toThrow(/version 2 is limited to world-run evidence events/);
   });
 
   it("rejects an invalid seal even when its digest field is well formed", async () => {

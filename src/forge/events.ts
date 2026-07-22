@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-import { ASSISTANCE_KINDS, WORLD_RUNTIME_STAGES, identifierSchema } from "./contracts";
+import {
+  ASSISTANCE_KINDS,
+  WORLD_RUNTIME_ACCESS_ACCOMMODATION_KINDS,
+  WORLD_RUNTIME_ACCESS_MODALITIES,
+  WORLD_RUNTIME_ACCESS_REPRESENTATIONS,
+  WORLD_RUNTIME_STAGES,
+  identifierSchema,
+} from "./contracts";
 
 /**
  * Version 1 remains readable for existing local journals and staged database
@@ -197,6 +204,32 @@ const adr001EvidenceDispositionSchema = z.enum([
 const adr001SupportTierSchema = z.enum(["attention", "cue", "representation", "example", "repair", "solution"]);
 const adr001SupportSourceSchema = z.enum(["authored", "model", "human"]);
 const adr001RuntimeStageSchema = z.enum(WORLD_RUNTIME_STAGES);
+const adr001AccessAccommodationSchema = z.strictObject({
+  accommodation_id: identifierSchema,
+  stage_id: adr001RuntimeStageSchema,
+  kind: z.enum(WORLD_RUNTIME_ACCESS_ACCOMMODATION_KINDS),
+  modality: z.enum(WORLD_RUNTIME_ACCESS_MODALITIES),
+  representation: z.enum(WORLD_RUNTIME_ACCESS_REPRESENTATIONS),
+  construct_preservation: z.literal("preserves_construct"),
+  answer_changing: z.literal(false),
+  policy_version: forgeEventReferenceSchema,
+  nonvisual_alternative: z.boolean(),
+});
+const adr001AccessAccommodationsSchema = uniqueArray(adr001AccessAccommodationSchema, 32).superRefine(
+  (accommodations, context) => {
+    const seen = new Set<string>();
+    accommodations.forEach((accommodation, index) => {
+      if (seen.has(accommodation.accommodation_id)) {
+        context.addIssue({
+          code: "custom",
+          message: "Access accommodations must have unique IDs.",
+          path: [index, "accommodation_id"],
+        });
+      }
+      seen.add(accommodation.accommodation_id);
+    });
+  },
+);
 
 const adr001SourceBindingSchema = z.discriminatedUnion("provenance_status", [
   z.strictObject({
@@ -225,26 +258,119 @@ const adr001SourceBindingSchema = z.discriminatedUnion("provenance_status", [
   }),
 ]);
 
-const adr001WorldRunStartedPayloadSchema = z.strictObject({
-  world_id: identifierSchema,
-  world_version: forgeEventSemverSchema,
-  content_version: forgeEventSemverSchema,
-  package_integrity_hash: forgeEventDigestSchema,
-  protocol_version: forgeEventSemverSchema,
-  capability_id: identifierSchema,
-  proof_claim_id: identifierSchema,
-  task_id: identifierSchema,
-  task_version: forgeEventSemverSchema,
-  task_family_id: identifierSchema,
-  representation_id: identifierSchema,
-  context_id: identifierSchema,
-  bounded_claim: z.string().trim().min(1).max(1_200),
-  validator_id: identifierSchema,
-  validator_version: forgeEventSemverSchema,
-  proof_authority: z.enum(["honour_based", "server_enforced", "human_observed"]),
-  source_bindings: z.array(adr001SourceBindingSchema).min(1).max(32),
-  source_provenance_status: z.enum(["bound", "incomplete"]),
+const adr001SourceBindingsSchema = z
+  .array(adr001SourceBindingSchema)
+  .min(1)
+  .max(32)
+  .superRefine((bindings, context) => {
+    const domainSourceRefs = new Set<string>();
+    const sourceItemIds = new Set<string>();
+    bindings.forEach((binding, index) => {
+      if (domainSourceRefs.has(binding.domain_source_ref) || sourceItemIds.has(binding.source_item_id)) {
+        context.addIssue({
+          code: "custom",
+          message: "Source bindings must have unique domain source references and source item IDs.",
+          path: [index],
+        });
+      }
+      domainSourceRefs.add(binding.domain_source_ref);
+      sourceItemIds.add(binding.source_item_id);
+    });
+  });
+
+const adr001EvidenceValiditySchema = z.strictObject({
+  package_integrity_matches: z.boolean(),
+  proof_authority_matches: z.boolean(),
+  contamination_reason_codes: reasonCodesSchema,
+  construct_changing_accommodation: z.boolean(),
 });
+
+type Adr001EvidenceValidity = z.infer<typeof adr001EvidenceValiditySchema>;
+
+function validateAdr001Disposition(
+  outcome: z.infer<typeof adr001ValidatorOutcomeSchema>,
+  disposition: z.infer<typeof adr001EvidenceDispositionSchema>,
+  explicitUncertainty: boolean,
+  uncertaintyExceptionReference: string | null,
+  validity: Adr001EvidenceValidity,
+  context: z.RefinementCtx,
+  dispositionPath: readonly string[],
+): void {
+  const invalidated =
+    !validity.package_integrity_matches
+    || !validity.proof_authority_matches
+    || validity.contamination_reason_codes.length > 0;
+  const expected = invalidated
+    ? "invalidated"
+    : validity.construct_changing_accommodation
+      ? "not_evaluated"
+      : outcome === "fail" && explicitUncertainty && uncertaintyExceptionReference !== null
+        ? "open_question"
+        : outcome === "pass"
+          ? "demonstrated"
+          : outcome === "fail"
+            ? "not_demonstrated"
+            : outcome === "inconclusive"
+              ? "open_question"
+              : "not_evaluated";
+  if (disposition !== expected) {
+    context.addIssue({
+      code: "custom",
+      message: `The ADR-001 disposition must be ${expected} for the supplied outcome and validity facts.`,
+      path: [...dispositionPath],
+    });
+  }
+  if (
+    uncertaintyExceptionReference !== null
+    && (invalidated || validity.construct_changing_accommodation || outcome !== "fail" || !explicitUncertainty)
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "An authored uncertainty exception applies only to an otherwise valid failed proof with explicit uncertainty.",
+      path: ["authored_uncertainty_exception_reference"],
+    });
+  }
+}
+
+function validateAdr001SourceProvenance(
+  bindings: z.infer<typeof adr001SourceBindingsSchema>,
+  sourceProvenanceStatus: "bound" | "incomplete",
+  context: z.RefinementCtx,
+): void {
+  const expected = bindings.every((binding) => binding.provenance_status === "bound") ? "bound" : "incomplete";
+  if (sourceProvenanceStatus !== expected) {
+    context.addIssue({
+      code: "custom",
+      message: "Source provenance status must reflect every named source binding.",
+      path: ["source_provenance_status"],
+    });
+  }
+}
+
+const adr001WorldRunStartedPayloadSchema = z
+  .strictObject({
+    world_id: identifierSchema,
+    world_version: forgeEventSemverSchema,
+    content_version: forgeEventSemverSchema,
+    package_integrity_hash: forgeEventDigestSchema,
+    protocol_version: forgeEventSemverSchema,
+    capability_id: identifierSchema,
+    proof_claim_id: identifierSchema,
+    task_id: identifierSchema,
+    task_version: forgeEventSemverSchema,
+    task_family_id: identifierSchema,
+    representation_id: identifierSchema,
+    context_id: identifierSchema,
+    bounded_claim: z.string().trim().min(1).max(1_200),
+    validator_id: identifierSchema,
+    validator_version: forgeEventSemverSchema,
+    proof_authority: z.enum(["honour_based", "server_enforced", "human_observed"]),
+    source_bindings: adr001SourceBindingsSchema,
+    source_provenance_status: z.enum(["bound", "incomplete"]),
+  })
+  .superRefine((payload, context) => {
+    validateAdr001SourceProvenance(payload.source_bindings, payload.source_provenance_status, context);
+  });
 
 const adr001AttemptCommittedPayloadSchema = z
   .strictObject({
@@ -273,41 +399,66 @@ const adr001AssistanceRecordedPayloadSchema = z.strictObject({
   protected_operation_overlap: z.number().min(0).max(1),
 });
 
-const adr001ProofSubmittedPayloadSchema = z.strictObject({
-  task_id: identifierSchema,
-  task_version: forgeEventSemverSchema,
-  task_family_id: identifierSchema,
-  representation_id: identifierSchema,
-  context_id: identifierSchema,
-  selection_ids: identifiersSchema,
-  response_digest: forgeEventDigestSchema.nullable(),
-  explicit_uncertainty: z.boolean(),
-  assistance_access: z.literal("removed"),
-  proof_nonce_digest: forgeEventDigestSchema.nullable(),
-  access_accommodation_ids: identifiersSchema,
-});
+const adr001ProofSubmittedPayloadSchema = z
+  .strictObject({
+    task_id: identifierSchema,
+    task_version: forgeEventSemverSchema,
+    task_family_id: identifierSchema,
+    representation_id: identifierSchema,
+    context_id: identifierSchema,
+    selection_ids: identifiersSchema,
+    response_digest: forgeEventDigestSchema.nullable(),
+    explicit_uncertainty: z.boolean(),
+    assistance_access: z.literal("removed"),
+    proof_nonce_digest: forgeEventDigestSchema.nullable(),
+    access_accommodations: adr001AccessAccommodationsSchema,
+  })
+  .superRefine((payload, context) => {
+    if (payload.selection_ids.length === 0 && payload.response_digest === null && !payload.explicit_uncertainty) {
+      context.addIssue({
+        code: "custom",
+        message: "An ADR-001 proof requires a structured selection, a response digest, or explicit uncertainty.",
+      });
+    }
+  });
 
-const adr001EvidenceRecordedPayloadSchema = z.strictObject({
-  evidence_id: identifierSchema,
-  disposition: adr001EvidenceDispositionSchema,
-  validator_outcome: adr001ValidatorOutcomeSchema,
-  validator_id: identifierSchema,
-  validator_version: forgeEventSemverSchema,
-  criteria: criteriaSchema,
-  proof_authority: z.enum(["honour_based", "server_enforced", "human_observed"]),
-  cognitive_support_event_ids: eventIdsSchema,
-  access_accommodation_ids: identifiersSchema,
-  source_bindings: z.array(adr001SourceBindingSchema).min(1).max(32),
-  source_provenance_status: z.enum(["bound", "incomplete"]),
-  response_digest: forgeEventDigestSchema.nullable(),
-  explicit_uncertainty: z.boolean(),
-  contamination: z.strictObject({
-    status: z.enum(["clear", "contaminated"]),
-    reason_codes: reasonCodesSchema,
-  }),
-  remains_untested: uniqueArray(z.string().trim().min(1).max(1_200), 32),
-  bounded_claim: z.string().trim().min(1).max(1_200),
-});
+const adr001EvidenceRecordedPayloadSchema = z
+  .strictObject({
+    evidence_id: identifierSchema,
+    disposition: adr001EvidenceDispositionSchema,
+    validator_outcome: adr001ValidatorOutcomeSchema,
+    validator_id: identifierSchema,
+    validator_version: forgeEventSemverSchema,
+    task_id: identifierSchema,
+    task_version: forgeEventSemverSchema,
+    task_family_id: identifierSchema,
+    representation_id: identifierSchema,
+    context_id: identifierSchema,
+    criteria: criteriaSchema.min(1),
+    proof_authority: z.enum(["honour_based", "server_enforced", "human_observed"]),
+    cognitive_support_event_ids: eventIdsSchema,
+    access_accommodations: adr001AccessAccommodationsSchema,
+    source_bindings: adr001SourceBindingsSchema,
+    source_provenance_status: z.enum(["bound", "incomplete"]),
+    response_digest: forgeEventDigestSchema.nullable(),
+    explicit_uncertainty: z.boolean(),
+    authored_uncertainty_exception_reference: forgeEventReferenceSchema.nullable(),
+    validity: adr001EvidenceValiditySchema,
+    remains_untested: uniqueArray(z.string().trim().min(1).max(1_200), 32),
+    bounded_claim: z.string().trim().min(1).max(1_200),
+  })
+  .superRefine((payload, context) => {
+    validateAdr001SourceProvenance(payload.source_bindings, payload.source_provenance_status, context);
+    validateAdr001Disposition(
+      payload.validator_outcome,
+      payload.disposition,
+      payload.explicit_uncertainty,
+      payload.authored_uncertainty_exception_reference,
+      payload.validity,
+      context,
+      ["disposition"],
+    );
+  });
 
 const adr001CompletedPayloadSchema = z.strictObject({
   disposition: adr001EvidenceDispositionSchema,
@@ -315,15 +466,30 @@ const adr001CompletedPayloadSchema = z.strictObject({
   next_review_at: forgeEventTimestampSchema.nullable(),
 });
 
-const adr001CorrectedPayloadSchema = z.strictObject({
-  supersedes_event_id: forgeEventIdSchema,
-  correction_id: identifierSchema,
-  reason_code: identifierSchema,
-  correction_reference: identifierSchema,
-  replacement_disposition: adr001EvidenceDispositionSchema,
-  replacement_validator_outcome: adr001ValidatorOutcomeSchema,
-  replacement_criteria: criteriaSchema,
-});
+const adr001CorrectedPayloadSchema = z
+  .strictObject({
+    supersedes_event_id: forgeEventIdSchema,
+    correction_id: identifierSchema,
+    reason_code: identifierSchema,
+    correction_reference: identifierSchema,
+    replacement_disposition: adr001EvidenceDispositionSchema,
+    replacement_validator_outcome: adr001ValidatorOutcomeSchema,
+    replacement_criteria: criteriaSchema.min(1),
+    replacement_explicit_uncertainty: z.boolean(),
+    replacement_authored_uncertainty_exception_reference: forgeEventReferenceSchema.nullable(),
+    replacement_validity: adr001EvidenceValiditySchema,
+  })
+  .superRefine((payload, context) => {
+    validateAdr001Disposition(
+      payload.replacement_validator_outcome,
+      payload.replacement_disposition,
+      payload.replacement_explicit_uncertainty,
+      payload.replacement_authored_uncertainty_exception_reference,
+      payload.replacement_validity,
+      context,
+      ["replacement_disposition"],
+    );
+  });
 
 export const ADR001_FORGE_EVENT_PAYLOAD_SCHEMAS = {
   "world_run.started": adr001WorldRunStartedPayloadSchema,
@@ -413,6 +579,7 @@ type EnvelopeForSemanticValidation = {
   schema_version: ForgeEventSchemaVersion;
   event_type: ForgeEventType;
   aggregate: { type: ForgeAggregateType };
+  actor: { type: "learner" | "system" | "validator" | "policy" | "human" };
   occurred_at: string;
   recorded_at: string;
   payload: unknown;
@@ -438,6 +605,27 @@ function validateEnvelopeSemantics(event: EnvelopeForSemanticValidation, context
       code: "custom",
       message: `${event.event_type} requires aggregate type ${expectedAggregate}`,
       path: ["aggregate", "type"],
+    });
+  }
+
+  if (event.schema_version === ADR001_FORGE_EVENT_SCHEMA_VERSION && event.event_type.startsWith("world_package.")) {
+    context.addIssue({
+      code: "custom",
+      message: "ADR-001 version 2 is limited to world-run evidence events; package lifecycle events remain version 1.",
+      path: ["event_type"],
+    });
+  }
+
+  if (
+    event.schema_version === ADR001_FORGE_EVENT_SCHEMA_VERSION
+    && event.event_type === "world_run.corrected"
+    && event.actor.type !== "validator"
+    && event.actor.type !== "human"
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "ADR-001 corrections require a validator or human actor.",
+      path: ["actor", "type"],
     });
   }
 

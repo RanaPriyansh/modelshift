@@ -4,6 +4,7 @@ import {
   type ForgeEvent,
   type ForgeV2Event,
 } from "./events";
+import { replayForgeEvents } from "./event-journal";
 import {
   deriveDefaultEvidenceDisposition,
   type BoundedLocalWorldRuntimeReceipt,
@@ -47,7 +48,10 @@ export interface Adr001RuntimeProjectionInput {
     readonly recordedAt: string;
     readonly idempotencyNamespace: string;
     readonly eventIds: Adr001ProjectionEventIds;
-    readonly supportIds: readonly string[];
+    readonly supportFacts: ReadonlyArray<{
+      readonly supportId: string;
+      readonly protectedOperationOverlap: number;
+    }>;
     readonly evidenceId: string;
     readonly proofNonceDigest: string | null;
     readonly nextReviewAt: string | null;
@@ -58,7 +62,7 @@ export interface Adr001RuntimeProjectionInput {
     readonly contaminationReasonCodes: readonly string[];
     readonly constructChangingAccommodation: boolean;
   };
-  readonly failWithExplicitUncertaintyIsOpenQuestion: boolean;
+  readonly authoredUncertaintyExceptionReference: string | null;
 }
 
 export type Adr001ProjectorErrorCode =
@@ -68,6 +72,7 @@ export type Adr001ProjectorErrorCode =
   | "duplicate_event_id"
   | "source_provenance_mismatch"
   | "event_seal_failed"
+  | "event_chain_incoherent"
   | "correction_not_appendable";
 
 export type Adr001ProjectionResult =
@@ -117,8 +122,21 @@ function sourceBindingsFor(receipt: BoundedLocalWorldRuntimeReceipt) {
   );
 }
 
+function accessAccommodationsFor(receipt: BoundedLocalWorldRuntimeReceipt) {
+  return receipt.accessAccommodations.map((accommodation) => ({
+    accommodation_id: accommodation.accommodationId,
+    stage_id: accommodation.stage,
+    kind: accommodation.kind,
+    modality: accommodation.modality,
+    representation: accommodation.representation,
+    construct_preservation: accommodation.constructPreservation,
+    answer_changing: accommodation.answerChanging,
+    policy_version: accommodation.policyVersion,
+    nonvisual_alternative: accommodation.nonvisualAlternative,
+  }));
+}
+
 function deriveDisposition(input: Adr001RuntimeProjectionInput): EvidenceDisposition {
-  if (input.integrity.constructChangingAccommodation) return "not_evaluated";
   if (
     !input.integrity.packageIntegrityMatches
     || !input.integrity.proofAuthorityMatches
@@ -126,10 +144,11 @@ function deriveDisposition(input: Adr001RuntimeProjectionInput): EvidenceDisposi
   ) {
     return "invalidated";
   }
+  if (input.integrity.constructChangingAccommodation) return "not_evaluated";
   if (
     input.receipt.validator.outcome === "fail"
     && input.attempt.explicitUncertainty
-    && input.failWithExplicitUncertaintyIsOpenQuestion
+    && input.authoredUncertaintyExceptionReference !== null
   ) {
     return "open_question";
   }
@@ -191,7 +210,8 @@ export async function projectAdr001RuntimeAttempt(
   }
   if (
     input.run.eventIds.assistance.length !== input.receipt.cognitiveSupport.length
-    || input.run.supportIds.length !== input.receipt.cognitiveSupport.length
+    || input.run.supportFacts.length !== input.receipt.cognitiveSupport.length
+    || unique(input.run.supportFacts.map((support) => support.supportId)).length !== input.run.supportFacts.length
   ) {
     return reject("support_identity_mismatch", "Every consumed cognitive support needs one explicit event and support identity.");
   }
@@ -200,6 +220,7 @@ export async function projectAdr001RuntimeAttempt(
     return reject("duplicate_event_id", "Projected events must have distinct caller-provided event IDs.");
   }
   const sourceBindings = sourceBindingsFor(input.receipt);
+  const accessAccommodations = accessAccommodationsFor(input.receipt);
   const derivedSourceStatus = sourceBindings.every((binding) => binding.provenance_status === "bound")
     ? "bound"
     : "incomplete";
@@ -261,6 +282,7 @@ export async function projectAdr001RuntimeAttempt(
 
     let causationId = started.event_id;
     for (const [index, support] of input.receipt.cognitiveSupport.entries()) {
+      const supportFact = input.run.supportFacts[index];
       const assistance = await sealForgeEvent({
         ...common,
         event_id: input.run.eventIds.assistance[index],
@@ -269,13 +291,13 @@ export async function projectAdr001RuntimeAttempt(
         causation_id: causationId,
         idempotency_key: idempotencyKey(input, `assistance.${index + 1}`),
         payload: {
-          support_id: input.run.supportIds[index],
+          support_id: supportFact.supportId,
           stage_id: support.stage,
           tier: support.tier,
           source: support.source,
           content_reference: support.actionId,
           policy_version: input.run.authority.policyVersion,
-          protected_operation_overlap: 0,
+          protected_operation_overlap: supportFact.protectedOperationOverlap,
         },
       });
       events.push(assistance);
@@ -301,7 +323,7 @@ export async function projectAdr001RuntimeAttempt(
         explicit_uncertainty: input.attempt.explicitUncertainty,
         assistance_access: "removed",
         proof_nonce_digest: input.run.proofNonceDigest,
-        access_accommodation_ids: input.receipt.accessAccommodations.map((accommodation) => accommodation.accommodationId),
+        access_accommodations: accessAccommodations,
       },
     });
     events.push(proof);
@@ -319,17 +341,25 @@ export async function projectAdr001RuntimeAttempt(
         validator_outcome: input.receipt.validator.outcome,
         validator_id: input.receipt.validator.id,
         validator_version: input.receipt.validator.version,
+        task_id: input.attempt.taskId,
+        task_version: input.attempt.taskVersion,
+        task_family_id: input.attempt.taskFamilyId,
+        representation_id: input.attempt.representationId,
+        context_id: input.attempt.contextId,
         criteria: [...input.receipt.validator.criteria],
         proof_authority: input.receipt.authority.proofAuthority,
         cognitive_support_event_ids: assistanceEventIds,
-        access_accommodation_ids: input.receipt.accessAccommodations.map((accommodation) => accommodation.accommodationId),
+        access_accommodations: accessAccommodations,
         source_bindings: sourceBindings,
         source_provenance_status: derivedSourceStatus,
         response_digest: input.attempt.responseDigest,
         explicit_uncertainty: input.attempt.explicitUncertainty,
-        contamination: {
-          status: input.integrity.contaminationReasonCodes.length > 0 ? "contaminated" : "clear",
-          reason_codes: [...input.integrity.contaminationReasonCodes],
+        authored_uncertainty_exception_reference: input.authoredUncertaintyExceptionReference,
+        validity: {
+          package_integrity_matches: input.integrity.packageIntegrityMatches,
+          proof_authority_matches: input.integrity.proofAuthorityMatches,
+          contamination_reason_codes: [...input.integrity.contaminationReasonCodes],
+          construct_changing_accommodation: input.integrity.constructChangingAccommodation,
         },
         remains_untested: remainsUntested,
         bounded_claim: input.attempt.boundedClaim,
@@ -351,6 +381,12 @@ export async function projectAdr001RuntimeAttempt(
       },
     });
     events.push(completed);
+    const replay = await replayForgeEvents(events, {
+      eventSchemaVersion: ADR001_FORGE_EVENT_SCHEMA_VERSION,
+    });
+    if (!replay.ok) {
+      return reject("event_chain_incoherent", `The supplied runtime facts violate ADR-001 event coherence: ${replay.message}`);
+    }
     return {
       ok: true,
       projectorVersion: ADR001_PROJECTOR_VERSION,
@@ -380,11 +416,37 @@ export interface Adr001CorrectionInput {
   readonly replacementValidatorOutcome: ValidatorOutcome;
   readonly replacementDisposition: EvidenceDisposition;
   readonly replacementCriteria: readonly string[];
+  readonly replacementExplicitUncertainty: boolean;
+  readonly replacementAuthoredUncertaintyExceptionReference: string | null;
+  readonly replacementValidity: {
+    readonly packageIntegrityMatches: boolean;
+    readonly proofAuthorityMatches: boolean;
+    readonly contaminationReasonCodes: readonly string[];
+    readonly constructChangingAccommodation: boolean;
+  };
 }
 
 /** Appends a correction to an already completed v2 run without rewriting it. */
 export async function projectAdr001Correction(input: Adr001CorrectionInput): Promise<Adr001ProjectionResult> {
+  const replay = await replayForgeEvents(input.completedEvents, {
+    eventSchemaVersion: ADR001_FORGE_EVENT_SCHEMA_VERSION,
+  });
   const completed = input.completedEvents.at(-1);
+  if (
+    !replay.ok
+    || !completed
+    || completed.schema_version !== ADR001_FORGE_EVENT_SCHEMA_VERSION
+    || completed.event_type !== "world_run.completed"
+    || input.completedEvents.some(
+      (event) =>
+        event.schema_version !== ADR001_FORGE_EVENT_SCHEMA_VERSION
+        || event.aggregate.type !== "world_run"
+        || event.aggregate.id !== completed.aggregate.id
+        || event.correlation_id !== completed.correlation_id,
+    )
+  ) {
+    return reject("correction_not_appendable", "A correction requires one verified, completed, coherent ADR-001 run.");
+  }
   const evidence = [...input.completedEvents].reverse().find((event) => event.event_type === "evidence.recorded");
   if (
     !completed
@@ -424,6 +486,15 @@ export async function projectAdr001Correction(input: Adr001CorrectionInput): Pro
         replacement_disposition: input.replacementDisposition,
         replacement_validator_outcome: input.replacementValidatorOutcome,
         replacement_criteria: [...input.replacementCriteria],
+        replacement_explicit_uncertainty: input.replacementExplicitUncertainty,
+        replacement_authored_uncertainty_exception_reference:
+          input.replacementAuthoredUncertaintyExceptionReference,
+        replacement_validity: {
+          package_integrity_matches: input.replacementValidity.packageIntegrityMatches,
+          proof_authority_matches: input.replacementValidity.proofAuthorityMatches,
+          contamination_reason_codes: [...input.replacementValidity.contaminationReasonCodes],
+          construct_changing_accommodation: input.replacementValidity.constructChangingAccommodation,
+        },
       },
     });
     return {

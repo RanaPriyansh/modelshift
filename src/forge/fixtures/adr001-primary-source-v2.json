@@ -63,9 +63,9 @@
     "correlation_id": "correlation.primary-source.adr001-fixture",
     "causation_id": "10000000-0000-4000-8000-000000000002",
     "idempotency_key": "idempotency.adr001.fixture.run.primary-source.adr001-fixture.proof",
-    "payload": { "task_id": "loc.washington-street-1937.transfer", "task_version": "1.0.0", "task_family_id": "task-family.primary-source-reasoning.cold-transfer.v1", "representation_id": "representation.primary-source.evidence-layer-classification", "context_id": "context.primary-source.unfamiliar-photograph", "selection_ids": ["washington-catalog-fact", "washington-open-question", "washington-relationship-inference", "washington-visible-detail"], "response_digest": null, "explicit_uncertainty": false, "assistance_access": "removed", "proof_nonce_digest": null, "access_accommodation_ids": [] },
+    "payload": { "task_id": "loc.washington-street-1937.transfer", "task_version": "1.0.0", "task_family_id": "task-family.primary-source-reasoning.cold-transfer.v1", "representation_id": "representation.primary-source.evidence-layer-classification", "context_id": "context.primary-source.unfamiliar-photograph", "selection_ids": ["washington-catalog-fact", "washington-open-question", "washington-relationship-inference", "washington-visible-detail"], "response_digest": null, "explicit_uncertainty": false, "assistance_access": "removed", "proof_nonce_digest": null, "access_accommodations": [] },
     "schema_version": 2,
-    "integrity_hash": "sha256:b10ef82d0726be492d5d97499cd0f0636fe7303aa25ae2c1f5b960548dcf198e"
+    "integrity_hash": "sha256:6e24bdbe76254e44567316b009273bcc90459a4fc21a3320797a6d631f38578a"
   },
   {
     "event_id": "10000000-0000-4000-8000-000000000004",
@@ -84,10 +84,15 @@
       "validator_outcome": "pass",
       "validator_id": "validator.primary-source-reasoning-transfer.v1",
       "validator_version": "1.0.0",
+      "task_id": "loc.washington-street-1937.transfer",
+      "task_version": "1.0.0",
+      "task_family_id": "task-family.primary-source-reasoning.cold-transfer.v1",
+      "representation_id": "representation.primary-source.evidence-layer-classification",
+      "context_id": "context.primary-source.unfamiliar-photograph",
       "criteria": ["On this unfamiliar photograph, the learner independently distinguished a visible detail, catalog metadata, an inference, and an unanswered question."],
       "proof_authority": "honour_based",
       "cognitive_support_event_ids": ["10000000-0000-4000-8000-000000000002"],
-      "access_accommodation_ids": [],
+      "access_accommodations": [],
       "source_bindings": [
         { "domain_source_ref": "loc.primary-source-analysis", "source_item_id": "source.loc.primary-source-analysis", "source_package_id": null, "source_package_version": null, "source_snapshot_digest": null, "locator_ids": [], "claim_ids": [], "rights_record_id": null, "review_decision_ids": [], "provenance_status": "legacy_metadata_only" },
         { "domain_source_ref": "loc.90706156", "source_item_id": "source.loc.picture.90706156", "source_package_id": null, "source_package_version": null, "source_snapshot_digest": null, "locator_ids": [], "claim_ids": [], "rights_record_id": null, "review_decision_ids": [], "provenance_status": "legacy_metadata_only" },
@@ -96,12 +101,13 @@
       "source_provenance_status": "incomplete",
       "response_digest": null,
       "explicit_uncertainty": false,
-      "contamination": { "status": "clear", "reason_codes": [] },
+      "authored_uncertainty_exception_reference": null,
+      "validity": { "package_integrity_matches": true, "proof_authority_matches": true, "contamination_reason_codes": [], "construct_changing_accommodation": false },
       "remains_untested": ["Whether the learner can corroborate conflicting sources.", "Whether the learner can investigate broader context, creator purpose, or bias.", "Whether this distinction is retained after time has passed.", "source-provenance.incomplete", "durability.not-established"],
       "bounded_claim": "On an unfamiliar photograph, the learner independently classifies one observation, one catalog fact, one inference, and one open question after support is removed."
     },
     "schema_version": 2,
-    "integrity_hash": "sha256:42e85d7d10469b86ba40659745231effd30fbc29c412764378c9a1c4cdc2b402"
+    "integrity_hash": "sha256:41727fa13af57432d1cbe37d3435975959153124b2816e1abb6d8a953435149d"
   },
   {
     "event_id": "10000000-0000-4000-8000-000000000005",
