@@ -112,7 +112,8 @@ describe("ModelShiftExperience runtime migration", () => {
     await completeProof();
 
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
-    const receipt = onRuntimeReceipt.mock.calls[0]?.[0];
+    const recording = onRuntimeReceipt.mock.calls[0]?.[0];
+    const receipt = recording.receipt;
     expect(receipt).toMatchObject({
       schemaVersion: "1.1.0",
       cognitiveSupport: [{
@@ -152,7 +153,7 @@ describe("ModelShiftExperience runtime migration", () => {
     await advanceToProof({ fallback: true });
     await completeProof();
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
-    const firstReceipt = onRuntimeReceipt.mock.calls[0]?.[0];
+    const firstReceipt = onRuntimeReceipt.mock.calls[0]?.[0].receipt;
     expect(firstReceipt.cognitiveSupport).toEqual([{
       actionId: "action.force-and-motion.interpretation.fallback.ambiguous-input",
       stage: "interpret_two_readings",
@@ -175,7 +176,7 @@ describe("ModelShiftExperience runtime migration", () => {
     await reachProof({ fallback: true });
     await completeProof();
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(2));
-    const secondReceipt = onRuntimeReceipt.mock.calls[1]?.[0];
+    const secondReceipt = onRuntimeReceipt.mock.calls[1]?.[0].receipt;
     expect(secondReceipt.attemptId).not.toBe(firstReceipt.attemptId);
     ledger = JSON.parse(localStorage.getItem(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY) ?? "{}");
     expect(ledger.entries).toHaveLength(2);

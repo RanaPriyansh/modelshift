@@ -20,6 +20,7 @@ import {
   proportionalReasoningWorldRuntimeAdapter,
   type BoundedLocalWorldRuntimeReceipt,
 } from "../../../forge/world-runtime";
+import type { WorldRuntimeReceiptRecording } from "../../../lib/forge-evidence";
 
 import styles from "./ProportionalReasoningWorld.module.css";
 import {
@@ -54,7 +55,7 @@ export interface ProportionalReasoningWorldProps {
   readonly audience?: RatioAudience;
   readonly onExit?: () => void;
   /** Called once per completed local runtime attempt; never persisted here. */
-  readonly onRuntimeReceipt?: (receipt: BoundedLocalWorldRuntimeReceipt) => void;
+  readonly onRuntimeReceipt?: (recording: WorldRuntimeReceiptRecording) => void;
 }
 
 function ConfidenceControl({
@@ -547,11 +548,14 @@ export function ProportionalReasoningWorld({
   }
 
   useEffect(() => {
-    if (runtime.receipt && emittedReceiptRef.current !== runtime.receipt) {
+    if (runtime.receipt && runtime.proof && emittedReceiptRef.current !== runtime.receipt) {
       emittedReceiptRef.current = runtime.receipt;
-      onRuntimeReceipt?.(runtime.receipt);
+      onRuntimeReceipt?.({
+        receipt: runtime.receipt,
+        validatorInput: proportionalReasoningWorldRuntimeAdapter.validatorInput(runtime.proof),
+      });
     }
-  }, [onRuntimeReceipt, runtime.receipt]);
+  }, [onRuntimeReceipt, runtime.proof, runtime.receipt]);
 
   useEffect(() => {
     mainRef.current?.focus({ preventScroll: true });

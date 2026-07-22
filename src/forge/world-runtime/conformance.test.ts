@@ -11,6 +11,8 @@ import type { PrimarySourceWorldEvent } from "../../worlds/primary-source-reason
 import type { ArgumentEvidenceWorldEvent } from "../../worlds/argument-evidence";
 import type { RatioWorldEvent } from "../../worlds/proportional-reasoning";
 import { packageIntegrityHash, runtimeBindingDigest } from "../../../scripts/ops/release-digests";
+import { getCanonicalDeterministicValidatorRegistration } from "../deterministic-validators";
+import { getInternalCanonicalDeterministicValidatorRegistration } from "../deterministic-validators.internal";
 import { INTERNAL_BUILT_IN_WORLD_PACKS as BUILT_IN_WORLD_PACKS } from "../worlds.internal";
 import type { WorldRuntimeActionKind, WorldRuntimeStage } from "../contracts";
 import {
@@ -29,9 +31,19 @@ import {
   createInternalWorldRuntimeSession,
   dispatchInternalWorldRuntimeCommand,
 } from "./runtime.internal";
+import {
+  createInternalWorldRuntimeSessionCore,
+  dispatchInternalWorldRuntimeCommandCore,
+} from "./runtime-core.internal";
+import {
+  createPublicWorldRuntimeSessionCore,
+  dispatchPublicWorldRuntimeCommandCore,
+} from "./runtime-core.public";
 import { retainedRuntimeIdentityForInternal } from "./retained-runtime-binding.internal";
 import { sourceCorroborationWorldRuntimeAdapter } from "./source-corroboration";
 import * as publicForgeBarrel from "../index";
+import * as internalRuntimeCore from "./runtime-core.internal";
+import * as publicRuntimeCore from "./runtime-core.public";
 import * as publicRuntimeBarrel from "./index";
 import * as publicRuntimeModule from "./runtime";
 
@@ -45,6 +57,14 @@ export type PublicRuntimeCoreAuthorityMustRemainAbsent = import("./runtime").Wor
 export type PublicRuntimeCreateWithAuthorityMustRemainAbsent = typeof import("./runtime").createWorldRuntimeSessionWithAuthority;
 // @ts-expect-error Parametric dispatch must not be publicly importable.
 export type PublicRuntimeDispatchWithAuthorityMustRemainAbsent = typeof import("./runtime").dispatchWorldRuntimeCommandWithAuthority;
+// @ts-expect-error The internal core must not export arbitrary session authority.
+export type InternalCoreCreateWithAuthorityMustRemainAbsent = typeof import("./runtime-core.internal").createWorldRuntimeSessionWithAuthority;
+// @ts-expect-error The internal core must not export arbitrary dispatch authority.
+export type InternalCoreDispatchWithAuthorityMustRemainAbsent = typeof import("./runtime-core.internal").dispatchWorldRuntimeCommandWithAuthority;
+// @ts-expect-error The public core must not export arbitrary session authority.
+export type PublicCoreCreateWithAuthorityMustRemainAbsent = typeof import("./runtime-core.public").createWorldRuntimeSessionWithAuthority;
+// @ts-expect-error The public core must not export arbitrary dispatch authority.
+export type PublicCoreDispatchWithAuthorityMustRemainAbsent = typeof import("./runtime-core.public").dispatchWorldRuntimeCommandWithAuthority;
 
 const EXACT_RECEIPT_TRACE = [
   "encounter",
@@ -71,7 +91,9 @@ interface TerminalObservation {
   readonly phase: string;
   readonly semanticTrace: readonly WorldRuntimeStage[];
   readonly receipt: BoundedLocalWorldRuntimeReceipt | null;
+  readonly validatorInput: unknown;
   readonly attemptId: string;
+  readonly transitions: readonly { readonly accepted: boolean; readonly reason: string | null }[];
 }
 
 interface MalformedObservation {
@@ -114,7 +136,9 @@ interface ConformanceFixture {
   readonly instructionalSupportStructurallyAbsent: boolean;
   readonly pack: WorldRuntimeAdapter<never, never, never>["pack"];
   runTerminal(kind: "pass" | "fail", attemptId?: string): TerminalObservation;
+  runTerminalOnCore(core: "public" | "internal", kind: "pass" | "fail", attemptId: string): TerminalObservation;
   runMalformed(): MalformedObservation;
+  runMalformedOnCore(core: "public" | "internal", attemptId: string): MalformedObservation;
   inspectProofProtection(): ProofProtectionObservation;
   resetCompletedAttempt(): ResetObservation;
 }
@@ -137,25 +161,41 @@ interface FixtureDefinition<State, Event, Proof> {
 }
 
 function defineFixture<State, Event, Proof>(definition: FixtureDefinition<State, Event, Proof>): ConformanceFixture {
-  const createSession = (attemptId?: string) => definition.internalAuthority
-    ? createInternalWorldRuntimeSession(definition.adapter, attemptId)
-    : createWorldRuntimeSession(definition.adapter, attemptId);
+  type CoreSelection = "configured" | "public" | "internal";
+  const createSession = (attemptId?: string, core: CoreSelection = "configured") => core === "public"
+    ? createPublicWorldRuntimeSessionCore(definition.adapter, attemptId)
+    : core === "internal"
+      ? createInternalWorldRuntimeSessionCore(definition.adapter, attemptId)
+      : definition.internalAuthority
+        ? createInternalWorldRuntimeSession(definition.adapter, attemptId)
+        : createWorldRuntimeSession(definition.adapter, attemptId);
   const dispatch = (
     session: ReturnType<typeof createSession>,
     command: RuntimeCommand<Event>,
-  ) => definition.internalAuthority
-    ? dispatchInternalWorldRuntimeCommand(definition.adapter, session, command)
-    : dispatchWorldRuntimeCommand(definition.adapter, session, command);
-  const runEvents = (events: readonly Event[], attemptId?: string): TerminalObservation => {
-    let runtime = createSession(attemptId);
+    core: CoreSelection = "configured",
+  ) => core === "public"
+    ? dispatchPublicWorldRuntimeCommandCore(definition.adapter, session, command)
+    : core === "internal"
+      ? dispatchInternalWorldRuntimeCommandCore(definition.adapter, session, command)
+      : definition.internalAuthority
+        ? dispatchInternalWorldRuntimeCommand(definition.adapter, session, command)
+        : dispatchWorldRuntimeCommand(definition.adapter, session, command);
+  const runEvents = (
+    events: readonly Event[],
+    attemptId?: string,
+    core: CoreSelection = "configured",
+  ): TerminalObservation => {
+    let runtime = createSession(attemptId, core);
     let domainState = definition.adapter.createInitialState();
+    const transitions: Array<{ accepted: boolean; reason: string | null }> = [];
     for (const event of events) {
       const domain = definition.adapter.reduce(domainState, event);
       expect(domain.accepted, domain.accepted ? undefined : domain.reason).toBe(true);
       if (!domain.accepted) throw new Error(`${definition.name} domain fixture rejected: ${domain.reason}`);
       domainState = domain.state;
 
-      const dispatched = dispatch(runtime, { kind: "domain", event });
+      const dispatched = dispatch(runtime, { kind: "domain", event }, core);
+      transitions.push({ accepted: dispatched.accepted, reason: dispatched.accepted ? null : dispatched.reason });
       expect(dispatched.accepted, dispatched.accepted ? undefined : dispatched.reason).toBe(true);
       if (!dispatched.accepted) throw new Error(`${definition.name} runtime fixture rejected: ${dispatched.reason}`);
       runtime = dispatched.session;
@@ -167,14 +207,16 @@ function defineFixture<State, Event, Proof>(definition: FixtureDefinition<State,
       phase: runtime.phase,
       semanticTrace: runtime.semanticTrace,
       receipt: runtime.receipt,
+      validatorInput: runtime.proof === null ? null : definition.adapter.validatorInput(runtime.proof),
       attemptId: runtime.attemptId,
+      transitions,
     };
   };
 
-  const runToProof = () => {
-    let runtime = createSession();
+  const runToProof = (core: CoreSelection = "configured", attemptId?: string) => {
+    let runtime = createSession(attemptId, core);
     for (const event of definition.toProof) {
-      const dispatched = dispatch(runtime, { kind: "domain", event });
+      const dispatched = dispatch(runtime, { kind: "domain", event }, core);
       if (!dispatched.accepted) throw new Error(`${definition.name} proof fixture rejected: ${dispatched.reason}`);
       runtime = dispatched.session;
     }
@@ -197,12 +239,32 @@ function defineFixture<State, Event, Proof>(definition: FixtureDefinition<State,
         ...(kind === "pass" ? definition.passSubmission : definition.failSubmission),
       ], attemptId);
     },
+    runTerminalOnCore(core, kind, attemptId) {
+      return runEvents([
+        ...definition.toProof,
+        ...(kind === "pass" ? definition.passSubmission : definition.failSubmission),
+      ], attemptId, core);
+    },
     runMalformed() {
       const runtime = runToProof();
       const rejected = dispatch(runtime, {
         kind: "domain",
         event: definition.malformedSubmission,
       });
+      return {
+        accepted: rejected.accepted,
+        reason: rejected.accepted ? null : rejected.reason,
+        phase: rejected.session.phase,
+        semanticTrace: rejected.session.semanticTrace,
+        receipt: rejected.session.receipt,
+      };
+    },
+    runMalformedOnCore(core, attemptId) {
+      const runtime = runToProof(core, attemptId);
+      const rejected = dispatch(runtime, {
+        kind: "domain",
+        event: definition.malformedSubmission,
+      }, core);
       return {
         accepted: rejected.accepted,
         reason: rejected.accepted ? null : rejected.reason,
@@ -633,6 +695,28 @@ describe.each(FIXTURES)("$name shared-runtime conformance", (fixture) => {
 });
 
 describe("all released runtime World receipt projection and release identity", () => {
+  it("keeps the sealed public and internal cores behaviorally identical for every public World", () => {
+    const normalizeRecordedAt = (observation: TerminalObservation): TerminalObservation => ({
+      ...observation,
+      receipt: observation.receipt === null
+        ? null
+        : { ...observation.receipt, recordedAt: "2000-01-01T00:00:00.000Z" },
+    });
+
+    for (const fixture of FIXTURES.filter((candidate) => candidate.pack.manifest.availability.status === "available")) {
+      for (const kind of ["pass", "fail"] as const) {
+        const attemptId = `attempt.core-parity-${fixture.worldId.replaceAll(".", "-")}-${kind}`;
+        const publicObservation = fixture.runTerminalOnCore("public", kind, attemptId);
+        const internalObservation = fixture.runTerminalOnCore("internal", kind, attemptId);
+        expect(normalizeRecordedAt(internalObservation)).toEqual(normalizeRecordedAt(publicObservation));
+      }
+      const malformedAttemptId = `attempt.core-parity-${fixture.worldId.replaceAll(".", "-")}-malformed`;
+      expect(fixture.runMalformedOnCore("internal", malformedAttemptId)).toEqual(
+        fixture.runMalformedOnCore("public", malformedAttemptId),
+      );
+    }
+  });
+
   it("keeps arbitrary authority resolvers absent from every public runtime surface", () => {
     const forbiddenRuntimeExports = [
       "createWorldRuntimeSessionWithAuthority",
@@ -641,6 +725,19 @@ describe("all released runtime World receipt projection and release identity", (
     for (const publicSurface of [publicRuntimeModule, publicRuntimeBarrel, publicForgeBarrel]) {
       expect(Object.keys(publicSurface)).not.toEqual(expect.arrayContaining(forbiddenRuntimeExports));
     }
+    for (const fixedCore of [internalRuntimeCore, publicRuntimeCore]) {
+      expect(Object.keys(fixedCore)).not.toEqual(expect.arrayContaining(forbiddenRuntimeExports));
+    }
+    const publicRegistration = getCanonicalDeterministicValidatorRegistration(
+      proportionalReasoningWorldRuntimeAdapter.pack.runtime.proof.validatorId,
+    );
+    const internalRegistration = getInternalCanonicalDeterministicValidatorRegistration(
+      proportionalReasoningWorldRuntimeAdapter.pack.runtime.proof.validatorId,
+    );
+    expect(Object.isFrozen(publicRegistration)).toBe(true);
+    expect(Object.isFrozen(internalRegistration)).toBe(true);
+    expect(Object.isFrozen(publicRegistration?.validator)).toBe(true);
+    expect(Object.isFrozen(internalRegistration?.validator)).toBe(true);
 
     for (const publicSource of [
       resolve(process.cwd(), "src/forge/world-runtime/runtime.ts"),
@@ -651,9 +748,17 @@ describe("all released runtime World receipt projection and release identity", (
         /export\s+(?:interface|type|function|\{[^}]*)(?:InternalWorldRuntimeAuthority|WorldRuntimeAuthority|createWorldRuntimeSessionWithAuthority|dispatchWorldRuntimeCommandWithAuthority)/s,
       );
     }
+    for (const fixedCoreSource of ["runtime-core.public.ts", "runtime-core.internal.ts"]) {
+      expect(readFileSync(
+        resolve(process.cwd(), "src/forge/world-runtime", fixedCoreSource),
+        "utf8",
+      )).not.toMatch(
+        /export\s+(?:interface|type|function)\s+(?:WorldRuntimeAuthority|createWorldRuntimeSessionWithAuthority|dispatchWorldRuntimeCommandWithAuthority)/,
+      );
+    }
   });
 
-  it("rejects forged public validator input before a proved receipt can reach the local ledger", () => {
+  it("rejects direct-core and manual forged passes before either can reach the local ledger", () => {
     const storage = new MemoryStorage();
     vi.stubGlobal("window", { localStorage: storage });
     const forgedAdapter = {
@@ -667,14 +772,14 @@ describe("all released runtime World receipt projection and release identity", (
       confidence: 85,
     };
 
-    let runtime = createWorldRuntimeSession(forgedAdapter, "attempt.public-authority-forgery");
+    let runtime = createInternalWorldRuntimeSessionCore(forgedAdapter, "attempt.internal-core-authority-forgery");
     for (const event of ratioToProof) {
-      const dispatched = dispatchWorldRuntimeCommand(forgedAdapter, runtime, { kind: "domain", event });
+      const dispatched = dispatchInternalWorldRuntimeCommandCore(forgedAdapter, runtime, { kind: "domain", event });
       expect(dispatched.accepted).toBe(true);
       if (!dispatched.accepted) return;
       runtime = dispatched.session;
     }
-    const rejected = dispatchWorldRuntimeCommand(forgedAdapter, runtime, {
+    const rejected = dispatchInternalWorldRuntimeCommandCore(forgedAdapter, runtime, {
       kind: "domain",
       event: successfulTransfer,
     });
@@ -684,11 +789,52 @@ describe("all released runtime World receipt projection and release identity", (
       session: { phase: "proof", receipt: null },
     });
 
-    const recorded = recordWorldRuntimeReceipt(
-      rejected.session.receipt as unknown as BoundedLocalWorldRuntimeReceipt,
-    );
+    const recorded = recordWorldRuntimeReceipt({
+      receipt: rejected.session.receipt as unknown as BoundedLocalWorldRuntimeReceipt,
+      validatorInput: { forged: true },
+    });
     expect(recorded).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
     expect(recorded.ledger.entries).toEqual([]);
+
+    let wrongAnswerRuntime = createInternalWorldRuntimeSessionCore(
+      proportionalReasoningWorldRuntimeAdapter,
+      "attempt.manual-receipt-forgery",
+    );
+    for (const event of [...ratioToProof, {
+      type: "SUBMIT_TRANSFER" as const,
+      choiceId: "24_km" as const,
+      explanation: "I used the same relationship idea, but selected 24 kilometres for this map.",
+      confidence: 60,
+    }]) {
+      const dispatched = dispatchInternalWorldRuntimeCommandCore(
+        proportionalReasoningWorldRuntimeAdapter,
+        wrongAnswerRuntime,
+        { kind: "domain", event },
+      );
+      expect(dispatched.accepted).toBe(true);
+      if (!dispatched.accepted) return;
+      wrongAnswerRuntime = dispatched.session;
+    }
+    if (!wrongAnswerRuntime.receipt || !wrongAnswerRuntime.proof) {
+      throw new Error("Wrong-answer fixture did not produce its bounded fail receipt.");
+    }
+    expect(wrongAnswerRuntime.receipt.validator.outcome).toBe("fail");
+    const manualForgedPass: BoundedLocalWorldRuntimeReceipt = {
+      ...wrongAnswerRuntime.receipt,
+      validator: {
+        ...wrongAnswerRuntime.receipt.validator,
+        code: "forged.pass",
+        outcome: "pass",
+        disposition: "demonstrated",
+        criteria: ["forged"],
+      },
+    };
+    const manualRecording = recordWorldRuntimeReceipt({
+      receipt: manualForgedPass,
+      validatorInput: proportionalReasoningWorldRuntimeAdapter.validatorInput(wrongAnswerRuntime.proof),
+    });
+    expect(manualRecording).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
+    expect(manualRecording.ledger.entries).toEqual([]);
     expect(storage.snapshot()).not.toContain('"outcome":"proved"');
   });
 
@@ -697,13 +843,14 @@ describe("all released runtime World receipt projection and release identity", (
     vi.stubGlobal("window", { localStorage: storage });
 
     for (const [index, fixture] of FIXTURES.entries()) {
-      const receipt = fixture.runTerminal("pass", `attempt.conformance-${index}-${fixture.worldId.replaceAll(".", "-")}`).receipt;
+      const terminal = fixture.runTerminal("pass", `attempt.conformance-${index}-${fixture.worldId.replaceAll(".", "-")}`);
+      const receipt = terminal.receipt;
       if (!receipt) throw new Error(`${fixture.name} did not emit a receipt.`);
       if (fixture.pack.manifest.availability.status === "available") {
-        expect(recordWorldRuntimeReceipt(receipt)).toMatchObject({ ok: true });
-        expect(recordWorldRuntimeReceipt(receipt)).toMatchObject({ ok: false, reason: "duplicate_entry" });
+        expect(recordWorldRuntimeReceipt({ receipt, validatorInput: terminal.validatorInput })).toMatchObject({ ok: true });
+        expect(recordWorldRuntimeReceipt({ receipt, validatorInput: terminal.validatorInput })).toMatchObject({ ok: false, reason: "duplicate_entry" });
       } else {
-        expect(recordWorldRuntimeReceipt(receipt)).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
+        expect(recordWorldRuntimeReceipt({ receipt, validatorInput: terminal.validatorInput })).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
       }
     }
     const persistedLedgerJson = storage.snapshot();

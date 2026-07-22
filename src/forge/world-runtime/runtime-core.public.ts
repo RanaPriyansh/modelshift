@@ -1,7 +1,9 @@
 import type { WorldRuntimeActionKind, WorldRuntimeBinding, WorldRuntimeStage } from "../contracts";
 import type { CanonicalDeterministicValidatorRegistration } from "../deterministic-validators";
-import { validateCanonicalDeterministicResult } from "../deterministic-validators";
-import { getInternalCanonicalDeterministicValidatorRegistration } from "../deterministic-validators.internal";
+import {
+  getCanonicalDeterministicValidatorRegistration,
+  validateCanonicalDeterministicResult,
+} from "../deterministic-validators";
 import { lintWorldRuntimePack } from "./linter";
 import {
   deriveCanonicalValidatorOutcome,
@@ -19,8 +21,10 @@ import {
   WORLD_RUNTIME_PROTOCOL_VERSION,
   WORLD_RUNTIME_RECEIPT_SCHEMA_VERSION,
 } from "./protocol";
-import type { RetainedRuntimeIdentity } from "./retained-runtime-binding";
-import { retainedRuntimeIdentityForInternal } from "./retained-runtime-binding.internal";
+import {
+  retainedRuntimeIdentityFor,
+  type RetainedRuntimeIdentity,
+} from "./retained-runtime-binding";
 
 /** @internal Resolver available only to fixed-authority runtime facades. */
 interface WorldRuntimeAuthority {
@@ -28,9 +32,9 @@ interface WorldRuntimeAuthority {
   retainedRuntimeIdentity(pack: WorldRuntimeAdapter<unknown, unknown, unknown>["pack"]): RetainedRuntimeIdentity | null;
 }
 
-const INTERNAL_WORLD_RUNTIME_AUTHORITY: WorldRuntimeAuthority = Object.freeze({
-  canonicalValidatorRegistration: getInternalCanonicalDeterministicValidatorRegistration,
-  retainedRuntimeIdentity: retainedRuntimeIdentityForInternal,
+const PUBLIC_WORLD_RUNTIME_AUTHORITY: WorldRuntimeAuthority = Object.freeze({
+  canonicalValidatorRegistration: getCanonicalDeterministicValidatorRegistration,
+  retainedRuntimeIdentity: retainedRuntimeIdentityFor,
 });
 
 export interface WorldRuntimeSession<State, DomainProof> {
@@ -587,21 +591,21 @@ function dispatchWorldRuntimeCommandWithAuthority<State, DomainEvent, DomainProo
   return { accepted: true, session: nextSession, effects };
 }
 
-export function createInternalWorldRuntimeSessionCore<State, DomainEvent, DomainProof>(
+export function createPublicWorldRuntimeSessionCore<State, DomainEvent, DomainProof>(
   adapter: WorldRuntimeAdapter<State, DomainEvent, DomainProof>,
   attemptId?: string,
 ): WorldRuntimeSession<State, DomainProof> {
-  return createWorldRuntimeSessionWithAuthority(adapter, INTERNAL_WORLD_RUNTIME_AUTHORITY, attemptId);
+  return createWorldRuntimeSessionWithAuthority(adapter, PUBLIC_WORLD_RUNTIME_AUTHORITY, attemptId);
 }
 
-export function dispatchInternalWorldRuntimeCommandCore<State, DomainEvent, DomainProof>(
+export function dispatchPublicWorldRuntimeCommandCore<State, DomainEvent, DomainProof>(
   adapter: WorldRuntimeAdapter<State, DomainEvent, DomainProof>,
   session: WorldRuntimeSession<State, DomainProof>,
   command: RuntimeCommand<DomainEvent>,
 ): RuntimeDispatchResult<State, DomainProof> {
   return dispatchWorldRuntimeCommandWithAuthority(
     adapter,
-    INTERNAL_WORLD_RUNTIME_AUTHORITY,
+    PUBLIC_WORLD_RUNTIME_AUTHORITY,
     session,
     command,
   );

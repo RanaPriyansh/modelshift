@@ -23,7 +23,10 @@ import {
 } from "@/src/forge/world-runtime";
 import { interpretationApiResponseSchema } from "@/src/lib/ai/schema";
 import { validateInterpretation } from "@/src/lib/ai/validation";
-import { recordWorldRuntimeReceipt } from "@/src/lib/forge-evidence/record-world-runtime-receipt";
+import {
+  recordWorldRuntimeReceipt,
+  type WorldRuntimeReceiptRecording,
+} from "@/src/lib/forge-evidence/record-world-runtime-receipt";
 import type {
   FallbackReason,
   LearningStage,
@@ -422,7 +425,7 @@ function ResultStage({ evidence, interpretation, receipt, onRestart }: {
 
 export interface ModelShiftExperienceProps {
   /** Test/compatibility observation only; the receipt remains local and non-durable. */
-  readonly onRuntimeReceipt?: (receipt: BoundedLocalWorldRuntimeReceipt) => void;
+  readonly onRuntimeReceipt?: (recording: WorldRuntimeReceiptRecording) => void;
 }
 
 export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceProps) {
@@ -474,11 +477,13 @@ export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceP
 
   useEffect(() => {
     const receipt = runtime.receipt;
-    if (!receipt || emittedReceiptRef.current === receipt) return;
+    const proof = runtime.proof;
+    if (!receipt || !proof || emittedReceiptRef.current === receipt) return;
     emittedReceiptRef.current = receipt;
-    recordWorldRuntimeReceipt(receipt);
-    onRuntimeReceipt?.(receipt);
-  }, [onRuntimeReceipt, runtime.receipt]);
+    const recording = { receipt, validatorInput: forceAndMotionWorldRuntimeAdapter.validatorInput(proof) };
+    recordWorldRuntimeReceipt(recording);
+    onRuntimeReceipt?.(recording);
+  }, [onRuntimeReceipt, runtime.proof, runtime.receipt]);
 
   function send(event: LearningEvent) {
     const result = dispatchWorldRuntimeCommand(forceAndMotionWorldRuntimeAdapter, runtimeRef.current, {
