@@ -38,6 +38,7 @@ export type RuntimeDispatchResult<State, DomainProof> =
         | "unknown_runtime_action"
         | "access_not_construct_preserving"
         | "runtime_trace_invalid"
+        | "runtime_support_mismatch"
         | "domain_rejected";
       readonly domainReason?: string;
     };
@@ -109,6 +110,15 @@ function hasCompletedReceiptTrace(trace: readonly WorldRuntimeStage[]): boolean 
     REQUIRED_RECEIPT_SEMANTIC_STAGES.includes(stage as (typeof REQUIRED_RECEIPT_SEMANTIC_STAGES)[number]),
   );
   return REQUIRED_RECEIPT_SEMANTIC_STAGES.every((stage, index) => coreTrace[index] === stage);
+}
+
+function blockedInstructionalSupportSession<State, DomainProof>(
+  session: WorldRuntimeSession<State, DomainProof>,
+): WorldRuntimeSession<State, DomainProof> {
+  return Object.freeze({
+    ...session,
+    proofBlockedActions: appendOnce(session.proofBlockedActions, "instructional_support"),
+  });
 }
 
 function receiptFor<State, DomainEvent, DomainProof>(
@@ -198,7 +208,10 @@ export function createWorldRuntimeSession<State, DomainEvent, DomainProof>(
   return Object.freeze({
     state,
     phase: adapter.phase(state),
-    semanticTrace: [adapter.initialSemanticStage(state)],
+    // The runtime, rather than a domain adapter, owns the invariant that
+    // every attempt begins at encounter. Retain the adapter field for API
+    // compatibility while refusing to let it seed a forged trace.
+    semanticTrace: ["encounter"],
     cognitiveSupport: [],
     accessAccommodations: [],
     proofBlockedActions: [],
@@ -241,11 +254,19 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
     return { accepted: false, session: blockedSession, reason: "proof_action_blocked" };
   }
 
-  if (command.kind === "model_action") {
+  if (commandKind === "model_action") {
     return { accepted: false, session, reason: "model_action_disallowed" };
   }
 
-  if (command.kind === "experience_replay") {
+  if (commandKind === "experience_replay") {
+    return { accepted: false, session, reason: "runtime_action_unavailable" };
+  }
+
+  if (commandKind === "access_accommodation" && command.kind !== "access_accommodation") {
+    return { accepted: false, session, reason: "runtime_action_unavailable" };
+  }
+
+  if (commandKind === "return_proof" && !adapter.pack.runtime.returnProof.enabled) {
     return { accepted: false, session, reason: "runtime_action_unavailable" };
   }
 
@@ -277,6 +298,12 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
     return { accepted: true, session: nextSession, effects: ["access_recorded"] };
   }
 
+  // The action wrappers above are terminal. Keep this explicit narrowing so
+  // domain reduction is impossible for every non-domain command shape.
+  if (command.kind !== "domain") {
+    return { accepted: false, session, reason: "runtime_action_unavailable" };
+  }
+
   const transition = adapter.reduce(session.state, command.event);
   if (!transition.accepted) {
     return {
@@ -295,6 +322,26 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
   if (commandKind === "reset") {
     return { accepted: true, session: createWorldRuntimeSession(adapter), effects: [] };
   }
+  const support = adapter.supportEvent(command.event, transition.state);
+  const isInstructionalSupport = commandKind === "instructional_support";
+  const supportTouchesProtectedPhase = session.phase !== "learning" || phase !== "learning";
+  if (isInstructionalSupport && supportTouchesProtectedPhase) {
+    return {
+      accepted: false,
+      session: blockedInstructionalSupportSession(session),
+      reason: "proof_action_blocked",
+    };
+  }
+  if ((support !== null) !== isInstructionalSupport) {
+    if (support !== null && supportTouchesProtectedPhase) {
+      return {
+        accepted: false,
+        session: blockedInstructionalSupportSession(session),
+        reason: "proof_action_blocked",
+      };
+    }
+    return { accepted: false, session, reason: "runtime_support_mismatch" };
+  }
   const semanticTrace = appendValidatedSemanticStages(
     session.semanticTrace,
     adapter.semanticStages(command.event, session.state, transition.state),
@@ -302,7 +349,6 @@ export function dispatchWorldRuntimeCommand<State, DomainEvent, DomainProof>(
   if (!semanticTrace) {
     return { accepted: false, session, reason: "runtime_trace_invalid" };
   }
-  const support = adapter.supportEvent(command.event, transition.state);
   const proof = adapter.proof(transition.state);
   if (proof && !session.receipt && (phase !== "bounded_result" || !hasCompletedReceiptTrace(semanticTrace))) {
     return { accepted: false, session, reason: "runtime_trace_invalid" };
