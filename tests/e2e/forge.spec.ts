@@ -77,6 +77,13 @@ const ROUTES: readonly RouteCase[] = [
     heading: /Proof should say exactly what happened\./i,
     world: false,
   },
+  {
+    path: "/pathways",
+    slug: "pathways",
+    title: /Current availability — FORGE/i,
+    heading: /What FORGE can—and cannot—offer today\./i,
+    world: false,
+  },
 ] as const;
 
 function capturePageFailures(page: Page): string[] {
@@ -228,6 +235,25 @@ test.describe("FORGE cross-route release contract", () => {
       expect(failures).toEqual([]);
     });
   }
+
+  test("pathway availability exposes four released mappings and five non-actionable gaps", async ({ page }) => {
+    const failures = capturePageFailures(page);
+    await page.goto("/pathways");
+
+    const map = page.getByRole("list", { name: "Current pathway availability by entitlement area" });
+    await expect(map).toBeVisible();
+    await expect(map.getByText("Released capability", { exact: true })).toHaveCount(4);
+    await expect(map.getByText("Identified gap", { exact: true })).toHaveCount(5);
+    await expect(map.getByRole("link", { name: /Open .+ World/ })).toHaveCount(4);
+    await expect(page.getByText("Not a curriculum. Not a recommendation.")).toBeVisible();
+
+    for (const area of ["language-literacy", "arts-design", "practical-life", "civic-media", "health-movement"]) {
+      const gap = page.getByTestId(`pathway-identified-gap-${area}`);
+      await expect(gap.getByRole("link")).toHaveCount(0);
+      await expect(gap).not.toContainText(/return proof|recommended|schedule/i);
+    }
+    expect(failures).toEqual([]);
+  });
 
   test("home planner renders grounded and exploratory paths from real typed questions", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "Planner semantics are viewport-independent; home layout runs in both projects.");

@@ -11,6 +11,7 @@ const ROUTES = [
   { path: "/learn/primary-source-reasoning", heading: "What can this photograph prove?", main: "#world-content" },
   { path: "/evidence", heading: "Proof should say exactly what happened.", main: "#forge-main" },
   { path: "/trail", heading: "A map of questions and evidence—not a level.", main: "#forge-main" },
+  { path: "/pathways", heading: "What FORGE can—and cannot—offer today.", main: "#forge-main" },
 ] as const;
 
 const CHILD_CAPABLE_WORLD_PATHS = new Set([
@@ -27,6 +28,8 @@ const CONTRAST_SAMPLES = [
   { route: "/", name: "Home primary action", selector: ".forge-primary-action" },
   { route: "/studio", name: "Studio dark-instrument heading", selector: ".lesson-studio-heading h1" },
   { route: "/studio", name: "Studio muted instrument text", selector: ".lesson-studio-heading > p" },
+  { route: "/pathways", name: "Pathways availability heading", selector: ".forge-pathways-hero h1" },
+  { route: "/pathways", name: "Pathways boundary text", selector: ".forge-pathways-boundary p" },
 ] as const;
 
 type ContrastSample = (typeof CONTRAST_SAMPLES)[number];
@@ -239,20 +242,23 @@ test.describe("FORGE Packet A experience system", () => {
       expect(await page.evaluate(() => document.activeElement?.id), `${route.path} skip target`).toBe(route.main.slice(1));
     }
 
-    await page.goto("/");
-    const visibleActionNames = await page.evaluate(() => {
-      const visible = (element: Element) => {
-        const styles = getComputedStyle(element);
-        const bounds = element.getBoundingClientRect();
-        return styles.display !== "none" && styles.visibility !== "hidden" && bounds.width > 0 && bounds.height > 0;
-      };
-      return Array.from(document.querySelectorAll<HTMLElement>("a, button"))
-        .filter(visible)
-        .map((element) => element.getAttribute("aria-label") ?? element.textContent?.trim() ?? "")
-        .filter(Boolean);
-    });
-    expect(visibleActionNames).toHaveLength(new Set(visibleActionNames).size);
+    for (const route of ["/", "/pathways"]) {
+      await page.goto(route);
+      const visibleActionNames = await page.evaluate(() => {
+        const visible = (element: Element) => {
+          const styles = getComputedStyle(element);
+          const bounds = element.getBoundingClientRect();
+          return styles.display !== "none" && styles.visibility !== "hidden" && bounds.width > 0 && bounds.height > 0;
+        };
+        return Array.from(document.querySelectorAll<HTMLElement>("a, button"))
+          .filter(visible)
+          .map((element) => element.getAttribute("aria-label") ?? element.textContent?.trim() ?? "")
+          .filter(Boolean);
+      });
+      expect(visibleActionNames, `${route} visible action names`).toHaveLength(new Set(visibleActionNames).size);
+    }
 
+    await page.goto("/");
     const question = page.getByRole("textbox", { name: "Your question" });
     await question.fill("Why does motion continue after a push ends?");
     await expect(question).toHaveValue("Why does motion continue after a push ends?");
@@ -294,6 +300,10 @@ test.describe("FORGE Packet A experience system", () => {
     await page.reload();
     expect(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)).toBe(true);
     await expect(page.getByRole("heading", { name: "What do you want to understand?" })).toBeVisible();
+    await page.goto("/pathways");
+    await expect(page.getByRole("heading", { name: "What FORGE can—and cannot—offer today." })).toBeVisible();
+    await expect(page.getByText("Released capability", { exact: true }).first()).toBeVisible();
+    await page.goto("/");
     const skip = page.locator(".forge-skip-link");
     await page.keyboard.press("Tab");
     await expect(skip).toBeFocused();
