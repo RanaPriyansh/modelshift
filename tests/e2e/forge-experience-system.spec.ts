@@ -303,6 +303,61 @@ test.describe("FORGE Packet A experience system", () => {
     await page.goto("/pathways");
     await expect(page.getByRole("heading", { name: "What FORGE can—and cannot—offer today." })).toBeVisible();
     await expect(page.getByText("Released capability", { exact: true }).first()).toBeVisible();
+    const pathwayAction = page.getByRole("link", { name: "Open Force & motion World" });
+    await expect(pathwayAction).toBeVisible();
+    await tabTo(page, '[href="/learn/force-and-motion"]', 16);
+    await expect(pathwayAction).toBeFocused();
+    const pathwayForcedColors = await page.evaluate(() => {
+      type Rgb = [number, number, number];
+
+      const parseColor = (value: string): Rgb => {
+        const channels = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [];
+        if (channels.length !== 3) throw new Error(`Unable to parse rendered color: ${value}`);
+        return [channels[0], channels[1], channels[2]];
+      };
+      const luminance = ([red, green, blue]: Rgb) => {
+        const channels = [red, green, blue].map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+      };
+      const ratio = (foreground: string, background: string) => {
+        const [lighter, darker] = [luminance(parseColor(foreground)), luminance(parseColor(background))]
+          .sort((left, right) => right - left);
+        return (lighter + 0.05) / (darker + 0.05);
+      };
+      const inheritedBackground = (element: HTMLElement) => {
+        for (let current: HTMLElement | null = element; current; current = current.parentElement) {
+          const background = getComputedStyle(current).backgroundColor;
+          if (!background.endsWith(", 0)")) return background;
+        }
+        return "rgb(255, 255, 255)";
+      };
+      const boundary = document.querySelector<HTMLElement>(".forge-pathways-boundary");
+      const action = document.querySelector<HTMLElement>('[href="/learn/force-and-motion"]');
+      if (!boundary || !action) throw new Error("Pathway forced-colors representatives are missing");
+      const boundaryStyle = getComputedStyle(boundary);
+      const actionStyle = getComputedStyle(action);
+      return {
+        actionBorderRatio: ratio(actionStyle.borderTopColor, inheritedBackground(action)),
+        actionBorderWidth: Number.parseFloat(actionStyle.borderTopWidth),
+        actionFocusOutlineRatio: ratio(actionStyle.outlineColor, inheritedBackground(action)),
+        actionFocusOutlineStyle: actionStyle.outlineStyle,
+        actionFocusOutlineWidth: Number.parseFloat(actionStyle.outlineWidth),
+        actionTextRatio: ratio(actionStyle.color, inheritedBackground(action)),
+        boundaryBorderRatio: ratio(boundaryStyle.borderTopColor, inheritedBackground(boundary)),
+        boundaryBorderWidth: Number.parseFloat(boundaryStyle.borderTopWidth),
+      };
+    });
+    expect(pathwayForcedColors.boundaryBorderWidth).toBeGreaterThanOrEqual(1);
+    expect(pathwayForcedColors.boundaryBorderRatio).toBeGreaterThanOrEqual(3);
+    expect(pathwayForcedColors.actionBorderWidth).toBeGreaterThanOrEqual(1);
+    expect(pathwayForcedColors.actionBorderRatio).toBeGreaterThanOrEqual(3);
+    expect(pathwayForcedColors.actionTextRatio).toBeGreaterThanOrEqual(4.5);
+    expect(pathwayForcedColors.actionFocusOutlineStyle).not.toBe("none");
+    expect(pathwayForcedColors.actionFocusOutlineWidth).toBeGreaterThanOrEqual(2);
+    expect(pathwayForcedColors.actionFocusOutlineRatio).toBeGreaterThanOrEqual(3);
     await page.goto("/");
     const skip = page.locator(".forge-skip-link");
     await page.keyboard.press("Tab");

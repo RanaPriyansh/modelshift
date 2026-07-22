@@ -19,6 +19,9 @@ export type PublicPathwayAvailability =
       readonly area: PathwayEntitlementArea;
       readonly areaLabel: string;
       readonly status: "released-capability";
+      readonly capability: {
+        readonly title: string;
+      };
       readonly world: {
         readonly title: string;
         readonly route: string;
@@ -69,6 +72,17 @@ function releasedPackFor(worldId: string) {
   return pack;
 }
 
+function releasedCapabilityFor(
+  pack: ReturnType<typeof releasedPackFor>,
+  capabilityId: string,
+) {
+  const capability = pack.capabilities.find((candidate) => candidate.id === capabilityId);
+  if (!capability) {
+    throw new Error(`Pathway availability needs a released capability definition for ${capabilityId}.`);
+  }
+  return capability;
+}
+
 /**
  * Server-only presentation projection of Packet C's frozen, released catalog.
  * It deliberately contains availability and named gaps only: no learner input,
@@ -79,6 +93,7 @@ export function getCurrentPathwayAvailability(): readonly PublicPathwayAvailabil
 
   for (const capability of CURRENT_FORGE_PATHWAY_CATALOG.capabilities) {
     const pack = releasedPackFor(capability.worldId);
+    const releasedCapability = releasedCapabilityFor(pack, capability.capabilityId);
     const ageModes = capability.ageModes.map((ageMode) => {
       const sourcePolicy = capability.sourcePoliciesByAge[ageMode];
       if (!sourcePolicy) throw new Error(`Pathway availability needs a source policy for ${capability.capabilityId}.`);
@@ -99,6 +114,9 @@ export function getCurrentPathwayAvailability(): readonly PublicPathwayAvailabil
         area,
         areaLabel: AREA_LABELS[area],
         status: "released-capability",
+        capability: {
+          title: releasedCapability.title,
+        },
         world: {
           title: pack.manifest.title,
           route: pack.manifest.route,

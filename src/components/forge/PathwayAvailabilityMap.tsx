@@ -16,6 +16,11 @@ export function PathwayAvailabilityMap({
 }) {
   const releasedCount = availability.filter((entry) => entry.status === "released-capability").length;
   const gapCount = availability.length - releasedCount;
+  const mappingLabel = releasedCount === 1 ? "mapping" : "mappings";
+  const mappingVerb = releasedCount === 1 ? "appears" : "appear";
+  const areaLabel = availability.length === 1 ? "area" : "areas";
+  const gapLabel = gapCount === 1 ? "gap" : "gaps";
+  const gapVerb = gapCount === 1 ? "remains" : "remain";
 
   return (
     <main className="forge-pathways-page" id="forge-main" tabIndex={-1}>
@@ -23,16 +28,16 @@ export function PathwayAvailabilityMap({
         <ForgeKicker>Current availability</ForgeKicker>
         <h1>What FORGE can—and cannot—offer today.</h1>
         <p>
-          Four released capabilities are mapped to four of nine entitlement areas. The remaining gaps stay visible instead of
+          {releasedCount} released {mappingLabel} {mappingVerb} across {availability.length} entitlement {areaLabel}. {gapCount} identified {gapLabel} {gapVerb} visible instead of
           being filled with a course list, a generated lesson, or a promise.
         </p>
       </header>
 
       <aside className="forge-pathways-boundary" aria-labelledby="pathways-boundary-title">
         <ForgeStatus tone="quiet">Availability map only</ForgeStatus>
-        <h2 id="pathways-boundary-title">Not a curriculum. Not a recommendation.</h2>
+        <h2 id="pathways-boundary-title">Not a curriculum, recommendation, or coverage claim.</h2>
         <p>
-          This map names current released capability coverage and explicit absences. It does not set a pace, grade level,
+          This map lists current released mappings and explicit absences. It is not a coverage claim and does not set a pace, grade level,
           sequence, prerequisite, personal path, completion status, or homeschool decision.
         </p>
       </aside>
@@ -42,7 +47,7 @@ export function PathwayAvailabilityMap({
           id="pathways-map-title"
           label="Nine-area entitlement ledger"
           title="Released capability and identified gap stay equally visible."
-          description={`${releasedCount} released mappings · ${gapCount} identified gaps · no area is silently counted as covered.`}
+          description={`${releasedCount} released mappings · ${gapCount} identified gaps · no missing area is hidden.`}
         />
         <ol className="forge-pathways-list" aria-label="Current pathway availability by entitlement area">
           {availability.map((entry, index) => (
@@ -54,7 +59,7 @@ export function PathwayAvailabilityMap({
               <span className="forge-pathway-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
               <div className="forge-pathway-main">
                 <p className="forge-pathway-area">{entry.areaLabel}</p>
-                <h3>{entry.status === "released-capability" ? entry.world.title : "No released World yet"}</h3>
+                <h3>{entry.status === "released-capability" ? entry.capability.title : "No released capability yet"}</h3>
                 {entry.status === "released-capability" ? (
                   <>
                     <ForgeStatus tone="evidence">Released capability</ForgeStatus>
