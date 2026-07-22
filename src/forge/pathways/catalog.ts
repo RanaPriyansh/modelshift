@@ -2,17 +2,26 @@ import { BUILT_IN_WORLD_PACKS } from "../worlds";
 
 import type { SafetyPolicy } from "../contracts";
 
-import { pathwayCapabilityCatalogSchema, type PathwayCapabilityCatalog, type PathwaySourcePolicy } from "./contracts";
+import {
+  pathwayCapabilityCatalogSchema,
+  type PathwayCapabilityCatalog,
+  type PathwayEntitlementArea,
+  type PathwaySourcePolicy,
+} from "./contracts";
 
 const EVIDENCE_EVENT_TYPES = [
   "world_run.started",
   "attempt.committed",
-  "assistance.recorded",
-  "proof.submitted",
   "evidence.recorded",
   "world_run.completed",
-  "world_run.corrected",
 ] as const;
+
+const REVIEWED_ENTITLEMENT_AREAS: Readonly<Record<string, readonly PathwayEntitlementArea[]>> = {
+  "capability.force-motion.zero-net-force": ["science"],
+  "capability.proportional-reasoning.compare-and-scale": ["mathematics"],
+  "capability.ai-literacy.source-corroboration": ["computing-ai"],
+  "capability.historical-literacy.observation-inference": ["history-source-reasoning"],
+};
 
 function sourcePolicyFor(
   ageMode: "under-13" | "13-17" | "18-plus",
@@ -21,6 +30,12 @@ function sourcePolicyFor(
   if (manifest.safety.retrievalMode === "none") return "authored_only";
   if (manifest.safety.retrievalMode === "open-web") return "open_web";
   return ageMode === "under-13" && manifest.safety.guardianManaged ? "guardian_curated" : "curated";
+}
+
+function entitlementAreasFor(capabilityId: string): readonly PathwayEntitlementArea[] {
+  const areas = REVIEWED_ENTITLEMENT_AREAS[capabilityId];
+  if (!areas) throw new Error(`Released capability ${capabilityId} needs a reviewed entitlement-area mapping.`);
+  return areas;
 }
 
 /**
@@ -36,9 +51,12 @@ export const CURRENT_FORGE_PATHWAY_CATALOG: PathwayCapabilityCatalog = Object.fr
       return pack.manifest.capabilityIds.map((capabilityId) => ({
         capabilityId,
         worldId: pack.manifest.id,
+        entitlementAreas: entitlementAreasFor(capabilityId),
         ageModes: [...pack.manifest.ageModes],
         evidenceTier: pack.manifest.evidenceTier,
-        sourcePolicies: [...new Set(pack.manifest.ageModes.map((ageMode) => sourcePolicyFor(ageMode, pack.manifest)))],
+        sourcePoliciesByAge: Object.fromEntries(
+          pack.manifest.ageModes.map((ageMode) => [ageMode, sourcePolicyFor(ageMode, pack.manifest)]),
+        ),
         sourceIds: pack.manifest.sources.map((source) => source.id),
         evidenceEventTypes: [...EVIDENCE_EVENT_TYPES],
         guardianManaged: pack.manifest.safety.guardianManaged,

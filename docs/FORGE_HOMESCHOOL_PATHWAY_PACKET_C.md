@@ -2,7 +2,7 @@
 
 ## Architecture summary
 
-`src/forge/pathways/` is a deterministic, in-process review contract. It projects only released current World manifests into a capability catalog, then evaluates a supplied review packet against broad entitlement, learner-agency, access, consent/assent, relationships, protection, portability, foundations, coercion, anti-gamification, source, and evidence boundaries.
+`src/forge/pathways/` is a deterministic, in-process review contract. It projects only released current World manifests into a capability catalog, with an explicit reviewed entitlement-area mapping and exact source policy for each supported learner age mode. It then evaluates a supplied review packet against broad entitlement, learner-agency, access, consent/assent, relationships, protection, portability, foundations, coercion, anti-gamification, source, and evidence boundaries.
 
 The evaluator has two outputs only: `needs-evidence` and `evidence-complete-for-independent-review`. The latter says the packet names the required evidence and limitations for an independent reviewer. It does not make a conclusion about learning effects, safety, legal compliance, pathway quality, recognition, or the sufficiency of an offline setting.
 
@@ -10,8 +10,9 @@ The evaluator has two outputs only: `needs-evidence` and `evidence-complete-for-
 
 - S0 pure logic only: no database, identity, registry server, scheduler, model, network, UI, or event write.
 - The catalog is a read-only projection of `BUILT_IN_WORLD_PACKS`; it does not turn the four released Worlds into a comprehensive program.
+- A capability can appear only in its named reviewed entitlement area. Reuse is rejected unless a future catalog record explicitly names more than one area.
 - Device age mode, device guardian-present preference, consent grant IDs, and relationship declarations are not treated as verified authority. They are review evidence to be independently checked.
-- Current event vocabulary is referenced exactly through `FORGE_EVENT_TYPES`; the packet emits no event and adds no event type.
+- Current event vocabulary is referenced exactly through `FORGE_EVENT_TYPES`; claim kinds accept only semantically compatible lifecycle/attempt or bounded-result event types. The packet emits no event and adds no event type.
 - The packet contains no jurisdiction, accreditation, attendance, credential, or suitability conclusion.
 - The contract rejects points, badges, streaks, leaderboards, comparative rank, completion races, engagement quotas, pause penalties, and guilt/urgency nudges.
 
@@ -29,7 +30,7 @@ The entitlement areas are a breadth ledger, not claims that equivalent packages 
 
 | Component | Side-effect class | Responsibility |
 | --- | --- | --- |
-| `catalog.ts` | S0 read-only projection | Maps released World manifests to current capability IDs, learner modes, tiers, sources, and existing event types. |
+| `catalog.ts` | S0 read-only projection | Maps released World manifests to current capability IDs, reviewed entitlement areas, age-specific source policies, tiers, sources, and existing event types. |
 | `review.ts` | S0 deterministic evaluation | Returns issue records and one of the two bounded statuses. |
 | Caller | outside Packet C | Obtains human review, verifies authority/relationships, chooses any operational consent process, and persists/export evidence. |
 
@@ -37,7 +38,7 @@ No state or memory is retained by Packet C. Callers provide packets and may prov
 
 ## Failure modes and evaluation plan
 
-The fixture suite asserts a complete-for-review packet across all three current learner modes and deterministic `needs-evidence` cases for breadth, agency, access, consent/assent, relationships, protection, portability, foundations, coercion, hidden gamification, invalid evidence claims, child open-web access, invented capability IDs, unsupported sources, and extra LMS state.
+The fixture suite asserts a complete-for-review packet across all three current learner modes and deterministic `needs-evidence` cases for breadth, entitlement substitution, duplicate capability reuse, per-age source-policy substitution, cloned duplicate objects, claim/event mismatch, agency, access, consent/assent, relationships, protection, portability, foundations, coercion, hidden gamification, invalid evidence claims, child open-web access, invented capability IDs, unsupported sources, and extra LMS state.
 
 The contract deliberately stops at inspectable packet completeness. A follow-on owner would need separate operational evidence for human review quality, offline relationships, safeguarding, disability support, portability execution, and any lawful local requirements.
 

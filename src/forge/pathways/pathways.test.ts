@@ -11,6 +11,15 @@ import { evaluatePathwayReviewPacket } from "./review";
 
 const REVIEWED_AT = "2026-07-22T12:00:00.000Z";
 
+function sourcePolicyForAge(
+  capability: (typeof CURRENT_FORGE_PATHWAY_CATALOG.capabilities)[number],
+  ageMode: PathwayReviewPacket["ageMode"],
+) {
+  const sourcePolicy = capability.sourcePoliciesByAge[ageMode];
+  if (!sourcePolicy) throw new Error(`Fixture capability is missing a source policy for ${ageMode}.`);
+  return sourcePolicy;
+}
+
 function packetFor(ageMode: PathwayReviewPacket["ageMode"] = "13-17"): PathwayReviewPacket {
   const eligible = CURRENT_FORGE_PATHWAY_CATALOG.capabilities.filter((capability) => capability.ageModes.includes(ageMode));
   const byArea: ReadonlyMap<string, (typeof eligible)[number] | undefined> = new Map([
@@ -46,7 +55,7 @@ function packetFor(ageMode: PathwayReviewPacket["ageMode"] = "13-17"): PathwayRe
         capabilityId: capability.capabilityId,
         worldId: capability.worldId,
         evidenceTier: capability.evidenceTier,
-        sourcePolicy: capability.sourcePolicies[0],
+        sourcePolicy: sourcePolicyForAge(capability, ageMode),
         learnerPosition: "chosen" as const,
       };
     }),
@@ -132,6 +141,12 @@ describe("FORGE Packet C pathway review", () => {
       "capability.proportional-reasoning.compare-and-scale",
       "capability.historical-literacy.observation-inference",
     ].sort());
+    expect(CURRENT_FORGE_PATHWAY_CATALOG.capabilities.map((capability) => [capability.capabilityId, capability.entitlementAreas])).toEqual([
+      ["capability.force-motion.zero-net-force", ["science"]],
+      ["capability.proportional-reasoning.compare-and-scale", ["mathematics"]],
+      ["capability.ai-literacy.source-corroboration", ["computing-ai"]],
+      ["capability.historical-literacy.observation-inference", ["history-source-reasoning"]],
+    ]);
     expect(CURRENT_FORGE_PATHWAY_CATALOG.capabilities.every((capability) => capability.evidenceEventTypes.includes("evidence.recorded"))).toBe(true);
   });
 
@@ -186,6 +201,64 @@ describe("FORGE Packet C pathway review", () => {
     published.capabilityId = "capability.invented.fixture";
     packet.evidenceClaims[0] = { ...packet.evidenceClaims[0], sourceIds: ["source.invented.fixture"] };
     expect(issueCodes(packet)).toEqual(expect.arrayContaining(["capability.unknown", "evidence.source-mismatch"]));
+  });
+
+  it("rejects entitlement substitution and duplicate capability reuse", () => {
+    const packet = packetFor();
+    const science = packet.entitlements.find((entry) => entry.area === "science");
+    const mathematicsIndex = packet.entitlements.findIndex((entry) => entry.area === "mathematics");
+    if (!science || science.state !== "published-capability" || mathematicsIndex < 0) {
+      throw new Error("Fixture needs published science and mathematics entries.");
+    }
+    packet.entitlements[mathematicsIndex] = { ...science, area: "mathematics" };
+
+    expect(issueCodes(packet)).toEqual(expect.arrayContaining([
+      "capability.entitlement-area-ineligible",
+      "capability.duplicate-reuse",
+    ]));
+  });
+
+  it.each([
+    ["under-13", "guardian_curated", "curated"],
+    ["13-17", "curated", "guardian_curated"],
+    ["18-plus", "curated", "guardian_curated"],
+  ] as const)("rejects %s policy substitution for the primary-source World", (ageMode, expectedPolicy, invalidPolicy) => {
+    const packet = packetFor(ageMode);
+    const primarySource = packet.entitlements.find((entry) => entry.area === "history-source-reasoning");
+    if (!primarySource || primarySource.state !== "published-capability") throw new Error("Fixture needs primary-source coverage.");
+    expect(primarySource.sourcePolicy).toBe(expectedPolicy);
+    primarySource.sourcePolicy = invalidPolicy;
+    expect(issueCodes(packet)).toContain("capability.source-policy-ineligible");
+  });
+
+  it.each([
+    ["deterministic result", "deterministic-result-recorded", "world_run.started"],
+    ["participation", "participation-recorded", "evidence.recorded"],
+  ] as const)("rejects a semantically impossible %s claim/event pairing", (_name, claimKind, eventType) => {
+    const packet = packetFor();
+    packet.evidenceClaims[0] = { ...packet.evidenceClaims[0], claimKind, eventType };
+    expect(issueCodes(packet)).toContain("evidence.claim-event-mismatch");
+  });
+
+  it.each([
+    ["catalog capability ID", () => ({
+      ...CURRENT_FORGE_PATHWAY_CATALOG,
+      capabilities: [...CURRENT_FORGE_PATHWAY_CATALOG.capabilities, structuredClone(CURRENT_FORGE_PATHWAY_CATALOG.capabilities[0])],
+    })],
+    ["entitlement area", (packet: PathwayReviewPacket) => {
+      packet.entitlements.push(structuredClone(packet.entitlements[0]));
+      return CURRENT_FORGE_PATHWAY_CATALOG;
+    }],
+    ["evidence claim ID", (packet: PathwayReviewPacket) => {
+      packet.evidenceClaims.push(structuredClone(packet.evidenceClaims[0]));
+      return CURRENT_FORGE_PATHWAY_CATALOG;
+    }],
+  ])("rejects cloned duplicate %s objects", (_name, duplicate) => {
+    const packet = packetFor();
+    const catalog = duplicate(packet);
+    const result = evaluatePathwayReviewPacket(packet, catalog);
+    expect(result.status).toBe("needs-evidence");
+    expect(result.issues.map((issue) => issue.code)).toContain("schema.invalid");
   });
 
   it("fails closed on undeclared LMS state through the strict packet schema", () => {
