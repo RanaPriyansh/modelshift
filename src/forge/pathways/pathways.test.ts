@@ -389,6 +389,9 @@ describe("FORGE Packet C pathway review", () => {
   it.each([
     "This record does not establish delayed retention or far transfer.",
     "This is not a school replacement.",
+    "This is not a school replacement",
+    "This record does not establish mastery, delayed retention, or far transfer.",
+    "This record does not establish mastery, delayed retention and far transfer",
   ])("allows an explicit bounded limitation: %s", (statement) => {
     const packet = packetFor();
     packet.evidenceClaims[0] = { ...packet.evidenceClaims[0], statement };
