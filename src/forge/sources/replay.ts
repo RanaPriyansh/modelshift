@@ -4,8 +4,10 @@ import { canonicalJson, forgeEventDigestSchema, sha256Digest } from "../events";
 import {
   SOURCE_PRODUCT_USES,
   SOURCE_AUTHORITY_SCHEMA_VERSION,
+  canonicalCodeUnitCompare,
   sourceAuthorityPackageDigest,
   sourceAuthorityPackageSchema,
+  sourceReviewPolicyDigest,
   sourceReviewPolicySchema,
   sourceSnapshotBytes,
   verifySourceSnapshot,
@@ -109,13 +111,16 @@ export type SourceDependentCandidate = z.infer<typeof sourceDependentCandidateSc
 export const SOURCE_AUTHORITY_ISSUE_CODES = [
   "schema.invalid",
   "policy.invalid",
+  "policy.digest-mismatch",
   "policy.mismatch",
   "package.digest-mismatch",
   "snapshot.invalid-bytes",
   "snapshot.digest-mismatch",
+  "snapshot.observed-after-as-of",
   "locator.snapshot-mismatch",
   "locator.outside-snapshot",
   "locator.text-not-found",
+  "locator.text-ambiguous",
   "locator.locally-unverifiable",
   "claim.source-missing",
   "claim.locator-missing",
@@ -126,6 +131,9 @@ export const SOURCE_AUTHORITY_ISSUE_CODES = [
   "review.scope-impersonation",
   "review.self-review",
   "review.expired",
+  "review.decided-after-as-of",
+  "review.invalid-validity-window",
+  "review.snapshot-after-decision",
   "review.target-missing",
   "review.artifact-binding-missing",
   "review.incomplete",
@@ -136,8 +144,13 @@ export const SOURCE_AUTHORITY_ISSUE_CODES = [
   "event.package-binding-invalid",
   "event.correction-rewrite",
   "event.rights-expiry-invalid",
+  "event.occurred-after-as-of",
+  "event.snapshot-after-event",
+  "event.duplicate-id",
+  "event.duplicate-lifecycle-id",
   "event.target-missing",
   "candidate.binding-invalid",
+  "candidate.duplicate-id",
 ] as const;
 
 export type SourceAuthorityIssueCode = (typeof SOURCE_AUTHORITY_ISSUE_CODES)[number];
@@ -155,6 +168,7 @@ export interface SourceAuthorityReplayResult {
   readonly sourceAuthenticity: "not-established";
   readonly durableStorage: "not-established";
   readonly accountableHumanApproval: "not-established";
+  readonly rightsClearance: "not-established";
   readonly invalidatedCandidates: readonly {
     readonly candidateId: string;
     readonly reasons: readonly string[];
@@ -169,6 +183,9 @@ function parseReplayEventInput(input: SourceAuthorityReplayEventInput): SourceAu
   });
   const { eventDigest, ...unsigned } = parsed;
   void eventDigest;
+  if (unsigned.type === "correction-recorded") {
+    return { ...unsigned, affectedClaimIds: [...unsigned.affectedClaimIds].sort(canonicalCodeUnitCompare) };
+  }
   return unsigned;
 }
 
@@ -223,6 +240,10 @@ function hasExpired(value: string, asOf: Date): boolean {
   return new Date(value).valueOf() <= asOf.valueOf();
 }
 
+function occursAfter(left: string, right: Date | string): boolean {
+  return new Date(left).valueOf() > (typeof right === "string" ? new Date(right).valueOf() : right.valueOf());
+}
+
 function structuralIssues(candidate: unknown, schema: z.ZodTypeAny, code: "schema.invalid" | "policy.invalid"): SourceAuthorityIssue[] {
   const parsed = schema.safeParse(candidate);
   if (parsed.success) return [];
@@ -238,6 +259,7 @@ async function validatePackageRelations(
   policy: SourceReviewPolicy,
   asOf: Date,
   issues: SourceAuthorityIssue[],
+  evaluateReviewScopes: boolean,
 ): Promise<void> {
   const itemById = new Map(sourcePackage.items.map((item) => [item.id, item]));
   const locatorById = new Map(sourcePackage.items.flatMap((item) => item.locators.map((locator) => [locator.id, locator] as const)));
@@ -248,6 +270,9 @@ async function validatePackageRelations(
   for (const item of sourcePackage.items) {
     const bytes = await sourceSnapshotBytes(item.snapshot);
     let decodedText: string | null = null;
+    if (occursAfter(item.snapshot.observedAt, asOf)) {
+      issue(issues, "snapshot.observed-after-as-of", `items.${item.id}.snapshot.observedAt`, "A snapshot observed after replay time cannot support this candidate.");
+    }
     if (!bytes) {
       issue(issues, "snapshot.invalid-bytes", `items.${item.id}.snapshot`, "Snapshot bytes are malformed, unavailable, or oversized.");
     } else if (!await verifySourceSnapshot(item.snapshot)) {
@@ -282,17 +307,25 @@ async function validatePackageRelations(
             issue(issues, "locator.locally-unverifiable", `locators.${locator.id}`, "Text quotes require a valid UTF-8 snapshot.");
             break;
           }
-          const quoteOffset = decodedText.indexOf(locator.selector.exact);
-          if (quoteOffset === -1) {
+          const quoteOffsets: number[] = [];
+          for (let searchFrom = 0; searchFrom <= decodedText.length - locator.selector.exact.length;) {
+            const candidateOffset = decodedText.indexOf(locator.selector.exact, searchFrom);
+            if (candidateOffset === -1) break;
+            const prefixMatches = !locator.selector.prefix ||
+              decodedText.slice(Math.max(0, candidateOffset - locator.selector.prefix.length), candidateOffset) === locator.selector.prefix;
+            const suffixOffset = candidateOffset + locator.selector.exact.length;
+            const suffixMatches = !locator.selector.suffix ||
+              decodedText.slice(suffixOffset, suffixOffset + locator.selector.suffix.length) === locator.selector.suffix;
+            if (prefixMatches && suffixMatches) quoteOffsets.push(candidateOffset);
+            // Advance one code unit so overlapping text quotes are also checked.
+            searchFrom = candidateOffset + 1;
+          }
+          if (quoteOffsets.length === 0) {
             issue(issues, "locator.text-not-found", `locators.${locator.id}.selector.exact`, "Text quote must occur in the immutable snapshot.");
             break;
           }
-          if (locator.selector.prefix && decodedText.slice(Math.max(0, quoteOffset - locator.selector.prefix.length), quoteOffset) !== locator.selector.prefix) {
-            issue(issues, "locator.text-not-found", `locators.${locator.id}.selector.prefix`, "Text quote prefix must be adjacent to the quoted snapshot text.");
-          }
-          const suffixOffset = quoteOffset + locator.selector.exact.length;
-          if (locator.selector.suffix && decodedText.slice(suffixOffset, suffixOffset + locator.selector.suffix.length) !== locator.selector.suffix) {
-            issue(issues, "locator.text-not-found", `locators.${locator.id}.selector.suffix`, "Text quote suffix must be adjacent to the quoted snapshot text.");
+          if (quoteOffsets.length > 1) {
+            issue(issues, "locator.text-ambiguous", `locators.${locator.id}.selector`, "Text quote context must resolve to exactly one immutable snapshot occurrence.");
           }
           break;
         }
@@ -352,10 +385,22 @@ async function validatePackageRelations(
     }
   }
 
+  // A policy whose content/digest is not exactly bound to the package cannot
+  // authorize any scope or reviewer evaluation.
+  if (!evaluateReviewScopes) return;
+
   const acceptedScopesByItem = new Set<string>();
   for (const decision of sourcePackage.reviewDecisions) {
     const reviewer = reviewerById.get(decision.reviewerId);
     let canSatisfyScope = decision.outcome === "accepted";
+    if (occursAfter(decision.decidedAt, asOf)) {
+      issue(issues, "review.decided-after-as-of", `reviewDecisions.${decision.id}.decidedAt`, "Future review decisions cannot satisfy a historical replay.");
+      canSatisfyScope = false;
+    }
+    if (new Date(decision.expiresAt).valueOf() <= new Date(decision.decidedAt).valueOf()) {
+      issue(issues, "review.invalid-validity-window", `reviewDecisions.${decision.id}.expiresAt`, "Review expiry must occur strictly after its decision time.");
+      canSatisfyScope = false;
+    }
     if (!reviewer || !reviewer.scopes.includes(decision.scope)) {
       issue(issues, "review.scope-impersonation", `reviewDecisions.${decision.id}`, "Reviewer is not authorized for this scoped decision.");
       canSatisfyScope = false;
@@ -372,6 +417,10 @@ async function validatePackageRelations(
         canSatisfyScope = false;
       } else if (item.authoredByIdentityId === decision.reviewerId) {
         issue(issues, "review.self-review", `reviewDecisions.${decision.id}`, "A reviewer cannot accept their own authored source item.");
+        canSatisfyScope = false;
+      }
+      if (item && occursAfter(item.snapshot.observedAt, decision.decidedAt)) {
+        issue(issues, "review.snapshot-after-decision", `reviewDecisions.${decision.id}.sourceItemIds`, "A decision cannot review a snapshot observed after the decision time.");
         canSatisfyScope = false;
       }
     }
@@ -435,13 +484,32 @@ async function validatePackageRelations(
   }
 }
 
-async function validateReplayEvents(replay: SourceAuthorityReplay, issues: SourceAuthorityIssue[]): Promise<void> {
+async function validateReplayEvents(replay: SourceAuthorityReplay, asOf: Date, issues: SourceAuthorityIssue[]): Promise<void> {
   let priorEventDigest = "genesis";
   const itemById = new Map(replay.package.items.map((item) => [item.id, item]));
   const claimById = new Map(replay.package.claims.map((claim) => [claim.id, claim]));
+  const eventIds = new Set<string>();
+  const lifecycleFactIds = new Set<string>();
 
   for (let index = 0; index < replay.events.length; index += 1) {
     const event = replay.events[index]!;
+    if (eventIds.has(event.id)) {
+      issue(issues, "event.duplicate-id", `events.${index}.id`, "Replay event IDs must be unique; retries are not defined by this contract.");
+    }
+    eventIds.add(event.id);
+    const lifecycleFactId = event.type === "correction-recorded" ? event.correctionId
+      : event.type === "withdrawal-recorded" ? event.withdrawalId
+        : event.type === "rights-expiry-recorded" ? event.expiryId
+          : null;
+    if (lifecycleFactId) {
+      if (lifecycleFactIds.has(lifecycleFactId)) {
+        issue(issues, "event.duplicate-lifecycle-id", `events.${index}`, "Correction, withdrawal, and expiry fact IDs must be unique.");
+      }
+      lifecycleFactIds.add(lifecycleFactId);
+    }
+    if (occursAfter(event.occurredAt, asOf)) {
+      issue(issues, "event.occurred-after-as-of", `events.${index}.occurredAt`, "Future lifecycle facts cannot be silently applied to a historical replay.");
+    }
     if (event.sequence !== index + 1) {
       issue(issues, "event.sequence-invalid", `events.${index}.sequence`, "Replay sequences must be contiguous and begin at one.");
     }
@@ -455,6 +523,11 @@ async function validateReplayEvents(replay: SourceAuthorityReplay, issues: Sourc
       if (event.type !== "package-recorded" || event.packageId !== replay.package.id || event.packageVersion !== replay.package.version || event.packageDigest !== replay.package.packageDigest) {
         issue(issues, "event.package-binding-invalid", `events.${index}`, "First replay event must bind the exact source package identity, version, and digest.");
       }
+      for (const item of replay.package.items) {
+        if (occursAfter(item.snapshot.observedAt, event.occurredAt)) {
+          issue(issues, "event.snapshot-after-event", `events.${index}`, "Package recording cannot use a snapshot observed after the event time.");
+        }
+      }
     } else if (event.type === "package-recorded") {
       issue(issues, "event.package-binding-invalid", `events.${index}`, "A source replay records its immutable package exactly once at sequence one.");
     }
@@ -466,6 +539,9 @@ async function validateReplayEvents(replay: SourceAuthorityReplay, issues: Sourc
       }
       if (event.replacementSnapshotDigest === event.affectedSnapshotDigest) {
         issue(issues, "event.correction-rewrite", `events.${index}.replacementSnapshotDigest`, "A correction cannot rewrite an existing snapshot in place.");
+      }
+      if (sourceItem && occursAfter(sourceItem.snapshot.observedAt, event.occurredAt)) {
+        issue(issues, "event.snapshot-after-event", `events.${index}`, "Correction cannot use a snapshot observed after the correction event.");
       }
       for (const claimId of event.affectedClaimIds) {
         const claim = claimById.get(claimId);
@@ -479,6 +555,9 @@ async function validateReplayEvents(replay: SourceAuthorityReplay, issues: Sourc
       if (!sourceItem || sourceItem.snapshot.digest !== event.snapshotDigest) {
         issue(issues, "event.target-missing", `events.${index}`, "Withdrawal must target an exact snapshot in this immutable package.");
       }
+      if (sourceItem && occursAfter(sourceItem.snapshot.observedAt, event.occurredAt)) {
+        issue(issues, "event.snapshot-after-event", `events.${index}`, "Withdrawal cannot use a snapshot observed after the withdrawal event.");
+      }
     }
     if (event.type === "rights-expiry-recorded") {
       const sourceItem = itemById.get(event.sourceItemId);
@@ -486,6 +565,9 @@ async function validateReplayEvents(replay: SourceAuthorityReplay, issues: Sourc
       if (!sourceItem || !rights || rights.sourceItemId !== event.sourceItemId || rights.expiresAt !== event.expiresAt ||
         new Date(event.occurredAt).valueOf() < new Date(event.expiresAt).valueOf()) {
         issue(issues, "event.rights-expiry-invalid", `events.${index}`, "Expiry facts must append the exact matured rights record without changing it.");
+      }
+      if (sourceItem && occursAfter(sourceItem.snapshot.observedAt, event.occurredAt)) {
+        issue(issues, "event.snapshot-after-event", `events.${index}`, "Rights expiry cannot use a snapshot observed after the expiry event.");
       }
     }
     priorEventDigest = event.eventDigest;
@@ -495,12 +577,53 @@ async function validateReplayEvents(replay: SourceAuthorityReplay, issues: Sourc
   }
 }
 
+interface CollectedDependentCandidates {
+  readonly candidates: readonly SourceDependentCandidate[];
+  readonly candidateIds: readonly string[];
+  readonly invalidCandidateIds: ReadonlySet<string>;
+}
+
+function dependentCandidateId(candidate: unknown, index: number): string {
+  if (candidate && typeof candidate === "object" && "id" in candidate && reviewCandidateIdSchema.safeParse(candidate.id).success) {
+    return candidate.id as string;
+  }
+  return `malformed-dependent.${index}`;
+}
+
+function collectDependentCandidates(values: readonly unknown[], issues: SourceAuthorityIssue[]): CollectedDependentCandidates {
+  const candidates: SourceDependentCandidate[] = [];
+  const candidateIds: string[] = [];
+  const seenCandidateIds = new Set<string>();
+  const invalidCandidateIds = new Set<string>();
+  values.forEach((candidate, index) => {
+    const candidateId = dependentCandidateId(candidate, index);
+    if (seenCandidateIds.has(candidateId)) {
+      issue(issues, "candidate.duplicate-id", `dependentCandidates.${index}.id`, "Dependent candidate IDs must be unique.");
+      invalidCandidateIds.add(candidateId);
+    } else {
+      seenCandidateIds.add(candidateId);
+      candidateIds.push(candidateId);
+    }
+    const parsed = sourceDependentCandidateSchema.safeParse(candidate);
+    if (parsed.success) {
+      candidates.push(parsed.data);
+      return;
+    }
+    invalidCandidateIds.add(candidateId);
+    for (const entry of parsed.error.issues) {
+      issue(issues, "candidate.binding-invalid", `dependentCandidates.${index}.${entry.path.join(".")}`, entry.message);
+    }
+  });
+  return { candidates, candidateIds, invalidCandidateIds };
+}
+
 function validateCandidateBindings(
   candidates: readonly SourceDependentCandidate[],
   replay: SourceAuthorityReplay,
   issues: SourceAuthorityIssue[],
+  initialInvalidCandidateIds: ReadonlySet<string>,
 ): ReadonlySet<string> {
-  const invalidCandidateIds = new Set<string>();
+  const invalidCandidateIds = new Set(initialInvalidCandidateIds);
   const itemById = new Map(replay.package.items.map((item) => [item.id, item]));
   const claimById = new Map(replay.package.claims.map((claim) => [claim.id, claim]));
   const rightsById = new Map(replay.package.rightsRecords.map((record) => [record.id, record]));
@@ -536,16 +659,18 @@ function validateCandidateBindings(
 
 function candidateInvalidations(
   candidates: readonly SourceDependentCandidate[],
+  candidateIds: readonly string[],
   replay: SourceAuthorityReplay,
   asOf: Date,
   hasBlockingAuthorityIssue: boolean,
   invalidCandidateIds: ReadonlySet<string>,
 ): readonly { readonly candidateId: string; readonly reasons: readonly string[] }[] {
   const rightsById = new Map(replay.package.rightsRecords.map((record) => [record.id, record]));
-  const invalidations: { candidateId: string; reasons: string[] }[] = [];
+  const reasonsByCandidateId = new Map(candidateIds.map((candidateId) => [candidateId, new Set<string>()]));
 
   for (const candidate of candidates) {
-    const reasons = new Set<string>();
+    const reasons = reasonsByCandidateId.get(candidate.id) ?? new Set<string>();
+    reasonsByCandidateId.set(candidate.id, reasons);
     if (invalidCandidateIds.has(candidate.id)) reasons.add("candidate-binding-invalid");
     for (const binding of candidate.sourceBindings) {
       if (binding.sourcePackageId !== replay.package.id || binding.sourcePackageVersion !== replay.package.version || binding.sourcePackageDigest !== replay.package.packageDigest) {
@@ -556,6 +681,7 @@ function candidateInvalidations(
       if (!rights) reasons.add("missing-rights-record");
       else if (hasExpired(rights.expiresAt, asOf)) reasons.add("rights-expired");
       for (const event of replay.events) {
+        if (occursAfter(event.occurredAt, asOf)) continue;
         if (event.type === "withdrawal-recorded" && event.sourceItemId === binding.sourceItemId) reasons.add("source-withdrawn");
         if (event.type === "correction-recorded" && event.sourceItemId === binding.sourceItemId && event.affectedClaimIds.some((claimId) => binding.claimIds.includes(claimId))) {
           reasons.add("source-corrected");
@@ -566,9 +692,18 @@ function candidateInvalidations(
       }
     }
     if (hasBlockingAuthorityIssue) reasons.add("source-authority-invalid");
-    if (reasons.size > 0) invalidations.push({ candidateId: candidate.id, reasons: [...reasons].sort() });
   }
-  return invalidations;
+  for (const candidateId of invalidCandidateIds) {
+    const reasons = reasonsByCandidateId.get(candidateId) ?? new Set<string>();
+    reasons.add("candidate-binding-invalid");
+    reasonsByCandidateId.set(candidateId, reasons);
+  }
+  if (hasBlockingAuthorityIssue) {
+    for (const reasons of reasonsByCandidateId.values()) reasons.add("source-authority-invalid");
+  }
+  return [...reasonsByCandidateId.entries()]
+    .filter(([, reasons]) => reasons.size > 0)
+    .map(([candidateId, reasons]) => ({ candidateId, reasons: [...reasons].sort(canonicalCodeUnitCompare) }));
 }
 
 /**
@@ -591,51 +726,62 @@ export async function replaySourceAuthority(input: {
   if (!asOf) issue(issues, "schema.invalid", "asOf", "Replay evaluation time must be an offset timestamp.");
   const replayResult = sourceAuthorityReplaySchema.safeParse(input.replay);
   const policyResult = sourceReviewPolicySchema.safeParse(input.reviewPolicy);
-  const candidates = (input.dependentCandidates ?? []).flatMap((candidate, index) => {
-    const parsed = sourceDependentCandidateSchema.safeParse(candidate);
-    if (parsed.success) return [parsed.data];
-    for (const entry of parsed.error.issues) {
-      issue(issues, "candidate.binding-invalid", `dependentCandidates.${index}.${entry.path.join(".")}`, entry.message);
-    }
-    return [];
-  });
+  const collectedCandidates = collectDependentCandidates(input.dependentCandidates ?? [], issues);
 
   if (!replayResult.success || !policyResult.success || !asOf) {
+    const invalidatedCandidates = collectedCandidates.candidateIds.map((candidateId) => ({
+      candidateId,
+      reasons: [
+        ...(collectedCandidates.invalidCandidateIds.has(candidateId) ? ["candidate-binding-invalid"] : []),
+        "source-authority-invalid",
+      ],
+    }));
     return {
       status: "review-candidate-incomplete",
       publicationAuthority: "not-established",
       sourceAuthenticity: "not-established",
       durableStorage: "not-established",
       accountableHumanApproval: "not-established",
-      invalidatedCandidates: [],
+      rightsClearance: "not-established",
+      invalidatedCandidates,
       issues,
     };
   }
 
   const replay = replayResult.data;
   const policy = policyResult.data;
-  if (replay.package.policyRef.id !== policy.id || replay.package.policyRef.version !== policy.version) {
-    issue(issues, "policy.mismatch", "package.policyRef", "Package policy reference must equal the supplied review policy identity and version.");
+  const { digest: policyDigest, ...policyInput } = policy;
+  void policyDigest;
+  const suppliedPolicyDigestMatches = policy.digest === await sourceReviewPolicyDigest(policyInput);
+  if (!suppliedPolicyDigestMatches) {
+    issue(issues, "policy.digest-mismatch", "reviewPolicy.digest", "Supplied policy digest does not match its canonical policy contents.");
+  }
+  const packagePolicyMatches = replay.package.policyRef.id === policy.id &&
+    replay.package.policyRef.version === policy.version &&
+    replay.package.policyRef.digest === policy.digest;
+  if (!packagePolicyMatches) {
+    issue(issues, "policy.mismatch", "package.policyRef", "Package policy reference must equal the supplied policy identity, version, and canonical digest.");
   }
   const { packageDigest, ...packageInput } = replay.package;
   void packageDigest;
   if (replay.package.packageDigest !== await sourceAuthorityPackageDigest(packageInput)) {
     issue(issues, "package.digest-mismatch", "package.packageDigest", "Package digest does not match all canonical package contents.");
   }
-  await validatePackageRelations(replay.package, policy, asOf, issues);
-  await validateReplayEvents(replay, issues);
+  await validatePackageRelations(replay.package, policy, asOf, issues, suppliedPolicyDigestMatches && packagePolicyMatches);
+  await validateReplayEvents(replay, asOf, issues);
 
-  const invalidCandidateIds = validateCandidateBindings(candidates, replay, issues);
+  const invalidCandidateIds = validateCandidateBindings(collectedCandidates.candidates, replay, issues, collectedCandidates.invalidCandidateIds);
   // Any package/replay failure invalidates supplied dependents. Only a
   // candidate's own malformed binding is excluded from this package-wide flag.
-  const hasBlockingAuthorityIssue = issues.some((entry) => entry.code !== "candidate.binding-invalid");
-  const invalidatedCandidates = candidateInvalidations(candidates, replay, asOf, hasBlockingAuthorityIssue, invalidCandidateIds);
+  const hasBlockingAuthorityIssue = issues.some((entry) => entry.code !== "candidate.binding-invalid" && entry.code !== "candidate.duplicate-id");
+  const invalidatedCandidates = candidateInvalidations(collectedCandidates.candidates, collectedCandidates.candidateIds, replay, asOf, hasBlockingAuthorityIssue, invalidCandidateIds);
   return {
     status: issues.length === 0 ? "review-candidate-complete" : "review-candidate-incomplete",
     publicationAuthority: "not-established",
     sourceAuthenticity: "not-established",
     durableStorage: "not-established",
     accountableHumanApproval: "not-established",
+    rightsClearance: "not-established",
     invalidatedCandidates,
     issues,
   };

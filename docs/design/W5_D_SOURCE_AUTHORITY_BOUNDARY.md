@@ -6,6 +6,8 @@ This slice is a deterministic, local contract and replay boundary for ADR-003 an
 
 The replay result can only be `review-candidate-complete` or `review-candidate-incomplete`. Even a complete candidate explicitly establishes none of source authenticity, durable storage, accountable-human identity, rights clearance, or publication authority. Caller-supplied reviewer IDs are checked against a local policy shape only; no identity/authentication claim is made.
 
+The review policy is content-addressed: its canonical digest includes required scopes, reviewer identities, and reviewer scopes, and the package stores the exact policy ID/version/digest tuple. Replay rejects a changed policy, future snapshot/decision/event, invalid decision window, duplicate lifecycle identity, or ambiguous text quote before a candidate can be complete.
+
 Corrections, rights-expiry observations, and withdrawals are appended through a chained replay log. They invalidate only supplied review-candidate dependencies; this module cannot disable, supersede, publish, or rewrite a World release. The replay head rejects shortened or reordered histories, and an event cannot rewrite a snapshot in place.
 
 Any package or replay authority failure also yields the explicit dependent-candidate invalidation reason `source-authority-invalid`; an incomplete aggregate status is never the only signal to a dependent candidate.

@@ -2,10 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   createSourceAuthorityPackage,
+  createSourceReviewPolicy,
+  sourceAuthorityPackageDigest,
   sourceAuthorityPackageSchema,
+  sourceReviewPolicyDigest,
   sourceReviewDecisionSchema,
   type SourceAuthorityPackageInput,
   type SourceReviewPolicy,
+  type SourceReviewPolicyInput,
 } from "./contracts";
 import {
   createSourceAuthorityReplay,
@@ -26,7 +30,7 @@ const SCOPES = [
   "proof-design",
 ] as const;
 
-const POLICY: SourceReviewPolicy = {
+const POLICY_INPUT: SourceReviewPolicyInput = {
   schemaVersion: "1.0",
   id: "source-policy.fixture",
   version: "1.0.0",
@@ -36,6 +40,8 @@ const POLICY: SourceReviewPolicy = {
     scopes: [scope],
   })),
 };
+
+const POLICY: SourceReviewPolicy = await createSourceReviewPolicy(POLICY_INPUT);
 
 function base64(value: string): string {
   const bytes = new TextEncoder().encode(value);
@@ -72,7 +78,7 @@ async function packageInput(): Promise<SourceAuthorityPackageInput> {
     schemaVersion: "1.0",
     id: "source-package.fixture.authority",
     version: "1.0.0",
-    policyRef: { id: POLICY.id, version: POLICY.version },
+    policyRef: { id: POLICY.id, version: POLICY.version, digest: POLICY.digest },
     items: [{
       id: "source.fixture.authority",
       authoredByIdentityId: "author.fixture",
@@ -177,6 +183,29 @@ async function completeReplay(): Promise<SourceAuthorityReplay> {
   });
 }
 
+async function replayForPackageInput(input: SourceAuthorityPackageInput): Promise<SourceAuthorityReplay> {
+  const sourcePackage = await createSourceAuthorityPackage(input);
+  return createSourceAuthorityReplay({
+    package: sourcePackage,
+    events: [{
+      id: "source-event.package-recorded",
+      occurredAt: OBSERVED_AT,
+      type: "package-recorded",
+      packageId: sourcePackage.id,
+      packageVersion: sourcePackage.version,
+      packageDigest: sourcePackage.packageDigest,
+    }],
+  });
+}
+
+async function replaceFixtureSourceText(input: SourceAuthorityPackageInput, text: string): Promise<void> {
+  const snapshot = input.items[0]!.snapshot;
+  snapshot.encodedBytes = base64(text);
+  snapshot.digest = await sha256Bytes(text);
+  snapshot.byteLength = new TextEncoder().encode(text).byteLength;
+  input.items[0]!.locators[0]!.snapshotDigest = snapshot.digest;
+}
+
 function issueCodes(result: Awaited<ReturnType<typeof replaySourceAuthority>>): readonly string[] {
   return result.issues.map((entry) => entry.code);
 }
@@ -207,8 +236,71 @@ describe("ADR-007 source authority contract replay", () => {
       sourceAuthenticity: "not-established",
       durableStorage: "not-established",
       accountableHumanApproval: "not-established",
+      rightsClearance: "not-established",
       issues: [],
     });
+  });
+
+  it("uses a known canonical policy digest and canonicalizes semantic policy/package sets", async () => {
+    expect(POLICY.digest).toBe("sha256:9e985c6a11b2478567637c436cdf36071809c348ed19a36b0246a25c29c6d670");
+    const reorderedPolicy: SourceReviewPolicyInput = {
+      ...POLICY_INPUT,
+      requiredScopes: [...POLICY_INPUT.requiredScopes].reverse(),
+      authorizedHumanReviewers: [...POLICY_INPUT.authorizedHumanReviewers].reverse().map((reviewer) => ({
+        ...reviewer,
+        scopes: [...reviewer.scopes].reverse(),
+      })),
+    };
+    expect(await sourceReviewPolicyDigest(reorderedPolicy)).toBe(POLICY.digest);
+
+    const input = await packageInputWithSecondItem();
+    const alternateLocator = structuredClone(input.items[0]!.locators[0]!);
+    alternateLocator.id = "source-locator.fixture.alternate";
+    input.items[0]!.locators.push(alternateLocator);
+    input.claims[0]!.locatorIds.push(alternateLocator.id);
+    const rightsDecision = input.reviewDecisions.find((decision) => decision.scope === "rights" && decision.sourceItemIds[0] === "source.fixture.authority");
+    const factualDecision = input.reviewDecisions.find((decision) => decision.scope === "factual-epistemic" && decision.sourceItemIds[0] === "source.fixture.authority");
+    if (!rightsDecision || !factualDecision) throw new Error("fixture decisions missing");
+    rightsDecision.sourceItemIds.push("source.fixture.second");
+    rightsDecision.rightsRecordIds.push("source-rights.fixture.second");
+    factualDecision.sourceItemIds.push("source.fixture.second");
+    factualDecision.claimIds.push("source-claim.fixture.second");
+    const reorderedPackage = structuredClone(input);
+    reorderedPackage.rightsRecords[0]!.permittedProductUses.reverse();
+    reorderedPackage.rightsRecords[0]!.productLimitations.reverse();
+    reorderedPackage.reviewDecisions.reverse();
+    reorderedPackage.claims[0]!.locatorIds.reverse();
+    reorderedPackage.reviewDecisions.find((decision) => decision.scope === "rights" && decision.sourceItemIds.includes("source.fixture.authority"))!.sourceItemIds.reverse();
+    reorderedPackage.reviewDecisions.find((decision) => decision.scope === "rights" && decision.sourceItemIds.includes("source.fixture.authority"))!.rightsRecordIds.reverse();
+    reorderedPackage.reviewDecisions.find((decision) => decision.scope === "factual-epistemic" && decision.sourceItemIds.includes("source.fixture.authority"))!.sourceItemIds.reverse();
+    reorderedPackage.reviewDecisions.find((decision) => decision.scope === "factual-epistemic" && decision.sourceItemIds.includes("source.fixture.authority"))!.claimIds.reverse();
+    expect(await sourceAuthorityPackageDigest(reorderedPackage)).toBe(await sourceAuthorityPackageDigest(input));
+    const changedPolicyReference = structuredClone(input);
+    changedPolicyReference.policyRef.digest = `sha256:${"f".repeat(64)}`;
+    expect(await sourceAuthorityPackageDigest(changedPolicyReference)).not.toBe(await sourceAuthorityPackageDigest(input));
+  });
+
+  it("requires the exact supplied policy digest before any review scope evaluation", async () => {
+    const replay = await completeReplay();
+    const digestTamperedPolicy = {
+      ...POLICY,
+      requiredScopes: [...POLICY.requiredScopes].filter((scope) => scope !== "proof-design"),
+    };
+    expect(issueCodes(await replaySourceAuthority({ replay, reviewPolicy: digestTamperedPolicy, asOf: AS_OF }))).toContain("policy.digest-mismatch");
+
+    const changedScopesPolicy = await createSourceReviewPolicy({
+      ...POLICY_INPUT,
+      requiredScopes: POLICY_INPUT.requiredScopes.filter((scope) => scope !== "proof-design"),
+    });
+    expect(issueCodes(await replaySourceAuthority({ replay, reviewPolicy: changedScopesPolicy, asOf: AS_OF }))).toContain("policy.mismatch");
+
+    const changedReviewerPolicy = await createSourceReviewPolicy({
+      ...POLICY_INPUT,
+      authorizedHumanReviewers: POLICY_INPUT.authorizedHumanReviewers.map((reviewer) => (
+        reviewer.id === "reviewer.rights" ? { ...reviewer, id: "reviewer.rights-replaced" } : reviewer
+      )),
+    });
+    expect(issueCodes(await replaySourceAuthority({ replay, reviewPolicy: changedReviewerPolicy, asOf: AS_OF }))).toContain("policy.mismatch");
   });
 
   it("keeps the existing source.* item identity and creates no World namespace", async () => {
@@ -374,6 +466,145 @@ describe("ADR-007 source authority contract replay", () => {
     if (expiry.type !== "rights-expiry-recorded") throw new Error("fixture expiry missing");
     expiry.expiresAt = "2026-07-21T00:00:00.000Z";
     expect(issueCodes(await replaySourceAuthority({ replay: mutated, reviewPolicy: POLICY, asOf: AS_OF }))).toContain("event.rights-expiry-invalid");
+  });
+
+  it("fails closed on future snapshots, invalid review windows, post-decision snapshots, and future lifecycle facts", async () => {
+    const boundary = await replaySourceAuthority({ replay: await completeReplay(), reviewPolicy: POLICY, asOf: OBSERVED_AT });
+    expect(boundary.status).toBe("review-candidate-complete");
+
+    const futureSnapshot = await packageInput();
+    futureSnapshot.items[0]!.snapshot.observedAt = "2026-07-24T00:00:00.000Z";
+    expect(issueCodes(await replaySourceAuthority({ replay: await replayForPackageInput(futureSnapshot), reviewPolicy: POLICY, asOf: AS_OF }))).toContain("snapshot.observed-after-as-of");
+
+    for (const outcome of ["accepted", "rejected"] as const) {
+      const futureDecision = await packageInput();
+      futureDecision.reviewDecisions[0]!.outcome = outcome;
+      futureDecision.reviewDecisions[0]!.decidedAt = "2026-07-24T00:00:00.000Z";
+      futureDecision.reviewDecisions[0]!.expiresAt = "2026-12-31T00:00:00.000Z";
+      expect(issueCodes(await replaySourceAuthority({ replay: await replayForPackageInput(futureDecision), reviewPolicy: POLICY, asOf: AS_OF }))).toContain("review.decided-after-as-of");
+    }
+
+    const invalidWindow = await packageInput();
+    invalidWindow.reviewDecisions[0]!.expiresAt = invalidWindow.reviewDecisions[0]!.decidedAt;
+    expect(issueCodes(await replaySourceAuthority({ replay: await replayForPackageInput(invalidWindow), reviewPolicy: POLICY, asOf: AS_OF }))).toContain("review.invalid-validity-window");
+
+    const postDecisionSnapshot = await packageInput();
+    postDecisionSnapshot.items[0]!.snapshot.observedAt = "2026-07-23T00:00:01.000Z";
+    const postDecisionCodes = issueCodes(await replaySourceAuthority({ replay: await replayForPackageInput(postDecisionSnapshot), reviewPolicy: POLICY, asOf: AS_OF }));
+    expect(postDecisionCodes).toContain("review.snapshot-after-decision");
+
+    const sourcePackage = await createSourceAuthorityPackage(await packageInput());
+    const futureReplay = await createSourceAuthorityReplay({
+      package: sourcePackage,
+      events: [
+        { id: "source-event.package-recorded", occurredAt: OBSERVED_AT, type: "package-recorded", packageId: sourcePackage.id, packageVersion: sourcePackage.version, packageDigest: sourcePackage.packageDigest },
+        { id: "source-event.future-correction", occurredAt: "2027-01-01T00:00:00.000Z", type: "correction-recorded", correctionId: "source-correction.future", sourceItemId: "source.fixture.authority", affectedSnapshotDigest: sourcePackage.items[0]!.snapshot.digest, affectedClaimIds: ["source-claim.fixture"], replacementSnapshotDigest: `sha256:${"b".repeat(64)}` },
+      ],
+    });
+    const futureResult = await replaySourceAuthority({ replay: futureReplay, reviewPolicy: POLICY, asOf: AS_OF, dependentCandidates: validDependentCandidate(futureReplay) });
+    expect(issueCodes(futureResult)).toContain("event.occurred-after-as-of");
+    expect(futureResult.invalidatedCandidates).toEqual([{
+      candidateId: "review-candidate.valid-dependent",
+      reasons: ["source-authority-invalid"],
+    }]);
+  });
+
+  it("requires text quote context to resolve exactly one occurrence", async () => {
+    const missing = await packageInput();
+    await replaceFixtureSourceText(missing, "one reviewed sentence");
+    missing.items[0]!.locators[0]!.selector = { kind: "TextQuoteSelector", exact: "absent quote" };
+    expect(issueCodes(await replaySourceAuthority({ replay: await replayForPackageInput(missing), reviewPolicy: POLICY, asOf: AS_OF }))).toContain("locator.text-not-found");
+
+    const ambiguous = await packageInput();
+    await replaceFixtureSourceText(ambiguous, "repeat; repeat; later repeat");
+    ambiguous.items[0]!.locators[0]!.selector = { kind: "TextQuoteSelector", exact: "repeat" };
+    expect(issueCodes(await replaySourceAuthority({ replay: await replayForPackageInput(ambiguous), reviewPolicy: POLICY, asOf: AS_OF }))).toContain("locator.text-ambiguous");
+
+    const uniquelyBound = await packageInput();
+    await replaceFixtureSourceText(uniquelyBound, "repeat; later repeat!");
+    uniquelyBound.items[0]!.locators[0]!.selector = { kind: "TextQuoteSelector", exact: "repeat", suffix: "!" };
+    expect((await replaySourceAuthority({ replay: await replayForPackageInput(uniquelyBound), reviewPolicy: POLICY, asOf: AS_OF })).status).toBe("review-candidate-complete");
+
+    const stillAmbiguous = await packageInput();
+    await replaceFixtureSourceText(stillAmbiguous, "xrepeat; xrepeat");
+    stillAmbiguous.items[0]!.locators[0]!.selector = { kind: "TextQuoteSelector", exact: "repeat", prefix: "x" };
+    expect(issueCodes(await replaySourceAuthority({ replay: await replayForPackageInput(stillAmbiguous), reviewPolicy: POLICY, asOf: AS_OF }))).toContain("locator.text-ambiguous");
+  });
+
+  it("rejects duplicate replay event and lifecycle fact identities", async () => {
+    const sourcePackage = await createSourceAuthorityPackage(await packageInput());
+    const duplicateEvent = await createSourceAuthorityReplay({
+      package: sourcePackage,
+      events: [
+        { id: "source-event.duplicate", occurredAt: OBSERVED_AT, type: "package-recorded", packageId: sourcePackage.id, packageVersion: sourcePackage.version, packageDigest: sourcePackage.packageDigest },
+        { id: "source-event.duplicate", occurredAt: "2026-07-23T00:00:01.000Z", type: "withdrawal-recorded", withdrawalId: "source-withdrawal.unique", sourceItemId: "source.fixture.authority", snapshotDigest: sourcePackage.items[0]!.snapshot.digest, reasonCode: "rights" },
+      ],
+    });
+    expect(issueCodes(await replaySourceAuthority({ replay: duplicateEvent, reviewPolicy: POLICY, asOf: AS_OF }))).toContain("event.duplicate-id");
+
+    const duplicateLifecycle = await createSourceAuthorityReplay({
+      package: sourcePackage,
+      events: [
+        { id: "source-event.package-recorded", occurredAt: OBSERVED_AT, type: "package-recorded", packageId: sourcePackage.id, packageVersion: sourcePackage.version, packageDigest: sourcePackage.packageDigest },
+        { id: "source-event.correction-one", occurredAt: "2026-07-23T00:00:01.000Z", type: "correction-recorded", correctionId: "source-correction.duplicate", sourceItemId: "source.fixture.authority", affectedSnapshotDigest: sourcePackage.items[0]!.snapshot.digest, affectedClaimIds: ["source-claim.fixture"], replacementSnapshotDigest: `sha256:${"b".repeat(64)}` },
+        { id: "source-event.correction-two", occurredAt: "2026-07-23T00:00:02.000Z", type: "correction-recorded", correctionId: "source-correction.duplicate", sourceItemId: "source.fixture.authority", affectedSnapshotDigest: sourcePackage.items[0]!.snapshot.digest, affectedClaimIds: ["source-claim.fixture"], replacementSnapshotDigest: `sha256:${"c".repeat(64)}` },
+      ],
+    });
+    expect(issueCodes(await replaySourceAuthority({ replay: duplicateLifecycle, reviewPolicy: POLICY, asOf: AS_OF }))).toContain("event.duplicate-lifecycle-id");
+  });
+
+  it("exposes rights clearance as not established in complete and parse-error results", async () => {
+    expect((await replaySourceAuthority({ replay: await completeReplay(), reviewPolicy: POLICY, asOf: AS_OF })).rightsClearance).toBe("not-established");
+    expect((await replaySourceAuthority({ replay: {}, reviewPolicy: POLICY, asOf: AS_OF })).rightsClearance).toBe("not-established");
+  });
+
+  it("never drops malformed or duplicate dependent candidate identities from explicit invalidation", async () => {
+    const replay = await completeReplay();
+    const malformedOnly = await replaySourceAuthority({
+      replay,
+      reviewPolicy: POLICY,
+      asOf: AS_OF,
+      dependentCandidates: [{ id: "review-candidate.malformed-only", sourceBindings: [] }],
+    });
+    expect(malformedOnly.invalidatedCandidates).toEqual([{
+      candidateId: "review-candidate.malformed-only",
+      reasons: ["candidate-binding-invalid"],
+    }]);
+
+    const malformedRawId = await replaySourceAuthority({
+      replay,
+      reviewPolicy: POLICY,
+      asOf: AS_OF,
+      dependentCandidates: [{ id: `private learner text ${"x".repeat(240)}`, sourceBindings: [] }],
+    });
+    expect(malformedRawId.invalidatedCandidates).toEqual([{
+      candidateId: "malformed-dependent.0",
+      reasons: ["candidate-binding-invalid"],
+    }]);
+
+    const valid = validDependentCandidate(replay)[0]!;
+    const malformedAndValid = await replaySourceAuthority({
+      replay,
+      reviewPolicy: POLICY,
+      asOf: AS_OF,
+      dependentCandidates: [{ id: valid.id, sourceBindings: [] }, valid],
+    });
+    expect(malformedAndValid.invalidatedCandidates).toEqual([{
+      candidateId: valid.id,
+      reasons: ["candidate-binding-invalid"],
+    }]);
+
+    const duplicateValid = await replaySourceAuthority({
+      replay,
+      reviewPolicy: POLICY,
+      asOf: AS_OF,
+      dependentCandidates: [valid, structuredClone(valid)],
+    });
+    expect(issueCodes(duplicateValid)).toContain("candidate.duplicate-id");
+    expect(duplicateValid.invalidatedCandidates).toEqual([{
+      candidateId: valid.id,
+      reasons: ["candidate-binding-invalid"],
+    }]);
   });
 
   it("rejects re-ordered, shortened, or in-place-mutated replay data", async () => {
