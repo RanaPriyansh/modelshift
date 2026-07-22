@@ -34,13 +34,34 @@ begin
     raise exception 'legacy self-service learner-profile mutation policy remains';
   end if;
 
-  if exists (
+  if not exists (
     select 1 from pg_constraint as constraint_record
     where constraint_record.conrelid = 'forge.consent_records'::regclass
       and constraint_record.conname = 'consent_records_purpose_key_check'
       and pg_get_constraintdef(constraint_record.oid) like '%private_evidence_persistence%'
   ) then
-    raise exception 'private-evidence consent must stay deferred until its canonical persistence runtime exists';
+    raise exception 'the retired private-evidence purpose must remain valid for immutable historical rows';
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'forge'
+      and tablename = 'consent_records'
+      and policyname = 'consent_records_insert'
+      and with_check like '%private_evidence_persistence%'
+      and with_check like '%purpose_key <>%'
+  ) then
+    raise exception 'authenticated consent inserts do not explicitly reject the retired private-evidence purpose';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_trigger as trigger_record
+    where trigger_record.tgrelid = 'forge.consent_records'::regclass
+      and trigger_record.tgname = 'consent_records_reject_retired_private_evidence_purpose'
+      and trigger_record.tgenabled = 'O'
+  ) then
+    raise exception 'retired private-evidence consent lacks its database write refusal trigger';
   end if;
 
   if to_regclass('forge.adult_private_evidence_entries') is not null then
