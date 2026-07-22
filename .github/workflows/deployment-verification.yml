@@ -45,11 +45,14 @@ jobs:
         with:
           node-version: "22"
           package-manager-cache: false
+      - name: Capture immutable verifier dependency identity before install
+        run: node scripts/operations/immutable-lockfile.mjs capture --source-ref "$GITHUB_SHA" --github-env "$GITHUB_ENV"
       - name: Install locked verifier dependencies
         run: pnpm install --frozen-lockfile
+      - name: Reject post-install verifier lockfile mutation
+        run: node scripts/operations/immutable-lockfile.mjs verify --expected-digest "$FORGE_LOCKFILE_DIGEST"
       - name: Compute checked-in release metadata
         run: |
-          printf 'FORGE_LOCKFILE_DIGEST=%s\n' "$(shasum -a 256 pnpm-lock.yaml | cut -d' ' -f1)" >> "$GITHUB_ENV"
           printf 'FORGE_CONTENT_MANIFEST_DIGEST=%s\n' "$(shasum -a 256 scripts/ops/content-package-manifest.json | cut -d' ' -f1)" >> "$GITHUB_ENV"
           printf 'FORGE_EVALUATOR_BASELINE_DIGEST=%s\n' "$(shasum -a 256 scripts/ops/evaluation-baseline.json | cut -d' ' -f1)" >> "$GITHUB_ENV"
       - name: Run bounded same-origin GET verifier

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -45,6 +46,28 @@ function copyReleaseDigestInputs(): string {
   cpSync(resolve(process.cwd(), "scripts/ops/evaluation-baseline.json"), resolve(root, "scripts/ops/evaluation-baseline.json"));
   cpSync(resolve(process.cwd(), "scripts/ops/content-package-manifest.json"), resolve(root, "scripts/ops/content-package-manifest.json"));
   return root;
+}
+
+const immutableLockfileHelper = resolve(process.cwd(), "scripts/operations/immutable-lockfile.mjs");
+
+function createLockfileRepository(lockfile = "lockfile: immutable\n") {
+  const root = mkdtempSync(resolve(tmpdir(), "forge-immutable-lockfile-"));
+  try {
+    execFileSync("git", ["init", "--quiet"], { cwd: root });
+    execFileSync("git", ["config", "user.email", "forge-test@example.test"], { cwd: root });
+    execFileSync("git", ["config", "user.name", "FORGE test"], { cwd: root });
+    writeFileSync(resolve(root, "pnpm-lock.yaml"), lockfile, "utf8");
+    execFileSync("git", ["add", "pnpm-lock.yaml"], { cwd: root });
+    execFileSync("git", ["commit", "--quiet", "-m", "lockfile fixture"], { cwd: root });
+    return { root, sha: execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim() };
+  } catch (error) {
+    rmSync(root, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+function runImmutableLockfile(root: string, args: readonly string[], environment: Partial<NodeJS.ProcessEnv> = {}) {
+  return spawnSync(process.execPath, [immutableLockfileHelper, ...args], { cwd: root, encoding: "utf8", env: { ...process.env, ...environment } });
 }
 
 describe("retained content package identity", () => {
@@ -129,6 +152,69 @@ describe("retained content package identity", () => {
       const changedBytes = readFileSync(manifestPath, "utf8");
       expect(readReleaseDigests(root).contentManifest).toBe(createHash("sha256").update(changedBytes).digest("hex"));
       expect(readReleaseDigests(root).contentManifest).not.toBe(createHash("sha256").update(originalBytes).digest("hex"));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("immutable dependency identity", () => {
+  it("uses the committed source blob even when working-tree bytes differ", () => {
+    const { root, sha } = createLockfileRepository("lockfile: committed\n");
+    try {
+      const environmentPath = resolve(root, "github-env");
+      writeFileSync(resolve(root, "pnpm-lock.yaml"), "lockfile: working-tree-only\n", "utf8");
+
+      const result = runImmutableLockfile(root, ["capture", "--source-ref", sha, "--github-env", environmentPath]);
+      const expected = createHash("sha256").update("lockfile: committed\n").digest("hex");
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe(expected);
+      expect(readFileSync(environmentPath, "utf8")).toBe(`FORGE_LOCKFILE_DIGEST=${expected}\n`);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects missing or invalid immutable source refs and empty source blobs", () => {
+    const missingRef = createLockfileRepository();
+    const invalidRef = createLockfileRepository();
+    const emptyBlob = createLockfileRepository("");
+    try {
+      expect(runImmutableLockfile(missingRef.root, ["capture"], { GITHUB_SHA: "" }).status).toBe(1);
+      expect(runImmutableLockfile(invalidRef.root, ["capture", "--source-ref", "not-a-commit"]).stderr).toMatch(/git show could not read/);
+      expect(runImmutableLockfile(emptyBlob.root, ["capture", "--source-ref", emptyBlob.sha]).stderr).toMatch(/is empty/);
+    } finally {
+      rmSync(missingRef.root, { recursive: true, force: true });
+      rmSync(invalidRef.root, { recursive: true, force: true });
+      rmSync(emptyBlob.root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a deliberately mutated lockfile fixture after installation", () => {
+    const { root, sha } = createLockfileRepository("lockfile: clean\n");
+    try {
+      const capture = runImmutableLockfile(root, ["capture", "--source-ref", sha]);
+      expect(capture.status).toBe(0);
+      writeFileSync(resolve(root, "pnpm-lock.yaml"), "lockfile: mutated-after-install\n", "utf8");
+
+      const verify = runImmutableLockfile(root, ["verify", "--expected-digest", capture.stdout.trim()]);
+      expect(verify.status).toBe(1);
+      expect(verify.stderr).toMatch(/digest differs from the immutable source digest and from the checked-out Git source/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts a clean source checkout after installation", () => {
+    const { root, sha } = createLockfileRepository("lockfile: clean\n");
+    try {
+      const capture = runImmutableLockfile(root, ["capture", "--source-ref", sha]);
+      const wrongDigest = runImmutableLockfile(root, ["verify", "--expected-digest", "0".repeat(64)]);
+      const verify = runImmutableLockfile(root, ["verify", "--expected-digest", capture.stdout.trim()]);
+      expect(capture.status).toBe(0);
+      expect(wrongDigest.stderr).toMatch(/digest differs from the immutable source digest/);
+      expect(verify.status).toBe(0);
+      expect(verify.stdout.trim()).toBe(capture.stdout.trim());
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
