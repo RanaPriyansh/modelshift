@@ -1,5 +1,6 @@
 export { PRIMARY_SOURCE_RUNTIME_BINDING } from "./primary-source-binding";
 export { PROPORTIONAL_REASONING_RUNTIME_BINDING } from "./proportional-reasoning-binding";
+export { SOURCE_CORROBORATION_RUNTIME_BINDING } from "./source-corroboration-binding";
 export { lintWorldRuntimePack, type WorldRuntimeLintResult } from "./linter";
 export {
   primarySourceWorldRuntimeAdapter,
@@ -10,6 +11,11 @@ export {
   proportionalReasoningWorldRuntimeAdapter,
   projectProportionalReasoningTransferValidation,
 } from "./proportional-reasoning";
+export {
+  projectSourceCorroborationTransferValidation,
+  sourceCorroborationWorldRuntimeAdapter,
+  type SourceCorroborationRuntimeProof,
+} from "./source-corroboration";
 export {
   deriveDefaultEvidenceDisposition,
   type AccessAccommodationEvent,

@@ -13,6 +13,7 @@ import {
   validateEncounter,
   validateEvidenceReview,
   validateReadings,
+  validateTestPrediction,
   validateTransferSubmission,
 } from "./validator";
 
@@ -20,6 +21,8 @@ export const initialEvidenceLearningState: EvidenceLearningState = {
   stage: "encounter",
   encounter: { stanceId: null, confidence: 60, reason: "" },
   committedEncounter: null,
+  acceptedTwoReadings: false,
+  testPredictionId: null,
   reviewedEvidenceIds: [],
   differenceId: null,
   readingVerdicts: {},
@@ -67,10 +70,21 @@ export function evidenceLearningReducer(
       if (!result.ok) return reject(state, result.error);
       return {
         ...state,
-        stage: "evidence",
+        stage: "compiler",
         committedEncounter: { ...state.encounter, reason: state.encounter.reason.trim() },
         lastError: null,
       };
+    }
+    case "ACCEPT_TWO_READINGS":
+      return atStage(state, "compiler")
+        ? { ...state, acceptedTwoReadings: true, lastError: null }
+        : reject(state, "invalid-transition");
+    case "COMMIT_TEST_PREDICTION": {
+      if (!atStage(state, "compiler")) return reject(state, "invalid-transition");
+      const result = validateTestPrediction(state.acceptedTwoReadings, action.predictionId);
+      return result.ok
+        ? { ...state, testPredictionId: action.predictionId, stage: "evidence", lastError: null }
+        : reject(state, result.error);
     }
     case "REVIEW_EVIDENCE":
       if (!atStage(state, "evidence") || !EVIDENCE_IDS.includes(action.evidenceId)) return reject(state, "invalid-transition");
@@ -118,8 +132,12 @@ export function evidenceLearningReducer(
     case "COMMIT_BOUNDED_CLAIM": {
       if (!atStage(state, "reconstruct")) return reject(state, "invalid-transition");
       const result = validateBoundedClaim(state.boundedClaimId);
-      return result.ok ? { ...state, stage: "transfer", lastError: null } : reject(state, result.error);
+      return result.ok ? { ...state, stage: "withdrawal", lastError: null } : reject(state, result.error);
     }
+    case "ACKNOWLEDGE_WITHDRAWAL":
+      return atStage(state, "withdrawal")
+        ? { ...state, stage: "transfer", lastError: null }
+        : reject(state, "invalid-transition");
     case "SET_TRANSFER_CHOICE":
       return atStage(state, "transfer")
         ? { ...state, transferChoiceId: action.choiceId, lastError: null }
@@ -157,6 +175,8 @@ export function evidenceLearningReducer(
         lastError: null,
       };
     }
+    case "RESET":
+      return initialEvidenceLearningState;
     default:
       return state;
   }

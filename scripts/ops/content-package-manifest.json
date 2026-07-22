@@ -3,7 +3,7 @@
   "packages": [
     { "id": "world.force-and-motion", "version": "1.0.0", "route": "/learn/force-and-motion" },
     { "id": "world.proportional-reasoning", "version": "1.0.1", "route": "/learn/proportional-reasoning", "runtime_binding_digest": "sha256:fa1b4cd1be4cfce67d37a59a6e892cc821022b1ced1007f8f9c27b9574961377" },
-    { "id": "world.source-corroboration", "version": "1.0.0", "route": "/learn/ai-and-learning" },
+    { "id": "world.source-corroboration", "version": "1.0.1", "route": "/learn/ai-and-learning", "runtime_binding_digest": "sha256:424f7b6f481707a290273d5d5b4f31364b8fadcdd8a0e2a616d2354e434d3d2f" },
     { "id": "world.primary-source-reasoning", "version": "1.0.1", "route": "/learn/primary-source-reasoning", "runtime_binding_digest": "sha256:e14f152652494c7fcbabc0c9745e017416ef5a6a78b03c4785d7085b522c6519" }
   ]
 }
