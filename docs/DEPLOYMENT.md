@@ -15,6 +15,8 @@ Additional server variables:
 
 Do not enable cloud auth until the intended Supabase organization/project is approved and production abuse controls, email policy, redirects, RLS migrations, privacy operations, and smoke tests are in place. Device access remains operational without it. Public managed and BYOK Lesson Studio provider calls are locked: there is no managed Studio environment switch, and a request-only key cannot authorize the route. They remain unavailable until active adult server-owned authority and separate quota, abuse, privacy, and review controls are approved.
 
+Release health always reports managed Lesson Studio as `false` and request-only, regardless of any unrelated OpenAI key or retired Studio configuration. Managed interpretation and planner flags remain separate controls.
+
 ## Current release
 
 As of 2026-07-22 01:56 IST, the fallback-only release is public and the source repository is public.

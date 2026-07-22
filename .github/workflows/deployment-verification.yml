@@ -26,7 +26,6 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
       OPENAI_API_KEY: ""
       FORGE_CLOUD_ACCOUNTS_ENABLED: "false"
-      FORGE_LESSON_STUDIO_OPENAI_ENABLED: "false"
       OPENAI_INTERPRETATION_ENABLED: "false"
       OPENAI_FORGE_PLANNER_ENABLED: "false"
       TARGET_ID: ${{ inputs.target_id }}
