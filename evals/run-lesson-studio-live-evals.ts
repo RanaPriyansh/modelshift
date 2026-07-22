@@ -10,7 +10,7 @@ async function main() {
   const report = await runLessonStudioLiveEval(config, generateLessonDraft);
   // The report is redacted by construction. Do not add prompts, drafts, keys, or provider bodies here.
   console.log(JSON.stringify(report));
-  if (report.status === "NOT_RUN") process.exitCode = 2;
+  if (report.status !== "PASSED") process.exitCode = 2;
 }
 
 void main();
