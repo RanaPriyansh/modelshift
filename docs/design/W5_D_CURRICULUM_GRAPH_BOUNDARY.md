@@ -36,5 +36,7 @@ Coverage projection always contains the exact nine Packet C areas in canonical o
 | 20 non-claims | `12...` |
 | 21 complete source review without publication | `10...` |
 | 22 legacy metadata cannot publish anew | `12...` |
-| 23 reviewed age/depth grants | `14...` |
-| 24 temporal evaluation floor and offset-equivalence | `17...` |
+| 23 cloned object identities | `13...` |
+| 24 multiple gaps in one area | `15...` |
+| Additional reviewed age/depth grants | `14...` |
+| Additional temporal evaluation floor and offset-equivalence | `17...` |

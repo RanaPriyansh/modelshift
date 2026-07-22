@@ -31,7 +31,8 @@ export interface CapabilityAvailabilityExplanation {
     readonly packageIntegrityHash: string;
     readonly runtimeBindingDigest: string;
     readonly validatorId: string;
-    readonly route: string;
+    /** Authored binding proposal only; the top-level route is null until release is derived. */
+    readonly proposedRoute: string;
   } | null;
   readonly policyBinding: { readonly id: string; readonly version: string; readonly digest: string } | null;
   readonly releaseBinding: { readonly availability: CurriculumAvailability; readonly route: string | null } | null;
@@ -109,7 +110,7 @@ export function explainCapabilityAvailability(validated: ValidatedCurriculumGrap
       packageIntegrityHash: node.worldBinding.packageIntegrityHash,
       runtimeBindingDigest: node.worldBinding.runtimeBindingDigest,
       validatorId: node.worldBinding.validatorRef.id,
-      route: node.worldBinding.route,
+      proposedRoute: node.worldBinding.route,
     },
     policyBinding: validated.graph?.policyRef ?? null,
     releaseBinding: { availability: derived.availability, route: derived.route },

@@ -526,6 +526,9 @@ describe("W5-D immutable curriculum graph", () => {
     expect(derivedNode(validated, "capability.argument-evidence.claim-boundary").route).toBeNull();
     expect(derivedNode(validated, "capability.language-literacy.claim-evidence-relation").availability).toBe("review-candidate");
     expect(derivedNode(validated, "capability.language-literacy.claim-evidence-relation").route).toBeNull();
+    const candidateExplanation = explainCapabilityAvailability(validated, "capability.language-literacy.claim-evidence-relation");
+    expect(candidateExplanation.route).toBeNull();
+    expect(candidateExplanation.worldBinding?.proposedRoute).toBe("/learn/argument-evidence");
     const coverage = projectNineAreaCoverage(validated);
     expect(coverage).toHaveLength(9);
     expect(coverage.find((entry) => entry.area === "language-literacy")!.gaps).toHaveLength(2);
