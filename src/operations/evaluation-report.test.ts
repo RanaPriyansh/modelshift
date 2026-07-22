@@ -26,6 +26,10 @@ describe("offline evaluation regression report", () => {
     const passed = buildOfflineRegressionReport({ gitSha: SHA, liveEvaluationStatus: "pass", liveEvaluationArtifactId: "live-eval-approved-1" });
     expect(passed.release_closure_status).toBe("PASS");
     expect(passed.live_model_evaluation.artifact_id).toBe("live-eval-approved-1");
+    const missingArtifact = buildOfflineRegressionReport({ gitSha: SHA, liveEvaluationStatus: "pass" });
+    expect(missingArtifact.live_model_evaluation.status).toBe("fail");
+    expect(missingArtifact.release_closure_status).toBe("FAIL");
+    expect(buildOfflineRegressionReport({ gitSha: SHA, releaseClosureMode: true }).release_closure_status).toBe("FAIL");
   });
   it("fails closed for an incomplete corpus and labels live evaluation honestly", () => {
     expect(buildOfflineRegressionReport({ fixtures: INTERPRETATION_FIXTURES.slice(0, 10), gitSha: SHA }).offline_regression_status).toBe("fail");

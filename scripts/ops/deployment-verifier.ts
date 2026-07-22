@@ -1,5 +1,7 @@
 import { isIP } from "node:net";
 import { lookup } from "node:dns/promises";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -14,6 +16,7 @@ import {
 import { resolveDeploymentTarget } from "./deployment-target-policy";
 
 export const DEPLOYMENT_VERIFIER_VERSION = "2.0.0";
+export const WORKER_CANDIDATE_STATES = ["BUILT_LOCAL", "PUSHED", "DEPLOYMENT_BLOCKED", "DEPLOYED_CANDIDATE"] as const;
 const SHA = /^[0-9a-f]{40}$/i;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
@@ -77,16 +80,27 @@ export type VerifyDeploymentOptions = {
   rollbackSha?: string;
   rollbackRehearsal?: "pass" | "fail" | "not_evaluated";
   decisionName?: string;
+  consoleVerification?: "pass" | "fail" | "not_evaluated";
   expectedLockfileDigest?: string;
   expectedContentManifestDigest?: string;
   expectedEvaluatorBaselineDigest?: string;
   expectedDatabaseMigrationIdentity?: string;
   liveEvaluationStatus?: "not_evaluated" | "pass" | "fail";
+  liveEvaluationArtifactId?: string;
   resolveHostname?: (hostname: string) => Promise<readonly string[]>;
 };
 
 function isPrivateAddress(address: string): boolean {
   const normalized = address.toLowerCase().replace(/^\[|\]$/g, "");
+  if (normalized.startsWith("::ffff:")) {
+    const mapped = normalized.slice("::ffff:".length);
+    if (mapped.includes(".")) return isPrivateAddress(mapped);
+    const words = mapped.split(":");
+    if (words.length === 2) {
+      const high = Number.parseInt(words[0] ?? "", 16); const low = Number.parseInt(words[1] ?? "", 16);
+      if (Number.isInteger(high) && Number.isInteger(low)) return isPrivateAddress(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`);
+    }
+  }
   if (normalized === "::1" || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe8") || normalized.startsWith("fe9") || normalized.startsWith("fea") || normalized.startsWith("feb")) return true;
   if (isIP(normalized) !== 4) return false;
   const parts = normalized.split(".").map(Number);
@@ -102,7 +116,7 @@ async function safeResolvedAddresses(hostname: string, resolver: (hostname: stri
   const normalized = hostname.toLowerCase().replace(/\.$/, "");
   if (BLOCKED_HOSTNAMES.has(normalized) || normalized.endsWith(".local") || normalized.endsWith(".internal")) throw new Error("target hostname is reserved or private");
   const addresses = await resolver(hostname);
-  if (addresses.length === 0 || addresses.some(isPrivateAddress)) throw new Error("target DNS resolves to a private, link-local, metadata, or otherwise blocked address");
+  if (addresses.length === 0 || addresses.some((address) => isIP(address) === 0 || isPrivateAddress(address))) throw new Error("target DNS resolves to a private, link-local, metadata, or otherwise blocked address");
   return [...new Set(addresses)].sort();
 }
 
@@ -134,11 +148,29 @@ function scripts(html: string, origin: string): { urls: URL[]; rejected: number 
   return { urls: [...urls].map((url) => new URL(url)), rejected };
 }
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
-async function get(fetchImpl: FetchLike, url: URL, timeoutMs: number, expectedAddresses?: readonly string[], resolver: (hostname: string) => Promise<readonly string[]> = defaultResolveHostname): Promise<Response> {
+async function pinnedRequest(url: URL, timeoutMs: number, addresses: readonly string[], maximum: number): Promise<Response> {
+  const address = addresses[0];
+  if (!address) throw new Error("no validated target address");
+  const requestFunction = url.protocol === "https:" ? httpsRequest : httpRequest;
+  return new Promise((resolveResponse, reject) => {
+    const request = requestFunction({ hostname: url.hostname, port: url.port || (url.protocol === "https:" ? 443 : 80), path: `${url.pathname}${url.search}`, method: "GET", headers: { Accept: "text/html,application/json;q=0.9,*/*;q=0.1", "User-Agent": `FORGE-deployment-verifier/${DEPLOYMENT_VERIFIER_VERSION}` }, lookup: (_hostname, _options, callback) => callback(null, address, isIP(address)), servername: url.hostname, rejectUnauthorized: true });
+    const chunks: Buffer[] = []; let bytes = 0;
+    request.setTimeout(timeoutMs, () => request.destroy(new Error("verification request timed out")));
+    request.on("error", reject);
+    request.on("response", (response) => {
+      response.on("data", (chunk: Buffer) => { bytes += chunk.byteLength; if (bytes <= maximum) chunks.push(chunk); else response.destroy(new Error("response exceeded the bounded verification size")); });
+      response.on("error", reject);
+      response.on("end", () => { if (bytes <= maximum) { const headers = new Headers(); for (const [key, value] of Object.entries(response.headers)) if (typeof value === "string") headers.set(key, value); resolveResponse(new Response(Buffer.concat(chunks), { status: response.statusCode ?? 0, headers })); } });
+    });
+    request.end();
+  });
+}
+async function get(fetchImpl: FetchLike, url: URL, timeoutMs: number, expectedAddresses?: readonly string[], resolver: (hostname: string) => Promise<readonly string[]> = defaultResolveHostname, usePinnedTransport = false, maximum = MAX_HTML): Promise<Response> {
   if (expectedAddresses) {
     const currentAddresses = await safeResolvedAddresses(url.hostname, resolver);
     if (currentAddresses.join(",") !== expectedAddresses.join(",")) throw new Error("target DNS resolution changed during verification");
   }
+  if (usePinnedTransport && expectedAddresses) return pinnedRequest(url, timeoutMs, expectedAddresses, maximum);
   const response = await fetchImpl(url, { method: "GET", redirect: "manual", signal: AbortSignal.timeout(timeoutMs), headers: { Accept: "text/html,application/json;q=0.9,*/*;q=0.1", "User-Agent": `FORGE-deployment-verifier/${DEPLOYMENT_VERIFIER_VERSION}` } });
   if (response.url) {
     try { if (new URL(response.url).origin !== url.origin) throw new Error("redirect crossed origins"); } catch (error) { if (error instanceof Error && error.message === "redirect crossed origins") throw error; }
@@ -147,10 +179,28 @@ async function get(fetchImpl: FetchLike, url: URL, timeoutMs: number, expectedAd
 }
 function headerChecks(checks: VerificationCheck[], response: Response, prefix: string, html: string, origin: string): void {
   const csp = response.headers.get("content-security-policy") ?? "";
-  for (const directive of ["default-src 'self'", "base-uri 'self'", "frame-ancestors 'none'", "object-src 'none'"]) record(checks, `${prefix}.csp.${directive.split(" ", 1)[0]}`, csp.includes(directive), `CSP contains ${directive}`);
-  const scriptSource = csp.match(/(?:^|;)\s*script-src\s+([^;]+)/i)?.[1] ?? "";
-  const scriptContract = scriptSource.includes("'self'") && scriptSource.includes("'strict-dynamic'") && /'nonce-[^']+'/.test(scriptSource) && !scriptSource.includes("'unsafe-inline'") && !scriptSource.includes("'unsafe-eval'");
+  const canonical: Record<string, readonly string[]> = {
+    "default-src": ["'self'"], "base-uri": ["'self'"], "form-action": ["'self'"], "frame-ancestors": ["'none'"], "object-src": ["'none'"],
+    "img-src": ["'self'", "data:", "blob:"], "font-src": ["'self'", "data:"], "style-src": ["'self'", "'unsafe-inline'"], "script-src": [],
+    "connect-src": ["'self'"], "media-src": ["'self'", "blob:"], "worker-src": ["'self'", "blob:"], "manifest-src": ["'self'"], "upgrade-insecure-requests": [],
+  };
+  const parsed: string[][] = csp.split(";").map((part) => part.trim().split(/\s+/)).filter((parts) => parts[0]);
+  const directives = new Map<string, string[]>();
+  let duplicate = false;
+  for (const parts of parsed) { const name = parts[0]?.toLowerCase(); if (!name) continue; if (directives.has(name)) duplicate = true; directives.set(name, parts.slice(1)); }
+  const sameTokens = (actual: readonly string[] | undefined, expected: readonly string[]): boolean => { if (!actual || actual.length !== expected.length) return false; const sortedExpected = [...expected].sort(); return [...actual].sort().every((value, index) => value === sortedExpected[index]); };
+  const scriptSource = directives.get("script-src");
+  const scriptContract = scriptSource !== undefined && scriptSource.length === 3 && scriptSource.includes("'self'") && scriptSource.includes("'strict-dynamic'") && scriptSource.some((value) => /^'nonce-[^']+'$/.test(value));
   record(checks, `${prefix}.csp.script_src_contract`, scriptContract, "script-src explicitly requires self, strict-dynamic, and a nonce without unsafe inline/eval");
+  const scriptElementContract = !directives.has("script-src-elem");
+  record(checks, `${prefix}.csp.script_src_elem_contract`, scriptElementContract, "script-src-elem is absent so it cannot override the canonical script policy");
+  const formAction = directives.get("form-action") ?? [];
+  record(checks, `${prefix}.csp.form_action`, sameTokens(formAction, canonical["form-action"] ?? []), "form-action permits only same-origin submissions");
+  const connectSource = directives.get("connect-src") ?? [];
+  record(checks, `${prefix}.csp.connect_src`, sameTokens(connectSource, canonical["connect-src"] ?? []), "connect-src permits only same-origin browser egress");
+  const canonicalNames = Object.keys(canonical).sort();
+  const exactCanonical = !duplicate && [...directives.keys()].sort().join(",") === canonicalNames.join(",") && Object.entries(canonical).every(([name, values]) => name === "script-src" ? scriptContract : sameTokens(directives.get(name), values));
+  record(checks, `${prefix}.csp.contract`, exactCanonical, "production CSP exactly matches the app security-header directive contract");
   const nonces = [...csp.matchAll(/nonce-([^' ;]+)/g)].map((match) => match[1]);
   const htmlNonces = [...html.matchAll(/<script\b[^>]*\bnonce=["']([^"']+)["']/gi)].map((match) => match[1]);
   record(checks, `${prefix}.csp.nonce`, nonces.length > 0 && htmlNonces.length > 0 && htmlNonces.every((nonce) => nonces.includes(nonce)), "CSP nonce is present and matches framework script nonces");
@@ -162,7 +212,7 @@ function headerChecks(checks: VerificationCheck[], response: Response, prefix: s
     const src = attrs.match(/\bsrc=["']([^"']+)["']/i)?.[1];
     if (nonce && nonces.includes(nonce)) return true;
     if (!src) return false;
-    try { const url = new URL(src, origin); return url.origin === origin && url.pathname.startsWith("/_next/static/") && scriptSource.includes("'self'"); } catch { return false; }
+    try { const url = new URL(src, origin); return url.origin === origin && url.pathname.startsWith("/_next/static/") && (scriptSource ?? []).includes("'self'"); } catch { return false; }
   });
   record(checks, `${prefix}.csp.script_elements`, scriptElementsSafe, "every executable script element obeys the nonce or same-origin versioned-source policy");
   record(checks, `${prefix}.nosniff`, response.headers.get("x-content-type-options")?.toLowerCase() === "nosniff", "X-Content-Type-Options is nosniff");
@@ -173,6 +223,8 @@ function headerChecks(checks: VerificationCheck[], response: Response, prefix: s
 }
 
 export async function verifyDeployment(options: VerifyDeploymentOptions): Promise<DeploymentVerificationReport> {
+  if (options.candidateState && !WORKER_CANDIDATE_STATES.includes(options.candidateState as (typeof WORKER_CANDIDATE_STATES)[number])) throw new Error("worker verifier cannot emit terminal ADR-006 states");
+  if (options.liveEvaluationStatus && options.liveEvaluationStatus !== "not_evaluated") throw new Error("worker verifier cannot consume live evaluation proof; use the separately approved eval:live gate");
   const expected = normalizeSha(options.expectedSha); const target = validateTargetUrl(options.baseUrl, options.allowedHosts, options.allowLocalhost); const origin = target.origin; const fetchImpl = options.fetchImpl ?? fetch; const timeoutMs = options.timeoutMs ?? 10_000; const checks: VerificationCheck[] = []; let observed: string | "unknown" = "unknown"; let runtimeMode = "unknown"; let cloudProviderFlags: Record<string, boolean | string> = { cloud_accounts_enabled: "not_evaluated", cloud_auth_configured: "not_evaluated", provider_mode: "not_evaluated" }; const assets = new Map<string, URL>();
   const generatedAt = options.generatedAt ?? new Date().toISOString();
   const resolver = options.resolveHostname ?? defaultResolveHostname;
@@ -186,13 +238,13 @@ export async function verifyDeployment(options: VerifyDeploymentOptions): Promis
     } catch {
       record(checks, "target.dns_policy", false, "target DNS is private, reserved, unavailable, or changed during verification");
       const failed = checks.length;
-      const candidateState = options.candidateState ?? "DEPLOYED_CANDIDATE";
+      const candidateState = options.candidateState ?? "DEPLOYMENT_BLOCKED";
       const releaseIdentity = buildReleaseIdentity({ sourceSha: expected, testedSha: expected, generatedAt, candidateState, buildRuntimeMode: "unknown", cloudProviderFlags, retainedArtifactIds: options.retainedArtifactIds ?? ["deployment-verification.json", "deployment-verification.md"], deploymentId: options.deploymentId, deploymentUrl: options.deploymentUrl, aliasUrl: options.aliasUrl, aliasResolvedAt: options.aliasResolvedAt, databaseProject: options.databaseProject, databaseMigration: options.databaseMigration, rollbackDeploymentId: options.rollbackDeploymentId, rollbackSha: options.rollbackSha, rollbackRehearsal: options.rollbackRehearsal, decisionName: options.decisionName });
       return { schema_version: "1.0", report_kind: "read_only_deployment_verification", verifier_version: DEPLOYMENT_VERIFIER_VERSION, generated_at: generatedAt, target_origin: origin, expected_release_sha: expected, observed_release_sha: "unknown", release_identity: releaseIdentity, request_policy: { methods: ["GET"], same_origin_only: true, redirects_followed: false, state_changing_requests: false, response_bodies_retained: false, learner_data_collected: false }, checks, summary: { passed: 0, failed }, status: "fail" };
     }
   }
   try {
-    const response = await get(fetchImpl, new URL("/api/health", origin), timeoutMs, targetAddresses, resolver);
+    const response = await get(fetchImpl, new URL("/api/health", origin), timeoutMs, targetAddresses, resolver, fetchImpl === fetch, MAX_HEALTH);
     record(checks, "health.status", response.status === 200, "health endpoint returns 200");
     record(checks, "health.content_type", response.headers.get("content-type")?.toLowerCase().includes("application/json") === true, "health endpoint returns JSON");
     record(checks, "health.cache_control", response.headers.get("cache-control")?.toLowerCase().includes("no-store") === true, "health response is not cached");
@@ -234,7 +286,7 @@ export async function verifyDeployment(options: VerifyDeploymentOptions): Promis
 
   for (const route of ROUTES) {
     try {
-      const response = await get(fetchImpl, new URL(route.path, origin), timeoutMs, targetAddresses, resolver);
+      const response = await get(fetchImpl, new URL(route.path, origin), timeoutMs, targetAddresses, resolver, fetchImpl === fetch, MAX_HTML);
       record(checks, `${route.id}.status`, response.status === 200, `${route.path} returns 200 without a redirect or access challenge`);
       record(checks, `${route.id}.content_type`, response.headers.get("content-type")?.toLowerCase().includes("text/html") === true, `${route.path} returns HTML`);
       const html = await readBounded(response, MAX_HTML);
@@ -246,12 +298,12 @@ export async function verifyDeployment(options: VerifyDeploymentOptions): Promis
   }
   record(checks, "client_assets.bounded_count", assets.size > 0 && assets.size <= MAX_ASSETS, `client asset set is non-empty and no larger than ${MAX_ASSETS}`);
   if (assets.size <= MAX_ASSETS) for (const [index, url] of [...assets.values()].sort((a, b) => a.href.localeCompare(b.href)).entries()) {
-    try { const response = await get(fetchImpl, url, timeoutMs, targetAddresses, resolver); const body = await readBounded(response, MAX_ASSET); const leaks = forbidden(body); record(checks, `client_asset.${index + 1}`, response.status === 200 && leaks.length === 0, leaks.length === 0 ? "client asset is reachable and contains no forbidden secret pattern" : `client asset contains forbidden pattern categories: ${leaks.join(", ")}`); } catch { record(checks, `client_asset.${index + 1}`, false, "client asset failed or exceeded a verification bound"); }
+    try { const response = await get(fetchImpl, url, timeoutMs, targetAddresses, resolver, fetchImpl === fetch, MAX_ASSET); const body = await readBounded(response, MAX_ASSET); const leaks = forbidden(body); record(checks, `client_asset.${index + 1}`, response.status === 200 && leaks.length === 0, leaks.length === 0 ? "client asset is reachable and contains no forbidden secret pattern" : `client asset contains forbidden pattern categories: ${leaks.join(", ")}`); } catch { record(checks, `client_asset.${index + 1}`, false, "client asset failed or exceeded a verification bound"); }
   }
   let passed = checks.filter((item) => item.status === "pass").length; let failed = checks.length - passed;
   const cspChecks = checks.filter((item) => item.id.includes(".csp."));
   const networkChecks = checks.filter((item) => item.id.startsWith("client_asset.") || item.id === "client_assets.bounded_count");
-  const candidateState = options.candidateState ?? (LOCAL_HOSTS.has(target.hostname) ? "BUILT_LOCAL" : "DEPLOYED_CANDIDATE");
+  const candidateState = options.candidateState ?? (LOCAL_HOSTS.has(target.hostname) ? "BUILT_LOCAL" : options.deploymentId && options.deploymentUrl ? "DEPLOYED_CANDIDATE" : "DEPLOYMENT_BLOCKED");
   if (!RELEASE_CANDIDATE_STATES.includes(candidateState)) throw new Error("candidate state is not an ADR-006 state");
   const releaseIdentity = buildReleaseIdentity({
     sourceSha: expected,
@@ -269,19 +321,16 @@ export async function verifyDeployment(options: VerifyDeploymentOptions): Promis
     databaseMigration: options.databaseMigration,
     browser: failed === 0 ? "pass" : "fail",
     csp: cspChecks.length > 0 && cspChecks.every((item) => item.status === "pass") ? "pass" : "fail",
-    console: "not_evaluated",
+    console: options.consoleVerification ?? "not_evaluated",
     network: networkChecks.length > 0 && networkChecks.every((item) => item.status === "pass") ? "pass" : "fail",
     rollbackDeploymentId: options.rollbackDeploymentId,
     rollbackSha: options.rollbackSha,
     rollbackRehearsal: options.rollbackRehearsal,
     decisionName: options.decisionName,
   });
-  const identityFailures = validateReleaseIdentity(releaseIdentity);
+  const identityFailures = validateReleaseIdentity(releaseIdentity, { liveEvaluationStatus: options.liveEvaluationStatus, liveEvaluationArtifactId: options.liveEvaluationArtifactId });
   record(checks, "release_identity.contract", identityFailures.length === 0, identityFailures.length === 0 ? "ADR-006 identity tuple is complete and internally consistent" : `ADR-006 identity tuple fields are invalid: ${identityFailures.join(", ")}`);
-  const liveEvaluationStatus = options.liveEvaluationStatus ?? "not_evaluated";
-  const productionGate = candidateState !== "PRODUCTION_VERIFIED"
-    || (liveEvaluationStatus === "pass" && Boolean(options.deploymentId) && Boolean(options.deploymentUrl) && Boolean(options.aliasUrl) && Boolean(options.aliasResolvedAt) && Boolean(options.decisionName) && options.rollbackRehearsal === "pass");
-  record(checks, "release_identity.production_gate", productionGate, candidateState === "PRODUCTION_VERIFIED" ? "PRODUCTION_VERIFIED requires passed live evidence, immutable deployment/alias, named decision, and rollback rehearsal" : "candidate is not being represented as production verified");
+  record(checks, "release_identity.state_bound", candidateState !== "DEPLOYMENT_BLOCKED", candidateState === "DEPLOYMENT_BLOCKED" ? "immutable deployment metadata is missing; candidate remains blocked" : `candidate state is ${candidateState}`);
   passed = checks.filter((item) => item.status === "pass").length; failed = checks.length - passed;
   return { schema_version: "1.0", report_kind: "read_only_deployment_verification", verifier_version: DEPLOYMENT_VERIFIER_VERSION, generated_at: generatedAt, target_origin: origin, expected_release_sha: expected, observed_release_sha: observed, release_identity: releaseIdentity, request_policy: { methods: ["GET"], same_origin_only: true, redirects_followed: false, state_changing_requests: false, response_bodies_retained: false, learner_data_collected: false }, checks, summary: { passed, failed }, status: failed === 0 ? "pass" : "fail" };
 }
@@ -300,8 +349,10 @@ async function main() {
   if (targetId && arg("--base-url")) throw new Error("--target-id cannot be combined with a caller-provided base URL");
   const outputDirectory = resolve(arg("--output-dir") ?? "test-results/release-ops");
   const requestedState = arg("--candidate-state");
-  const candidateState = requestedState && RELEASE_CANDIDATE_STATES.includes(requestedState as ReleaseCandidateState) ? requestedState as ReleaseCandidateState : undefined;
-  if (requestedState && !candidateState) throw new Error("--candidate-state must be an ADR-006 candidate state");
+  const candidateState = requestedState && WORKER_CANDIDATE_STATES.includes(requestedState as (typeof WORKER_CANDIDATE_STATES)[number]) ? requestedState as ReleaseCandidateState : undefined;
+  if (requestedState && !candidateState) throw new Error("--candidate-state must be a nonterminal worker ADR-006 state");
+  const liveEvaluationStatus = arg("--live-evaluation-status");
+  if (liveEvaluationStatus && liveEvaluationStatus !== "not_evaluated") throw new Error("worker CLI cannot consume live evaluation proof");
   const report = await verifyDeployment({
     baseUrl,
     expectedSha,
@@ -319,11 +370,13 @@ async function main() {
     rollbackSha: arg("--rollback-sha"),
     rollbackRehearsal: arg("--rollback-rehearsal") as "pass" | "fail" | "not_evaluated" | undefined,
     decisionName: arg("--decision-name"),
+    consoleVerification: arg("--console-verification") as "pass" | "fail" | "not_evaluated" | undefined,
     expectedLockfileDigest: arg("--expected-lockfile-digest"),
     expectedContentManifestDigest: arg("--expected-content-manifest-digest"),
     expectedEvaluatorBaselineDigest: arg("--expected-evaluator-baseline-digest"),
     expectedDatabaseMigrationIdentity: arg("--expected-database-migration-identity"),
-    liveEvaluationStatus: arg("--live-evaluation-status") as "not_evaluated" | "pass" | "fail" | undefined,
+    liveEvaluationStatus: liveEvaluationStatus as "not_evaluated" | undefined,
+    liveEvaluationArtifactId: arg("--live-evaluation-artifact-id"),
   });
   await writeDeploymentReport(report, outputDirectory);
   console.log(`deployment verification: ${report.status.toUpperCase()} (${report.summary.passed} passed, ${report.summary.failed} failed)`);

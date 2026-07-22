@@ -69,6 +69,7 @@ jobs:
         continue-on-error: true
         run: pnpm exec tsx scripts/ops/run-production-browser-verification.ts --expected-sha "$GITHUB_SHA"
       - name: Write sanitized evaluation report
+        id: evaluation_report
         if: always()
         continue-on-error: true
         run: pnpm exec tsx scripts/ops/evaluation-report.ts --git-sha "$GITHUB_SHA" --output-dir test-results/release-ops
@@ -80,7 +81,7 @@ jobs:
       - name: Write bounded Playwright failure manifest
         if: always()
         continue-on-error: true
-        run: pnpm exec tsx scripts/ops/playwright-artifact-manifest.ts --root test-results --output test-results/release-ops/playwright-artifact-manifest.json --tested-sha "$GITHUB_SHA" --artifact-id "$FORGE_BROWSER_ARTIFACT_ID"
+        run: pnpm exec tsx scripts/ops/playwright-artifact-manifest.ts --root test-results --output test-results/release-ops/playwright-artifact-manifest.json --stage-dir test-results/release-ops/playwright-failure-artifacts --tested-sha "$GITHUB_SHA" --artifact-id "$FORGE_BROWSER_ARTIFACT_ID"
       - name: Upload sanitized operations reports
         if: always() && hashFiles('test-results/release-ops/*') != ''
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -95,9 +96,7 @@ jobs:
         with:
           name: forge-playwright-failure-${{ github.run_id }}
           path: |
-            test-results/**/*.png
-            test-results/**/*.webm
-            test-results/**/*.zip
+            test-results/release-ops/playwright-failure-artifacts/
             test-results/release-ops/playwright-artifact-manifest.json
           if-no-files-found: warn
           retention-days: 14
@@ -105,4 +104,5 @@ jobs:
         if: always()
         run: |
           test "${{ steps.browser.outcome }}" = success
+          test "${{ steps.evaluation_report.outcome }}" = success
           test "${{ steps.local_verify.outcome }}" = success
