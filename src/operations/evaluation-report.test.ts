@@ -17,6 +17,7 @@ describe("offline evaluation regression report", () => {
     expect(report.release_identity.candidate_state).toBe("BUILT_LOCAL");
     expect(report.release_identity.source_sha).toBe(SHA);
     expect(report.release_identity.public_alias).toEqual({ status: "not_evaluated" });
+    expect(report.release_identity.named_release_decision.outcome).toBe("not_authorized");
     expect(JSON.stringify(report)).not.toContain(INTERPRETATION_FIXTURES[0]?.explanation);
   });
   it("keeps live evaluation as a separate fail-closed release gate", () => {

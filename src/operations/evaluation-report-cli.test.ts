@@ -35,9 +35,19 @@ describe("evaluation report CI entrypoint", () => {
     const report = JSON.parse(await readFile(resolve(directory, "evaluation-regression.json"), "utf8")) as {
       git_sha: string;
       live_model_evaluation: { status: string };
+      release_identity: { named_release_decision: { outcome: string } };
     };
     expect(report.git_sha).toBe(SHA);
     expect(report.live_model_evaluation.status).toBe("not_evaluated");
+    expect(report.release_identity.named_release_decision.outcome).toBe("not_authorized");
+  });
+
+  it("rejects a caller-supplied release-decision outcome", async () => {
+    const directory = await outputDirectory();
+    const result = runCiEntrypoint(["--git-sha", SHA, "--output-dir", directory, "--decision-outcome", "promote"]);
+
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}\n${result.stderr}`).toMatch(/cannot accept a release decision outcome/);
   });
 
   it("rejects a caller-supplied live pass and arbitrary artifact ID", async () => {

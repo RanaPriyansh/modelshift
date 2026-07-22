@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildReleaseIdentity,
   RELEASE_CANDIDATE_STATES,
+  RELEASE_DECISION_OUTCOMES,
   type ReleaseHealthCloudProviderFlags,
   type ReleaseIdentityVerificationAuthority,
   validateReleaseIdentity,
@@ -58,6 +59,7 @@ function terminal(candidateState: "PRODUCTION_VERIFIED" | "ROLLED_BACK" = "PRODU
     rollbackSha: SHA,
     rollbackRehearsal: "pass",
     decisionName: rollback ? "principal-rollback" : "principal-approved",
+    decisionOutcome: rollback ? "rollback" : "promote",
   });
   const authority: ReleaseIdentityVerificationAuthority = {
     immutable_deployment: { id: deploymentId, url: deploymentUrl },
@@ -65,7 +67,7 @@ function terminal(candidateState: "PRODUCTION_VERIFIED" | "ROLLED_BACK" = "PRODU
     production_verification_artifact_id: "production-verification-1",
     live_evaluation: { status: "pass", artifact_id: "live-evaluation-1" },
     rollback_rehearsal: { deployment_id: rollback ? deploymentId : "dpl-rollback", sha: SHA, artifact_id: "rollback-rehearsal-1" },
-    named_release_decision: { name: rollback ? "principal-rollback" : "principal-approved", decided_at: TIME },
+    named_release_decision: { name: rollback ? "principal-rollback" : "principal-approved", decided_at: TIME, outcome: rollback ? "rollback" : "promote" },
   };
   return { identity, authority };
 }
@@ -75,12 +77,17 @@ describe("ADR-006 release identity", () => {
     expect(RELEASE_CANDIDATE_STATES).toEqual(["BUILT_LOCAL", "PUSHED", "DEPLOYMENT_BLOCKED", "DEPLOYED_CANDIDATE", "PRODUCTION_VERIFIED", "ROLLED_BACK"]);
   });
 
+  it("exposes only the three typed release-decision outcomes", () => {
+    expect(RELEASE_DECISION_OUTCOMES).toEqual(["not_authorized", "promote", "rollback"]);
+    expect(base().named_release_decision.outcome).toBe("not_authorized");
+  });
+
   it("fails closed for malformed or mismatched identity fields", () => {
     const identity = base();
     expect(validateReleaseIdentity(identity)).toEqual([]);
     expect(validateReleaseIdentity({ ...identity, tested_sha: "bad" })).toContain("source_tested_sha");
     expect(validateReleaseIdentity({ ...identity, retained_artifact_ids: ["bad id"] })).toContain("retained_artifact_ids");
-    expect(validateReleaseIdentity({ ...identity, named_release_decision: { name: "x", decided_at: "not-a-time" } })).toContain("named_release_decision");
+    expect(validateReleaseIdentity({ ...identity, named_release_decision: { name: "x", decided_at: "not-a-time", outcome: "not_authorized" } })).toContain("named_release_decision");
     expect(validateReleaseIdentity({ ...identity, immutable_deployment: undefined } as never)).toContain("immutable_deployment");
   });
 
@@ -216,16 +223,26 @@ describe("ADR-006 release identity", () => {
   });
 
   it.each([
+    "not authorized",
+    "promotion not authorized",
+    "principal review: not authorized",
+    "principal denied promotion",
+    "promotion rejected",
     "Packet D worker handoff; promotion not authorized",
     "Packet D offline regression; promotion not authorized",
-    "worker release review",
-    "offline release review",
-    "principal review; not authorized",
-  ])("rejects reserved or non-authorizing terminal decision %s", (name) => {
+  ])("rejects descriptive terminal decision name %s when its typed outcome is non-authorizing", (name) => {
     const { identity, authority } = terminal();
-    const terminalIdentity = { ...identity, named_release_decision: { ...identity.named_release_decision, name } };
-    const terminalAuthority = { ...authority, named_release_decision: { ...authority.named_release_decision, name } };
+    const terminalIdentity = { ...identity, named_release_decision: { ...identity.named_release_decision, name, outcome: "not_authorized" as const } };
+    const terminalAuthority = { ...authority, named_release_decision: { ...authority.named_release_decision, name, outcome: "not_authorized" as const } };
     expect(validateReleaseIdentity(terminalIdentity, { verificationAuthority: terminalAuthority })).toContain("production_verified_evidence");
+  });
+
+  it("requires the exact typed authorization outcome for each terminal state", () => {
+    const production = terminal();
+    expect(validateReleaseIdentity({ ...production.identity, named_release_decision: { ...production.identity.named_release_decision, outcome: "rollback" } }, { verificationAuthority: production.authority })).toContain("production_verified_evidence");
+    expect(validateReleaseIdentity(production.identity, { verificationAuthority: { ...production.authority, named_release_decision: { ...production.authority.named_release_decision, outcome: "not_authorized" } } })).toContain("production_verified_evidence");
+    const rolledBack = terminal("ROLLED_BACK");
+    expect(validateReleaseIdentity({ ...rolledBack.identity, named_release_decision: { ...rolledBack.identity.named_release_decision, outcome: "promote" } }, { verificationAuthority: rolledBack.authority })).toContain("rolled_back_evidence");
   });
 
   it("requires rollback terminal evidence to resolve the public alias to the actual rollback deployment", () => {

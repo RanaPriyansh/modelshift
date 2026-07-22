@@ -139,6 +139,7 @@ async function main() {
   const liveStatus = arg("--live-evaluation-status") as "not_evaluated" | "pass" | "fail" | undefined;
   if (liveStatus && liveStatus !== "not_evaluated") throw new Error("offline evaluation report cannot accept self-asserted live evaluation evidence");
   if (arg("--live-evaluation-artifact-id")) throw new Error("offline evaluation report cannot accept a live evaluation artifact ID");
+  if (arg("--decision-outcome")) throw new Error("offline evaluation report cannot accept a release decision outcome");
   const report = buildOfflineRegressionReport({ gitSha: arg("--git-sha") ?? process.env.GITHUB_SHA, releaseClosureMode: process.argv.includes("--release-closure") });
   await writeEvaluationReport(report, outputDirectory);
   console.log(`offline evaluation regression: ${report.offline_regression_status.toUpperCase()}`);
