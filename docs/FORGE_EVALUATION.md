@@ -54,7 +54,7 @@ The same Zod schema validates all provider output. OpenAI uses Responses Structu
 - A BYOK credential is React component state only, is sent in one same-origin JSON request, and is cleared after success or failure.
 - No key is stored in local/session storage, returned in output, accepted in a URL, or sent to an arbitrary base URL.
 - The route rejects missing origin, cross-origin requests, JSON lookalikes, oversized bodies, extra fields, prompt-injection markers, restricted requests, and unmanaged child sessions.
-- Managed OpenAI use is off unless both the key and explicit Studio enable flag exist server-side.
+- Public Studio provider use is structurally locked: a request-only key or retired Studio flag cannot authorize it. It remains unavailable until active adult server-owned authority and separately approved quota, abuse, privacy, and review controls exist.
 - Provider output has `Cache-Control: no-store`; the app does not persist a generated draft.
 - Cloud session refreshes propagate the anti-cache headers required by `@supabase/ssr`; cookies are `HttpOnly`, `SameSite=Lax`, `Secure` in production, and scoped to `/`.
 - Production script policy uses a per-request nonce and does not permit arbitrary inline script.

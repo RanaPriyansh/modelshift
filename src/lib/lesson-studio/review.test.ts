@@ -54,7 +54,7 @@ function sourceBindingsFor(sourceNeedIds: readonly string[]) {
 
 function sourceReceipt(
   record: ReturnType<typeof createLessonReviewRecord>,
-  sourceBindings = sourceBindingsFor(record.sourceNeedIds),
+  sourceBindings = sourceBindingsFor(record.draftSeed.sourceNeedIds),
 ) {
   return createSourceBindingReceipt({
     receiptVersion: "1.0",
@@ -226,14 +226,14 @@ describe("local lesson review machine", () => {
     expect(valid.sourceBindingReceipt?.sourceBindings).toHaveLength(2);
     expect(applyLessonReviewDecision(record, valid).sourceBindingReceipt?.receiptDigest).toBe(valid.sourceBindingReceipt?.receiptDigest);
 
-    const missing = sourceReceipt(record, sourceBindingsFor(record.sourceNeedIds.slice(0, 1)));
+    const missing = sourceReceipt(record, sourceBindingsFor(record.draftSeed.sourceNeedIds.slice(0, 1)));
     expect(() => applyLessonReviewDecision(record, {
       ...valid,
       sourceBindingReceipt: missing,
       metadata: { ...valid.metadata, sourceBindingReceiptDigest: missing.receiptDigest },
     })).toThrow("source-binding-invalid");
 
-    const invented = sourceReceipt(record, sourceBindingsFor([...record.sourceNeedIds, "source-need-ffffffffffff"]));
+    const invented = sourceReceipt(record, sourceBindingsFor([...record.draftSeed.sourceNeedIds, "source-need-ffffffffffff"]));
     expect(() => applyLessonReviewDecision(record, {
       ...valid,
       sourceBindingReceipt: invented,
@@ -241,13 +241,71 @@ describe("local lesson review machine", () => {
     })).toThrow("source-binding-invalid");
 
     const duplicate = sourceReceipt(record, [
-      ...sourceBindingsFor(record.sourceNeedIds),
-      ...sourceBindingsFor([record.sourceNeedIds[0]]),
+      ...sourceBindingsFor(record.draftSeed.sourceNeedIds),
+      ...sourceBindingsFor([record.draftSeed.sourceNeedIds[0]]),
     ]);
     expect(() => applyLessonReviewDecision(record, {
       ...valid,
       sourceBindingReceipt: duplicate,
       metadata: { ...valid.metadata, sourceBindingReceiptDigest: duplicate.receiptDigest },
     })).toThrow("source-binding-invalid");
+  });
+
+  it("rejects forged projections that disagree with deterministic replay before a transition can run", () => {
+    const fresh = createLessonReviewRecord(compileLessonDraftPipeline(draft), policyVersionRef);
+    expect(lessonReviewRecordSchema.safeParse({ ...fresh, state: "approved-package" }).success).toBe(false);
+    expect(lessonReviewRecordSchema.safeParse({ ...fresh, state: "rejected" }).success).toBe(false);
+    expect(lessonReviewRecordSchema.safeParse({ ...fresh, state: "withdrawn" }).success).toBe(false);
+    expect(lessonReviewRecordSchema.safeParse({ ...fresh, state: "factual-review" }).success).toBe(false);
+    expect(lessonReviewRecordSchema.safeParse({
+      ...fresh,
+      versionRefs: { ...fresh.versionRefs, sourceBinding: `sha256:${"d".repeat(64)}` },
+    }).success).toBe(false);
+    const fabricatedReceipt = sourceReceipt(fresh);
+    expect(lessonReviewRecordSchema.safeParse({
+      ...fresh,
+      state: "factual-review",
+      versionRefs: { ...fresh.versionRefs, sourceBinding: fabricatedReceipt.receiptDigest },
+      sourceBindingReceipt: fabricatedReceipt,
+    }).success).toBe(false);
+    expect(() => applyLessonReviewDecision({ ...fresh, state: "approved-package" }, decision(fresh, 1))).toThrow();
+  });
+
+  it("rejects fewer, reordered, and source-reference-forged decision histories", () => {
+    let approved = createLessonReviewRecord(compileLessonDraftPipeline(draft), policyVersionRef);
+    for (let index = 1; index <= 7; index += 1) approved = applyLessonReviewDecision(approved, decision(approved, index));
+    expect(lessonReviewRecordSchema.safeParse({
+      ...approved,
+      decisions: approved.decisions.slice(0, -1),
+    }).success).toBe(false);
+    expect(lessonReviewRecordSchema.safeParse({
+      ...approved,
+      decisions: [approved.decisions[1], approved.decisions[0], ...approved.decisions.slice(2)],
+    }).success).toBe(false);
+    expect(lessonReviewRecordSchema.safeParse({
+      ...approved,
+      decisions: [...approved.decisions, approved.decisions.at(-1)],
+    }).success).toBe(false);
+
+    let sourceBound = createLessonReviewRecord(compileLessonDraftPipeline(draft), policyVersionRef);
+    sourceBound = applyLessonReviewDecision(sourceBound, decision(sourceBound, 1));
+    sourceBound = applyLessonReviewDecision(sourceBound, decision(sourceBound, 2));
+    expect(lessonReviewRecordSchema.safeParse({
+      ...sourceBound,
+      versionRefs: { ...sourceBound.versionRefs, sourceBinding: `sha256:${"e".repeat(64)}` },
+    }).success).toBe(false);
+  });
+
+  it("defines no local supersession: even an existing cross-scope decision cannot be superseded", () => {
+    let record = createLessonReviewRecord(compileLessonDraftPipeline(draft), policyVersionRef);
+    const coordinator = decision(record, 1);
+    record = applyLessonReviewDecision(record, coordinator);
+    expect(() => applyLessonReviewDecision(record, {
+      ...decision(record, 2),
+      metadata: {
+        ...decision(record, 2).metadata,
+        supersedesDecisionId: coordinator.decisionId,
+      },
+    })).toThrow("invalid-supersession");
   });
 });
