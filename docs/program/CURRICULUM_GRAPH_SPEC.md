@@ -306,11 +306,13 @@ type ReleasedWorldAuthorityV1 = WorldBindingV1 & {
   availabilityStatus: "available";
   releaseEventRef: string;
   reviewedEntitlementAreas: readonly PathwayEntitlementArea[];
+  reviewedAgeModes: readonly LearnerAgeMode[];
+  reviewedDepthModes: readonly CurriculumDepthMode[];
   publicationPolicyRef: { id: string; version: string; digest: string };
 };
 ```
 
-The adapter from the built-in registry creates `ReleasedWorldAuthorityV1`; graph fixtures cannot. The separate authority port must also name the exact reviewed entitlement areas; graph authorship alone cannot make one released capability satisfy an unreviewed area. A node derives `released` only when every scalar and semantic-set World binding and the node's entitlement-area set equal one released authority record. Package, runtime, validator, capability, task-family, source ID, source-provenance status, route, entitlement, policy, release, or availability mismatch derives `review-candidate` with exact issue codes. No nearest match or title fallback is permitted.
+The adapter from the built-in registry creates `ReleasedWorldAuthorityV1`; graph fixtures cannot. The separate authority port must also name the exact reviewed entitlement areas, learner age modes, and curriculum depth modes; graph authorship or an access-route declaration alone cannot make one released capability satisfy an unreviewed area, population, or delayed-return mode. A node derives `released` only when every scalar and semantic-set World binding and the node's entitlement, age, and depth sets equal one released authority record. Package, runtime, validator, capability, task-family, source ID, source-provenance status, route, entitlement, age, depth, policy, release, or availability mismatch derives `review-candidate` with exact issue codes. No nearest match or title fallback is permitted.
 
 Release availability and source-authority quality are separate projection fields. An exact current released record with legacy source metadata derives `{ availability: "released", sourceAuthorityStatus: "legacy-incomplete" }`. An exact bound record still derives only `{ availability: "released", sourceAuthorityStatus: "bound-review-candidate" }` until a separate publication authority input establishes the publication act. The graph never turns structural source completeness into publication authority.
 
