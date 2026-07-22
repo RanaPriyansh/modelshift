@@ -30,6 +30,10 @@ class MemoryStorage {
 
 const CORE_TRACE = [
   "encounter", "commit_model", "interpret_two_readings", "name_disagreement", "commit_test_prediction",
+  "run_separating_experience", "governed_support", "reconstruct", "withdraw_instructional_ai", "cold_transfer", "bounded_result",
+] as const;
+const CORE_TRACE_WITHOUT_SUPPORT = [
+  "encounter", "commit_model", "interpret_two_readings", "name_disagreement", "commit_test_prediction",
   "run_separating_experience", "reconstruct", "withdraw_instructional_ai", "cold_transfer", "bounded_result",
 ] as const;
 
@@ -272,5 +276,54 @@ describe("recordWorldRuntimeReceipt", () => {
       reason: "invalid_runtime_receipt",
     });
     expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(0);
+  });
+
+  it("accepts governed support only once in its canonical pre-reconstruction trace slot", () => {
+    const storage = new MemoryStorage();
+    vi.stubGlobal("window", { localStorage: storage });
+    expect(recordWorldRuntimeReceipt(receipt({ attemptId: "attempt.valid-support-trace" }))).toMatchObject({ ok: true });
+
+    const adversarialTraces = [
+      // Support after proof starts.
+      [
+        ...CORE_TRACE_WITHOUT_SUPPORT.slice(0, -1),
+        "governed_support",
+        "bounded_result",
+      ],
+      // Duplicate optional support at its otherwise valid location.
+      [
+        ...CORE_TRACE_WITHOUT_SUPPORT.slice(0, 6),
+        "governed_support",
+        "governed_support",
+        ...CORE_TRACE_WITHOUT_SUPPORT.slice(6),
+      ],
+      // Support before the separating experience.
+      [
+        ...CORE_TRACE_WITHOUT_SUPPORT.slice(0, 5),
+        "governed_support",
+        ...CORE_TRACE_WITHOUT_SUPPORT.slice(5),
+      ],
+      // Return before bounded_result.
+      [
+        ...CORE_TRACE_WITHOUT_SUPPORT.slice(0, -1),
+        "return_or_apply",
+        "bounded_result",
+      ],
+      // Even post-result return is absent from an immutable attempt receipt.
+      [...CORE_TRACE_WITHOUT_SUPPORT, "return_or_apply"],
+      // Required core stages are unique as well as ordered.
+      ["encounter", ...CORE_TRACE_WITHOUT_SUPPORT],
+    ] as const;
+
+    for (const [index, semanticTrace] of adversarialTraces.entries()) {
+      expect(recordWorldRuntimeReceipt(receipt({
+        attemptId: `attempt.invalid-trace-${index}`,
+        protocol: {
+          ...receipt().protocol,
+          semanticTrace,
+        },
+      }))).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
+    }
+    expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(1);
   });
 });
