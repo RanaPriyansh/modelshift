@@ -72,6 +72,39 @@ function terminal(candidateState: "PRODUCTION_VERIFIED" | "ROLLED_BACK" = "PRODU
   return { identity, authority };
 }
 
+function stateFixture(candidateState: (typeof RELEASE_CANDIDATE_STATES)[number]) {
+  if (candidateState === "PRODUCTION_VERIFIED" || candidateState === "ROLLED_BACK") return terminal(candidateState);
+  if (candidateState === "DEPLOYED_CANDIDATE") {
+    return {
+      identity: buildReleaseIdentity({
+        sourceSha: SHA,
+        testedSha: SHA,
+        generatedAt: TIME,
+        candidateState,
+        buildRuntimeMode: "fallback_only",
+        cloudProviderFlags: FLAGS,
+        retainedArtifactIds: ["candidate-1"],
+        deploymentId: "dpl-candidate",
+        deploymentUrl: "https://candidate.example/",
+        browser: "pass",
+        csp: "pass",
+        network: "pass",
+      }),
+    };
+  }
+  return {
+    identity: buildReleaseIdentity({
+      sourceSha: SHA,
+      testedSha: SHA,
+      generatedAt: TIME,
+      candidateState,
+      buildRuntimeMode: "production",
+      cloudProviderFlags: FLAGS,
+      retainedArtifactIds: ["build-1"],
+    }),
+  };
+}
+
 describe("ADR-006 release identity", () => {
   it("exposes exactly the six canonical candidate states", () => {
     expect(RELEASE_CANDIDATE_STATES).toEqual(["BUILT_LOCAL", "PUSHED", "DEPLOYMENT_BLOCKED", "DEPLOYED_CANDIDATE", "PRODUCTION_VERIFIED", "ROLLED_BACK"]);
@@ -243,6 +276,18 @@ describe("ADR-006 release identity", () => {
     expect(validateReleaseIdentity(production.identity, { verificationAuthority: { ...production.authority, named_release_decision: { ...production.authority.named_release_decision, outcome: "not_authorized" } } })).toContain("production_verified_evidence");
     const rolledBack = terminal("ROLLED_BACK");
     expect(validateReleaseIdentity({ ...rolledBack.identity, named_release_decision: { ...rolledBack.identity.named_release_decision, outcome: "promote" } }, { verificationAuthority: rolledBack.authority })).toContain("rolled_back_evidence");
+  });
+
+  it.each(RELEASE_CANDIDATE_STATES.flatMap((candidateState) => RELEASE_DECISION_OUTCOMES.map((outcome) => [candidateState, outcome] as const)))("accepts only the coherent %s / %s candidate-outcome pair", (candidateState, outcome) => {
+    const fixture = stateFixture(candidateState);
+    const identity = { ...fixture.identity, named_release_decision: { ...fixture.identity.named_release_decision, outcome } };
+    const authority = "authority" in fixture
+      ? { ...fixture.authority, named_release_decision: { ...fixture.authority.named_release_decision, outcome } }
+      : undefined;
+    const failures = validateReleaseIdentity(identity, authority ? { verificationAuthority: authority } : {});
+    const expectedOutcome = candidateState === "PRODUCTION_VERIFIED" ? "promote" : candidateState === "ROLLED_BACK" ? "rollback" : "not_authorized";
+    if (outcome === expectedOutcome) expect(failures).toEqual([]);
+    else expect(failures).toContain("candidate_decision_outcome");
   });
 
   it("requires rollback terminal evidence to resolve the public alias to the actual rollback deployment", () => {
