@@ -35,7 +35,8 @@ function assignAll(selects: HTMLElement[], categories: string[]) {
 describe("PrimarySourceReasoningWorld", () => {
   it("runs mystery through one-shot proof and emits only the bounded record", async () => {
     const onEvidence = vi.fn<(record: PrimarySourceProofRecord) => void>();
-    render(<PrimarySourceReasoningWorld onEvidence={onEvidence} />);
+    const onRuntimeReceipt = vi.fn();
+    render(<PrimarySourceReasoningWorld onEvidence={onEvidence} onRuntimeReceipt={onRuntimeReceipt} />);
 
     expect(screen.getByTestId("stage-mystery")).toBeInTheDocument();
     expect(screen.getByAltText(/sepia stereograph card/i)).toBeInTheDocument();
@@ -111,6 +112,15 @@ describe("PrimarySourceReasoningWorld", () => {
       independentTransfer: { correctCount: 4, passed: true, confidence: 85 },
     });
     expect(JSON.stringify(onEvidence.mock.calls[0]?.[0])).not.toContain(
+      "The visible scene, the source record",
+    );
+    await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
+    expect(onRuntimeReceipt.mock.calls[0]?.[0]).toMatchObject({
+      authority: { proofAuthority: "honour_based", persistence: "not_persisted", isDurable: false },
+      validator: { outcome: "pass", disposition: "demonstrated" },
+      sourceProvenanceStatus: "incomplete",
+    });
+    expect(JSON.stringify(onRuntimeReceipt.mock.calls[0]?.[0])).not.toContain(
       "The visible scene, the source record",
     );
   });
