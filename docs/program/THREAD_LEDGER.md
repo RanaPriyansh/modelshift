@@ -8,7 +8,7 @@ Workers implement bounded slices in isolated worktrees. They do not edit the pri
 
 | Lane | Task | Default model | Dispatch status | Existing handoff | Next goal |
 | --- | --- | --- | --- | --- | --- |
-| Experience and design system | `019f8705-865e-7631-a921-ee4b5690b778` | `gpt-5.6-terra` xhigh | `IN_PROGRESS` | `e73dc9d` on old `af5f3ca` base | Create a new branch from current main; selectively port tokens/primitives; unify shell and state/access behavior |
+| Experience and design system | `019f8705-865e-7631-a921-ee4b5690b778` | `gpt-5.6-terra` xhigh | `IDLE`; Packet A `ACCEPTED_ON_MAIN` | Worker chain `e84a395` + `eb19eb4`; integrated as `60b947e` + `f7a3bc4` | Hold for cross-lane regression; resume for screen-reader/nonvisual-equivalence work only after Packet E defines the shared runtime |
 | Trust, auth, and private evidence | `019f8705-2825-7cb2-94e1-b30d5aab1447` | `gpt-5.6-terra` xhigh | `IN_PROGRESS` | `24edb6f` on old base | Reconcile with current hardened SSR auth/event spine; stage adult sync and abuse-controlled integration only |
 | Homeschool pathways and entitlement | `019f8704-dc1c-7381-b71b-c0303987251a` | `gpt-5.6-terra` xhigh | `IN_PROGRESS` | `dd6fe0e` on old base | Port pure pathway contracts to current main; connect to capability registry; no certification/UI claims |
 | Release, evaluation, observability | `019f8705-4855-7522-9140-8d45cd93ae60` | `gpt-5.6-luna` high | `IN_PROGRESS` | `a98f8bb` on old base | Reconcile CI/reports/health against current main; diagnose blocked deployment; produce integration packet |
@@ -38,6 +38,8 @@ Required work:
 6. test home, Studio, login/account, all four Worlds, evidence, and trail.
 
 Stop gate: one clean commit; no route behavior regression; exact visual/browser evidence; a conflict/disposition list for anything intentionally not ported.
+
+Principal disposition on 2026-07-22: **accepted and integrated**. The first handoff was held until rendered contrast, forced-colors, 44 px link targets, the quiet-status contrast defect, and the fidelity-report ownership/404 wording were corrected in an additive commit. Two read-only reviews accepted the resulting chain. On integrated code SHA `f7a3bc4`, lint, typecheck, 182 application tests, 9 evaluator tests, optimized build, and the production-mode Chromium matrix passed; browser result was 45 passed, 19 intentional cross-project skips, 0 failed. This closes Packet A's bounded presentation/access slice, not screen-reader testing, complete nonvisual representation equivalence, or the broader FORGE objective.
 
 ## Packet B — Trust, auth, and private evidence
 
