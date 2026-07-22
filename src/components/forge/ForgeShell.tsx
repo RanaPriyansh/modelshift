@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import "@/app/forge.css";
+import { ForgeTrustLine } from "./ForgePrimitives";
 
 type ForgeSection = "home" | "learn" | "studio" | "trail" | "evidence" | "account";
 
@@ -16,9 +16,10 @@ const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; section: ForgeSect
 function ForgeMark() {
   return (
     <span className="forge-mark" aria-hidden="true">
-      <span />
-      <span />
-      <span />
+      <svg viewBox="0 0 40 40">
+        <path d="M20 2.5 37.5 20 20 37.5 2.5 20 20 2.5Z" />
+        <path d="m13.5 13.5 13 13m0-13-13 13" />
+      </svg>
     </span>
   );
 }
@@ -144,9 +145,7 @@ export function ForgeShell({
       <header className="forge-topbar">
         <Brand />
         <PrimaryNavigation active={active} />
-        <p className="forge-topbar-disclosure" aria-label="Learner acts • AI assists • Evidence decides">
-          Learner acts <i aria-hidden="true" /> AI assists <i aria-hidden="true" /> Evidence decides
-        </p>
+        <ForgeTrustLine className="forge-topbar-disclosure" />
       </header>
       {children}
       <MobileNavigation active={active} />

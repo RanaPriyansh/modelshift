@@ -531,7 +531,7 @@ test.describe("FORGE cross-route release contract", () => {
     await page.keyboard.press("Enter");
     await expect(page.locator("#forge-main")).toBeFocused();
 
-    const openWorld = page.getByRole("link", { name: "Open world" }).first();
+    const openWorld = page.getByRole("link", { name: "Open Force & motion World" });
     await tabTo(page, openWorld);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/learn\/force-and-motion$/);

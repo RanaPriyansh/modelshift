@@ -6,6 +6,12 @@ import { FormEvent, useState } from "react";
 import { PUBLIC_WORLD_CATALOG } from "@/src/forge/worlds";
 import type { ForgePlanContract } from "@/src/lib/forge-planner";
 
+import {
+  ForgeKicker,
+  ForgeSectionHeading,
+  ForgeStatus,
+  ForgeTrustLine,
+} from "./ForgePrimitives";
 import { ForgeArrow, ForgeShell } from "./ForgeShell";
 
 const AGE_MODES = [
@@ -274,29 +280,25 @@ function LearningPlanResult({ plan }: { plan: ForgePlanContract }) {
 function WorldCatalog() {
   return (
     <section className="forge-section forge-worlds" id="worlds" aria-labelledby="worlds-title">
-      <header className="forge-section-heading">
-        <div>
-          <span>Honest catalog</span>
-          <h2 id="worlds-title">Enter through a world, not a course list.</h2>
-        </div>
-        <p>
-          Four Worlds work end to end across simulation, exact mathematics, AI literacy, and primary-source reasoning. The rest name the intended
-          breadth without pretending the curriculum already exists.
-        </p>
-      </header>
+      <ForgeSectionHeading
+        id="worlds-title"
+        label="Honest catalog"
+        title="Enter through a world, not a course list."
+        description="Four Worlds work end to end across simulation, exact mathematics, AI literacy, and primary-source reasoning. The rest name the intended breadth without pretending the curriculum already exists."
+      />
 
       <div className="forge-world-list">
         {WORLD_ROWS.map((world, index) => (
           <article className={`forge-world-row forge-world-row--${world.tone}`} key={world.title}>
             <span className="forge-world-index">0{index + 1}</span>
             <div className="forge-world-copy">
-              <span>{world.eyebrow}</span>
+              <ForgeStatus tone={world.tone === "ready" ? "evidence" : "quiet"}>{world.eyebrow}</ForgeStatus>
               <h3>{world.title}</h3>
               <p>{world.description}</p>
             </div>
             <span className="forge-world-detail">{world.detail}</span>
             {"href" in world ? (
-              <Link href={world.href} className="forge-world-link">
+              <Link href={world.href} className="forge-world-link" aria-label={`Open ${world.title} World`}>
                 {world.action}
                 <ForgeArrow />
               </Link>
@@ -344,10 +346,12 @@ function LearningContract() {
 function FoundationsAndFrontier() {
   return (
     <section className="forge-section forge-foundations" aria-labelledby="foundation-title">
-      <header className="forge-section-heading">
-        <div><span>Shared depth, personal direction</span><h2 id="foundation-title">A common foundation. A learner-owned frontier.</h2></div>
-        <p>Personalization changes the entry point, pacing, language, and examples—not the standard of evidence.</p>
-      </header>
+      <ForgeSectionHeading
+        id="foundation-title"
+        label="Shared depth, personal direction"
+        title="A common foundation. A learner-owned frontier."
+        description="Personalization changes the entry point, pacing, language, and examples—not the standard of evidence."
+      />
       <div className="forge-two-rails">
         <article>
           <span>Common foundations</span>
@@ -379,10 +383,12 @@ function FoundationsAndFrontier() {
 function Continuity() {
   return (
     <section className="forge-section forge-continuity" aria-labelledby="continuity-title">
-      <header className="forge-section-heading">
-        <div><span>Continuity without streaks</span><h2 id="continuity-title">Continue the question. Return for proof.</h2></div>
-        <p>This foundation has no account or cloud sync. Bounded proof outcomes and return dates stay privately in this browser.</p>
-      </header>
+      <ForgeSectionHeading
+        id="continuity-title"
+        label="Continuity without streaks"
+        title="Continue the question. Return for proof."
+        description="This foundation has no account or cloud sync. Bounded proof outcomes and return dates stay privately in this browser."
+      />
       <div className="forge-continuity-actions">
         <Link href="/learn/force-and-motion">
           <span>Continue a working world</span>
@@ -410,10 +416,12 @@ function Continuity() {
 function ProjectsAndPeople() {
   return (
     <section className="forge-section forge-projects" aria-labelledby="projects-title">
-      <header className="forge-section-heading">
-        <div><span>Beyond the screen</span><h2 id="projects-title">Projects turn knowledge into work. People make it matter.</h2></div>
-        <p>AI can help prepare a project or a critique. It cannot manufacture community legitimacy, mentorship, friendship, or care.</p>
-      </header>
+      <ForgeSectionHeading
+        id="projects-title"
+        label="Beyond the screen"
+        title="Projects turn knowledge into work. People make it matter."
+        description="AI can help prepare a project or a critique. It cannot manufacture community legitimacy, mentorship, friendship, or care."
+      />
       <div className="forge-projects-layout">
         <article>
           <span>Project compiler · planned</span>
@@ -446,7 +454,7 @@ export function ForgeHome() {
       <main id="forge-main" tabIndex={-1}>
         <section className="forge-hero" aria-labelledby="forge-question">
           <div className="forge-hero-heading">
-            <p>Start with a question, not a course.</p>
+            <ForgeKicker>Start with a question, not a course.</ForgeKicker>
             <h1 id="forge-question">What do you want to understand?</h1>
             <p>FORGE builds from your present model toward knowledge you can use—and asks for proof after the help leaves.</p>
           </div>
@@ -473,9 +481,7 @@ function BrandFooter() {
     <>
       <div><strong>FORGE</strong><span>Learning OS</span></div>
       <p>A working prototype. No account, diagnosis, grade, or claim of mastery.</p>
-      <p aria-label="Learner acts • AI assists • Evidence decides">
-        Learner acts <i aria-hidden="true" /> AI assists <i aria-hidden="true" /> Evidence decides
-      </p>
+      <ForgeTrustLine />
     </>
   );
 }
