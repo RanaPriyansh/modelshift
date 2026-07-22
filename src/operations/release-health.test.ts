@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { buildReleaseHealth, resolveReleaseSha } from "./release-health";
@@ -23,11 +26,11 @@ describe("release health", () => {
     expect(health.cloud_auth_configured).toBe(false);
     expect(health.learner_evidence_sync).toBe("disabled");
     expect(health.device_profiles).toBe("device_only");
-    expect(health.managed_provider_flags).toEqual({ openai: true, anthropic: false, gemini: false, openrouter: false });
+    expect(health.managed_surface_flags).toEqual({ lesson_studio: false, interpretation: false, planner: false });
+    expect(health.managed_provider_flags).toEqual({ openai: false, anthropic: false, gemini: false, openrouter: false });
     expect(JSON.stringify(health)).not.toContain("must-not-appear");
   });
   it.each([
-    ["studio", { FORGE_LESSON_STUDIO_OPENAI_ENABLED: "true" }, { lesson_studio: true, interpretation: false, planner: false }],
     ["interpretation", { OPENAI_INTERPRETATION_ENABLED: "true" }, { lesson_studio: false, interpretation: true, planner: false }],
     ["planner", { OPENAI_FORGE_PLANNER_ENABLED: "true" }, { lesson_studio: false, interpretation: false, planner: true }],
   ])("reports managed %s independently when a key is present", (_name, flags, expected) => {
@@ -39,19 +42,40 @@ describe("release health", () => {
   it.each([
     { OPENAI_INTERPRETATION_ENABLED: "true", OPENAI_INTERPRETATION_DISABLED: "true", OPENAI_API_KEY: "key-is-present" },
     { OPENAI_FORGE_PLANNER_ENABLED: "true", OPENAI_FORGE_PLANNER_DISABLED: "true", OPENAI_API_KEY: "key-is-present" },
-    { FORGE_LESSON_STUDIO_OPENAI_ENABLED: "true" },
   ])("fails closed when a managed surface is enabled but its effective key/configuration is absent or disabled", (flags) => {
     const health = buildReleaseHealth(flags);
     expect(health.managed_surface_flags).toEqual({ lesson_studio: false, interpretation: false, planner: false });
     expect(health.managed_provider_flags.openai).toBe(false);
     expect(health.runtime_mode).toBe("fallback_only");
   });
-  it("reports managed state as explicit intent plus a nonempty server value, not credential validity", () => {
-    const empty = buildReleaseHealth({ FORGE_LESSON_STUDIO_OPENAI_ENABLED: "true", OPENAI_API_KEY: "" });
-    const nonemptyPlaceholder = buildReleaseHealth({ FORGE_LESSON_STUDIO_OPENAI_ENABLED: "true", OPENAI_API_KEY: "opaque-configured-value" });
-    expect(empty.managed_surface_flags.lesson_studio).toBe(false);
-    expect(nonemptyPlaceholder.managed_surface_flags.lesson_studio).toBe(true);
-    expect(JSON.stringify(nonemptyPlaceholder)).not.toContain("opaque-configured-value");
+  it("never treats retired Studio values as a managed surface or runtime mode", () => {
+    const health = buildReleaseHealth({ FORGE_LESSON_STUDIO_OPENAI_ENABLED: "true", OPENAI_API_KEY: "opaque-configured-value" });
+    expect(health.managed_surface_flags).toEqual({ lesson_studio: false, interpretation: false, planner: false });
+    expect(health.managed_provider_flags.openai).toBe(false);
+    expect(health.runtime_mode).toBe("fallback_only");
+    expect(health.provider_mode).toBe("request_only_byok");
+    expect(JSON.stringify(health)).not.toContain("opaque-configured-value");
+  });
+  it("keeps legacy Studio values separate from active interpretation/planner intent", () => {
+    const health = buildReleaseHealth({
+      FORGE_LESSON_STUDIO_OPENAI_ENABLED: "true",
+      OPENAI_API_KEY: "opaque-configured-value",
+      OPENAI_INTERPRETATION_ENABLED: "true",
+    });
+    expect(health.managed_surface_flags).toEqual({ lesson_studio: false, interpretation: true, planner: false });
+    expect(health.runtime_mode).toBe("managed_openai");
+  });
+  it("does not seed the retired Studio switch into release runners, workflows, or runbook examples", () => {
+    for (const relativePath of [
+      ".github/workflows/deployment-verification.yml",
+      ".github/workflows/quality-gates.yml",
+      "scripts/ops/run-production-browser-verification.ts",
+      "scripts/ops/run-local-production-verification.ts",
+      ".env.example",
+      "docs/DEPLOYMENT.md",
+    ]) {
+      expect(readFileSync(join(process.cwd(), relativePath), "utf8")).not.toContain("FORGE_LESSON_STUDIO_OPENAI_ENABLED");
+    }
   });
   it("marks malformed release metadata unknown", () => {
     const health = buildReleaseHealth({ FORGE_LOCKFILE_DIGEST: "short", FORGE_CONTENT_MANIFEST_DIGEST: "not-a-digest", FORGE_EVALUATOR_BASELINE_DIGEST: "", FORGE_DATABASE_MIGRATION_IDENTITY: "bad value" });
