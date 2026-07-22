@@ -1,0 +1,231 @@
+[
+  {
+    "event_id": "d84b6bcf-780f-4d99-acfc-63c93eb4d402",
+    "event_type": "world_run.started",
+    "aggregate": {
+      "type": "world_run",
+      "id": "run.world.source-corroboration.2d66bddd82c76a0e54b444fa",
+      "version": 1
+    },
+    "actor": {
+      "type": "learner",
+      "id": "device.2d66bddd82c76a0e54b444fa"
+    },
+    "authority": {
+      "policy_version": "policy.source-corroboration.authored-support.v1",
+      "consent_grant_ids": []
+    },
+    "occurred_at": "2026-07-22T19:53:00.000Z",
+    "recorded_at": "2026-07-22T19:53:00.000Z",
+    "correlation_id": "correlation.2d66bddd82c76a0e54b444fa",
+    "causation_id": null,
+    "idempotency_key": "idempotency.world-runtime-v2.run.world.source-corroboration.2d66bddd82c76a0e54b444fa.started",
+    "payload": {
+      "world_id": "world.source-corroboration",
+      "world_version": "1.0.1",
+      "content_version": "1.0.0",
+      "package_integrity_hash": "sha256:2f7900a0c3e7cfe5c993ec27b8071cc14d84dc605eef28cca041dc60b870f690",
+      "runtime_binding_digest": "sha256:a172f067f6135bdcec13c66053ef250ef92692db734b60ddf8e396fb8b0dc4b5",
+      "protocol_version": "1.1.0",
+      "capability_id": "capability.ai-literacy.source-corroboration",
+      "proof_claim_id": "proof.ai-literacy.independent-corroboration",
+      "task_id": "task.61526026988b517f4db157b7baf0f47b",
+      "task_version": "1.0.0",
+      "task_family_id": "task-family.source-corroboration.cold-transfer.v1",
+      "representation_id": "capability.ai-literacy.source-corroboration",
+      "context_id": "proof.ai-literacy.independent-corroboration",
+      "bounded_claim": "Given a new authored transfer-fixture source-brief pair, the learner independently selects the bounded joint claim and the still-open question in one assistance-free submission.",
+      "validator_id": "validator.source-corroboration-transfer.v1",
+      "validator_version": "1.0.0",
+      "proof_authority": "honour_based",
+      "source_bindings": [
+        {
+          "domain_source_ref": "source.bastani-pnas.genai-learning-2025",
+          "source_item_id": "source.bastani-pnas.genai-learning-2025",
+          "source_package_id": null,
+          "source_package_version": null,
+          "source_snapshot_digest": null,
+          "locator_ids": [],
+          "claim_ids": [],
+          "rights_record_id": null,
+          "review_decision_ids": [],
+          "provenance_status": "legacy_metadata_only"
+        },
+        {
+          "domain_source_ref": "source.tutor-copilot.arxiv-2024",
+          "source_item_id": "source.tutor-copilot.arxiv-2024",
+          "source_package_id": null,
+          "source_package_version": null,
+          "source_snapshot_digest": null,
+          "locator_ids": [],
+          "claim_ids": [],
+          "rights_record_id": null,
+          "review_decision_ids": [],
+          "provenance_status": "legacy_metadata_only"
+        }
+      ],
+      "source_provenance_status": "incomplete"
+    },
+    "schema_version": 2,
+    "integrity_hash": "sha256:2f726388c314ce296717e2fd344f96fb2f693c283d3cc479418ec1185ecaaf23"
+  },
+  {
+    "event_id": "2856a5de-57db-4070-ad00-79d2d46d0ae0",
+    "event_type": "proof.submitted",
+    "aggregate": {
+      "type": "world_run",
+      "id": "run.world.source-corroboration.2d66bddd82c76a0e54b444fa",
+      "version": 2
+    },
+    "actor": {
+      "type": "learner",
+      "id": "device.2d66bddd82c76a0e54b444fa"
+    },
+    "authority": {
+      "policy_version": "policy.source-corroboration.authored-support.v1",
+      "consent_grant_ids": []
+    },
+    "occurred_at": "2026-07-22T19:53:00.000Z",
+    "recorded_at": "2026-07-22T19:53:00.000Z",
+    "correlation_id": "correlation.2d66bddd82c76a0e54b444fa",
+    "causation_id": "d84b6bcf-780f-4d99-acfc-63c93eb4d402",
+    "idempotency_key": "idempotency.world-runtime-v2.run.world.source-corroboration.2d66bddd82c76a0e54b444fa.proof",
+    "payload": {
+      "task_id": "task.61526026988b517f4db157b7baf0f47b",
+      "task_version": "1.0.0",
+      "task_family_id": "task-family.source-corroboration.cold-transfer.v1",
+      "representation_id": "capability.ai-literacy.source-corroboration",
+      "context_id": "proof.ai-literacy.independent-corroboration",
+      "selection_ids": [
+        "selection.2e80c06bbbec645be489fdf8",
+        "selection.e9aab3d3f7d44381df9d1d22"
+      ],
+      "response_digest": null,
+      "explicit_uncertainty": false,
+      "assistance_access": "removed",
+      "proof_nonce_digest": null,
+      "access_accommodations": []
+    },
+    "schema_version": 2,
+    "integrity_hash": "sha256:b22b7fedda774052833d7bb337b28d3a9198b48f211edb015745d9be561a1e83"
+  },
+  {
+    "event_id": "58ab36ab-f311-4ad3-a8eb-f8566cfa2257",
+    "event_type": "evidence.recorded",
+    "aggregate": {
+      "type": "world_run",
+      "id": "run.world.source-corroboration.2d66bddd82c76a0e54b444fa",
+      "version": 3
+    },
+    "actor": {
+      "type": "learner",
+      "id": "device.2d66bddd82c76a0e54b444fa"
+    },
+    "authority": {
+      "policy_version": "policy.source-corroboration.authored-support.v1",
+      "consent_grant_ids": []
+    },
+    "occurred_at": "2026-07-22T19:53:00.000Z",
+    "recorded_at": "2026-07-22T19:53:00.000Z",
+    "correlation_id": "correlation.2d66bddd82c76a0e54b444fa",
+    "causation_id": "2856a5de-57db-4070-ad00-79d2d46d0ae0",
+    "idempotency_key": "idempotency.world-runtime-v2.run.world.source-corroboration.2d66bddd82c76a0e54b444fa.evidence",
+    "payload": {
+      "evidence_id": "evidence.2d66bddd82c76a0e54b444fa",
+      "disposition": "demonstrated",
+      "validator_outcome": "pass",
+      "validator_id": "validator.source-corroboration-transfer.v1",
+      "validator_version": "1.0.0",
+      "task_id": "task.61526026988b517f4db157b7baf0f47b",
+      "task_version": "1.0.0",
+      "task_family_id": "task-family.source-corroboration.cold-transfer.v1",
+      "representation_id": "capability.ai-literacy.source-corroboration",
+      "context_id": "proof.ai-literacy.independent-corroboration",
+      "criteria": [
+        "choice:bounded-measures",
+        "open-question:held-constant"
+      ],
+      "proof_authority": "honour_based",
+      "cognitive_support_event_ids": [],
+      "access_accommodations": [],
+      "source_bindings": [
+        {
+          "domain_source_ref": "source.bastani-pnas.genai-learning-2025",
+          "source_item_id": "source.bastani-pnas.genai-learning-2025",
+          "source_package_id": null,
+          "source_package_version": null,
+          "source_snapshot_digest": null,
+          "locator_ids": [],
+          "claim_ids": [],
+          "rights_record_id": null,
+          "review_decision_ids": [],
+          "provenance_status": "legacy_metadata_only"
+        },
+        {
+          "domain_source_ref": "source.tutor-copilot.arxiv-2024",
+          "source_item_id": "source.tutor-copilot.arxiv-2024",
+          "source_package_id": null,
+          "source_package_version": null,
+          "source_snapshot_digest": null,
+          "locator_ids": [],
+          "claim_ids": [],
+          "rights_record_id": null,
+          "review_decision_ids": [],
+          "provenance_status": "legacy_metadata_only"
+        }
+      ],
+      "source_provenance_status": "incomplete",
+      "runtime_binding_digest": "sha256:a172f067f6135bdcec13c66053ef250ef92692db734b60ddf8e396fb8b0dc4b5",
+      "response_digest": null,
+      "explicit_uncertainty": false,
+      "authored_uncertainty_exception_reference": null,
+      "validity": {
+        "package_integrity_matches": true,
+        "proof_authority_matches": true,
+        "contamination_reason_codes": [],
+        "construct_changing_accommodation": false
+      },
+      "remains_untested": [
+        "Delayed retention and repeat reliability are untested.",
+        "Other subjects, populations, contexts, delivery roles, models, and tool designs are untested.",
+        "Causal isolation across the study differences is untested.",
+        "Open-web source quality and adversarial misinformation are untested.",
+        "Representative learner and accessibility validity are untested.",
+        "source-provenance.incomplete",
+        "durability.not-established"
+      ],
+      "bounded_claim": "Given a new authored transfer-fixture source-brief pair, the learner independently selects the bounded joint claim and the still-open question in one assistance-free submission."
+    },
+    "schema_version": 2,
+    "integrity_hash": "sha256:7fe9721151c37e083748b514a0bd135c40b1a5c5567df75f8c3b80fd481734a0"
+  },
+  {
+    "event_id": "2b7657b9-b11e-4329-8c68-4db8245aafb0",
+    "event_type": "world_run.completed",
+    "aggregate": {
+      "type": "world_run",
+      "id": "run.world.source-corroboration.2d66bddd82c76a0e54b444fa",
+      "version": 4
+    },
+    "actor": {
+      "type": "learner",
+      "id": "device.2d66bddd82c76a0e54b444fa"
+    },
+    "authority": {
+      "policy_version": "policy.source-corroboration.authored-support.v1",
+      "consent_grant_ids": []
+    },
+    "occurred_at": "2026-07-22T19:53:00.000Z",
+    "recorded_at": "2026-07-22T19:53:00.000Z",
+    "correlation_id": "correlation.2d66bddd82c76a0e54b444fa",
+    "causation_id": "58ab36ab-f311-4ad3-a8eb-f8566cfa2257",
+    "idempotency_key": "idempotency.world-runtime-v2.run.world.source-corroboration.2d66bddd82c76a0e54b444fa.completed",
+    "payload": {
+      "disposition": "demonstrated",
+      "evidence_id": "evidence.2d66bddd82c76a0e54b444fa",
+      "next_review_at": null
+    },
+    "schema_version": 2,
+    "integrity_hash": "sha256:0ce5e5e0f73a9ea98ef28bcb72d91dec347daad94d017b6d1156a40d088bfd89"
+  }
+]
