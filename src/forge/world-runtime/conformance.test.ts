@@ -543,7 +543,7 @@ describe.each(FIXTURES)("$name shared-runtime conformance", (fixture) => {
     expect(receipt?.sourceBindings.map((binding) => binding.sourceItemId)).toEqual(fixture.expectedSourceItemIds);
     expect(receipt?.sourceBindings.every((binding) => binding.status === "legacy_metadata_only")).toBe(true);
     expect(receipt?.cognitiveSupport).toEqual(fixture.expectedCognitiveSupport);
-    expect(receipt?.remainsUntested.length).toBeGreaterThan(0);
+    expect(receipt?.remainsUntested).toEqual(fixture.pack.runtime.evidence.remainsUntested);
     const serialized = JSON.stringify(receipt);
     for (const prose of fixture.rawLearnerProse) expect(serialized).not.toContain(prose);
 

@@ -107,7 +107,7 @@ function receipt(overrides: Partial<BoundedLocalWorldRuntimeReceipt> = {}): Boun
       },
     ],
     sourceProvenanceStatus: "incomplete",
-    remainsUntested: ["delayed-retention"],
+    remainsUntested: [...PROPORTIONAL_REASONING_WORLD.runtime!.evidence.remainsUntested],
     responseDigest: null,
     ...overrides,
   };
@@ -293,6 +293,16 @@ describe("recordWorldRuntimeReceipt", () => {
       world: { ...receipt().world, id: "world.learner\nsecret" },
     });
     expect(recordWorldRuntimeReceipt(rawIdentifier)).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
+    expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(0);
+  });
+
+  it("rejects a structurally valid receipt whose package-owned limitation list was replaced", () => {
+    const storage = new MemoryStorage();
+    vi.stubGlobal("window", { localStorage: storage });
+    const forgedLimitations = receipt({
+      remainsUntested: ["Trust asserted by an adapter or provider."],
+    });
+    expect(recordWorldRuntimeReceipt(forgedLimitations)).toMatchObject({ ok: false, reason: "invalid_runtime_receipt" });
     expect(createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter({ storage })).read().ledger.entries).toHaveLength(0);
   });
 

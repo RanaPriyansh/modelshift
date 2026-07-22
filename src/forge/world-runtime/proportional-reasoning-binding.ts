@@ -54,6 +54,11 @@ export const PROPORTIONAL_REASONING_RUNTIME_BINDING = {
     receiptSchemaVersion: "1.1.0",
     proofAuthority: "honour_based",
     persistence: "not_persisted",
+    remainsUntested: [
+      "Delayed retention after assistance has faded",
+      "Transfer across a wider range of proportional and non-proportional situations",
+      "Independent setup when no answer choices are provided",
+    ],
   },
   // The authored World names a future return task, but no task/scheduler is
   // published. This remains disabled and is not an operational action.

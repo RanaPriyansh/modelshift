@@ -181,6 +181,7 @@ function hasReleasedBuiltInRuntimeIdentity(receipt: BoundedLocalWorldRuntimeRece
     receipt.sourceBindings.length === expectedSourceBindings.length &&
     receipt.sourceBindings.every((binding, index) => sameSourceBinding(binding, expectedSourceBindings[index]!)) &&
     receipt.sourceProvenanceStatus === expectedProvenanceStatus &&
+    sameStrings(receipt.remainsUntested, runtime.evidence.remainsUntested) &&
     receipt.cognitiveSupport.every(supportMatchesCatalog);
 }
 

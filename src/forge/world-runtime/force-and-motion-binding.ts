@@ -77,6 +77,13 @@ export const FORCE_AND_MOTION_RUNTIME_BINDING = {
     receiptSchemaVersion: "1.1.0",
     proofAuthority: "honour_based",
     persistence: "not_persisted",
+    remainsUntested: [
+      "Delayed retention: not tested yet.",
+      "Transfer beyond this one authored cargo-pod task was not tested.",
+      "Reliability across repeated attempts was not tested.",
+      "Causal explanation quality beyond the validator's authored-choice signal was not tested.",
+      "Representative learner and accessibility validity were not tested.",
+    ],
   },
   returnProof: {
     enabled: false,

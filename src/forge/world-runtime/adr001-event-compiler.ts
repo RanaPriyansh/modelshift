@@ -62,6 +62,7 @@ export type WorldRuntimeAdr001CompilerErrorCode =
   | "source_identity_mismatch"
   | "support_identity_mismatch"
   | "access_identity_mismatch"
+  | "remains_untested_mismatch"
   | "projection_rejected"
   | "journal_replay_rejected";
 
@@ -314,6 +315,9 @@ export async function compileWorldRuntimeReceiptToAdr001(
   if (!declaredAccessMatches(receipt, runtime)) {
     return reject("access_identity_mismatch", "Receipt access accommodation is not an exact declared construct-preserving runtime alternative.");
   }
+  if (!sameCanonicalJson(receipt.remainsUntested, runtime.evidence.remainsUntested)) {
+    return reject("remains_untested_mismatch", "Receipt limitations must be the exact ordered nonempty released runtime limitation list.");
+  }
 
   const retainedIdentity = retainedRuntimeIdentityFor(pack);
   if (!retainedIdentity) {
@@ -371,13 +375,6 @@ export async function compileWorldRuntimeReceiptToAdr001(
       attemptId: receipt.attemptId,
       packageIntegrityHash: identity.packageIntegrityHash,
       runtimeBindingDigest: identity.runtimeBindingDigest,
-      canonicalValidatorResult: {
-        id: receipt.validator.id,
-        version: receipt.validator.version,
-        code: validation.code,
-        outcome: validatorOutcome,
-        criteria: validation.evidence,
-      },
     },
     "attempt-token",
   );

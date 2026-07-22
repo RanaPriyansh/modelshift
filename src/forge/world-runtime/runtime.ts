@@ -272,7 +272,10 @@ function receiptFor<State, DomainEvent, DomainProof>(
     accessAccommodations: [...session.accessAccommodations],
     sourceBindings,
     sourceProvenanceStatus: sourceBindings.every((binding) => binding.status === "bound") ? "bound" : "incomplete",
-    remainsUntested: [...adapter.remainsUntested(proof)],
+    // This boundary is released package metadata, not adapter output. In
+    // particular, no learner submission, provider response, or validator
+    // result can change the limitation list carried by a receipt.
+    remainsUntested: [...runtime.evidence.remainsUntested],
     responseDigest: null,
     }),
   };

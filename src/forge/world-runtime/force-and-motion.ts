@@ -158,13 +158,4 @@ export const forceAndMotionWorldRuntimeAdapter: WorldRuntimeAdapter<
   validatorCriteria(result: DeterministicValidationResult, proof: ForceAndMotionRuntimeProof): readonly string[] {
     return [...result.evidence, proof.submissionCriterion];
   },
-  remainsUntested(proof: ForceAndMotionRuntimeProof): readonly string[] {
-    return [
-      `Delayed retention: ${proof.evidence.later}.`,
-      "Transfer beyond this one authored cargo-pod task was not tested.",
-      "Reliability across repeated attempts was not tested.",
-      "Causal explanation quality beyond the validator's authored-choice signal was not tested.",
-      "Representative learner and accessibility validity were not tested.",
-    ];
-  },
 });
