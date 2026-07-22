@@ -24,6 +24,9 @@ export type ReleaseHealth = {
   evaluator_baseline_digest: string | "unknown";
   database_migration_identity: string | "unknown";
   managed_surface_flags: {
+    // These are configuration-intent indicators: each requires its explicit
+    // switch plus a nonempty server-side value. They do not validate a vendor
+    // credential or prove that a provider request can succeed.
     lesson_studio: boolean;
     interpretation: boolean;
     planner: boolean;
@@ -61,6 +64,8 @@ export function buildReleaseHealth(environment: ReleaseEnvironment = process.env
   const cloudAuthority = readForgeCloudAuthority(environment);
   const cloudAccountsEnabled = cloudAuthority.cloudAccountsEnabled;
   const cloudAuthConfigured = cloudAuthority.cloudAuthConfigured;
+  // Presence is intentionally the only credential-side signal exposed here.
+  // Health must not parse, normalize, or disclose a provider secret.
   const hasManagedKey = Boolean(environment.OPENAI_API_KEY);
   const managedLessonStudio = environment.FORGE_LESSON_STUDIO_OPENAI_ENABLED === "true" && hasManagedKey;
   const managedInterpretation = environment.OPENAI_INTERPRETATION_ENABLED === "true"

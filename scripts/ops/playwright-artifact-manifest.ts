@@ -1,5 +1,6 @@
-import { copyFile, lstat, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { resolve, relative } from "node:path";
+import { copyFile, lstat, mkdir, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
+import type { Stats } from "node:fs";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const MAX_FILES = 40;
@@ -24,7 +25,7 @@ async function files(root: string, excludedDirectory: string, current = root): P
   const output: string[] = [];
   for (const entry of entries) {
     const path = resolve(current, entry.name);
-    if (path === excludedDirectory || path.startsWith(`${excludedDirectory}/`)) continue;
+    if (path === excludedDirectory || path.startsWith(`${excludedDirectory}${sep}`)) continue;
     if (entry.isDirectory()) output.push(...await files(root, excludedDirectory, path));
     else if (entry.isFile() && ALLOWED.has(path.slice(path.lastIndexOf(".")).toLowerCase()) && FAILURE_SCREENSHOT.test(entry.name)) output.push(path);
   }
@@ -33,28 +34,78 @@ async function files(root: string, excludedDirectory: string, current = root): P
 
 function isStrictChild(parent: string, child: string): boolean {
   const path = relative(parent, child);
-  return path.length > 0 && !path.startsWith("..") && !path.includes("../") && !path.startsWith("/");
+  return path.length > 0 && path !== ".." && !path.startsWith(`..${sep}`) && !isAbsolute(path);
 }
 
 function overlaps(left: string, right: string): boolean {
   return left === right || isStrictChild(left, right) || isStrictChild(right, left);
 }
 
+async function lstatIfPresent(path: string): Promise<Stats | null> {
+  try {
+    return await lstat(path);
+  } catch (error: unknown) {
+    if (isNodeError(error) && error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && "code" in error;
+}
+
+async function trustedRoot(rootDirectory: string): Promise<{ lexical: string; physical: string }> {
+  const lexical = resolve(rootDirectory);
+  const rootStat = await lstatIfPresent(lexical);
+  if (!rootStat?.isDirectory() || rootStat.isSymbolicLink()) throw new Error("--root must be an existing non-symlink directory");
+  return { lexical, physical: await realpath(lexical) };
+}
+
+/** Walk/create one component at a time; recursive mkdir would follow a raced/symlinked chain. */
+async function ensureTrustedDirectory(root: string, target: string): Promise<string> {
+  if (target !== root && !isStrictChild(root, target)) throw new Error("path must remain strictly contained by the trusted root");
+  const path = relative(root, target);
+  let current = root;
+  for (const component of path ? path.split(sep) : []) {
+    current = resolve(current, component);
+    let currentStat = await lstatIfPresent(current);
+    if (!currentStat) {
+      await mkdir(current);
+      currentStat = await lstat(current);
+    }
+    if (!currentStat.isDirectory() || currentStat.isSymbolicLink()) throw new Error("path contains a symlink or non-directory component");
+    const physical = await realpath(current);
+    if (physical !== root && !isStrictChild(root, physical)) throw new Error("path resolved outside the trusted root");
+    current = physical;
+  }
+  return current;
+}
+
 /** Validate every destructive/output boundary before touching the stage path. */
-export function validateArtifactPaths(rootDirectory: string, outputPath: string, stageDirectory: string): void {
-  const root = resolve(rootDirectory);
-  const output = resolve(outputPath);
-  const stage = resolve(stageDirectory);
-  if (!isStrictChild(root, stage)) throw new Error("--stage-dir must be strictly contained by --root and cannot equal, contain, or sit outside it");
-  if (!isStrictChild(root, output)) throw new Error("--output must be strictly contained by --root");
-  if (overlaps(stage, output)) throw new Error("--stage-dir and --output must not overlap");
+export async function validateArtifactPaths(rootDirectory: string, outputPath: string, stageDirectory: string): Promise<{ root: string; output: string; stage: string }> {
+  const root = await trustedRoot(rootDirectory);
+  const lexicalOutput = resolve(outputPath);
+  const lexicalStage = resolve(stageDirectory);
+  if (!isStrictChild(root.lexical, lexicalStage)) throw new Error("--stage-dir must be strictly contained by --root and cannot equal, contain, or sit outside it");
+  if (!isStrictChild(root.lexical, lexicalOutput)) throw new Error("--output must be strictly contained by --root");
+  if (overlaps(lexicalStage, lexicalOutput)) throw new Error("--stage-dir and --output must not overlap");
+  // Keep caller-controlled containment lexical, then perform all filesystem
+  // operations under the trusted physical root. This handles macOS /var ->
+  // /private/var canonicalization without accepting a symlinked component.
+  const stage = resolve(root.physical, relative(root.lexical, lexicalStage));
+  const output = resolve(root.physical, relative(root.lexical, lexicalOutput));
+
+  const trustedStage = await ensureTrustedDirectory(root.physical, stage);
+  if (trustedStage !== stage) throw new Error("--stage-dir must not resolve through a symlink");
+  const trustedOutputParent = await ensureTrustedDirectory(root.physical, dirname(output));
+  if (trustedOutputParent !== dirname(output)) throw new Error("--output parent must not resolve through a symlink");
+  const outputStat = await lstatIfPresent(output);
+  if (outputStat && (outputStat.isSymbolicLink() || !outputStat.isFile())) throw new Error("--output must not be a symlink or non-regular file");
+  return { root: root.physical, output, stage };
 }
 
 export async function writePlaywrightArtifactManifest(rootDirectory: string, testedSha: string, outputPath: string, retainedArtifactId: string, stageDirectory: string): Promise<PlaywrightArtifactManifest> {
-  const root = resolve(rootDirectory);
-  const stage = resolve(stageDirectory);
-  const output = resolve(outputPath);
-  validateArtifactPaths(root, output, stage);
+  const { root, output, stage } = await validateArtifactPaths(rootDirectory, outputPath, stageDirectory);
   let candidates: string[] = [];
   try { candidates = await files(root, stage); } catch { /* no failures produced */ }
   const artifacts: Artifact[] = [];
@@ -62,7 +113,8 @@ export async function writePlaywrightArtifactManifest(rootDirectory: string, tes
   let truncated = false;
   let excludedCount = 0;
   await rm(stage, { recursive: true, force: true });
-  await mkdir(stage, { recursive: true });
+  await mkdir(stage);
+  await ensureTrustedDirectory(root, stage);
   for (const path of candidates.sort()) {
     const sourceStat = await lstat(path);
     if (!sourceStat.isFile() || sourceStat.isSymbolicLink() || sourceStat.size < PNG_SIGNATURE.byteLength || sourceStat.size > MAX_BYTES) { excludedCount += 1; continue; }
@@ -72,13 +124,12 @@ export async function writePlaywrightArtifactManifest(rootDirectory: string, tes
     if (!signature.equals(PNG_SIGNATURE)) { excludedCount += 1; continue; }
     const relativePath = relative(root, path);
     const stagedPath = resolve(stage, relativePath);
-    await mkdir(resolve(stagedPath, ".."), { recursive: true });
+    await ensureTrustedDirectory(root, dirname(stagedPath));
     await copyFile(path, stagedPath);
     artifacts.push({ path: relativePath, bytes });
     total += bytes;
   }
   const manifest: PlaywrightArtifactManifest = { schema_version: "1.0", report_kind: "bounded_playwright_failure_artifacts", tested_sha: testedSha, retained_artifact_ids: [retainedArtifactId], artifacts, excluded_count: excludedCount, truncated };
-  await mkdir(resolve(output, ".."), { recursive: true });
   await writeFile(output, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   return manifest;
 }

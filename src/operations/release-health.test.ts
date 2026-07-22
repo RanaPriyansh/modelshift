@@ -46,6 +46,13 @@ describe("release health", () => {
     expect(health.managed_provider_flags.openai).toBe(false);
     expect(health.runtime_mode).toBe("fallback_only");
   });
+  it("reports managed state as explicit intent plus a nonempty server value, not credential validity", () => {
+    const empty = buildReleaseHealth({ FORGE_LESSON_STUDIO_OPENAI_ENABLED: "true", OPENAI_API_KEY: "" });
+    const nonemptyPlaceholder = buildReleaseHealth({ FORGE_LESSON_STUDIO_OPENAI_ENABLED: "true", OPENAI_API_KEY: "opaque-configured-value" });
+    expect(empty.managed_surface_flags.lesson_studio).toBe(false);
+    expect(nonemptyPlaceholder.managed_surface_flags.lesson_studio).toBe(true);
+    expect(JSON.stringify(nonemptyPlaceholder)).not.toContain("opaque-configured-value");
+  });
   it("marks malformed release metadata unknown", () => {
     const health = buildReleaseHealth({ FORGE_LOCKFILE_DIGEST: "short", FORGE_CONTENT_MANIFEST_DIGEST: "not-a-digest", FORGE_EVALUATOR_BASELINE_DIGEST: "", FORGE_DATABASE_MIGRATION_IDENTITY: "bad value" });
     expect(health.dependency_lock_digest).toBe("unknown");
