@@ -11,6 +11,7 @@ import type {
   LearningWorldPack,
   SourceProvenance,
 } from "./contracts";
+import { deepFreeze } from "./deep-freeze";
 import { argumentEvidenceTransferValidator } from "./deterministic-validators.internal";
 import { ARGUMENT_EVIDENCE_RUNTIME_BINDING } from "./world-runtime/argument-evidence-binding";
 import {
@@ -44,7 +45,7 @@ export const ARGUMENT_EVIDENCE_AUTHORED_FIXTURE_SOURCE = {
  * Retained executable package only. Nothing in this module may be re-exported
  * by a client/public barrel before publication authority is granted.
  */
-export const ARGUMENT_EVIDENCE_WORLD = {
+export const ARGUMENT_EVIDENCE_WORLD = deepFreeze({
   manifest: {
     schemaVersion: "1.0",
     id: ARGUMENT_EVIDENCE_WORLD_ID,
@@ -113,27 +114,27 @@ export const ARGUMENT_EVIDENCE_WORLD = {
     },
   ],
   runtime: ARGUMENT_EVIDENCE_RUNTIME_BINDING,
-} satisfies LearningWorldPack;
+} satisfies LearningWorldPack);
 
-export const INTERNAL_BUILT_IN_WORLD_PACKS = [
+export const INTERNAL_BUILT_IN_WORLD_PACKS = deepFreeze([
   ...BUILT_IN_WORLD_PACKS,
   ARGUMENT_EVIDENCE_WORLD,
-] as const;
+] as const);
 
-export const INTERNAL_BUILT_IN_WORLD_IDS = INTERNAL_BUILT_IN_WORLD_PACKS.map(
+export const INTERNAL_BUILT_IN_WORLD_IDS = deepFreeze(INTERNAL_BUILT_IN_WORLD_PACKS.map(
   (pack) => pack.manifest.id,
-);
+));
 
-export const INTERNAL_BUILT_IN_WORLD_ROUTES = INTERNAL_BUILT_IN_WORLD_PACKS.map(
+export const INTERNAL_BUILT_IN_WORLD_ROUTES = deepFreeze(INTERNAL_BUILT_IN_WORLD_PACKS.map(
   (pack) => pack.manifest.route,
-);
+));
 
-export const INTERNAL_BUILT_IN_SOURCE_IDS = [
+export const INTERNAL_BUILT_IN_SOURCE_IDS = deepFreeze([
   ...BUILT_IN_SOURCE_IDS,
   ARGUMENT_EVIDENCE_AUTHORED_FIXTURE_SOURCE.id,
-] as const;
+] as const);
 
-export const INTERNAL_BUILT_IN_DETERMINISTIC_VALIDATORS = [
+export const INTERNAL_BUILT_IN_DETERMINISTIC_VALIDATORS = deepFreeze([
   ...BUILT_IN_DETERMINISTIC_VALIDATORS,
   argumentEvidenceTransferValidator,
-] as const;
+] as const);

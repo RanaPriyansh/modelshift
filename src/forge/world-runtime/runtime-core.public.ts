@@ -4,6 +4,7 @@ import {
   getCanonicalDeterministicValidatorRegistration,
   validateCanonicalDeterministicResult,
 } from "../deterministic-validators";
+import { deepFreeze } from "../deep-freeze";
 import { lintWorldRuntimePack } from "./linter";
 import {
   deriveCanonicalValidatorOutcome,
@@ -58,15 +59,6 @@ interface PublicReceiptAttestation {
 }
 
 const publicReceiptAttestations = new WeakMap<BoundedLocalWorldRuntimeReceipt, PublicReceiptAttestation>();
-
-function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
-  if (value === null || typeof value !== "object") return value;
-  const object = value as object;
-  if (seen.has(object)) return value;
-  seen.add(object);
-  for (const nested of Object.values(value as Record<string, unknown>)) deepFreeze(nested, seen);
-  return Object.freeze(value);
-}
 
 function sameOrderedStrings(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length && left.every((entry, index) => entry === right[index]);
