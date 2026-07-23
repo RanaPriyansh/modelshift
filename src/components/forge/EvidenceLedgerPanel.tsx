@@ -33,7 +33,7 @@ const CAPABILITIES: Readonly<Record<string, { title: string; href: string }>> = 
 
 const STATE_LABELS = {
   building: "Building",
-  proved_once: "Proved once",
+  proved_once: "One local result",
   ready_to_revisit: "Ready to revisit",
   carried_into_project: "Carried into a project",
   open_question: "Open question",
@@ -41,7 +41,7 @@ const STATE_LABELS = {
 
 const OUTCOME_LABELS = {
   practice_completed: "Practice completed",
-  proved: "Independent transfer observed",
+  proved: "Matched this World’s protected transfer criteria (local record)",
   not_proved: "Not proved on this attempt",
   open_question: "Question remains open",
 } as const;
@@ -199,7 +199,8 @@ export function EvidenceLedgerPanel({ compact = false }: { compact?: boolean }) 
           <span>Local evidence ledger</span>
           <h2 id="local-ledger-title" ref={headingRef} tabIndex={-1}>Browser storage is unavailable.</h2>
         </header>
-        <p>Learning Worlds still work, but this browser cannot retain a private evidence record.</p>
+        <p>Learning Worlds still work, but this browser cannot retain a private evidence record right now. No record was saved or shared.</p>
+        <button type="button" onClick={refresh}>Try local storage again</button>
       </section>
     );
   }
@@ -216,8 +217,8 @@ export function EvidenceLedgerPanel({ compact = false }: { compact?: boolean }) 
 
       {entries.length === 0 ? (
         <div className="forge-ledger-empty">
-          <strong>No proof records yet.</strong>
-          <p>Complete an unfamiliar transfer in a working World. FORGE will store the outcome and help used—not your raw explanation.</p>
+          <strong>No local evidence records yet.</strong>
+          <p>A protected transfer attempt in a working World can create a browser-local record of the outcome and help used—not your raw explanation.</p>
           <Link href="/learn/proportional-reasoning">Open a 10-minute World</Link>
         </div>
       ) : (

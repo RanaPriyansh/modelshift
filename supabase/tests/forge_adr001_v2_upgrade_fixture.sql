@@ -112,6 +112,13 @@ insert into forge_adr001_v2_upgrade_migration_ledger values (5, '20260722113000_
 insert into forge_adr001_v2_upgrade_migration_ledger values (6, '20260722150000_adr001_v2_persistence_contract.sql');
 \ir ../migrations/20260722150000_adr001_v2_persistence_contract.sql
 
+-- Preserve the historical v2 behavioral proof at its own compatibility point
+-- before the additive migration deliberately removes browser canonical writes.
+\ir forge_adr001_v2_contract.sql
+\ir forge_adr001_v2_precorrection_committed_history.sql
+insert into forge_adr001_v2_upgrade_migration_ledger values (7, '20260723000100_adr001_v2_evidence_authority.sql');
+\ir ../migrations/20260723000100_adr001_v2_evidence_authority.sql
+
 do $$
 begin
   if (select count(*) from forge.consent_records where learner_user_id = '20000000-0000-4000-8000-000000000001'
@@ -164,14 +171,15 @@ begin
     '20260722090640_adult_private_evidence_staging.sql',
     '20260722101500_packet_b_authority_correction.sql',
     '20260722113000_packet_b_retire_private_evidence_consent.sql',
-    '20260722150000_adr001_v2_persistence_contract.sql'
+    '20260722150000_adr001_v2_persistence_contract.sql',
+    '20260723000100_adr001_v2_evidence_authority.sql'
   ] then
     raise exception 'ADR-001 v2 upgrade replayed an unexpected migration ledger';
   end if;
 end;
 $$;
 
-\ir forge_adr001_v2_contract.sql
+\ir forge_adr001_v3_evidence_authority_contract.sql
 \ir forge_schema_contract.sql
 \ir forge_adult_cloud_staging_contract.sql
 

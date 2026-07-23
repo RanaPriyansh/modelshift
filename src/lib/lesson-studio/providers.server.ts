@@ -2,6 +2,12 @@ import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
 
+import {
+  authorizeProviderUse,
+  consumeProviderAuthorityForTransport,
+  type ProviderAuthorityDecision,
+} from "../forge-auth/provider-authority.server";
+
 import { buildLessonStudioInput, LESSON_STUDIO_INSTRUCTIONS } from "./prompt";
 import {
   estimateLessonRequestCostMicros,
@@ -33,6 +39,8 @@ export type GenerateLessonOptions = {
   fetchImpl?: FetchLike;
   openAIClient?: LessonStudioOpenAIClient;
   timeoutMs?: number;
+  /** Server-test seam only; request fields can never supply provider authority. */
+  authority?: ProviderAuthorityDecision;
 };
 
 export type GeneratedLessonDraft = {
@@ -44,6 +52,7 @@ export type GeneratedLessonDraft = {
 };
 
 export type LessonStudioErrorCode =
+  | "authoring_unavailable"
   | "missing_key"
   | "request_budget_exceeded"
   | "provider_refusal"
@@ -283,6 +292,11 @@ export async function generateLessonDraft(
   request: LessonStudioRequest,
   options: GenerateLessonOptions = {},
 ): Promise<GeneratedLessonDraft> {
+  const authority = options.authority ?? await authorizeProviderUse("lesson-draft");
+  if (!consumeProviderAuthorityForTransport(authority, "lesson-draft")) {
+    throw new LessonStudioError("authoring_unavailable");
+  }
+
   const estimatedCostMicros = estimateLessonRequestCostMicros(request);
   const budget = LESSON_STUDIO_BUDGETS[request.depth];
   if (estimatedCostMicros > budget.maxEstimatedCostMicros) {

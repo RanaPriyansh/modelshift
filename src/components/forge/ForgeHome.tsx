@@ -255,7 +255,7 @@ function LearningPlanResult({ plan }: { plan: ForgePlanContract }) {
     : plan.route.worldRoute;
   return (
     <div className="forge-plan-result forge-plan-result--grounded" data-testid="forge-plan-grounded">
-      <span>Reviewed Learning Contract</span>
+      <span>Current working World route</span>
       <h3>{plan.learning.title}</h3>
       <p>{plan.learning.objective}</p>
       <ol>
@@ -270,9 +270,9 @@ function LearningPlanResult({ plan }: { plan: ForgePlanContract }) {
         ))}
       </div>
       <Link className="forge-primary-action" href={route}>
-        Enter reviewed World <ForgeArrow />
+        Enter working World <ForgeArrow />
       </Link>
-      <p className="forge-plan-privacy">The route and sources are authored. Any optional AI rephrase is unverified and cannot change them.</p>
+      <p className="forge-plan-privacy">This route is a current working path, not a universal curriculum or evidence claim. Its authored sources and route cannot be changed by an optional AI rephrase.</p>
     </div>
   );
 }
@@ -284,7 +284,7 @@ function WorldCatalog() {
         id="worlds-title"
         label="Honest catalog"
         title="Enter through a world, not a course list."
-        description="Four Worlds work end to end across simulation, exact mathematics, AI literacy, and primary-source reasoning. The rest name the intended breadth without pretending the curriculum already exists."
+        description="Four working World routes are available across simulation, exact mathematics, AI literacy, and primary-source reasoning. The rest name intended breadth without implying that the curriculum already exists."
       />
 
       <div className="forge-world-list">
@@ -391,13 +391,13 @@ function Continuity() {
         id="continuity-title"
         label="Continuity without streaks"
         title="Continue the question. Return for proof."
-        description="This foundation has no account or cloud sync. Bounded proof outcomes and return dates stay privately in this browser."
+        description="No account is required. Browser-local records can retain bounded outcomes and return dates; optional adult cloud continuity stays off unless a reviewed deployment configures it."
       />
       <div className="forge-continuity-actions">
         <Link href="/learn/force-and-motion">
           <span>Continue a working world</span>
           <strong>Force & motion</strong>
-          <small>A fresh session starts; completed proof remains local.</small>
+          <small>A fresh session starts; any local record remains in this browser.</small>
           <ForgeArrow />
         </Link>
         <Link href="/trail">
@@ -407,7 +407,7 @@ function Continuity() {
           <ForgeArrow />
         </Link>
         <Link href="/evidence">
-          <span>Proof record</span>
+          <span>Local evidence record</span>
           <strong>Open your local evidence</strong>
           <small>Export, select for an educator copy, or delete it.</small>
           <ForgeArrow />
@@ -484,7 +484,7 @@ function BrandFooter() {
   return (
     <>
       <div><strong>FORGE</strong><span>Learning OS</span></div>
-      <p>A working prototype. No account, diagnosis, grade, or claim of mastery.</p>
+      <p>A working prototype. No required account, diagnosis, grade, or claim of mastery.</p>
       <ForgeTrustLine />
     </>
   );

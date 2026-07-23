@@ -124,6 +124,48 @@ run_race() {
   printf 'race-passed %s winner=%s loser=%s\n' "$label" "$winner" "$loser"
 }
 
+run_v3_proof_session() {
+  local db_name=$1
+  local event_id=$2
+  local idempotency_key=$3
+  local hold_seconds=$4
+  local log_file=$5
+  psql_local -d "$db_name" -v ON_ERROR_STOP=1 \
+    -v event_id="$event_id" -v idempotency_key="$idempotency_key" -v hold_seconds="$hold_seconds" \
+    -f "$root_dir/supabase/tests/forge_adr001_v3_proof_race.sql" >"$log_file" 2>&1
+}
+
+run_v3_nonce_race() {
+  local db_name=$1
+  local winner_log="$temp_dir/v3_nonce.winner.log"
+  local loser_log="$temp_dir/v3_nonce.loser.log"
+  local winner_pid loser_status winner_status
+
+  run_v3_proof_session "$db_name" \
+    85000000-0000-4000-8000-000000000002 \
+    idempotency.authority.race.winner 1 "$winner_log" &
+  winner_pid=$!
+  wait_for_append "$winner_log" "$winner_pid"
+
+  set +e
+  run_v3_proof_session "$db_name" \
+    85000000-0000-4000-8000-000000000003 \
+    idempotency.authority.race.loser 0 "$loser_log"
+  loser_status=$?
+  wait "$winner_pid"
+  winner_status=$?
+  set -e
+
+  if [[ $winner_status -ne 0 || $loser_status -eq 0 ]] \
+     || ! rg -q 'proof nonce must be an unexpired server-issued one-time challenge' "$loser_log"; then
+    printf 'v3 nonce race did not produce one projection and one rejected replay\n' >&2
+    sed -n '1,160p' "$winner_log" >&2
+    sed -n '1,160p' "$loser_log" >&2
+    return 1
+  fi
+  printf 'race-passed v3_nonce winner=service_role loser=service_role\n'
+}
+
 run_fixture() {
   local kind=$1
   local fixture_file=$2
@@ -134,28 +176,9 @@ run_fixture() {
   fixture_dbs+=("$db_name")
   psql_local -d "$db_name" -Atc "select current_database(), current_user, coalesce(inet_server_addr()::text, 'local-socket'), inet_server_port();"
   psql_local -d "$db_name" -v ON_ERROR_STOP=1 -f "$root_dir/$fixture_file"
-  psql_local -d "$db_name" -v ON_ERROR_STOP=1 -f "$root_dir/supabase/tests/forge_adr001_v2_concurrency_setup.sql"
-
-  run_race "$db_name" uuid_v1_first v1 v2 \
-    60000000-0000-4000-8000-000000000001 60000000-0000-4000-8000-000000000001 \
-    run.race.uuid-v1 run.race.uuid-v2 idempotency.race.uuid.v1 idempotency.race.uuid.v2 'global event ID collision'
-  run_race "$db_name" uuid_v2_first v2 v1 \
-    60000000-0000-4000-8000-000000000002 60000000-0000-4000-8000-000000000002 \
-    run.race.uuid-v2-first run.race.uuid-v1-second idempotency.race.uuid.v2-first idempotency.race.uuid.v1-second 'global event ID collision'
-  run_race "$db_name" aggregate_v1_first v1 v2 \
-    60000000-0000-4000-8000-000000000003 60000000-0000-4000-8000-000000000004 \
-    run.race.aggregate-v1-first run.race.aggregate-v1-first idempotency.race.aggregate.v1 idempotency.race.aggregate.v2 'schema version mismatch'
-  run_race "$db_name" aggregate_v2_first v2 v1 \
-    60000000-0000-4000-8000-000000000005 60000000-0000-4000-8000-000000000006 \
-    run.race.aggregate-v2-first run.race.aggregate-v2-first idempotency.race.aggregate.v2-first idempotency.race.aggregate.v1-second 'schema version mismatch'
-  run_race "$db_name" idempotency_v1_first v1 v2 \
-    60000000-0000-4000-8000-000000000007 60000000-0000-4000-8000-000000000008 \
-    run.race.idempotency-v1 run.race.idempotency-v2 idempotency.race.shared-v1-first idempotency.race.shared-v1-first 'idempotency key collision'
-  run_race "$db_name" idempotency_v2_first v2 v1 \
-    60000000-0000-4000-8000-000000000009 60000000-0000-4000-8000-000000000010 \
-    run.race.idempotency-v2-first run.race.idempotency-v1-second idempotency.race.shared-v2-first idempotency.race.shared-v2-first 'idempotency key collision'
-
-  psql_local -d "$db_name" -v ON_ERROR_STOP=1 -f "$root_dir/supabase/tests/forge_adr001_v2_concurrency_assert.sql"
+  psql_local -d "$db_name" -v ON_ERROR_STOP=1 -f "$root_dir/supabase/tests/forge_adr001_v3_concurrency_setup.sql"
+  run_v3_nonce_race "$db_name"
+  psql_local -d "$db_name" -v ON_ERROR_STOP=1 -f "$root_dir/supabase/tests/forge_adr001_v3_concurrency_assert.sql"
   drop_verified_fixture "$db_name"
   fixture_dbs=("${fixture_dbs[@]/$db_name}")
 }

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MAX_FORGE_PLAN_REQUEST_BYTES, POST } from "../../../app/api/forge/plan/route";
+import { createForgePlanPost, MAX_FORGE_PLAN_REQUEST_BYTES, POST } from "../../../app/api/forge/plan/route";
+import { planForgeLearning } from "./planner";
 
 const body = {
   question: "How do force, velocity, and motion relate after a push ends?",
@@ -131,5 +132,29 @@ describe("POST /api/forge/plan", () => {
       schemaVersion: "1.0",
       error: { code: "invalid_request", message: "The planning request is invalid." },
     });
+  });
+
+  it("denies direct planning transport before a provider request even when an adult claim and flags are present", async () => {
+    vi.stubEnv("OPENAI_FORGE_PLANNER_ENABLED", "true");
+    vi.stubEnv("OPENAI_API_KEY", "transport-key-is-not-authority");
+    const parse = vi.fn();
+    const handler = createForgePlanPost({
+      plan: (input) => planForgeLearning(input, {
+        apiKey: "transport-key-is-not-authority",
+        client: { responses: { parse } } as never,
+      }),
+    });
+
+    const direct = await handler(request({ ...body, ageMode: "adult" }));
+    expect(direct.status).toBe(200);
+    await expect(direct.json()).resolves.toMatchObject({
+      contractKind: "grounded_learning",
+      model: { contribution: "not_used", fallbackReason: "disabled" },
+    });
+    expect(parse).not.toHaveBeenCalled();
+
+    const selfAttested = await handler(request({ ...body, ageMode: "adult", selfAttestedAdult: true }));
+    expect(selfAttested.status).toBe(400);
+    expect(parse).not.toHaveBeenCalled();
   });
 });

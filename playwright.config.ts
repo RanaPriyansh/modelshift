@@ -1,6 +1,28 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
+export type ForgePlaywrightEnvironment = Readonly<Record<string, string | undefined>>;
+
+export function resolveLocalPlaywrightServer(
+  environment: ForgePlaywrightEnvironment = process.env,
+) {
+  const localPort = environment.FORGE_PLAYWRIGHT_PORT ?? "3317";
+  if (!/^\d{2,5}$/.test(localPort) || Number(localPort) > 65_535) {
+    throw new Error("FORGE_PLAYWRIGHT_PORT must be a valid TCP port.");
+  }
+
+  return {
+    port: localPort,
+    baseURL: `http://127.0.0.1:${localPort}`,
+    command: `pnpm dev --hostname 127.0.0.1 --port ${localPort}`,
+    reuseExistingServer: false as const,
+  };
+}
+
+const localServer = resolveLocalPlaywrightServer();
+if (process.env.PLAYWRIGHT_BASE_URL === "") {
+  throw new Error("PLAYWRIGHT_BASE_URL must be omitted or set to a nonempty URL.");
+}
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? localServer.baseURL;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -18,9 +40,12 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {
-        command: "pnpm dev --hostname 127.0.0.1",
+        command: localServer.command,
         url: baseURL,
-        reuseExistingServer: !process.env.CI,
+        // Reusing an arbitrary process can silently exercise a different
+        // checkout. A collision must fail loudly; exact-SHA release runs use
+        // the production verification harness and an explicit base URL.
+        reuseExistingServer: localServer.reuseExistingServer,
         timeout: 120_000,
       },
   projects: [

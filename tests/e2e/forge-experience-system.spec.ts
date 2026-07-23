@@ -306,7 +306,7 @@ test.describe("FORGE Packet A experience system", () => {
     await expect(page.getByRole("heading", { name: "What do you want to understand?" })).toBeVisible();
     await page.goto("/pathways");
     await expect(page.getByRole("heading", { name: "What FORGE can—and cannot—offer today." })).toBeVisible();
-    await expect(page.getByText("Released capability", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Working World mapping", { exact: true }).first()).toBeVisible();
     const pathwayAction = page.getByRole("link", { name: "Open Force & motion World" });
     await expect(pathwayAction).toBeVisible();
     await tabTo(page, '[href="/learn/force-and-motion"]', 16);
@@ -431,5 +431,71 @@ test.describe("FORGE Packet A experience system", () => {
     expect(await page.evaluate(() => matchMedia("(prefers-contrast: more)").matches)).toBe(true);
     await page.keyboard.press("Tab");
     await expect(page.locator(".forge-skip-link")).toBeFocused();
+  });
+
+  test("Force World keeps its dark-surface and cutoff annotation foregrounds distinct", async ({ page }) => {
+    await page.goto("/learn/force-and-motion");
+    const headingTypography = await page.locator(".stage-heading h1").evaluate((heading) => {
+      const styles = getComputedStyle(heading);
+      return Number.parseFloat(styles.lineHeight) / Number.parseFloat(styles.fontSize);
+    });
+    expect(headingTypography, "the 320px Force heading must preserve readable line separation").toBeGreaterThanOrEqual(1.15);
+    const contrast = await page.locator(".world--mystery .cutoff-label").evaluate((annotation) => {
+      type Rgb = [number, number, number];
+      const parseColor = (value: string): Rgb => {
+        const channels = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [];
+        if (channels.length !== 3) throw new Error(`Unable to parse SVG color: ${value}`);
+        return [channels[0]!, channels[1]!, channels[2]!];
+      };
+      const luminance = ([red, green, blue]: Rgb) => {
+        const channels = [red, green, blue].map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+      };
+      const rect = annotation.querySelector<SVGRectElement>("rect");
+      const text = annotation.querySelector<SVGTextElement>("text");
+      if (!rect || !text) throw new Error("Force World cutoff annotation is incomplete");
+      const figure = annotation.closest<HTMLElement>(".world--mystery");
+      if (!figure) throw new Error("Force World annotation surface is missing");
+      const shell = document.querySelector<HTMLElement>(".app-shell");
+      const heading = document.querySelector<HTMLElement>(".stage-heading h1");
+      const choice = document.querySelector<HTMLElement>(".choice-row__label");
+      const choiceSurface = choice?.closest<HTMLElement>(".choice-row");
+      if (!shell || !heading || !choice || !choiceSurface) throw new Error("Force World primary surface is missing");
+      const surface = parseColor(getComputedStyle(rect).fill);
+      const foreground = parseColor(getComputedStyle(text).fill);
+      const headingForeground = parseColor(getComputedStyle(heading).color);
+      const headingSurface = parseColor(getComputedStyle(shell).backgroundColor);
+      const choiceForeground = parseColor(getComputedStyle(choice).color);
+      const choiceBackground = parseColor(getComputedStyle(choiceSurface).backgroundColor);
+      const ratio = (Math.max(luminance(surface), luminance(foreground)) + 0.05)
+        / (Math.min(luminance(surface), luminance(foreground)) + 0.05);
+      const headingRatio = (Math.max(luminance(headingSurface), luminance(headingForeground)) + 0.05)
+        / (Math.min(luminance(headingSurface), luminance(headingForeground)) + 0.05);
+      const choiceRatio = (Math.max(luminance(choiceBackground), luminance(choiceForeground)) + 0.05)
+        / (Math.min(luminance(choiceBackground), luminance(choiceForeground)) + 0.05);
+      const tokens = getComputedStyle(figure);
+      return {
+        foreground: getComputedStyle(text).fill,
+        headingForeground: getComputedStyle(heading).color,
+        headingRatio,
+        choiceForeground: getComputedStyle(choice).color,
+        choiceRatio,
+        ratio,
+        surface: getComputedStyle(rect).fill,
+        surfaceToken: tokens.getPropertyValue("--force-world-annotation-surface").trim(),
+        textToken: tokens.getPropertyValue("--force-world-annotation-ink").trim(),
+      };
+    });
+
+    expect(contrast.surfaceToken).not.toBe(contrast.textToken);
+    expect(contrast.surface).not.toBe(contrast.foreground);
+    expect(contrast.ratio).toBeGreaterThanOrEqual(4.5);
+    expect(contrast.headingForeground).not.toBe("rgb(17, 23, 20)");
+    expect(contrast.headingRatio).toBeGreaterThanOrEqual(4.5);
+    expect(contrast.choiceForeground).not.toBe("rgb(17, 23, 20)");
+    expect(contrast.choiceRatio).toBeGreaterThanOrEqual(4.5);
   });
 });

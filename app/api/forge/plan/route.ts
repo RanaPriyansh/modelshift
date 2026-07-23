@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { forgePlanRequestSchema, planForgeLearning } from "../../../../src/lib/forge-planner";
+import {
+  forgePlanRequestSchema,
+  planForgeLearning,
+  type ForgePlanRequest,
+} from "../../../../src/lib/forge-planner";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,32 +80,44 @@ async function readBoundedBody(request: Request): Promise<string | null> {
   }
 }
 
-export async function POST(request: Request) {
-  const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
-  const mediaType = contentType.split(";", 1)[0]?.trim();
-  if (mediaType !== "application/json" || !sameOrigin(request)) return invalidRequest();
+type PlanRouteDependencies = {
+  readonly plan: (input: ForgePlanRequest) => ReturnType<typeof planForgeLearning>;
+};
 
-  let text: string | null;
-  try {
-    text = await readBoundedBody(request);
-  } catch {
-    return invalidRequest();
-  }
-  if (text === null) return invalidRequest();
+const DEFAULT_DEPENDENCIES: PlanRouteDependencies = {
+  plan: planForgeLearning,
+};
 
-  let body: unknown;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    return invalidRequest();
-  }
+export function createForgePlanPost(dependencies: PlanRouteDependencies = DEFAULT_DEPENDENCIES) {
+  return async function POST(request: Request) {
+    const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+    const mediaType = contentType.split(";", 1)[0]?.trim();
+    if (mediaType !== "application/json" || !sameOrigin(request)) return invalidRequest();
 
-  const parsed = forgePlanRequestSchema.safeParse(body);
-  if (!parsed.success) return invalidRequest();
+    let text: string | null;
+    try {
+      text = await readBoundedBody(request);
+    } catch {
+      return invalidRequest();
+    }
+    if (text === null) return invalidRequest();
 
-  const contract = await planForgeLearning(parsed.data);
-  return NextResponse.json(contract, {
-    status: contract.contractKind === "refusal" ? 403 : 200,
-    headers: responseHeaders(),
-  });
+    let body: unknown;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      return invalidRequest();
+    }
+
+    const parsed = forgePlanRequestSchema.safeParse(body);
+    if (!parsed.success) return invalidRequest();
+
+    const contract = await dependencies.plan(parsed.data);
+    return NextResponse.json(contract, {
+      status: contract.contractKind === "refusal" ? 403 : 200,
+      headers: responseHeaders(),
+    });
+  };
 }
+
+export const POST = createForgePlanPost();

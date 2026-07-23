@@ -246,17 +246,20 @@ test.describe("FORGE cross-route release contract", () => {
     });
   }
 
-  test("pathway availability exposes four released mappings and five non-actionable gaps", async ({ page }) => {
+  test("pathway availability exposes four working World mappings and five non-actionable gaps", async ({ page }) => {
     const failures = capturePageFailures(page);
     await page.goto("/pathways");
 
     const map = page.getByRole("list", { name: "Current pathway availability by entitlement area" });
     await expect(map).toBeVisible();
-    await expect(map.getByText("Released capability", { exact: true })).toHaveCount(4);
+    await expect(map.getByText("Working World mapping", { exact: true })).toHaveCount(4);
     await expect(map.getByText("Identified gap", { exact: true })).toHaveCount(5);
     await expect(map.getByRole("link", { name: /Open .+ World/ })).toHaveCount(4);
-    await expect(page.getByText("4 released mappings appear across 9 entitlement areas. 5 identified gaps remain visible instead of being filled with a course list, a generated lesson, or a promise.")).toBeVisible();
+    await expect(page.getByText("4 working World mappings appear across 9 entitlement areas. 5 identified gaps remain visible instead of being filled with a course list, a generated lesson, or a promise.")).toBeVisible();
     await expect(page.getByText("Not a curriculum, recommendation, or coverage claim.")).toBeVisible();
+    const description = page.locator('meta[name="description"]');
+    await expect(description).toHaveCount(1);
+    await expect(description).toHaveAttribute("content", "A read-only map of current working World mappings and explicit entitlement gaps, not a coverage claim.");
     await expect(page.getByRole("heading", { name: "Compare and scale proportional relationships" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Distinguish net force from velocity" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Keep historical claims inside their evidence boundary" })).toBeVisible();
@@ -281,8 +284,8 @@ test.describe("FORGE cross-route release contract", () => {
     await page.getByRole("button", { name: /Shape my first move/ }).click();
     const grounded = page.getByTestId("forge-plan-grounded");
     await expect(grounded).toBeVisible();
-    await expect(grounded).toContainText("Reviewed Learning Contract");
-    await expect(grounded.getByRole("link", { name: /Enter reviewed World/ })).toHaveAttribute(
+    await expect(grounded).toContainText("Current working World route");
+    await expect(grounded.getByRole("link", { name: /Enter working World/ })).toHaveAttribute(
       "href",
       "/learn/force-and-motion",
     );
@@ -393,7 +396,7 @@ test.describe("FORGE cross-route release contract", () => {
     await page.getByRole("button", { name: /Shape my first move/ }).click();
     const grounded = page.getByTestId("forge-plan-grounded");
     await expect(grounded).toBeVisible();
-    await expect(grounded.getByRole("link", { name: /Enter reviewed World/ })).toHaveAttribute(
+    await expect(grounded.getByRole("link", { name: /Enter working World/ })).toHaveAttribute(
       "href",
       "/learn/proportional-reasoning?audience=child_with_grown_up",
     );
@@ -619,7 +622,7 @@ test.describe("FORGE cross-route release contract", () => {
     const ledger = page.getByRole("region", { name: "Your evidence, under your control." });
     await expect(ledger).toContainText("1 bounded record");
     await expect(ledger.getByRole("heading", { name: "Proportional relationships" })).toBeVisible();
-    await expect(ledger).toContainText("Independent transfer observed");
+    await expect(ledger).toContainText("Matched this World’s protected transfer criteria (local record)");
 
     const educatorToggle = ledger.getByRole("button", { name: "Include in educator copy" });
     await educatorToggle.click();

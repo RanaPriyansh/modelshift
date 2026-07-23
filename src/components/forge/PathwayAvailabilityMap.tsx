@@ -14,10 +14,10 @@ export function PathwayAvailabilityMap({
 }: {
   availability: readonly PublicPathwayAvailability[];
 }) {
-  const releasedCount = availability.filter((entry) => entry.status === "released-capability").length;
-  const gapCount = availability.length - releasedCount;
-  const mappingLabel = releasedCount === 1 ? "mapping" : "mappings";
-  const mappingVerb = releasedCount === 1 ? "appears" : "appear";
+  const workingCount = availability.filter((entry) => entry.status === "released-capability").length;
+  const gapCount = availability.length - workingCount;
+  const mappingLabel = workingCount === 1 ? "mapping" : "mappings";
+  const mappingVerb = workingCount === 1 ? "appears" : "appear";
   const areaLabel = availability.length === 1 ? "area" : "areas";
   const gapLabel = gapCount === 1 ? "gap" : "gaps";
   const gapVerb = gapCount === 1 ? "remains" : "remain";
@@ -28,7 +28,7 @@ export function PathwayAvailabilityMap({
         <ForgeKicker>Current availability</ForgeKicker>
         <h1>What FORGE can—and cannot—offer today.</h1>
         <p>
-          {releasedCount} released {mappingLabel} {mappingVerb} across {availability.length} entitlement {areaLabel}. {gapCount} identified {gapLabel} {gapVerb} visible instead of
+          {workingCount} working World {mappingLabel} {mappingVerb} across {availability.length} entitlement {areaLabel}. {gapCount} identified {gapLabel} {gapVerb} visible instead of
           being filled with a course list, a generated lesson, or a promise.
         </p>
       </header>
@@ -37,7 +37,7 @@ export function PathwayAvailabilityMap({
         <ForgeStatus tone="quiet">Availability map only</ForgeStatus>
         <h2 id="pathways-boundary-title">Not a curriculum, recommendation, or coverage claim.</h2>
         <p>
-          This map lists current released mappings and explicit absences. It is not a coverage claim and does not set a pace, grade level,
+          This map lists current working World mappings and explicit absences. It is not a coverage claim and does not set a pace, grade level,
           sequence, prerequisite, personal path, completion status, or homeschool decision.
         </p>
       </aside>
@@ -46,8 +46,8 @@ export function PathwayAvailabilityMap({
         <ForgeSectionHeading
           id="pathways-map-title"
           label="Nine-area entitlement ledger"
-          title="Released capability and identified gap stay equally visible."
-          description={`${releasedCount} released mappings · ${gapCount} identified gaps · no missing area is hidden.`}
+          title="Working World mapping and identified gap stay equally visible."
+          description={`${workingCount} working World mappings · ${gapCount} identified gaps · no missing area is hidden.`}
         />
         <ol className="forge-pathways-list" aria-label="Current pathway availability by entitlement area">
           {availability.map((entry, index) => (
@@ -59,10 +59,10 @@ export function PathwayAvailabilityMap({
               <span className="forge-pathway-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
               <div className="forge-pathway-main">
                 <p className="forge-pathway-area">{entry.areaLabel}</p>
-                <h3>{entry.status === "released-capability" ? entry.capability.title : "No released capability yet"}</h3>
+                <h3>{entry.status === "released-capability" ? entry.capability.title : "No working World mapping yet"}</h3>
                 {entry.status === "released-capability" ? (
                   <>
-                    <ForgeStatus tone="evidence">Released capability</ForgeStatus>
+                    <ForgeStatus tone="evidence">Working World mapping</ForgeStatus>
                     <dl>
                       <div><dt>Available to</dt><dd>{entry.ageModes.map((mode) => mode.label).join(" · ")}</dd></div>
                       <div><dt>Source policy</dt><dd>{sourcePolicyText(entry)}</dd></div>
@@ -97,7 +97,7 @@ export function PathwayAvailabilityMap({
         <ul>
           <li><strong>Choose another question.</strong><span>Question-first intake remains open; this map does not lock an order.</span></li>
           <li><strong>Pause, decline, or ask for help.</strong><span>Those are learner rights, not gaps to be smoothed over by a recommendation.</span></li>
-          <li><strong>Keep missing areas visible.</strong><span>Only a separately reviewed released package can change an identified gap.</span></li>
+          <li><strong>Keep missing areas visible.</strong><span>Only a later reviewed publication can change an identified gap.</span></li>
         </ul>
         <Link className="forge-secondary-action forge-pathways-home-link" href="/">
           Ask a different question

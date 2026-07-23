@@ -27,8 +27,9 @@ export function TrailPrototype() {
         </header>
 
         <PrototypeNotice>
-          This foundation has no account or cloud sync. Completed proof outcomes are retained only in this browser, can be
-          exported or deleted below, and deliberately exclude raw explanations and identity.
+          No account is required. When storage is available, browser-local records can retain bounded outcomes, can be exported or
+          deleted below, and deliberately exclude raw explanations and identity. Optional adult cloud continuity does not upload this
+          device ledger.
         </PrototypeNotice>
 
         <EvidenceLedgerPanel compact />
@@ -77,13 +78,14 @@ export function EvidencePrototype() {
           <span>Evidence</span>
           <h1>Proof should say exactly what happened.</h1>
           <p>
-            A FORGE record separates assisted performance from independent evidence and names what remains untested. It is a
+            A FORGE record separates assisted performance from a protected transfer attempt and names what remains untested. It is a
             claim with conditions—not a grade, rank, or permanent verdict.
           </p>
         </header>
 
         <PrototypeNotice>
-          Working Worlds now save bounded proof outcomes in this browser and schedule return dates after independent proof.
+          When storage is available, Working Worlds can retain bounded outcomes in this browser and schedule return dates after a
+          protected transfer attempt matches that World’s current criteria.
           “Educator copy” only marks records for a learner-triggered download; FORGE sends nothing to another person.
         </PrototypeNotice>
 
@@ -103,7 +105,7 @@ export function EvidencePrototype() {
           </dl>
           <footer>
             <span>Bounded claim</span>
-            <p>Independent transfer was observed once on this new problem. Broader mastery and retention are not established.</p>
+            <p>This browser recorded one protected transfer attempt that matched this World’s current criteria. Broader mastery and retention are not established.</p>
           </footer>
         </section>
 

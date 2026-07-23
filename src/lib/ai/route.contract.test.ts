@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MAX_INTERPRET_REQUEST_BYTES, POST } from "../../../app/api/interpret/route";
+import { createInterpretPost, MAX_INTERPRET_REQUEST_BYTES, POST } from "../../../app/api/interpret/route";
+import { interpretExplanation } from "./interpret";
 
 const body = {
   scenario_id: "mystery_force_cutoff",
@@ -24,6 +25,10 @@ function request(bodyValue: unknown, headers: Record<string, string> = {}) {
 }
 
 describe("POST /api/interpret boundary", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("returns the frozen fallback shape for an unavailable model", async () => {
     const response = await POST(request(body));
     expect(response.status).toBe(200);
@@ -62,5 +67,26 @@ describe("POST /api/interpret boundary", () => {
   it("accepts the browser origin matching the actual Host when the framework URL is normalized", async () => {
     const response = await POST(request(body, { host: "127.0.0.1:3000", origin: "http://127.0.0.1:3000" }));
     expect(response.status).toBe(200);
+  });
+
+  it("denies a direct route attempt before an injected provider transport despite flags, keys, and client claims", async () => {
+    vi.stubEnv("OPENAI_INTERPRETATION_ENABLED", "true");
+    vi.stubEnv("OPENAI_API_KEY", "transport-key-is-not-authority");
+    const parse = vi.fn();
+    const handler = createInterpretPost({
+      interpret: (input) => interpretExplanation(input, {
+        apiKey: "transport-key-is-not-authority",
+        client: { responses: { parse } } as never,
+      }),
+    });
+
+    const direct = await handler(request(body));
+    expect(direct.status).toBe(200);
+    await expect(direct.json()).resolves.toMatchObject({ source: "fallback", fallback_reason: "disabled" });
+    expect(parse).not.toHaveBeenCalled();
+
+    const selfAttested = await handler(request({ ...body, selfAttestedAdult: true }));
+    expect(selfAttested.status).toBe(400);
+    expect(parse).not.toHaveBeenCalled();
   });
 });

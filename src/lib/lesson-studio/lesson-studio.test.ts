@@ -12,6 +12,7 @@ import {
   type LessonDraft,
   type LessonStudioRequest,
 } from "./schema";
+import { approvedProviderAuthorityForTest } from "../forge-auth/provider-authority.test-helpers";
 
 const draft: LessonDraft = lessonDraftSchema.parse({
   schemaVersion: "1.0",
@@ -76,15 +77,9 @@ function routeRequest(value: unknown, headers: Record<string, string> = {}) {
   });
 }
 
-const activeAdultIdentity = {
-  id: "adult-test-identity",
-  email: "adult@example.test",
-  accountKind: "cloud_identity" as const,
-};
-
 function authorizedPost(generate = generateLessonDraft) {
   return createLessonDraftPost({
-    readIdentity: async () => activeAdultIdentity,
+    authorize: async () => approvedProviderAuthorityForTest("lesson-draft"),
     generate,
   });
 }
@@ -105,7 +100,10 @@ describe("lesson provider adapters", () => {
         }),
       },
     };
-    const generated = await generateLessonDraft(requestFor("openai"), { openAIClient: client });
+    const generated = await generateLessonDraft(requestFor("openai"), {
+      openAIClient: client,
+      authority: approvedProviderAuthorityForTest("lesson-draft"),
+    });
     expect(generated).toMatchObject({ draft, model: "gpt-5.6-sol", keyHandling: "request_only" });
     expect(captured).toMatchObject({ store: false, max_output_tokens: 2_400 });
     expect(JSON.stringify(captured)).not.toContain("safety_identifier");
@@ -120,7 +118,10 @@ describe("lesson provider adapters", () => {
         })),
       },
     };
-    await expect(generateLessonDraft(requestFor("openai"), { openAIClient: nestedRefusal })).rejects.toEqual(
+    await expect(generateLessonDraft(requestFor("openai"), {
+      openAIClient: nestedRefusal,
+      authority: approvedProviderAuthorityForTest("lesson-draft"),
+    })).rejects.toEqual(
       expect.objectContaining<Partial<LessonStudioError>>({ code: "provider_refusal" }),
     );
 
@@ -134,7 +135,10 @@ describe("lesson provider adapters", () => {
         })),
       },
     };
-    await expect(generateLessonDraft(requestFor("openai"), { openAIClient: incomplete })).rejects.toEqual(
+    await expect(generateLessonDraft(requestFor("openai"), {
+      openAIClient: incomplete,
+      authority: approvedProviderAuthorityForTest("lesson-draft"),
+    })).rejects.toEqual(
       expect.objectContaining<Partial<LessonStudioError>>({ code: "request_budget_exceeded" }),
     );
   });
@@ -153,7 +157,10 @@ describe("lesson provider adapters", () => {
       return new Response(JSON.stringify(payload), { status: 200, headers: { "content-type": "application/json" } });
     }) as unknown as typeof fetch;
 
-    const generated = await generateLessonDraft(requestFor(provider), { fetchImpl });
+    const generated = await generateLessonDraft(requestFor(provider), {
+      fetchImpl,
+      authority: approvedProviderAuthorityForTest("lesson-draft"),
+    });
     expect(generated.draft.plausibleReadings).toHaveLength(2);
     expect(url).toBe(provider === "anthropic"
       ? "https://api.anthropic.com/v1/messages"
@@ -168,9 +175,29 @@ describe("lesson provider adapters", () => {
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
       choices: [{ message: { content: "Here is your lesson" } }],
     }), { status: 200 })) as unknown as typeof fetch;
-    await expect(generateLessonDraft(requestFor("openrouter"), { fetchImpl })).rejects.toEqual(
+    await expect(generateLessonDraft(requestFor("openrouter"), {
+      fetchImpl,
+      authority: approvedProviderAuthorityForTest("lesson-draft"),
+    })).rejects.toEqual(
       expect.objectContaining<Partial<LessonStudioError>>({ code: "malformed_provider_output" }),
     );
+  });
+
+  it("makes zero provider calls when flags, keys, and a direct transport are present without server authority", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "transport-key-is-not-authority");
+    vi.stubEnv("FORGE_LESSON_STUDIO_OPENAI_ENABLED", "true");
+    const parse = vi.fn();
+    const fetchImpl = vi.fn() as unknown as typeof fetch;
+
+    await expect(generateLessonDraft(requestFor("openai"), {
+      openAIClient: { responses: { parse } } as never,
+    })).rejects.toEqual(expect.objectContaining<Partial<LessonStudioError>>({ code: "authoring_unavailable" }));
+    await expect(generateLessonDraft(requestFor("anthropic"), { fetchImpl })).rejects.toEqual(
+      expect.objectContaining<Partial<LessonStudioError>>({ code: "authoring_unavailable" }),
+    );
+
+    expect(parse).not.toHaveBeenCalled();
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
 
@@ -179,18 +206,26 @@ describe("POST /api/forge/lesson-draft", () => {
     vi.stubEnv("FORGE_LESSON_STUDIO_OPENAI_ENABLED", "true");
     vi.stubEnv("OPENAI_API_KEY", "managed-key-must-never-be-used");
     const generate = vi.fn();
-    const post = createLessonDraftPost({ readIdentity: async () => null, generate });
+    const post = createLessonDraftPost({
+      authorize: async () => ({ allowed: false, reason: "cloud_authority_disabled" }),
+      generate,
+    });
     const request = routeRequest(requestFor("openai"));
     const response = await post(request);
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toMatchObject({ error: { code: "authoring_unavailable" } });
     expect(request.bodyUsed).toBe(false);
     expect(generate).not.toHaveBeenCalled();
+
+    const selfAttestedRequest = routeRequest({ ...requestFor("openai"), selfAttestedAdult: true });
+    expect((await post(selfAttestedRequest)).status).toBe(403);
+    expect(selfAttestedRequest.bodyUsed).toBe(false);
+    expect(generate).not.toHaveBeenCalled();
     // The production export also fails closed with the structurally disabled public cloud identity path.
     expect((await POST(routeRequest(requestFor("openai")))).status).toBe(403);
   });
 
-  it("rejects missing keys without logging or returning author material or credentials after an active-adult mock", async () => {
+  it("rejects missing keys without logging or returning author material or credentials after a server-owned provider-authority mock", async () => {
     vi.stubEnv("OPENAI_API_KEY", "managed-key-must-never-be-used");
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
@@ -246,24 +281,33 @@ describe("POST /api/forge/lesson-draft", () => {
 
   it("classifies rate limits, refusals, and exhausted output budgets without retrying or logging", async () => {
     const rateLimited = vi.fn(async () => new Response("{}", { status: 429 })) as unknown as typeof fetch;
-    await expect(generateLessonDraft(requestFor("anthropic"), { fetchImpl: rateLimited })).rejects.toEqual(
+    await expect(generateLessonDraft(requestFor("anthropic"), {
+      fetchImpl: rateLimited,
+      authority: approvedProviderAuthorityForTest("lesson-draft"),
+    })).rejects.toEqual(
       expect.objectContaining<Partial<LessonStudioError>>({ code: "rate_limited" }),
     );
 
     const refused = vi.fn(async () => new Response(JSON.stringify({ stop_reason: "refusal", content: [] }), { status: 200 })) as unknown as typeof fetch;
-    await expect(generateLessonDraft(requestFor("anthropic"), { fetchImpl: refused })).rejects.toEqual(
+    await expect(generateLessonDraft(requestFor("anthropic"), {
+      fetchImpl: refused,
+      authority: approvedProviderAuthorityForTest("lesson-draft"),
+    })).rejects.toEqual(
       expect.objectContaining<Partial<LessonStudioError>>({ code: "provider_refusal" }),
     );
 
     const exhausted = vi.fn(async () => new Response(JSON.stringify({
       candidates: [{ finishReason: "MAX_TOKENS", content: { parts: [] } }],
     }), { status: 200 })) as unknown as typeof fetch;
-    await expect(generateLessonDraft(requestFor("gemini"), { fetchImpl: exhausted })).rejects.toEqual(
+    await expect(generateLessonDraft(requestFor("gemini"), {
+      fetchImpl: exhausted,
+      authority: approvedProviderAuthorityForTest("lesson-draft"),
+    })).rejects.toEqual(
       expect.objectContaining<Partial<LessonStudioError>>({ code: "request_budget_exceeded" }),
     );
   });
 
-  it("allows a future mocked active-adult request only through the server-owned dependency", async () => {
+  it("allows a synthetic server-owned authority fixture only through the route dependency", async () => {
     const generate = vi.fn(async () => ({
       draft,
       model: "gpt-5.6-sol",

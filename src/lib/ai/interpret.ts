@@ -8,6 +8,11 @@ import { neutralFallback } from "./fallback";
 import { buildInterpretationInput, INTERPRETATION_INSTRUCTIONS, isAdversarialExplanation } from "./prompt";
 import { interpretationSchema, type InterpretRequestInput } from "./schema";
 import { validateInterpretation } from "./validation";
+import {
+  authorizeProviderUse,
+  consumeProviderAuthorityForTransport,
+  type ProviderAuthorityDecision,
+} from "../forge-auth/provider-authority.server";
 
 const INTERPRETATION_TIMEOUT_MS = 6_000;
 
@@ -22,6 +27,11 @@ export type InterpretOptions = {
   apiKey?: string | undefined;
   model?: string | undefined;
   disabled?: boolean;
+  /**
+   * Server-test seam only. Route data must never create this decision; normal
+   * execution always calls authorizeProviderUse before a transport is built.
+   */
+  authority?: ProviderAuthorityDecision;
 };
 
 function fallbackForError(error: unknown): ValidatedInterpretation {
@@ -45,6 +55,9 @@ export async function interpretExplanation(
   }
   if (request.explanation === EXPLICIT_UNCERTAINTY) return neutralFallback("ambiguous_input");
   if (isAdversarialExplanation(request.explanation)) return neutralFallback("ambiguous_input");
+
+  const authority = options.authority ?? await authorizeProviderUse("interpretation");
+  if (!consumeProviderAuthorityForTransport(authority, "interpretation")) return neutralFallback("disabled");
 
   const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY;
   if (!apiKey && !options.client) return neutralFallback("missing_key");

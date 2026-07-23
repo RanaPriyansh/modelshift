@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { interpretExplanation, interpretationRequestSchema, neutralFallback } from "../../../src/lib/ai";
+import {
+  interpretExplanation,
+  interpretationRequestSchema,
+  neutralFallback,
+  type InterpretRequestInput,
+} from "../../../src/lib/ai";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,29 +68,41 @@ async function readBoundedBody(request: Request): Promise<string | null> {
   }
 }
 
-export async function POST(request: Request) {
-  const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
-  const mediaType = contentType.split(";", 1)[0]?.trim();
-  if (mediaType !== "application/json" || !sameOrigin(request)) {
-    return json(neutralFallback("ambiguous_input"), 400);
-  }
+type InterpretRouteDependencies = {
+  readonly interpret: (input: InterpretRequestInput) => ReturnType<typeof interpretExplanation>;
+};
 
-  let text: string | null;
-  try {
-    text = await readBoundedBody(request);
-  } catch {
-    return json(neutralFallback("ambiguous_input"), 400);
-  }
-  if (text === null) return json(neutralFallback("ambiguous_input"), 400);
+const DEFAULT_DEPENDENCIES: InterpretRouteDependencies = {
+  interpret: interpretExplanation,
+};
 
-  let body: unknown;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    return json(neutralFallback("ambiguous_input"), 400);
-  }
+export function createInterpretPost(dependencies: InterpretRouteDependencies = DEFAULT_DEPENDENCIES) {
+  return async function POST(request: Request) {
+    const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+    const mediaType = contentType.split(";", 1)[0]?.trim();
+    if (mediaType !== "application/json" || !sameOrigin(request)) {
+      return json(neutralFallback("ambiguous_input"), 400);
+    }
 
-  const parsed = interpretationRequestSchema.safeParse(body);
-  if (!parsed.success) return json(neutralFallback("ambiguous_input"), 400);
-  return json(await interpretExplanation(parsed.data));
+    let text: string | null;
+    try {
+      text = await readBoundedBody(request);
+    } catch {
+      return json(neutralFallback("ambiguous_input"), 400);
+    }
+    if (text === null) return json(neutralFallback("ambiguous_input"), 400);
+
+    let body: unknown;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      return json(neutralFallback("ambiguous_input"), 400);
+    }
+
+    const parsed = interpretationRequestSchema.safeParse(body);
+    if (!parsed.success) return json(neutralFallback("ambiguous_input"), 400);
+    return json(await dependencies.interpret(parsed.data));
+  };
 }
+
+export const POST = createInterpretPost();

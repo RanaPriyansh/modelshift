@@ -6,7 +6,7 @@ import { getCurrentPathwayAvailability } from "@/src/forge/pathways/public-avail
 
 export const metadata: Metadata = {
   title: "Current availability — FORGE",
-  description: "A read-only map of current released FORGE capabilities and explicit entitlement gaps.",
+  description: "A read-only map of current working World mappings and explicit entitlement gaps, not a coverage claim.",
 };
 
 export default function PathwaysPage() {

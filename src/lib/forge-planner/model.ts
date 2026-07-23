@@ -10,6 +10,11 @@ import {
   type ModelPlannerOutput,
   type PlannerModelMetadata,
 } from "./schema";
+import {
+  authorizeProviderUse,
+  consumeProviderAuthorityForTransport,
+  type ProviderAuthorityDecision,
+} from "../forge-auth/provider-authority.server";
 
 export const FORGE_PLANNER_TIMEOUT_MS = 4_500;
 
@@ -36,6 +41,8 @@ export type PlannerModelOptions = {
   disabled?: boolean;
   /** Test seam only. Request input can never control the timeout. */
   timeoutMs?: number;
+  /** Server-test seam only; request fields can never supply provider authority. */
+  authority?: ProviderAuthorityDecision;
 };
 
 type ModelRoute = Pick<AuthoredTopic, "id" | "worldId" | "worldVersion" | "route" | "sourceIds"> | null;
@@ -124,6 +131,9 @@ export async function runOptionalModelGovernor(
   if (options.disabled || process.env.OPENAI_FORGE_PLANNER_DISABLED === "true" || !explicitlyEnabled) {
     return fallback("disabled");
   }
+
+  const authority = options.authority ?? await authorizeProviderUse("learning-plan-rephrase");
+  if (!consumeProviderAuthorityForTransport(authority, "learning-plan-rephrase")) return fallback("disabled");
 
   const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY;
   if (!apiKey && !options.client) return fallback("missing_key");

@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 
 import { containsAdversarialText, containsPrivateData, isRestrictedTopic } from "../../../../src/lib/forge-planner/safety";
-import { readForgeCloudIdentity, type ForgeCloudIdentity } from "../../../../src/lib/forge-auth/session.server";
+import {
+  authorizeProviderUse,
+  providerAuthorityAllows,
+  type ProviderAuthorityDecision,
+} from "../../../../src/lib/forge-auth/provider-authority.server";
 import {
   generateLessonDraft,
   LessonStudioError,
@@ -102,25 +106,28 @@ async function readBoundedBody(request: Request): Promise<string | null> {
 }
 
 type LessonDraftRouteDependencies = {
-  readIdentity: () => Promise<ForgeCloudIdentity | null>;
+  authorize: () => Promise<ProviderAuthorityDecision>;
   generate: typeof generateLessonDraft;
 };
 
 const DEFAULT_DEPENDENCIES: LessonDraftRouteDependencies = {
-  readIdentity: readForgeCloudIdentity,
+  authorize: () => authorizeProviderUse("lesson-draft"),
   generate: generateLessonDraft,
 };
 
 /**
- * The route body is deliberately inaccessible until server-owned active adult
- * identity succeeds. The literal authoring mode and all UI copy remain
- * declarations only, never authority.
+ * The route body is deliberately inaccessible until the server-owned provider
+ * authority confirms verified adult identity, purpose, tenant, consent,
+ * revocation, expiry, and quota. UI/body declarations never grant authority.
  */
 export function createLessonDraftPost(dependencies: LessonDraftRouteDependencies = DEFAULT_DEPENDENCIES) {
   return async function POST(request: Request) {
     const correlationId = randomUUID();
     if (!isSameOrigin(request)) return errorResponse("wrong_origin", 403, correlationId);
-    if (!await dependencies.readIdentity()) return errorResponse("authoring_unavailable", 403, correlationId);
+    const authority = await dependencies.authorize();
+    if (!providerAuthorityAllows(authority, "lesson-draft")) {
+      return errorResponse("authoring_unavailable", 403, correlationId);
+    }
     const mediaType = request.headers.get("content-type")?.toLowerCase().split(";", 1)[0]?.trim();
     if (mediaType !== "application/json") {
       return errorResponse("bad_request", 415, correlationId);
@@ -153,7 +160,7 @@ export function createLessonDraftPost(dependencies: LessonDraftRouteDependencies
     if (forwardedAuthoringFields.some(containsPrivateData)) return errorResponse("private_data", 403, correlationId);
 
     try {
-      const generated = await dependencies.generate(input);
+      const generated = await dependencies.generate(input, { authority });
       const budget = LESSON_STUDIO_BUDGETS[input.depth];
       const response = lessonStudioResponseSchema.parse({
         schemaVersion: "1.0",
@@ -178,7 +185,8 @@ export function createLessonDraftPost(dependencies: LessonDraftRouteDependencies
       return NextResponse.json(response, { status: 200, headers: jsonHeaders(correlationId) });
     } catch (error) {
       if (error instanceof LessonStudioError) {
-        const status = error.code === "missing_key" ? 400
+        const status = error.code === "authoring_unavailable" ? 403
+          : error.code === "missing_key" ? 400
           : error.code === "provider_refusal" ? 422
             : error.code === "rate_limited" || error.code === "request_budget_exceeded" ? 429
               : error.code === "timeout" ? 504

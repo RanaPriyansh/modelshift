@@ -11,14 +11,14 @@ import { PathwayAvailabilityMap } from "./PathwayAvailabilityMap";
 afterEach(cleanup);
 
 describe("PathwayAvailabilityMap", () => {
-  it("renders all nine areas with text-labelled released capability and gap states", () => {
+  it("renders all nine areas with text-labelled working mappings and gap states", () => {
     render(<PathwayAvailabilityMap availability={getCurrentPathwayAvailability()} />);
 
     expect(screen.getByRole("heading", { name: "What FORGE can—and cannot—offer today." })).toBeInTheDocument();
     expect(screen.getByText("Not a curriculum, recommendation, or coverage claim.")).toBeInTheDocument();
     expect(screen.queryByText(/capability coverage/i)).not.toBeInTheDocument();
     expect(screen.getByRole("list", { name: "Current pathway availability by entitlement area" })).toBeInTheDocument();
-    expect(screen.getAllByText("Released capability")).toHaveLength(4);
+    expect(screen.getAllByText("Working World mapping")).toHaveLength(4);
     expect(screen.getAllByText("Identified gap")).toHaveLength(5);
     expect(screen.getByRole("heading", { name: "Compare and scale proportional relationships" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Distinguish net force from velocity" })).toBeInTheDocument();
@@ -30,7 +30,7 @@ describe("PathwayAvailabilityMap", () => {
     render(<PathwayAvailabilityMap availability={getCurrentPathwayAvailability().slice(0, 2)} />);
 
     expect(screen.getByText(
-      "1 released mapping appears across 2 entitlement areas. 1 identified gap remains visible instead of being filled with a course list, a generated lesson, or a promise.",
+      "1 working World mapping appears across 2 entitlement areas. 1 identified gap remains visible instead of being filled with a course list, a generated lesson, or a promise.",
     )).toBeInTheDocument();
   });
 
@@ -64,5 +64,14 @@ describe("PathwayAvailabilityMap", () => {
     expect(within(ratio).getByText("Child + grown-up: Authored only · Teen: Authored only · Adult: Authored only")).toBeInTheDocument();
     expect(within(ratio).getByText(/Return proof is not available/)).toBeInTheDocument();
     expect(screen.queryByText(/your evidence|your path|completed/i)).not.toBeInTheDocument();
+  });
+
+  it("keeps working routes distinct from reviewed publication and learner capability claims", () => {
+    render(<PathwayAvailabilityMap availability={getCurrentPathwayAvailability()} />);
+
+    expect(screen.getByText("Working World mapping and identified gap stay equally visible.")).toBeInTheDocument();
+    expect(screen.getByText(/not a coverage claim/i)).toBeInTheDocument();
+    expect(screen.queryByText("Released capability")).not.toBeInTheDocument();
+    expect(screen.queryByText(/your capability|released capability/i)).not.toBeInTheDocument();
   });
 });

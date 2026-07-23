@@ -6,9 +6,9 @@ import "./forge.css";
 import "./forge-system.css";
 
 export const metadata: Metadata = {
-  title: "FORGE — Learn anything. Prove what changed.",
+  title: "FORGE — Working Worlds. Bounded evidence.",
   description:
-    "A learner-owned learning system for children with grown-ups, teens, and adults: reviewed Worlds, bounded AI support, and proof after help.",
+    "A learner-owned prototype with working learning Worlds, bounded AI support, and browser-local evidence records.",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

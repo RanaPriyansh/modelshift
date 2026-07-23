@@ -4,6 +4,7 @@ import { z } from "zod";
 import { planForgeLearning } from "./planner";
 import { FORGE_PLANNER_TIMEOUT_MS, runOptionalModelGovernor } from "./model";
 import { forgePlanRequestSchema, modelPlannerOutputSchema, type ForgePlanRequest } from "./schema";
+import { approvedProviderAuthorityForTest } from "../forge-auth/provider-authority.test-helpers";
 
 const baseRequest: ForgePlanRequest = {
   question: "How do force, motion, and velocity relate after a push ends?",
@@ -270,6 +271,7 @@ describe("optional AI governor", () => {
       apiKey: "test",
       client: { responses: { parse } } as never,
       model: "test-model",
+      authority: approvedProviderAuthorityForTest("learning-plan-rephrase"),
     });
 
     expect(contract).toMatchObject({
@@ -306,6 +308,7 @@ describe("optional AI governor", () => {
     const apiError = await planForgeLearning(baseRequest, {
       apiKey: "test",
       client: { responses: { parse: vi.fn().mockRejectedValue(new Error("provider unavailable")) } } as never,
+      authority: approvedProviderAuthorityForTest("learning-plan-rephrase"),
     });
     expect(apiError).toMatchObject({
       contractKind: "grounded_learning",
@@ -316,6 +319,7 @@ describe("optional AI governor", () => {
     const malformed = await planForgeLearning(baseRequest, {
       apiKey: "test",
       client: { responses: { parse: vi.fn().mockResolvedValue({ output_parsed: { route: "force_motion" } }) } } as never,
+      authority: approvedProviderAuthorityForTest("learning-plan-rephrase"),
     });
     expect(malformed).toMatchObject({
       contractKind: "grounded_learning",
@@ -342,6 +346,7 @@ describe("optional AI governor", () => {
       apiKey: "test",
       client: { responses: { parse: timeoutParse } } as never,
       timeoutMs: 5,
+      authority: approvedProviderAuthorityForTest("learning-plan-rephrase"),
     });
     expect(timeout).toMatchObject({ contribution: "not_used", fallbackReason: "timeout" });
   });
@@ -360,6 +365,7 @@ describe("optional AI governor", () => {
           }),
         },
       } as never,
+      authority: approvedProviderAuthorityForTest("learning-plan-rephrase"),
     });
 
     expect(invented).toMatchObject({

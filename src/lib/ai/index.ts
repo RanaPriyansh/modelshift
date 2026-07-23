@@ -1,5 +1,6 @@
 export { neutralFallback } from "./fallback";
 export { interpretExplanation, INTERPRETATION_TIMEOUT_MS } from "./interpret";
+export type { InterpretOptions } from "./interpret";
 export { buildInterpretationInput, INTERPRETATION_INSTRUCTIONS, isAdversarialExplanation } from "./prompt";
 export { interpretationRequestSchema, interpretationSchema } from "./schema";
 export type { InterpretRequestInput, ModelInterpretation } from "./schema";
