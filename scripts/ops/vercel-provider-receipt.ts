@@ -188,21 +188,34 @@ function readEvents(value: unknown): VercelApiEvent[] | null {
 }
 
 type ProviderDigestEvent = Readonly<{ event_id: string; observed_at: string; digest: string }>;
+const TOP_LEVEL_MARKER_FIELDS = ["text", "id", "deploymentId", "date"] as const;
+
+function canonicalDigestMarkers(value: unknown): RegExpMatchArray[] {
+  return typeof value === "string" ? [...value.matchAll(BUILD_DIGEST_MARKER)] : [];
+}
 
 /**
  * Vercel's current events endpoint returns each log value in event.payload.
  * Nested marker events require payload.date; the envelope timestamp is not a
  * substitute. A legacy top-level log shape is accepted only with its explicit
  * deploymentId binding and envelope created timestamp. Never mix fields across
- * those two shapes: the nested payload, when present, is authoritative.
+ * those two shapes: a nested marker with parallel top-level marker fields is
+ * ambiguous and fails closed rather than silently choosing one source.
  */
 function readProviderDigestEvent(event: VercelApiEvent, deploymentId: string): ProviderDigestEvent | null {
   const payload = event.payload;
-  const nested = payload !== undefined;
+  const nested = Object.hasOwn(event, "payload");
   const values = !nested ? event : isRecord(payload) ? payload : null;
-  if (!values) return null;
-  const text = typeof values.text === "string" ? values.text : "";
-  const matches = [...text.matchAll(BUILD_DIGEST_MARKER)];
+  const topLevelMatches = nested ? canonicalDigestMarkers(event.text) : [];
+  if (!values) {
+    if (topLevelMatches.length > 0) throw new Error("Vercel deployment build-log event mixes malformed nested and top-level marker shapes");
+    return null;
+  }
+  const matches = canonicalDigestMarkers(values.text);
+  const hasTopLevelMarkerFields = nested && TOP_LEVEL_MARKER_FIELDS.some((field) => Object.hasOwn(event, field));
+  if (nested && ((matches.length > 0 && hasTopLevelMarkerFields) || (matches.length === 0 && topLevelMatches.length > 0))) {
+    throw new Error("Vercel deployment build-log event mixes nested and top-level marker shapes");
+  }
   if (matches.length === 0) return null;
   if (matches.length !== 1) throw new Error("Vercel deployment build-log event contains ambiguous canonical public-asset digest markers");
   const match = matches[0]!;
