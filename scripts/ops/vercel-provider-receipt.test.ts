@@ -18,6 +18,7 @@ const DEPLOYMENT = {
   projectId: TARGET.project_id,
   url: "forge-learning-7a63ywsp5-ranapriyanshs-projects.vercel.app",
   readyState: "READY",
+  target: "production",
   createdAt: 1_784_764_800_000,
   // Matches Vercel's documented Git deployment shape: the source object uses
   // repoId, while repository owner/name/path are in the separate gitRepo.
@@ -47,6 +48,7 @@ describe("Vercel provider deployment receipt", () => {
 
   it.each([
     ["wrong project", { ...DEPLOYMENT, projectId: "prj_AbCdEfGhIjKlMnOpQrStUvWxYz12" }, EVENTS],
+    ["preview deployment", { ...DEPLOYMENT, target: "preview" }, EVENTS],
     ["unrelated immutable host", { ...DEPLOYMENT, url: "unrelated.example" }, EVENTS],
     ["non-default immutable port", { ...DEPLOYMENT, url: "forge-learning-7a63ywsp5-ranapriyanshs-projects.vercel.app:444" }, EVENTS],
     ["alias as immutable URL", { ...DEPLOYMENT, url: "modelshift.vercel.app" }, EVENTS],

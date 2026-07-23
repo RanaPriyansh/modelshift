@@ -204,8 +204,8 @@ export function normalizeVercelProviderReceipt(
   const sourceSha = readProviderGitSource(deploymentPayload, target);
   const immutableUrl = canonicalImmutableUrl(deploymentPayload.url);
   const createdAt = canonicalTimestampFromProvider(deploymentPayload.createdAt);
-  if (!id || !projectId || !sourceSha || !immutableUrl || deploymentPayload.readyState !== "READY" || !createdAt) {
-    throw new Error("Vercel deployment response is missing a READY provider git-source identity, source SHA, or creation time");
+  if (!id || !projectId || !sourceSha || !immutableUrl || deploymentPayload.readyState !== "READY" || deploymentPayload.target !== "production" || !createdAt) {
+    throw new Error("Vercel deployment response is missing a production READY provider git-source identity, source SHA, or creation time");
   }
   const deploymentIdentity = { id, project_id: projectId, url: immutableUrl };
   if (!matchesImmutableDeploymentTarget(deploymentIdentity, target.origin, target)) {
@@ -281,6 +281,9 @@ async function readProviderJson(path: string, token: string): Promise<unknown> {
       method: "GET",
       path,
       servername: "api.vercel.com",
+      // Explicit even though it is Node's default: a provider-authenticated
+      // receipt must never be collected across an unauthenticated TLS channel.
+      rejectUnauthorized: true,
       headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
     }, (response) => {
       const contentLength = response.headers["content-length"];
