@@ -187,6 +187,32 @@ function readEvents(value: unknown): VercelApiEvent[] | null {
   return isRecord(value) && Array.isArray(value.events) && value.events.every(isRecord) ? value.events : null;
 }
 
+type ProviderDigestEvent = Readonly<{ event_id: string; observed_at: string; digest: string }>;
+
+/**
+ * Vercel's current events endpoint returns each log value in event.payload,
+ * with envelope event.created. A legacy top-level log shape is accepted only
+ * when it has the same explicit deploymentId binding. Never mix fields across
+ * those two shapes: the nested payload, when present, is authoritative.
+ */
+function readProviderDigestEvent(event: VercelApiEvent, deploymentId: string): ProviderDigestEvent | null {
+  const payload = event.payload;
+  const values = payload === undefined ? event : isRecord(payload) ? payload : null;
+  if (!values) return null;
+  const text = typeof values.text === "string" ? values.text : "";
+  const match = text.match(BUILD_DIGEST_MARKER);
+  if (!match) return null;
+
+  const eventId = canonicalTextId(values.id);
+  const observedAt = canonicalTimestampFromProvider(values.date === undefined ? event.created : values.date);
+  const reportedDeploymentId = values.deploymentId;
+  const digest = canonicalDigest(match[1]);
+  if (!eventId || !observedAt || !digest || !isPlausibleVercelDeploymentId(reportedDeploymentId) || reportedDeploymentId !== deploymentId) {
+    throw new Error("Vercel deployment build-log marker has missing, malformed, or mismatched deployment identity");
+  }
+  return { event_id: eventId, observed_at: observedAt, digest };
+}
+
 /**
  * Normalize portable provider responses to a plain receipt. This does not
  * confer provider authority: callers may persist or inspect the result, but
@@ -214,12 +240,8 @@ export function normalizeVercelProviderReceipt(
   const events = readEvents(eventsPayload);
   if (!events) throw new Error("Vercel deployment events response is malformed");
   const digestEvents = events.flatMap((event) => {
-    const text = typeof event.text === "string" ? event.text : "";
-    const match = text.match(BUILD_DIGEST_MARKER);
-    const eventId = canonicalTextId(event.id);
-    const observedAt = canonicalTimestampFromProvider(event.created);
-    const digest = canonicalDigest(match?.[1]);
-    return eventId && observedAt && digest ? [{ event_id: eventId, observed_at: observedAt, digest }] : [];
+    const marker = readProviderDigestEvent(event, id);
+    return marker ? [marker] : [];
   });
   if (digestEvents.length !== 1) throw new Error("Vercel deployment build logs must contain exactly one canonical public-asset digest marker");
   const event = digestEvents[0]!;

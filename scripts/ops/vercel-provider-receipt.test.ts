@@ -25,17 +25,34 @@ const DEPLOYMENT = {
   gitSource: { type: "github", repoId: 1308085427, ref: "main", sha: SHA },
   gitRepo: { namespace: "RanaPriyansh", name: "modelshift", path: "RanaPriyansh/modelshift", type: "github", defaultBranch: "main" },
 };
-const EVENTS = {
-  events: [{
+// Exact shape observed from GET /v2/deployments/<id>/events. The API returns
+// an array; the log identity/text/date live in event.payload, while created is
+// the enclosing event timestamp.
+const LIVE_EVENTS = [{
+  payload: {
+    deploymentId: DEPLOYMENT.id,
     id: "evt_AbCdEfGhIjKlMnOpQrStUvWxYz12",
+    date: 1_784_764_860_000,
+    text: `Public build boundary verified across 38 static assets; public asset digest ${DIGEST}.`,
+    info: { type: "stdout" },
+  },
+  created: 1_784_764_861_000,
+}];
+
+// Retained top-level variant: it is accepted only with an equally explicit
+// deployment binding and canonical envelope timestamp.
+const TOP_LEVEL_EVENTS = {
+  events: [{
+    deploymentId: DEPLOYMENT.id,
+    id: "evt_QrStUvWxYz12AbCdEfGhIjKlMnOp",
     created: 1_784_764_860_000,
     text: `Public build boundary verified across 38 static assets; public asset digest ${DIGEST}.`,
   }],
 };
 
 describe("Vercel provider deployment receipt", () => {
-  it("normalizes the provider deployment metadata and observed terminal build-log digest", () => {
-    const receipt = normalizeVercelProviderReceipt(DEPLOYMENT, EVENTS, TARGET, "2026-07-23T00:02:00.000Z");
+  it("normalizes the exact nested live-provider event shape and observed terminal build-log digest", () => {
+    const receipt = normalizeVercelProviderReceipt(DEPLOYMENT, LIVE_EVENTS, TARGET, "2026-07-23T00:02:00.000Z");
     expect(receipt).toMatchObject({
       schema_version: "1.0",
       receipt_kind: "vercel_authenticated_build_log",
@@ -46,27 +63,36 @@ describe("Vercel provider deployment receipt", () => {
     expect(validateVercelProviderReceipt(receipt)).toEqual([]);
   });
 
+  it("retains the explicitly bound top-level event variant", () => {
+    const receipt = normalizeVercelProviderReceipt(DEPLOYMENT, TOP_LEVEL_EVENTS, TARGET, "2026-07-23T00:02:00.000Z");
+    expect(receipt.public_asset).toMatchObject({ event_id: TOP_LEVEL_EVENTS.events[0].id, observed_at: "2026-07-23T00:01:00.000Z" });
+  });
+
   it.each([
-    ["wrong project", { ...DEPLOYMENT, projectId: "prj_AbCdEfGhIjKlMnOpQrStUvWxYz12" }, EVENTS],
-    ["preview deployment", { ...DEPLOYMENT, target: "preview" }, EVENTS],
-    ["unrelated immutable host", { ...DEPLOYMENT, url: "unrelated.example" }, EVENTS],
-    ["non-default immutable port", { ...DEPLOYMENT, url: "forge-learning-7a63ywsp5-ranapriyanshs-projects.vercel.app:444" }, EVENTS],
-    ["alias as immutable URL", { ...DEPLOYMENT, url: "modelshift.vercel.app" }, EVENTS],
-    ["meta-only source SHA", { ...DEPLOYMENT, gitSource: undefined, meta: { githubCommitSha: SHA } }, EVENTS],
-    ["conflicting caller meta SHA", { ...DEPLOYMENT, meta: { githubCommitSha: "f".repeat(40) } }, EVENTS],
-    ["conflicting caller meta repository", { ...DEPLOYMENT, meta: { githubRepo: "attacker/other" } }, EVENTS],
-    ["dirty local-source archive without provider gitSource", { ...DEPLOYMENT, gitSource: undefined, meta: { githubCommitSha: SHA, githubRepo: "RanaPriyansh/modelshift", githubCommitRef: "main" } }, EVENTS],
-    ["missing provider git repository", { ...DEPLOYMENT, gitRepo: undefined }, EVENTS],
-    ["wrong provider repository ID", { ...DEPLOYMENT, gitSource: { ...DEPLOYMENT.gitSource, repoId: 99 } }, EVENTS],
-    ["wrong provider git repository path", { ...DEPLOYMENT, gitRepo: { ...DEPLOYMENT.gitRepo, path: "attacker/other" } }, EVENTS],
-    ["wrong provider git ref", { ...DEPLOYMENT, gitSource: { ...DEPLOYMENT.gitSource, ref: "feature/dirty" } }, EVENTS],
-    ["ambiguous digest logs", DEPLOYMENT, { events: [...EVENTS.events, { ...EVENTS.events[0], id: "evt_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm", created: 1_784_764_861_000 }] }],
+    ["wrong project", { ...DEPLOYMENT, projectId: "prj_AbCdEfGhIjKlMnOpQrStUvWxYz12" }, LIVE_EVENTS],
+    ["preview deployment", { ...DEPLOYMENT, target: "preview" }, LIVE_EVENTS],
+    ["unrelated immutable host", { ...DEPLOYMENT, url: "unrelated.example" }, LIVE_EVENTS],
+    ["non-default immutable port", { ...DEPLOYMENT, url: "forge-learning-7a63ywsp5-ranapriyanshs-projects.vercel.app:444" }, LIVE_EVENTS],
+    ["alias as immutable URL", { ...DEPLOYMENT, url: "modelshift.vercel.app" }, LIVE_EVENTS],
+    ["meta-only source SHA", { ...DEPLOYMENT, gitSource: undefined, meta: { githubCommitSha: SHA } }, LIVE_EVENTS],
+    ["conflicting caller meta SHA", { ...DEPLOYMENT, meta: { githubCommitSha: "f".repeat(40) } }, LIVE_EVENTS],
+    ["conflicting caller meta repository", { ...DEPLOYMENT, meta: { githubRepo: "attacker/other" } }, LIVE_EVENTS],
+    ["dirty local-source archive without provider gitSource", { ...DEPLOYMENT, gitSource: undefined, meta: { githubCommitSha: SHA, githubRepo: "RanaPriyansh/modelshift", githubCommitRef: "main" } }, LIVE_EVENTS],
+    ["missing provider git repository", { ...DEPLOYMENT, gitRepo: undefined }, LIVE_EVENTS],
+    ["wrong provider repository ID", { ...DEPLOYMENT, gitSource: { ...DEPLOYMENT.gitSource, repoId: 99 } }, LIVE_EVENTS],
+    ["wrong provider git repository path", { ...DEPLOYMENT, gitRepo: { ...DEPLOYMENT.gitRepo, path: "attacker/other" } }, LIVE_EVENTS],
+    ["wrong provider git ref", { ...DEPLOYMENT, gitSource: { ...DEPLOYMENT.gitSource, ref: "feature/dirty" } }, LIVE_EVENTS],
+    ["missing nested deployment ID", DEPLOYMENT, [{ ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, deploymentId: undefined } }]],
+    ["cross-deployment nested marker", DEPLOYMENT, [{ ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, deploymentId: "dpl_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm" } }]],
+    ["cross-deployment marker alongside matching marker", DEPLOYMENT, [...LIVE_EVENTS, { ...LIVE_EVENTS[0], created: 1_784_764_861_000, payload: { ...LIVE_EVENTS[0].payload, id: "evt_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm", deploymentId: "dpl_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm" } }]],
+    ["malformed nested marker date", DEPLOYMENT, [{ ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, date: "not-a-timestamp" } }]],
+    ["duplicate matching digest markers", DEPLOYMENT, [...LIVE_EVENTS, { ...LIVE_EVENTS[0], created: 1_784_764_861_000, payload: { ...LIVE_EVENTS[0].payload, id: "evt_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm" } }]],
   ])("fails closed for %s", (_label, deployment, events) => {
     expect(() => normalizeVercelProviderReceipt(deployment, events, TARGET, "2026-07-23T00:02:00.000Z")).toThrow();
   });
 
   it("does not turn normalized JSON or a fabricated object into an authenticated capability", () => {
-    const plainReceipt = normalizeVercelProviderReceipt(DEPLOYMENT, EVENTS, TARGET, "2026-07-23T00:02:00.000Z");
+    const plainReceipt = normalizeVercelProviderReceipt(DEPLOYMENT, LIVE_EVENTS, TARGET, "2026-07-23T00:02:00.000Z");
     expect(receiptFromAuthenticatedHandle(plainReceipt)).toBeNull();
     expect(receiptFromAuthenticatedHandle({})).toBeNull();
   });
