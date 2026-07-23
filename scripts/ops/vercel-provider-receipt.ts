@@ -14,7 +14,7 @@ const MAX_PROVIDER_RESPONSE_BYTES = 4_000_000;
 // Emitted by scripts/ops/verify-public-build-boundary.ts after Vercel has
 // produced .next/static. The collector reads this provider-owned build-log
 // observation; it never asks health to attest the deployment-specific digest.
-const BUILD_DIGEST_MARKER = /^Public build boundary verified across [1-9][0-9]* static assets; public asset digest ([0-9a-f]{64})\.$/im;
+const BUILD_DIGEST_MARKER = /^Public build boundary verified across [1-9][0-9]* static assets; public asset digest ([0-9a-f]{64})\.$/gim;
 type RecordValue = Record<string, unknown>;
 
 export const VERCEL_PROVIDER_RECEIPT_VERSION = "1.0";
@@ -190,21 +190,25 @@ function readEvents(value: unknown): VercelApiEvent[] | null {
 type ProviderDigestEvent = Readonly<{ event_id: string; observed_at: string; digest: string }>;
 
 /**
- * Vercel's current events endpoint returns each log value in event.payload,
- * with envelope event.created. A legacy top-level log shape is accepted only
- * when it has the same explicit deploymentId binding. Never mix fields across
+ * Vercel's current events endpoint returns each log value in event.payload.
+ * Nested marker events require payload.date; the envelope timestamp is not a
+ * substitute. A legacy top-level log shape is accepted only with its explicit
+ * deploymentId binding and envelope created timestamp. Never mix fields across
  * those two shapes: the nested payload, when present, is authoritative.
  */
 function readProviderDigestEvent(event: VercelApiEvent, deploymentId: string): ProviderDigestEvent | null {
   const payload = event.payload;
-  const values = payload === undefined ? event : isRecord(payload) ? payload : null;
+  const nested = payload !== undefined;
+  const values = !nested ? event : isRecord(payload) ? payload : null;
   if (!values) return null;
   const text = typeof values.text === "string" ? values.text : "";
-  const match = text.match(BUILD_DIGEST_MARKER);
-  if (!match) return null;
+  const matches = [...text.matchAll(BUILD_DIGEST_MARKER)];
+  if (matches.length === 0) return null;
+  if (matches.length !== 1) throw new Error("Vercel deployment build-log event contains ambiguous canonical public-asset digest markers");
+  const match = matches[0]!;
 
   const eventId = canonicalTextId(values.id);
-  const observedAt = canonicalTimestampFromProvider(values.date === undefined ? event.created : values.date);
+  const observedAt = canonicalTimestampFromProvider(nested ? values.date : event.created);
   const reportedDeploymentId = values.deploymentId;
   const digest = canonicalDigest(match[1]);
   if (!eventId || !observedAt || !digest || !isPlausibleVercelDeploymentId(reportedDeploymentId) || reportedDeploymentId !== deploymentId) {
