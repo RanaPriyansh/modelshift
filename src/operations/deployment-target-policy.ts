@@ -10,6 +10,11 @@ export const DEPLOYMENT_TARGETS = {
     hostname: "modelshift.vercel.app",
     project_id: "prj_SnTYtzLicYKYlHvXCNwq9J7ehQZB",
     team_id: "team_lr0E9GlEDc3XYJP7xrx8po2W",
+    git_source: {
+      type: "github",
+      repository: "RanaPriyansh/modelshift",
+      ref: "main",
+    },
     immutable_deployment: {
       hostname_prefix: "forge-learning-",
       hostname_suffix: "-ranapriyanshs-projects.vercel.app",
@@ -19,11 +24,13 @@ export const DEPLOYMENT_TARGETS = {
 
 export type DeploymentTargetId = keyof typeof DEPLOYMENT_TARGETS;
 export type ImmutableDeploymentTargetPolicy = Readonly<{ hostname_prefix: string; hostname_suffix: string }>;
+export type GitSourceTargetPolicy = Readonly<{ type: "github"; repository: string; ref: string }>;
 export type DeploymentTarget = Readonly<{
   origin: string;
   hostname: string;
   project_id: string;
   team_id: string;
+  git_source: GitSourceTargetPolicy;
   immutable_deployment: ImmutableDeploymentTargetPolicy;
 }>;
 

@@ -4,7 +4,6 @@ import type { AddressInfo, LookupFunction } from "node:net";
 
 import { CANONICAL_DEPLOYMENT_ROUTES, createPinnedLookup, IANA_IPV6_GLOBAL_UNICAST_POLICY_VERSION, IANA_SPECIAL_PURPOSE_POLICY_VERSION, INITIAL_HTML_CLIENT_ASSET_BUDGET, validateTargetUrl, verifyDeployment, type DeploymentVerificationReport } from "../../scripts/ops/deployment-verifier";
 import { matchesImmutableDeploymentTarget, resolveDeploymentTarget } from "../../scripts/ops/deployment-target-policy";
-import type { ProviderReceiptInput } from "../../scripts/ops/vercel-provider-receipt";
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
 const DIGEST = "a".repeat(64);
@@ -13,6 +12,7 @@ const TEST_DEPLOYMENT_TARGET = {
   hostname: "forge.example",
   project_id: "prj_SnTYtzLicYKYlHvXCNwq9J7ehQZB",
   team_id: "team_lr0E9GlEDc3XYJP7xrx8po2W",
+  git_source: { type: "github", repository: "RanaPriyansh/modelshift", ref: "main" },
   immutable_deployment: {
     hostname_prefix: "forge-learning-",
     hostname_suffix: "-ranapriyanshs-projects.vercel.app",
@@ -25,7 +25,6 @@ const RELEASE_MANIFEST = {
   binding_status: "bound",
   candidate_state: "DEPLOYED_CANDIDATE",
   source_sha: SHA,
-  build_time: "2026-07-22T00:00:00.000Z",
   dependency_lock_digest: DIGEST,
   public_asset: { status: "provider_receipt_required", gate: "provider_observed_asset_digest_required_before_promotion" },
   immutable_deployment: { id: DEPLOYMENT_ID, url: "https://forge-learning-test123-ranapriyanshs-projects.vercel.app/", project_id: TEST_DEPLOYMENT_TARGET.project_id },
@@ -74,7 +73,7 @@ function mockFetch(asset = "self.__next_f=[]", defaultAssets: readonly string[] 
     return new Response(`<html><body>${pages[url.pathname] ?? ""}${scripts.map(scriptTag).join("")}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "content-security-policy": CSP, "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "strict-origin-when-cross-origin", "permissions-policy": "camera=(), microphone=(), geolocation=()" } });
   };
 }
-async function run(fetchImpl = mockFetch(), providerReceipt: ProviderReceiptInput = { authority: "authenticated_vercel_api", receipt: PROVIDER_RECEIPT }): Promise<DeploymentVerificationReport> { return verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:03.000Z", expectedLockfileDigest: DIGEST, providerReceipt, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", deploymentTarget: TEST_DEPLOYMENT_TARGET, resolveHostname: async () => ["8.8.8.8"] }); }
+async function run(fetchImpl = mockFetch(), externalProviderReceipt?: unknown): Promise<DeploymentVerificationReport> { return verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:03.000Z", expectedLockfileDigest: DIGEST, externalProviderReceipt, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", deploymentTarget: TEST_DEPLOYMENT_TARGET, resolveHostname: async () => ["8.8.8.8"] }); }
 describe("deployment verifier", () => {
   it("uses the Node all-address lookup shape while pinning the validated address", async () => {
     const server = createServer((_request, response) => response.end("pinned"));
@@ -104,7 +103,7 @@ describe("deployment verifier", () => {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     }
   });
-  it("verifies all four Worlds, the source-corroboration path, shell routes, CSP nonce, and disabled state", async () => { const report = await run(); expect(report.status).toBe("pass"); expect(report.observed_release_sha).toBe(SHA); expect(report.request_policy.methods).toEqual(["GET"]); expect(report.release_identity.candidate_state).toBe("DEPLOYED_CANDIDATE"); expect(report.release_identity.source_sha).toBe(SHA); expect(report.release_identity.tested_sha).toBe(SHA); expect(report.release_identity.database).toEqual({ status: "not_configured" }); expect(report.alias_verified_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/); expect(report.release_identity.public_alias).toEqual({ url: "https://forge.example/", resolved_at: report.alias_verified_at }); expect(report.checks.some((item) => item.id === "world_primary_source_reasoning.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "source_corroboration_path.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "pathway_availability.marker" && item.status === "pass")).toBe(true); });
+  it("checks all four Worlds, the source-corroboration path, shell routes, CSP nonce, and disabled state without promoting a plain receipt", async () => { const report = await run(); expect(report.status).toBe("fail"); expect(report.observed_release_sha).toBe(SHA); expect(report.request_policy.methods).toEqual(["GET"]); expect(report.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED"); expect(report.release_identity.source_sha).toBe(SHA); expect(report.release_identity.tested_sha).toBe(SHA); expect(report.release_identity.database).toEqual({ status: "not_configured" }); expect(report.alias_verified_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/); expect(report.checks.some((item) => item.id === "world_primary_source_reasoning.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "source_corroboration_path.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "pathway_availability.marker" && item.status === "pass")).toBe(true); expect(report.checks.find((item) => item.id === "provider_receipt.authority")?.status).toBe("fail"); });
   it("keeps the source-corroboration route in the exact canonical verifier route set", () => {
     expect(CANONICAL_DEPLOYMENT_ROUTES.map((route) => route.path)).toEqual([
       "/",
@@ -126,7 +125,7 @@ describe("deployment verifier", () => {
     expect(zero.checks.find((item) => item.id === "client_assets.bounded_count")).toMatchObject({ status: "fail", detail: expect.stringContaining("contains 0 distinct assets") });
 
     const exact = await run(mockFetch("self.__next_f=[]", assets(INITIAL_HTML_CLIENT_ASSET_BUDGET)));
-    expect(exact.status).toBe("pass");
+    expect(exact.status).toBe("fail");
     expect(exact.checks.find((item) => item.id === "client_assets.bounded_count")).toMatchObject({ status: "pass", detail: expect.stringContaining(`contains ${INITIAL_HTML_CLIENT_ASSET_BUDGET} distinct assets`) });
     expect(exact.checks.filter((item) => item.id.startsWith("client_asset.") && item.status === "pass")).toHaveLength(INITIAL_HTML_CLIENT_ASSET_BUDGET);
 
@@ -138,7 +137,7 @@ describe("deployment verifier", () => {
   it("rejects unsafe remote targets and fails without leaking asset secrets", async () => { expect(() => validateTargetUrl("http://forge.example", ["forge.example"])).toThrow(/HTTPS/); expect(() => validateTargetUrl("https://user:pass@forge.example", ["forge.example"])).toThrow(/credentials/); const secret = `sk-${"x".repeat(32)}`; const report = await run(mockFetch(`window.token=\"${secret}\"`)); expect(report.status).toBe("fail"); expect(JSON.stringify(report)).not.toContain(secret); });
   it("uses only the checked-in public deployment target policy", () => { expect(resolveDeploymentTarget("forge_learning_os_project")).toMatchObject({ origin: "https://modelshift.vercel.app", hostname: "modelshift.vercel.app", project_id: TEST_DEPLOYMENT_TARGET.project_id, immutable_deployment: TEST_DEPLOYMENT_TARGET.immutable_deployment }); expect(() => resolveDeploymentTarget("caller-controlled-host")).toThrow(/allowlist/); expect(() => validateTargetUrl("https://192.0.2.1", ["192.0.2.1"])).toThrow(/IP-literal/); expect(() => validateTargetUrl("http://localhost")).toThrow(/allow-localhost/); });
   it("defaults remote verification without immutable metadata to blocked, never deployed candidate", async () => {
-    const report = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch("self.__next_f=[]", ["/_next/static/app.js"], {}, { schema_version: "1.0", binding_status: "unbound", candidate_state: "unknown", source_sha: "unknown", build_time: "unknown", dependency_lock_digest: "unknown", public_asset: { status: "unknown" }, immutable_deployment: { status: "unknown" }, public_alias: { status: "unknown" }, reason_codes: [] }) as typeof fetch, expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["8.8.8.8"] });
+    const report = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch("self.__next_f=[]", ["/_next/static/app.js"], {}, { schema_version: "1.0", binding_status: "unbound", candidate_state: "unknown", source_sha: "unknown", dependency_lock_digest: "unknown", public_asset: { status: "unknown" }, immutable_deployment: { status: "unknown" }, public_alias: { status: "unknown" }, reason_codes: [] }) as typeof fetch, expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["8.8.8.8"] });
     expect(report.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
     expect(report.status).toBe("fail");
     expect(report.checks.find((item) => item.id === "release_identity.state_bound")?.status).toBe("fail");
@@ -161,12 +160,11 @@ describe("deployment verifier", () => {
     expect(report.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
     expect(report.checks.find((item) => item.id === "health.release_manifest.alias_target")?.status).toBe("fail");
   });
-  it("blocks a candidate whose build time is after the verifier's alias receipt", async () => {
-    const future = new Date(Date.now() + 86_400_000).toISOString();
-    const manifest = { ...RELEASE_MANIFEST, build_time: future };
-    const report = await run(mockFetch("self.__next_f=[]", ["/_next/static/app.js"], {}, manifest, future) as typeof fetch);
+  it("keeps app build_time diagnostic-only while provider receipt timestamps control provenance", async () => {
+    const report = await run(mockFetch("self.__next_f=[]", ["/_next/static/app.js"], {}, RELEASE_MANIFEST, "not-a-provider-time") as typeof fetch, PROVIDER_RECEIPT);
+    expect(report.checks.find((item) => item.id === "health.build_time_diagnostic")?.status).toBe("fail");
+    expect(report.checks.find((item) => item.id === "provider_receipt.tuple")?.status).toBe("pass");
     expect(report.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
-    expect(report.checks.find((item) => item.id === "health.release_manifest.build_time_order")?.status).toBe("fail");
   });
   it("rejects immutable deployment hosts and IDs outside the bounded FORGE naming policy", async () => {
     const alias = "https://forge.example/";
@@ -197,16 +195,20 @@ describe("deployment verifier", () => {
     expect(report.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
     expect(report.checks.find((item) => item.id === "health.release_manifest.schema")?.status).toBe("fail");
   });
-  it("requires an in-process authenticated provider receipt instead of a caller-retained asset digest", async () => {
+  it("treats every programmatic plain receipt as external evidence", async () => {
     const missingExpected = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", deploymentTarget: TEST_DEPLOYMENT_TARGET, resolveHostname: async () => ["8.8.8.8"] });
     expect(missingExpected.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
     expect(missingExpected.checks.find((item) => item.id === "provider_receipt.schema")?.status).toBe("fail");
 
-    const selfReported = await run(mockFetch(), { authority: "external_evidence", receipt: PROVIDER_RECEIPT });
+    const selfReported = await run(mockFetch(), PROVIDER_RECEIPT);
     expect(selfReported.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
     expect(selfReported.checks.find((item) => item.id === "provider_receipt.authority")?.status).toBe("fail");
 
-    const malformed = await run(mockFetch(), { authority: "authenticated_vercel_api", receipt: { ...PROVIDER_RECEIPT, public_asset: { ...PROVIDER_RECEIPT.public_asset, digest: "short" } } });
+    const forgedAuthorityObject = await run(mockFetch(), { authority: "authenticated_vercel_api", receipt: PROVIDER_RECEIPT });
+    expect(forgedAuthorityObject.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
+    expect(forgedAuthorityObject.checks.find((item) => item.id === "provider_receipt.authority")?.status).toBe("fail");
+
+    const malformed = await run(mockFetch(), { ...PROVIDER_RECEIPT, public_asset: { ...PROVIDER_RECEIPT.public_asset, digest: "short" } });
     expect(malformed.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
     expect(malformed.checks.find((item) => item.id === "provider_receipt.schema")?.status).toBe("fail");
   });
@@ -219,18 +221,19 @@ describe("deployment verifier", () => {
       { public_asset: { ...PROVIDER_RECEIPT.public_asset, observed_at: "2026-07-21T23:59:59.000Z" }, collected_at: "2026-07-22T00:00:02.000Z" },
     ];
     for (const overrides of cases) {
-      const report = await run(mockFetch(), { authority: "authenticated_vercel_api", receipt: { ...PROVIDER_RECEIPT, ...overrides } });
+      const report = await run(mockFetch(), { ...PROVIDER_RECEIPT, ...overrides });
       expect(report.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
       expect(report.checks.find((item) => item.id === "health.release_manifest.binding")?.status).toBe("fail");
     }
   });
-  it("accepts two provider-observed deployments of the same source with different emitted asset digests", async () => {
-    const first = await run(mockFetch(), { authority: "authenticated_vercel_api", receipt: { ...PROVIDER_RECEIPT, public_asset: { ...PROVIDER_RECEIPT.public_asset, digest: "a".repeat(64) } } });
-    const second = await run(mockFetch(), { authority: "authenticated_vercel_api", receipt: { ...PROVIDER_RECEIPT, public_asset: { ...PROVIDER_RECEIPT.public_asset, digest: "b".repeat(64) } } });
-    expect(first.release_identity.candidate_state).toBe("DEPLOYED_CANDIDATE");
-    expect(second.release_identity.candidate_state).toBe("DEPLOYED_CANDIDATE");
-    expect(first.status).toBe("pass");
-    expect(second.status).toBe("pass");
+  it("does not require two provider-observed builds of the same source to share an asset digest", async () => {
+    const first = await run(mockFetch(), { ...PROVIDER_RECEIPT, public_asset: { ...PROVIDER_RECEIPT.public_asset, digest: "a".repeat(64) } });
+    const second = await run(mockFetch(), { ...PROVIDER_RECEIPT, public_asset: { ...PROVIDER_RECEIPT.public_asset, digest: "b".repeat(64) } });
+    for (const report of [first, second]) {
+      expect(report.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
+      expect(report.checks.find((item) => item.id === "provider_receipt.tuple")?.status).toBe("pass");
+      expect(report.checks.find((item) => item.id === "provider_receipt.authority")?.status).toBe("fail");
+    }
   });
   it.each([
     "::",
@@ -271,9 +274,9 @@ describe("deployment verifier", () => {
       calls += 1;
       return mockFetch()(input);
     };
-    const report = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:03.000Z", expectedLockfileDigest: DIGEST, providerReceipt: { authority: "authenticated_vercel_api", receipt: PROVIDER_RECEIPT }, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", deploymentTarget: TEST_DEPLOYMENT_TARGET, resolveHostname: async () => [address] });
+    const report = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:03.000Z", expectedLockfileDigest: DIGEST, externalProviderReceipt: PROVIDER_RECEIPT, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", deploymentTarget: TEST_DEPLOYMENT_TARGET, resolveHostname: async () => [address] });
     expect(report.checks.find((item) => item.id === "target.dns_policy")?.status).toBe("pass");
-    expect(report.status).toBe("pass");
+    expect(report.status).toBe("fail");
     expect(calls).toBeGreaterThan(0);
   });
   it("records the current IANA registry snapshot alongside the CIDR policy", () => {
