@@ -1,6 +1,11 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import {
+  assertNoAdultPilotPublicArtifactLeaks,
+  scanAdultPilotProductionPublicAssets,
+} from "../../src/components/forge/pilot/adult-pilot-public-artifact-boundary";
+
 import { readPublicAssetDigest } from "./release-digests";
 
 const RETAINED_ARGUMENT_EVIDENCE_MARKERS = [
@@ -41,10 +46,12 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
       if (bytes.includes(Buffer.from(marker))) leaks.push(`${file}: ${marker}`);
     }
   }
+  const adultPilotLeaks = scanAdultPilotProductionPublicAssets(root);
   if (leaks.length > 0) {
     throw new Error(`Retained unavailable Argument & Evidence data reached public build assets:\n${leaks.join("\n")}`);
   }
-  process.stdout.write(`Public build boundary verified across ${files.length} static assets; public asset digest ${readPublicAssetDigest(root)}.\n`);
+  assertNoAdultPilotPublicArtifactLeaks(adultPilotLeaks);
+  process.stdout.write(`Public build boundary verified across ${files.length} static assets, including adult-pilot fixture markers; public asset digest ${readPublicAssetDigest(root)}.\n`);
 }
 
 verifyPublicBuildBoundary();
