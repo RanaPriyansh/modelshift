@@ -1,4 +1,5 @@
 import { readForgeCloudAuthority } from "../lib/forge-auth/cloud-authority";
+import { buildReleaseManifest, type ReleaseManifest } from "./release-manifest";
 
 const RELEASE_SHA_PATTERN = /^[0-9a-f]{40}$/i;
 const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
@@ -38,6 +39,8 @@ export type ReleaseHealth = {
     openrouter: false;
   };
   provider_mode: "request_only_byok" | "managed_openai";
+  /** Public-release provenance is never inferred from local build metadata. */
+  release_manifest: ReleaseManifest;
 };
 
 function validSha(value: string | undefined): string | "unknown" {
@@ -106,5 +109,6 @@ export function buildReleaseHealth(environment: ReleaseEnvironment = process.env
       openrouter: false,
     },
     provider_mode: managedOpenAI ? "managed_openai" : "request_only_byok",
+    release_manifest: buildReleaseManifest(environment),
   };
 }

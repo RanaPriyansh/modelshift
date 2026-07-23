@@ -1,4 +1,6 @@
-# ModelShift — Goal and Architecture Authority
+# HISTORICAL — ModelShift-only Goal and Architecture Authority
+
+> This document is a historical ModelShift v1 planning record, not current FORGE product, release, minor-safety, homeschool, efficacy, or deployment authority. Current authority is `docs/program/README.md` (North Star), `FORGE_PRODUCT_SPEC.md` (product rights), `docs/FORGE_DELIVERY_GATES.md` (claim ladder), and `docs/operations/CURRENT_RELEASE.md` (current public release record).
 
 **Authority role:** Goal, requirements, architecture, and scope authority only. The principal ModelShift thread remains integration, delivery, deployment, and `/feedback` authority.
 

@@ -4,15 +4,15 @@
 
 **Purpose:** map the full FORGE objective to current evidence, missing proof, owners, and stop rules
 
-**Released code/source SHA:** `c7d401101791faa80ac0ba61c73044928a2da7b6`
+**Current deployed code/source SHA:** `cdc4bf5a2ceef7b4431832e5eb1e9e75f241d32c`
 
 **Public alias:** `https://modelshift.vercel.app`
-**Production deployment:** `dpl_6MUabxtnuMVzwxHf1vbM5Y1LxNfs`
-**Immutable deployment URL:** `https://forge-learning-2sh2loxy1-ranapriyanshs-projects.vercel.app`
+**Production deployment:** `dpl_EdtJDSaDS4bwN1anLUi2rqNqLi4E`
+**Immutable deployment URL:** `https://forge-learning-aie8l0ycz-ranapriyanshs-projects.vercel.app`
 
-This is a bounded post-release record for `c7d4011`. The documentation-only commit that follows it is not deployed and does not change this release tuple. The verifier classifies it as `DEPLOYED_CANDIDATE`, not terminal `PRODUCTION_VERIFIED`, because live-provider and rollback-rehearsal authority remain absent.
+This is a bounded current public record for `cdc4bf5`. Public health identifies the exact SHA, while build time and retained digests remain unknown; it is therefore `DEPLOYED_CANDIDATE`, not terminal `PRODUCTION_VERIFIED`. The [canonical current record](../operations/CURRENT_RELEASE.md) owns the exact tuple and release-provenance/rollback gates. This local documentation or verifier repair is not deployed and does not alter the tuple.
 
-**Wave 6 code cut reviewed by this amendment:** `39d86820e46fea6e7df4f4dadc48a19a5fa7e7eb` is distinct from the recorded public release above. It follows the local fixture/compiler chain through `a0eb0758fa1ac029d0ee93c4ded3129fb802f368` and adds a bounded presentation projection at `/paths/source-corroboration`; it is not a release, assignment, or evidence-write path. The prior accepted Wave 5 baseline at `7ba70ef60c038883bd4ae9ca89c974d9bec61cea` retains its recorded evidence and limits. The documentation SHA, CI/release identity, and any later deployment remain separate principal records; none of these additions creates trusted curriculum, persistent review, live provider, runtime assignment, authenticated identity, durable proof, or homeschool authority.
+**Wave 6 code cut reviewed by this amendment:** `39d86820e46fea6e7df4f4dadc48a19a5fa7e7eb` is the known feature ancestor of the recorded public release above. It follows the local fixture/compiler chain through `a0eb0758fa1ac029d0ee93c4ded3129fb802f368` and adds a bounded presentation projection at `/paths/source-corroboration`; it is not an assignment or evidence-write path. The prior accepted Wave 5 baseline at `7ba70ef60c038883bd4ae9ca89c974d9bec61cea` retains its recorded evidence and limits. The documentation SHA, CI/release identity, and any later deployment remain separate principal records; none of these additions creates trusted curriculum, persistent review, live provider, runtime assignment, authenticated identity, durable proof, minor operation, or homeschool authority.
 
 **Audit date:** 23 July 2026
 
@@ -87,7 +87,7 @@ Wave 5 adds local trust and persistence contracts plus one internally retained A
 
 Independent W5-E reviewers accepted exact candidate `a38faa11a51c5f48d791c1f06770f70cf9bd3d3c` after the public-fixture, duplicated-domain-truth, attestation, clone-forgery, and mutable-binding findings were repaired. The conflict-free integrated code is `7ba70ef60c038883bd4ae9ca89c974d9bec61cea`; this documentation commit follows it and is not part of that code SHA.
 
-### Wave 4 amendment for `c7d4011`
+### Historical Wave 4 amendment for `c7d4011`
 
 Wave 4 migrates Force and Motion and AI & Learning into the shared runtime alongside Primary Source Reasoning and Proportional Reasoning. The accepted release records four authored bounded Worlds, not a general-purpose curriculum or education system.
 

@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { readPublicAssetDigest } from "./release-digests";
+
 const RETAINED_ARGUMENT_EVIDENCE_MARKERS = [
   "argument-evidence",
   "world.argument-evidence",
@@ -42,7 +44,7 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
   if (leaks.length > 0) {
     throw new Error(`Retained unavailable Argument & Evidence data reached public build assets:\n${leaks.join("\n")}`);
   }
-  process.stdout.write(`Public build boundary verified across ${files.length} static assets.\n`);
+  process.stdout.write(`Public build boundary verified across ${files.length} static assets; public asset digest ${readPublicAssetDigest(root)}.\n`);
 }
 
 verifyPublicBuildBoundary();

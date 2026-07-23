@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { relative, resolve, sep } from "node:path";
 
 import { PRIMARY_SOURCE_RUNTIME_BINDING } from "../../src/forge/world-runtime/primary-source-binding";
 import { BUILT_IN_WORLD_PACKS } from "../../src/forge/worlds";
@@ -28,6 +28,52 @@ type RetainedBuiltInPack = {
 
 function digest(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
+function containedRealPath(realRoot: string, candidate: string, allowRoot = false): string {
+  const realCandidate = realpathSync(candidate);
+  const relativePath = relative(realRoot, realCandidate);
+  if ((!allowRoot && relativePath === "") || relativePath === ".." || relativePath.startsWith(`..${sep}`)) {
+    throw new Error("Public asset digest rejected a path outside the real .next/static root.");
+  }
+  return realCandidate;
+}
+
+function filesUnder(directory: string, realRoot: string): string[] {
+  const directoryStat = lstatSync(directory);
+  if (directoryStat.isSymbolicLink()) throw new Error("Public asset digest rejected a symlink in .next/static.");
+  if (!directoryStat.isDirectory()) throw new Error("Public asset digest requires directories and regular files only.");
+  containedRealPath(realRoot, directory, true);
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = resolve(directory, entry.name);
+    const entryStat = lstatSync(path);
+    if (entryStat.isSymbolicLink()) throw new Error("Public asset digest rejected a symlink in .next/static.");
+    if (entryStat.isDirectory()) return filesUnder(path, realRoot);
+    if (!entryStat.isFile()) throw new Error("Public asset digest requires regular files only.");
+    return [containedRealPath(realRoot, path)];
+  });
+}
+
+/**
+ * A deterministic digest of every emitted public static asset. It is a build
+ * identity input only: a deploy still has to bind it to the immutable target.
+ */
+export function readPublicAssetDigest(root = process.cwd()): string {
+  const staticDirectory = resolve(root, ".next/static");
+  const staticStat = lstatSync(staticDirectory);
+  if (staticStat.isSymbolicLink() || !staticStat.isDirectory()) throw new Error("Public asset digest requires a real .next/static directory.");
+  const realStaticDirectory = realpathSync(staticDirectory);
+  const files = filesUnder(staticDirectory, realStaticDirectory).sort();
+  if (files.length === 0) throw new Error("Public asset digest requires a non-empty .next/static build output.");
+  const hash = createHash("sha256");
+  for (const file of files) {
+    const relativePath = relative(realStaticDirectory, file).split(sep).join("/");
+    hash.update(relativePath, "utf8");
+    hash.update("\0", "utf8");
+    hash.update(readFileSync(file));
+    hash.update("\0", "utf8");
+  }
+  return hash.digest("hex");
 }
 
 function sha256Reference(value: string): string {

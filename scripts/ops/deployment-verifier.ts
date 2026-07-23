@@ -13,19 +13,29 @@ import {
   type ReleaseIdentityTuple,
   validateReleaseIdentity,
 } from "../../src/operations/release-identity";
-import { resolveDeploymentTarget } from "./deployment-target-policy";
+import {
+  isBoundReleaseManifest,
+  validateReleaseManifest,
+  type BoundReleaseManifest,
+} from "../../src/operations/release-manifest";
+import {
+  matchesImmutableDeploymentTarget,
+  resolveDeploymentTarget,
+  type DeploymentTarget,
+} from "./deployment-target-policy";
 
-export const DEPLOYMENT_VERIFIER_VERSION = "2.0.0";
+export const DEPLOYMENT_VERIFIER_VERSION = "2.2.0";
 export const WORKER_CANDIDATE_STATES = ["BUILT_LOCAL", "PUSHED", "DEPLOYMENT_BLOCKED", "DEPLOYED_CANDIDATE"] as const;
 const SHA = /^[0-9a-f]{40}$/i;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
-const ROUTES = [
+export const CANONICAL_DEPLOYMENT_ROUTES = [
   { id: "home", path: "/", marker: /FORGE|What do you want to understand/i },
   { id: "world_force_motion", path: "/learn/force-and-motion", marker: /Force & motion|force-and-motion/i },
   { id: "world_ai_learning", path: "/learn/ai-and-learning", marker: /AI & learning|ai-and-learning/i },
   { id: "world_proportional_reasoning", path: "/learn/proportional-reasoning", marker: /Proportional|proportional-reasoning/i },
   { id: "world_primary_source_reasoning", path: "/learn/primary-source-reasoning", marker: /Primary source|primary-source-reasoning/i },
+  { id: "source_corroboration_path", path: "/paths/source-corroboration", marker: /Verify before you trust|source-corroboration/i },
   { id: "pathway_availability", path: "/pathways", marker: /What FORGE can(?:—|&mdash;|&#x2014;)and cannot(?:—|&mdash;|&#x2014;)offer today|Availability map only/i },
   { id: "studio", path: "/studio", marker: /Lesson Studio|provider-neutral|learning question/i },
   { id: "device_profile_login", path: "/login", marker: /device profile|Cloud identity · not configured|Pick where your learning trail lives/i },
@@ -44,7 +54,7 @@ const MAX_ASSET = 2_000_000;
 /**
  * Hard cap for the distinct, same-origin Next.js scripts referenced by the
  * initial HTML of every canonical route. Wave 4 currently emits 25 such
- * chunks across the nine inspected routes; 32 leaves seven deliberate slots
+ * chunks across the ten inspected routes; 32 leaves seven deliberate slots
  * for reviewed top-level product growth while keeping the read-only scan
  * bounded. This does not enumerate hydration-only chunks.
  *
@@ -63,6 +73,7 @@ export type DeploymentVerificationReport = {
   report_kind: "read_only_deployment_verification";
   verifier_version: string;
   generated_at: string;
+  alias_verified_at: string | "not_verified";
   target_origin: string;
   expected_release_sha: string;
   observed_release_sha: string | "unknown";
@@ -82,10 +93,6 @@ export type VerifyDeploymentOptions = {
   timeoutMs?: number;
   candidateState?: ReleaseCandidateState;
   retainedArtifactIds?: readonly string[];
-  deploymentId?: string;
-  deploymentUrl?: string;
-  aliasUrl?: string;
-  aliasResolvedAt?: string;
   databaseProject?: string;
   databaseMigration?: string;
   rollbackDeploymentId?: string;
@@ -94,12 +101,16 @@ export type VerifyDeploymentOptions = {
   decisionName?: string;
   consoleVerification?: "pass" | "fail" | "not_evaluated";
   expectedLockfileDigest?: string;
+  /** A caller-retained emitted-asset digest; health cannot attest this itself. */
+  expectedPublicAssetDigest?: string;
   expectedContentManifestDigest?: string;
   expectedEvaluatorBaselineDigest?: string;
   expectedDatabaseMigrationIdentity?: string;
   liveEvaluationStatus?: "not_evaluated" | "pass" | "fail";
   liveEvaluationArtifactId?: string;
   resolveHostname?: (hostname: string) => Promise<readonly string[]>;
+  /** Supplied only by the checked-in target policy (or focused test fixtures). */
+  deploymentTarget?: DeploymentTarget;
 };
 
 // IANA IPv4/IPv6 Special-Purpose Address Registries, last updated 2025-10-09.
@@ -215,6 +226,7 @@ async function safeResolvedAddresses(hostname: string, resolver: (hostname: stri
 }
 
 function normalizeSha(value: string): string { if (!SHA.test(value)) throw new Error("expected release SHA must be a full 40-character Git SHA"); return value.toLowerCase(); }
+function normalizeExpectedDigest(value: string | undefined): string | undefined { return value && DIGEST.test(value) ? value.toLowerCase() : undefined; }
 export function validateTargetUrl(raw: string, allowedHosts: readonly string[] = [], allowLocalhost = false): URL {
   let url: URL;
   try { url = new URL(raw); } catch { throw new Error("base URL must be an absolute URL"); }
@@ -338,7 +350,7 @@ function headerChecks(checks: VerificationCheck[], response: Response, prefix: s
 export async function verifyDeployment(options: VerifyDeploymentOptions): Promise<DeploymentVerificationReport> {
   if (options.candidateState && !WORKER_CANDIDATE_STATES.includes(options.candidateState as (typeof WORKER_CANDIDATE_STATES)[number])) throw new Error("worker verifier cannot emit terminal ADR-006 states");
   if (options.liveEvaluationStatus && options.liveEvaluationStatus !== "not_evaluated") throw new Error("worker verifier cannot consume live evaluation proof; use the separately approved eval:live gate");
-  const expected = normalizeSha(options.expectedSha); const target = validateTargetUrl(options.baseUrl, options.allowedHosts, options.allowLocalhost); const origin = target.origin; const fetchImpl = options.fetchImpl ?? fetch; const timeoutMs = options.timeoutMs ?? 10_000; const checks: VerificationCheck[] = []; let observed: string | "unknown" = "unknown"; let runtimeMode = "unknown"; let cloudProviderFlags: Record<string, boolean | string> = { cloud_accounts_enabled: "not_evaluated", cloud_auth_configured: "not_evaluated", provider_mode: "not_evaluated" }; const assets = new Map<string, URL>();
+  const expected = normalizeSha(options.expectedSha); const target = validateTargetUrl(options.baseUrl, options.allowedHosts, options.allowLocalhost); const origin = target.origin; const targetOrigin = target.toString(); const expectedPublicAssetDigest = normalizeExpectedDigest(options.expectedPublicAssetDigest); const fetchImpl = options.fetchImpl ?? fetch; const timeoutMs = options.timeoutMs ?? 10_000; const checks: VerificationCheck[] = []; let observed: string | "unknown" = "unknown"; let runtimeMode = "unknown"; let cloudProviderFlags: Record<string, boolean | string> = { cloud_accounts_enabled: "not_evaluated", cloud_auth_configured: "not_evaluated", provider_mode: "not_evaluated" }; const assets = new Map<string, URL>();
   const generatedAt = options.generatedAt ?? new Date().toISOString();
   const resolver = options.resolveHostname ?? defaultResolveHostname;
   let targetAddresses: readonly string[] | undefined;
@@ -351,18 +363,20 @@ export async function verifyDeployment(options: VerifyDeploymentOptions): Promis
     } catch {
       record(checks, "target.dns_policy", false, "target DNS is private, reserved, unavailable, or changed during verification");
       const failed = checks.length;
-      const candidateState = options.candidateState ?? "DEPLOYMENT_BLOCKED";
-      const releaseIdentity = buildReleaseIdentity({ sourceSha: expected, testedSha: expected, generatedAt, candidateState, buildRuntimeMode: "unknown", cloudProviderFlags, retainedArtifactIds: options.retainedArtifactIds ?? ["deployment-verification.json", "deployment-verification.md"], deploymentId: options.deploymentId, deploymentUrl: options.deploymentUrl, aliasUrl: options.aliasUrl, aliasResolvedAt: options.aliasResolvedAt, databaseProject: options.databaseProject, databaseMigration: options.databaseMigration, rollbackDeploymentId: options.rollbackDeploymentId, rollbackSha: options.rollbackSha, rollbackRehearsal: options.rollbackRehearsal, decisionName: options.decisionName });
-      return { schema_version: "1.0", report_kind: "read_only_deployment_verification", verifier_version: DEPLOYMENT_VERIFIER_VERSION, generated_at: generatedAt, target_origin: origin, expected_release_sha: expected, observed_release_sha: "unknown", release_identity: releaseIdentity, request_policy: { methods: ["GET"], same_origin_only: true, redirects_followed: false, state_changing_requests: false, response_bodies_retained: false, learner_data_collected: false }, checks, summary: { passed: 0, failed }, status: "fail" };
+      const releaseIdentity = buildReleaseIdentity({ sourceSha: expected, testedSha: expected, generatedAt, candidateState: "DEPLOYMENT_BLOCKED", buildRuntimeMode: "unknown", cloudProviderFlags, retainedArtifactIds: options.retainedArtifactIds ?? ["deployment-verification.json", "deployment-verification.md"], databaseProject: options.databaseProject, databaseMigration: options.databaseMigration, rollbackDeploymentId: options.rollbackDeploymentId, rollbackSha: options.rollbackSha, rollbackRehearsal: options.rollbackRehearsal, decisionName: options.decisionName });
+      return { schema_version: "1.0", report_kind: "read_only_deployment_verification", verifier_version: DEPLOYMENT_VERIFIER_VERSION, generated_at: generatedAt, alias_verified_at: "not_verified", target_origin: origin, expected_release_sha: expected, observed_release_sha: "unknown", release_identity: releaseIdentity, request_policy: { methods: ["GET"], same_origin_only: true, redirects_followed: false, state_changing_requests: false, response_bodies_retained: false, learner_data_collected: false }, checks, summary: { passed: 0, failed }, status: "fail" };
     }
   }
+  let releaseManifest: BoundReleaseManifest | null = null;
+  let aliasVerifiedAt: string | "not_verified" = "not_verified";
   try {
     const response = await get(fetchImpl, new URL("/api/health", origin), timeoutMs, targetAddresses, resolver, fetchImpl === fetch, MAX_HEALTH);
     record(checks, "health.status", response.status === 200, "health endpoint returns 200");
     record(checks, "health.content_type", response.headers.get("content-type")?.toLowerCase().includes("application/json") === true, "health endpoint returns JSON");
     record(checks, "health.cache_control", response.headers.get("cache-control")?.toLowerCase().includes("no-store") === true, "health response is not cached");
     const text = await readBounded(response, MAX_HEALTH); let payload: unknown; try { payload = JSON.parse(text); } catch { payload = null; }
-    const expectedKeys = ["app_name", "build_time", "cloud_accounts_enabled", "cloud_auth_configured", "content_package_manifest_digest", "database_migration_identity", "dependency_lock_digest", "device_profiles", "evaluator_baseline_digest", "learner_evidence_sync", "managed_provider_flags", "managed_surface_flags", "provider_mode", "release_sha", "runtime_mode", "schema_version", "service", "status"];
+    if (!LOCAL_HOSTS.has(target.hostname)) aliasVerifiedAt = new Date().toISOString();
+    const expectedKeys = ["app_name", "build_time", "cloud_accounts_enabled", "cloud_auth_configured", "content_package_manifest_digest", "database_migration_identity", "dependency_lock_digest", "device_profiles", "evaluator_baseline_digest", "learner_evidence_sync", "managed_provider_flags", "managed_surface_flags", "provider_mode", "release_manifest", "release_sha", "runtime_mode", "schema_version", "service", "status"];
     const shape = isRecord(payload) && Object.keys(payload).sort().join(",") === expectedKeys.join(",") && payload.schema_version === "1.0" && payload.status === "ok" && payload.service === "forge-learning-os" && payload.app_name === "FORGE";
     record(checks, "health.schema", shape, "health payload uses the allowlisted release schema");
     if (shape && isRecord(payload)) {
@@ -392,12 +406,44 @@ export async function verifyDeployment(options: VerifyDeploymentOptions): Promis
       record(checks, "health.digest_content_manifest", payload.content_package_manifest_digest === options.expectedContentManifestDigest, "content package manifest digest matches the checked-in source");
       record(checks, "health.digest_evaluator_baseline", payload.evaluator_baseline_digest === options.expectedEvaluatorBaselineDigest, "evaluator baseline digest matches the checked-in source");
       record(checks, "health.database_migration_identity", payload.database_migration_identity === options.expectedDatabaseMigrationIdentity, "database migration identity matches the explicit configured/not-configured state");
+      const manifestFailures = validateReleaseManifest(payload.release_manifest);
+      record(checks, "health.release_manifest.schema", manifestFailures.length === 0, manifestFailures.length === 0 ? "release manifest uses the exact allowlisted candidate schema" : `release manifest is malformed: ${manifestFailures.join(", ")}`);
+      if (isBoundReleaseManifest(payload.release_manifest)) {
+        const candidateManifest = payload.release_manifest;
+        const matchesHealth = payload.release_sha === candidateManifest.source_sha
+          && payload.build_time === candidateManifest.build_time
+          && payload.dependency_lock_digest === candidateManifest.dependency_lock_digest;
+        const matchesExpectedSource = candidateManifest.source_sha === expected;
+        const aliasMatchesTarget = candidateManifest.public_alias.url === targetOrigin;
+        const immutableMatchesPolicy = matchesImmutableDeploymentTarget(
+          candidateManifest.immutable_deployment,
+          candidateManifest.public_alias.url,
+          options.deploymentTarget,
+        );
+        const publicAssetMatchesAuthority = candidateManifest.public_asset.status === "recorded"
+          && expectedPublicAssetDigest !== undefined
+          && candidateManifest.public_asset.digest === expectedPublicAssetDigest;
+        const buildPrecedesAliasVerification = aliasVerifiedAt !== "not_verified"
+          && new Date(candidateManifest.build_time).getTime() <= new Date(aliasVerifiedAt).getTime();
+        record(checks, "health.release_manifest.alias_target", aliasMatchesTarget, "manifest public alias exactly matches the normalized verified target origin");
+        record(checks, "health.release_manifest.build_time_order", buildPrecedesAliasVerification, "manifest build time is no later than the verifier's post-fetch alias receipt timestamp");
+        record(checks, "health.release_manifest.immutable_target", immutableMatchesPolicy, "immutable deployment uses the checked-in FORGE Vercel hostname and non-placeholder deployment-ID policy");
+        record(checks, "health.release_manifest.public_asset_authority", publicAssetMatchesAuthority, "recorded public asset digest matches the caller-retained expected digest");
+        const boundCandidate = matchesHealth && matchesExpectedSource && aliasMatchesTarget && buildPrecedesAliasVerification && immutableMatchesPolicy && publicAssetMatchesAuthority;
+        if (boundCandidate) releaseManifest = candidateManifest;
+        record(checks, "health.release_manifest.binding", boundCandidate, "bound candidate tuple matches health, verified alias target and receipt time, source SHA, immutable-target policy, and retained public asset digest");
+      } else {
+        const localUnbound = LOCAL_HOSTS.has(target.hostname)
+          && isRecord(payload.release_manifest)
+          && payload.release_manifest.binding_status === "unbound";
+        record(checks, "health.release_manifest.binding", localUnbound, localUnbound ? "local artifact correctly reports release provenance as unbound" : "public candidate provenance is missing or unbound");
+      }
     }
     record(checks, "release.identity", observed === expected, "observed release SHA matches the expected immutable SHA");
     record(checks, "release.header_consistency", response.headers.get("x-forge-release-sha")?.toLowerCase() === observed, "release header matches the health payload");
   } catch { record(checks, "health.request", false, "health request failed or exceeded a verification bound"); record(checks, "release.identity", false, "release identity could not be verified"); }
 
-  for (const route of ROUTES) {
+  for (const route of CANONICAL_DEPLOYMENT_ROUTES) {
     try {
       const response = await get(fetchImpl, new URL(route.path, origin), timeoutMs, targetAddresses, resolver, fetchImpl === fetch, MAX_HTML);
       record(checks, `${route.id}.status`, response.status === 200, `${route.path} returns 200 without a redirect or access challenge`);
@@ -416,7 +462,11 @@ export async function verifyDeployment(options: VerifyDeploymentOptions): Promis
   let passed = checks.filter((item) => item.status === "pass").length; let failed = checks.length - passed;
   const cspChecks = checks.filter((item) => item.id.includes(".csp."));
   const networkChecks = checks.filter((item) => item.id.startsWith("client_asset.") || item.id === "client_assets.bounded_count");
-  const candidateState = options.candidateState ?? (LOCAL_HOSTS.has(target.hostname) ? "BUILT_LOCAL" : options.deploymentId && options.deploymentUrl ? "DEPLOYED_CANDIDATE" : "DEPLOYMENT_BLOCKED");
+  const candidateState = LOCAL_HOSTS.has(target.hostname)
+    ? "BUILT_LOCAL"
+    : releaseManifest
+      ? "DEPLOYED_CANDIDATE"
+      : "DEPLOYMENT_BLOCKED";
   if (!RELEASE_CANDIDATE_STATES.includes(candidateState)) throw new Error("candidate state is not an ADR-006 state");
   const releaseIdentity = buildReleaseIdentity({
     sourceSha: expected,
@@ -426,10 +476,10 @@ export async function verifyDeployment(options: VerifyDeploymentOptions): Promis
     buildRuntimeMode: runtimeMode,
     cloudProviderFlags,
     retainedArtifactIds: options.retainedArtifactIds ?? ["evaluation-regression.json", "evaluation-regression.md", "deployment-verification.json", "deployment-verification.md"],
-    deploymentId: options.deploymentId,
-    deploymentUrl: options.deploymentUrl,
-    aliasUrl: options.aliasUrl,
-    aliasResolvedAt: options.aliasResolvedAt,
+    deploymentId: releaseManifest?.immutable_deployment.id,
+    deploymentUrl: releaseManifest?.immutable_deployment.url,
+    aliasUrl: releaseManifest?.public_alias.url,
+    aliasResolvedAt: releaseManifest && aliasVerifiedAt !== "not_verified" ? aliasVerifiedAt : undefined,
     databaseProject: options.databaseProject,
     databaseMigration: options.databaseMigration,
     browser: failed === 0 ? "pass" : "fail",
@@ -445,12 +495,12 @@ export async function verifyDeployment(options: VerifyDeploymentOptions): Promis
   record(checks, "release_identity.contract", identityFailures.length === 0, identityFailures.length === 0 ? "ADR-006 identity tuple is complete and internally consistent" : `ADR-006 identity tuple fields are invalid: ${identityFailures.join(", ")}`);
   record(checks, "release_identity.state_bound", candidateState !== "DEPLOYMENT_BLOCKED", candidateState === "DEPLOYMENT_BLOCKED" ? "immutable deployment metadata is missing; candidate remains blocked" : `candidate state is ${candidateState}`);
   passed = checks.filter((item) => item.status === "pass").length; failed = checks.length - passed;
-  return { schema_version: "1.0", report_kind: "read_only_deployment_verification", verifier_version: DEPLOYMENT_VERIFIER_VERSION, generated_at: generatedAt, target_origin: origin, expected_release_sha: expected, observed_release_sha: observed, release_identity: releaseIdentity, request_policy: { methods: ["GET"], same_origin_only: true, redirects_followed: false, state_changing_requests: false, response_bodies_retained: false, learner_data_collected: false }, checks, summary: { passed, failed }, status: failed === 0 ? "pass" : "fail" };
+  return { schema_version: "1.0", report_kind: "read_only_deployment_verification", verifier_version: DEPLOYMENT_VERIFIER_VERSION, generated_at: generatedAt, alias_verified_at: aliasVerifiedAt, target_origin: origin, expected_release_sha: expected, observed_release_sha: observed, release_identity: releaseIdentity, request_policy: { methods: ["GET"], same_origin_only: true, redirects_followed: false, state_changing_requests: false, response_bodies_retained: false, learner_data_collected: false }, checks, summary: { passed, failed }, status: failed === 0 ? "pass" : "fail" };
 }
 
 export function renderDeploymentMarkdown(report: DeploymentVerificationReport): string {
   const rows = report.checks.map((item) => `| ${item.id} | ${item.status.toUpperCase()} | ${item.detail} |`).join("\n");
-  return `# FORGE Deployment Verification\n\n- Status: **${report.status.toUpperCase()}**\n- Target origin: \`${report.target_origin}\`\n- Expected release: \`${report.expected_release_sha}\`\n- Observed release: \`${report.observed_release_sha}\`\n- Candidate state: \`${report.release_identity.candidate_state}\`\n- Verifier: \`${report.verifier_version}\`\n- Generated: ${report.generated_at}\n\nThis report contains only bounded, same-origin GET evidence. It never deploys, calls a provider, submits learner data, retains response bodies, or mutates state. Initial HTML script references are checked; runtime-loaded chunks discovered only after hydration are not exhaustively enumerated by this read-only verifier.\n\n| Check | Status | Evidence |\n| --- | --- | --- |\n${rows}\n\n## ADR-006 release identity tuple\n\n\`\`\`json\n${JSON.stringify(report.release_identity, null, 2)}\n\`\`\`\n`;
+  return `# FORGE Deployment Verification\n\n- Status: **${report.status.toUpperCase()}**\n- Target origin: \`${report.target_origin}\`\n- Expected release: \`${report.expected_release_sha}\`\n- Observed release: \`${report.observed_release_sha}\`\n- Alias verified at: ${report.alias_verified_at}\n- Candidate state: \`${report.release_identity.candidate_state}\`\n- Verifier: \`${report.verifier_version}\`\n- Generated: ${report.generated_at}\n\nThis report contains only bounded, same-origin GET evidence. It never deploys, calls a provider, submits learner data, retains response bodies, or mutates state. Initial HTML script references are checked; runtime-loaded chunks discovered only after hydration are not exhaustively enumerated by this read-only verifier.\n\n| Check | Status | Evidence |\n| --- | --- | --- |\n${rows}\n\n## ADR-006 release identity tuple\n\n\`\`\`json\n${JSON.stringify(report.release_identity, null, 2)}\n\`\`\`\n`;
 }
 export async function writeDeploymentReport(report: DeploymentVerificationReport, outputDirectory: string): Promise<void> { await mkdir(outputDirectory, { recursive: true }); await Promise.all([writeFile(resolve(outputDirectory, "deployment-verification.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8"), writeFile(resolve(outputDirectory, "deployment-verification.md"), renderDeploymentMarkdown(report), "utf8")]); }
 const arg = (name: string): string | undefined => { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : undefined; };
@@ -460,6 +510,18 @@ async function main() {
   const baseUrl = approvedTarget?.origin ?? arg("--base-url"); const expectedSha = arg("--expected-sha");
   if (!baseUrl || !expectedSha) throw new Error("--target-id (checked-in) or --base-url, plus --expected-sha, are required");
   if (targetId && arg("--base-url")) throw new Error("--target-id cannot be combined with a caller-provided base URL");
+  if (!approvedTarget) {
+    let localBase = false;
+    try { localBase = LOCAL_HOSTS.has(new URL(baseUrl).hostname); } catch { /* validateTargetUrl emits the canonical setup error below. */ }
+    if (!process.argv.includes("--allow-localhost") || !localBase) throw new Error("remote verification requires a checked-in --target-id; --base-url is reserved for the explicit local artifact runner");
+  }
+  if (["--deployment-id", "--deployment-url", "--alias-url", "--alias-resolved-at"].some((name) => arg(name) !== undefined)) {
+    throw new Error("deployment and alias identity are accepted only from the bound public health manifest");
+  }
+  const expectedPublicAssetDigest = arg("--expected-public-asset-digest");
+  if (approvedTarget && (!expectedPublicAssetDigest || !DIGEST.test(expectedPublicAssetDigest))) {
+    throw new Error("--expected-public-asset-digest must be a caller-retained lowercase SHA-256 digest for a checked-in remote target");
+  }
   const outputDirectory = resolve(arg("--output-dir") ?? "test-results/release-ops");
   const requestedState = arg("--candidate-state");
   const candidateState = requestedState && WORKER_CANDIDATE_STATES.includes(requestedState as (typeof WORKER_CANDIDATE_STATES)[number]) ? requestedState as ReleaseCandidateState : undefined;
@@ -474,10 +536,6 @@ async function main() {
     allowLocalhost: process.argv.includes("--allow-localhost"),
     candidateState,
     retainedArtifactIds: args("--artifact-id"),
-    deploymentId: arg("--deployment-id"),
-    deploymentUrl: arg("--deployment-url"),
-    aliasUrl: arg("--alias-url"),
-    aliasResolvedAt: arg("--alias-resolved-at"),
     databaseProject: arg("--database-project"),
     databaseMigration: arg("--database-migration"),
     rollbackDeploymentId: arg("--rollback-deployment-id"),
@@ -486,11 +544,13 @@ async function main() {
     decisionName: arg("--decision-name"),
     consoleVerification: arg("--console-verification") as "pass" | "fail" | "not_evaluated" | undefined,
     expectedLockfileDigest: arg("--expected-lockfile-digest"),
+    expectedPublicAssetDigest,
     expectedContentManifestDigest: arg("--expected-content-manifest-digest"),
     expectedEvaluatorBaselineDigest: arg("--expected-evaluator-baseline-digest"),
     expectedDatabaseMigrationIdentity: arg("--expected-database-migration-identity"),
     liveEvaluationStatus: liveEvaluationStatus as "not_evaluated" | undefined,
     liveEvaluationArtifactId: arg("--live-evaluation-artifact-id"),
+    deploymentTarget: approvedTarget,
   });
   await writeDeploymentReport(report, outputDirectory);
   console.log(`deployment verification: ${report.status.toUpperCase()} (${report.summary.passed} passed, ${report.summary.failed} failed)`);
