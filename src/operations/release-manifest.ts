@@ -26,10 +26,9 @@ export const RELEASE_MANIFEST_ERROR_CODES = [
 
 export type ReleaseManifestErrorCode = (typeof RELEASE_MANIFEST_ERROR_CODES)[number];
 
-type RecordedPublicAsset = { status: "recorded"; digest: string };
-type GatedAbsentPublicAsset = {
-  status: "absent_with_gate";
-  gate: "public_asset_digest_required_before_promotion";
+type ProviderReceiptRequiredPublicAsset = {
+  status: "provider_receipt_required";
+  gate: "provider_observed_asset_digest_required_before_promotion";
 };
 
 export type BoundReleaseManifest = {
@@ -39,7 +38,12 @@ export type BoundReleaseManifest = {
   source_sha: string;
   build_time: string;
   dependency_lock_digest: string;
-  public_asset: RecordedPublicAsset | GatedAbsentPublicAsset;
+  /**
+   * A deployment cannot know Vercel's emitted static asset tree until after
+   * its build has run. Health therefore declares the required post-build
+   * receipt rather than self-reporting a build-time digest.
+   */
+  public_asset: ProviderReceiptRequiredPublicAsset;
   immutable_deployment: { id: string; url: string; project_id: string };
   public_alias: { url: string };
 };
@@ -161,12 +165,12 @@ export function buildReleaseManifest(environment: ReleaseEnvironment = process.e
   const lockDigest = canonicalDigest(environment.FORGE_LOCKFILE_DIGEST);
   if (!lockDigest) failures.push("dependency_lock_digest");
 
-  const assetDigest = canonicalDigest(environment.FORGE_PUBLIC_ASSET_DIGEST);
-  const gatedAssetAbsence = environment.FORGE_PUBLIC_ASSET_DIGEST_STATUS === "absent_with_gate"
-    && environment.FORGE_PUBLIC_ASSET_DIGEST_GATE === "public_asset_digest_required_before_promotion";
-  if ((!assetDigest && !gatedAssetAbsence) || (assetDigest && (environment.FORGE_PUBLIC_ASSET_DIGEST_STATUS || environment.FORGE_PUBLIC_ASSET_DIGEST_GATE))) {
-    failures.push("public_asset_digest");
-  }
+  // A local .next/static digest is useful as a build diagnostic, but Vercel's
+  // emitted output is deployment-specific. Do not let a caller bake either a
+  // digest or a pre-deployment absence receipt into health.
+  if (environment.FORGE_PUBLIC_ASSET_DIGEST !== undefined
+    || environment.FORGE_PUBLIC_ASSET_DIGEST_STATUS !== undefined
+    || environment.FORGE_PUBLIC_ASSET_DIGEST_GATE !== undefined) failures.push("public_asset_digest");
 
   const deploymentId = environment.VERCEL_DEPLOYMENT_ID;
   const deploymentUrl = canonicalVercelDeploymentOrigin(environment.VERCEL_URL);
@@ -186,7 +190,7 @@ export function buildReleaseManifest(environment: ReleaseEnvironment = process.e
   const aliasUrl = new URL(CURRENT_TARGET.origin).toString();
   if (environment.FORGE_RELEASE_ALIAS_URL !== undefined || environment.FORGE_RELEASE_ALIAS_RESOLVED_AT !== undefined) failures.push("public_alias");
 
-  if (failures.length > 0 || !sourceSha || !buildTime || !lockDigest || !platformDeployment || (!assetDigest && !gatedAssetAbsence)) {
+  if (failures.length > 0 || !sourceSha || !buildTime || !lockDigest || !platformDeployment) {
     return unbound(failures);
   }
 
@@ -197,9 +201,10 @@ export function buildReleaseManifest(environment: ReleaseEnvironment = process.e
     source_sha: sourceSha,
     build_time: buildTime,
     dependency_lock_digest: lockDigest,
-    public_asset: assetDigest
-      ? { status: "recorded", digest: assetDigest }
-      : { status: "absent_with_gate", gate: "public_asset_digest_required_before_promotion" },
+    public_asset: {
+      status: "provider_receipt_required",
+      gate: "provider_observed_asset_digest_required_before_promotion",
+    },
     immutable_deployment: platformDeployment,
     public_alias: { url: aliasUrl },
   };
@@ -210,10 +215,10 @@ export function validateReleaseManifest(value: unknown): ReleaseManifestErrorCod
   if (value.binding_status === "bound") {
     const keys = ["schema_version", "binding_status", "candidate_state", "source_sha", "build_time", "dependency_lock_digest", "public_asset", "immutable_deployment", "public_alias"];
     const publicAsset = isRecord(value.public_asset) ? value.public_asset : null;
-    const validAsset = Boolean(publicAsset && (
-      (hasExactKeys(publicAsset, ["status", "digest"]) && publicAsset.status === "recorded" && canonicalDigest(publicAsset.digest))
-      || (hasExactKeys(publicAsset, ["status", "gate"]) && publicAsset.status === "absent_with_gate" && publicAsset.gate === "public_asset_digest_required_before_promotion")
-    ));
+    const validAsset = Boolean(publicAsset
+      && hasExactKeys(publicAsset, ["status", "gate"])
+      && publicAsset.status === "provider_receipt_required"
+      && publicAsset.gate === "provider_observed_asset_digest_required_before_promotion");
     const deployment = isRecord(value.immutable_deployment) ? value.immutable_deployment : null;
     const alias = isRecord(value.public_alias) ? value.public_alias : null;
     const failures: ReleaseManifestErrorCode[] = [];
