@@ -1,4 +1,5 @@
 import { isIP } from "node:net";
+import { request as httpsRequest } from "node:https";
 
 import {
   isPlausibleVercelDeploymentId,
@@ -15,11 +16,9 @@ const MAX_PROVIDER_RESPONSE_BYTES = 4_000_000;
 // observation; it never asks health to attest the deployment-specific digest.
 const BUILD_DIGEST_MARKER = /^Public build boundary verified across [1-9][0-9]* static assets; public asset digest ([0-9a-f]{64})\.$/im;
 type RecordValue = Record<string, unknown>;
-type FetchLike = typeof fetch;
 
 export const VERCEL_PROVIDER_RECEIPT_VERSION = "1.0";
 export const VERCEL_PROVIDER_RECEIPT_KIND = "vercel_authenticated_build_log";
-export type ProviderReceiptAuthority = "authenticated_vercel_api" | "external_evidence";
 
 export type VercelProviderReceipt = {
   schema_version: "1.0";
@@ -43,10 +42,18 @@ export type VercelProviderReceipt = {
   };
 };
 
-export type ProviderReceiptInput = Readonly<{
-  authority: ProviderReceiptAuthority;
-  receipt: unknown;
+declare const AUTHENTICATED_RECEIPT_HANDLE: unique symbol;
+
+/**
+ * Opaque, process-local capability. Its type can be asserted by TypeScript
+ * callers, but the verifier accepts it only when its object identity is in
+ * this module's private WeakMap.
+ */
+export type AuthenticatedVercelReceiptHandle = Readonly<{
+  [AUTHENTICATED_RECEIPT_HANDLE]: never;
 }>;
+
+const authenticatedReceiptCapabilities = new WeakMap<object, VercelProviderReceipt>();
 
 type VercelApiDeployment = RecordValue;
 type VercelApiEvent = RecordValue;
@@ -133,10 +140,28 @@ export function isVercelProviderReceipt(value: unknown): value is VercelProvider
   return validateVercelProviderReceipt(value).length === 0;
 }
 
-function readSourceSha(deployment: VercelApiDeployment): string | null {
+/**
+ * Only Vercel's deployment gitSource object establishes source provenance.
+ * Deployment meta is caller-settable (including by the CLI), so it may only
+ * provide a consistency check and can never supply a missing source identity.
+ */
+function readProviderGitSource(deployment: VercelApiDeployment, target: DeploymentTarget): string | null {
+  const gitSource = isRecord(deployment.gitSource) ? deployment.gitSource : null;
+  if (!gitSource) return null;
+  const sourceSha = canonicalSha(gitSource.sha);
+  if (gitSource.type !== target.git_source.type
+    || gitSource.repo !== target.git_source.repository
+    || gitSource.ref !== target.git_source.ref
+    || !sourceSha) return null;
+
   const metadata = isRecord(deployment.meta) ? deployment.meta : {};
-  const gitSource = isRecord(deployment.gitSource) ? deployment.gitSource : {};
-  return canonicalSha(metadata.githubCommitSha) ?? canonicalSha(gitSource.sha);
+  const metadataSha = metadata.githubCommitSha;
+  const metadataRepo = metadata.githubRepo;
+  const metadataRef = metadata.githubCommitRef;
+  if ((metadataSha !== undefined && canonicalSha(metadataSha) !== sourceSha)
+    || (metadataRepo !== undefined && metadataRepo !== target.git_source.repository)
+    || (metadataRef !== undefined && metadataRef !== target.git_source.ref)) return null;
+  return sourceSha;
 }
 
 function readDeploymentId(deployment: VercelApiDeployment): string | null {
@@ -149,7 +174,12 @@ function readEvents(value: unknown): VercelApiEvent[] | null {
   return isRecord(value) && Array.isArray(value.events) && value.events.every(isRecord) ? value.events : null;
 }
 
-function buildReceiptFromVercelResponses(
+/**
+ * Normalize portable provider responses to a plain receipt. This does not
+ * confer provider authority: callers may persist or inspect the result, but
+ * the verifier treats every plain object as external evidence.
+ */
+export function normalizeVercelProviderReceipt(
   deploymentPayload: unknown,
   eventsPayload: unknown,
   target: DeploymentTarget,
@@ -158,11 +188,11 @@ function buildReceiptFromVercelResponses(
   if (!isRecord(deploymentPayload)) throw new Error("Vercel deployment response is malformed");
   const id = readDeploymentId(deploymentPayload);
   const projectId = canonicalTextId(deploymentPayload.projectId);
-  const sourceSha = readSourceSha(deploymentPayload);
+  const sourceSha = readProviderGitSource(deploymentPayload, target);
   const immutableUrl = canonicalImmutableUrl(deploymentPayload.url);
   const createdAt = canonicalTimestampFromProvider(deploymentPayload.createdAt);
   if (!id || !projectId || !sourceSha || !immutableUrl || deploymentPayload.readyState !== "READY" || !createdAt) {
-    throw new Error("Vercel deployment response is missing a READY deployment identity, source SHA, or creation time");
+    throw new Error("Vercel deployment response is missing a READY provider git-source identity, source SHA, or creation time");
   }
   const deploymentIdentity = { id, project_id: projectId, url: immutableUrl };
   if (!matchesImmutableDeploymentTarget(deploymentIdentity, target.origin, target)) {
@@ -193,48 +223,96 @@ function buildReceiptFromVercelResponses(
   return receipt;
 }
 
-async function readProviderJson(response: Response): Promise<unknown> {
-  if (!response.ok) throw new Error(`Vercel provider API returned ${response.status}`);
-  const length = Number(response.headers.get("content-length") ?? "0");
-  if (!Number.isFinite(length) || length < 0 || length > MAX_PROVIDER_RESPONSE_BYTES) throw new Error("Vercel provider response exceeded the bounded collector size");
-  const text = await response.text();
-  if (Buffer.byteLength(text, "utf8") > MAX_PROVIDER_RESPONSE_BYTES) throw new Error("Vercel provider response exceeded the bounded collector size");
+function bindAuthenticatedReceipt(receipt: VercelProviderReceipt): AuthenticatedVercelReceiptHandle {
+  const capability = Object.freeze({});
+  authenticatedReceiptCapabilities.set(capability, receipt);
+  return capability as AuthenticatedVercelReceiptHandle;
+}
+
+/** Returns a receipt only for a capability issued in this process by the collector. */
+export function receiptFromAuthenticatedHandle(handle: unknown): VercelProviderReceipt | null {
+  return typeof handle === "object" && handle !== null
+    ? authenticatedReceiptCapabilities.get(handle) ?? null
+    : null;
+}
+
+/** Stream a provider JSON body with a hard byte cap even when headers lie or are absent. */
+export async function parseBoundedProviderJson(
+  body: AsyncIterable<Buffer>,
+  declaredContentLength: string | string[] | undefined,
+  maximumBytes = MAX_PROVIDER_RESPONSE_BYTES,
+): Promise<unknown> {
+  const declared = Number(declaredContentLength ?? "0");
+  if (!Number.isFinite(declared) || declared < 0 || declared > maximumBytes) throw new Error("Vercel provider response exceeded the bounded collector size");
+  const chunks: Buffer[] = [];
+  let bytes = 0;
+  for await (const chunk of body) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    bytes += buffer.byteLength;
+    if (bytes > maximumBytes) throw new Error("Vercel provider response exceeded the bounded collector size");
+    chunks.push(buffer);
+  }
   try {
-    return JSON.parse(text);
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } catch {
     throw new Error("Vercel provider response is not JSON");
   }
 }
 
+async function readProviderJson(path: string, token: string): Promise<unknown> {
+  return new Promise((resolveJson, reject) => {
+    const request = httpsRequest({
+      protocol: "https:",
+      hostname: "api.vercel.com",
+      port: 443,
+      method: "GET",
+      path,
+      servername: "api.vercel.com",
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    }, (response) => {
+      const contentLength = response.headers["content-length"];
+      const declaredLength = Number(contentLength ?? "0");
+      if (!Number.isFinite(declaredLength) || declaredLength < 0 || declaredLength > MAX_PROVIDER_RESPONSE_BYTES) {
+        response.resume();
+        reject(new Error("Vercel provider response exceeded the bounded collector size"));
+        return;
+      }
+      if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
+        response.resume();
+        reject(new Error(`Vercel provider API returned ${response.statusCode ?? 0}`));
+        return;
+      }
+      void parseBoundedProviderJson(response, contentLength)
+        .then(resolveJson)
+        .catch(reject);
+    });
+    request.setTimeout(15_000, () => request.destroy(new Error("Vercel provider request timed out")));
+    request.once("error", reject);
+    request.end();
+  });
+}
+
 /**
  * Read only the Vercel deployment metadata and build-event log through the
  * authenticated provider API. It never calls the app, deploys, promotes, or
- * writes provider state. The returned object is an in-process authority input;
- * persisting/reloading its JSON alone downgrades it to external evidence.
+ * writes provider state. It creates an opaque process-local capability only
+ * after the fixed-origin HTTPS requests return valid provider responses.
+ * Persisting/reloading receipt JSON never recreates that capability.
  */
 export async function collectVercelProviderReceipt(options: Readonly<{
   deploymentId: string;
   token: string;
   target: DeploymentTarget;
-  fetchImpl?: FetchLike;
-  collectedAt?: string;
-}>): Promise<VercelProviderReceipt> {
+}>): Promise<AuthenticatedVercelReceiptHandle> {
   if (!isPlausibleVercelDeploymentId(options.deploymentId)) throw new Error("--vercel-deployment-id must be a non-placeholder Vercel deployment ID");
   if (!options.token || options.token.trim().length < 8) throw new Error("Vercel receipt collection requires a non-empty read-only API token");
-  const collectedAt = canonicalTimestamp(options.collectedAt ?? new Date().toISOString());
+  const collectedAt = canonicalTimestamp(new Date().toISOString());
   if (!collectedAt) throw new Error("collector time must be a canonical ISO timestamp");
-  const apiBase = "https://api.vercel.com";
   const deploymentQuery = new URLSearchParams({ teamId: options.target.team_id }).toString();
   // Read backward from completion so the terminal public-build-boundary line
   // is included without retaining an unbounded build-log history.
   const eventsQuery = new URLSearchParams({ teamId: options.target.team_id, direction: "backward", errorsOnly: "false", limit: "500" }).toString();
-  const headers = { Authorization: `Bearer ${options.token}`, Accept: "application/json" };
-  const fetchImpl = options.fetchImpl ?? fetch;
-  const deploymentResponse = await fetchImpl(`${apiBase}/v13/deployments/${encodeURIComponent(options.deploymentId)}?${deploymentQuery}`, { method: "GET", redirect: "error", headers, signal: AbortSignal.timeout(15_000) });
-  const deployment = await readProviderJson(deploymentResponse);
-  const eventsResponse = await fetchImpl(`${apiBase}/v2/deployments/${encodeURIComponent(options.deploymentId)}/events?${eventsQuery}`, { method: "GET", redirect: "error", headers, signal: AbortSignal.timeout(15_000) });
-  const events = await readProviderJson(eventsResponse);
-  return buildReceiptFromVercelResponses(deployment, events, options.target, collectedAt);
+  const deployment = await readProviderJson(`/v13/deployments/${encodeURIComponent(options.deploymentId)}?${deploymentQuery}`, options.token);
+  const events = await readProviderJson(`/v2/deployments/${encodeURIComponent(options.deploymentId)}/events?${eventsQuery}`, options.token);
+  return bindAuthenticatedReceipt(normalizeVercelProviderReceipt(deployment, events, options.target, collectedAt));
 }
-
-export const __test__ = { buildReceiptFromVercelResponses };

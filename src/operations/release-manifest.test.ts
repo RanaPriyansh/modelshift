@@ -38,6 +38,13 @@ describe("release manifest", () => {
       public_alias: { url: "https://modelshift.vercel.app/" },
       public_asset: { status: "provider_receipt_required", gate: "provider_observed_asset_digest_required_before_promotion" },
     });
+    expect("build_time" in manifest).toBe(false);
+  });
+
+  it("keeps caller build time out of the bound provenance tuple", () => {
+    const manifest = candidate({ FORGE_BUILD_TIME: "not-provider-provenance" });
+    expect(isBoundReleaseManifest(manifest)).toBe(true);
+    expect(JSON.stringify(manifest)).not.toContain("build_time");
   });
 
   it("rejects a caller-supplied build asset digest instead of self-attesting remote output", () => {
@@ -50,7 +57,6 @@ describe("release manifest", () => {
 
   it.each([
     ["unknown candidate state", { FORGE_RELEASE_CANDIDATE_STATE: "PRODUCTION_VERIFIED" }, "candidate_state"],
-    ["malformed build time", { FORGE_BUILD_TIME: "2026-07-23T00:00:00Z" }, "build_time"],
     ["malformed lock digest", { FORGE_LOCKFILE_DIGEST: "short" }, "dependency_lock_digest"],
     ["caller public asset absence gate", { FORGE_PUBLIC_ASSET_DIGEST_STATUS: "absent_with_gate" }, "public_asset_digest"],
     ["malformed platform immutable URL", { VERCEL_URL: "forge-learning-test123-ranapriyanshs-projects.vercel.app/path" }, "immutable_deployment"],

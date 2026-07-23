@@ -6,7 +6,6 @@ const SHA = /^[0-9a-f]{40}$/i;
 const DIGEST = /^[0-9a-f]{64}$/i;
 const DEPLOYMENT_ID = /^dpl_[A-Za-z0-9]{20,64}$/;
 const PROJECT_ID = /^prj_[A-Za-z0-9]{20,64}$/;
-const CANONICAL_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const CURRENT_TARGET = resolveDeploymentTarget("forge_learning_os_project");
 
 type ReleaseEnvironment = Readonly<Record<string, string | undefined>>;
@@ -16,7 +15,6 @@ export const RELEASE_MANIFEST_ERROR_CODES = [
   "candidate_state",
   "source_sha",
   "source_drift",
-  "build_time",
   "dependency_lock_digest",
   "public_asset_digest",
   "immutable_deployment",
@@ -36,7 +34,6 @@ export type BoundReleaseManifest = {
   binding_status: "bound";
   candidate_state: "DEPLOYED_CANDIDATE";
   source_sha: string;
-  build_time: string;
   dependency_lock_digest: string;
   /**
    * A deployment cannot know Vercel's emitted static asset tree until after
@@ -53,7 +50,6 @@ export type UnboundReleaseManifest = {
   binding_status: "unbound";
   candidate_state: "unknown";
   source_sha: "unknown";
-  build_time: "unknown";
   dependency_lock_digest: "unknown";
   public_asset: { status: "unknown" };
   immutable_deployment: { status: "unknown" };
@@ -77,12 +73,6 @@ function canonicalSha(value: unknown): string | null {
 
 function canonicalDigest(value: unknown): string | null {
   return typeof value === "string" && DIGEST.test(value) ? value.toLowerCase() : null;
-}
-
-function canonicalTimestamp(value: unknown): string | null {
-  if (typeof value !== "string" || !CANONICAL_TIME.test(value)) return null;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) || parsed.toISOString() !== value ? null : value;
 }
 
 function canonicalHttpsOrigin(value: unknown): string | null {
@@ -120,7 +110,6 @@ function unbound(reasonCodes: readonly ReleaseManifestErrorCode[]): UnboundRelea
     binding_status: "unbound",
     candidate_state: "unknown",
     source_sha: "unknown",
-    build_time: "unknown",
     dependency_lock_digest: "unknown",
     public_asset: { status: "unknown" },
     immutable_deployment: { status: "unknown" },
@@ -160,8 +149,6 @@ export function buildReleaseManifest(environment: ReleaseEnvironment = process.e
   const platformSha = canonicalSha(environment.VERCEL_GIT_COMMIT_SHA);
   if (!platformSha || !sourceSha || platformSha !== sourceSha) failures.push("source_drift");
 
-  const buildTime = canonicalTimestamp(environment.FORGE_BUILD_TIME);
-  if (!buildTime) failures.push("build_time");
   const lockDigest = canonicalDigest(environment.FORGE_LOCKFILE_DIGEST);
   if (!lockDigest) failures.push("dependency_lock_digest");
 
@@ -190,7 +177,7 @@ export function buildReleaseManifest(environment: ReleaseEnvironment = process.e
   const aliasUrl = new URL(CURRENT_TARGET.origin).toString();
   if (environment.FORGE_RELEASE_ALIAS_URL !== undefined || environment.FORGE_RELEASE_ALIAS_RESOLVED_AT !== undefined) failures.push("public_alias");
 
-  if (failures.length > 0 || !sourceSha || !buildTime || !lockDigest || !platformDeployment) {
+  if (failures.length > 0 || !sourceSha || !lockDigest || !platformDeployment) {
     return unbound(failures);
   }
 
@@ -199,7 +186,6 @@ export function buildReleaseManifest(environment: ReleaseEnvironment = process.e
     binding_status: "bound",
     candidate_state: "DEPLOYED_CANDIDATE",
     source_sha: sourceSha,
-    build_time: buildTime,
     dependency_lock_digest: lockDigest,
     public_asset: {
       status: "provider_receipt_required",
@@ -213,7 +199,7 @@ export function buildReleaseManifest(environment: ReleaseEnvironment = process.e
 export function validateReleaseManifest(value: unknown): ReleaseManifestErrorCode[] {
   if (!isRecord(value) || value.schema_version !== "1.0") return ["candidate_state"];
   if (value.binding_status === "bound") {
-    const keys = ["schema_version", "binding_status", "candidate_state", "source_sha", "build_time", "dependency_lock_digest", "public_asset", "immutable_deployment", "public_alias"];
+    const keys = ["schema_version", "binding_status", "candidate_state", "source_sha", "dependency_lock_digest", "public_asset", "immutable_deployment", "public_alias"];
     const publicAsset = isRecord(value.public_asset) ? value.public_asset : null;
     const validAsset = Boolean(publicAsset
       && hasExactKeys(publicAsset, ["status", "gate"])
@@ -224,7 +210,6 @@ export function validateReleaseManifest(value: unknown): ReleaseManifestErrorCod
     const failures: ReleaseManifestErrorCode[] = [];
     if (!hasExactKeys(value, keys) || value.candidate_state !== "DEPLOYED_CANDIDATE") failures.push("candidate_state");
     if (!canonicalSha(value.source_sha)) failures.push("source_sha");
-    if (!canonicalTimestamp(value.build_time)) failures.push("build_time");
     if (!canonicalDigest(value.dependency_lock_digest)) failures.push("dependency_lock_digest");
     if (!validAsset) failures.push("public_asset_digest");
     if (!deployment || !hasExactKeys(deployment, ["id", "url", "project_id"]) || !validDeploymentId(deployment.id) || !isCanonicalHttpsOrigin(deployment.url) || !validProjectId(deployment.project_id)) failures.push("immutable_deployment");
@@ -232,7 +217,7 @@ export function validateReleaseManifest(value: unknown): ReleaseManifestErrorCod
     return [...new Set(failures)];
   }
 
-  const keys = ["schema_version", "binding_status", "candidate_state", "source_sha", "build_time", "dependency_lock_digest", "public_asset", "immutable_deployment", "public_alias", "reason_codes"];
+  const keys = ["schema_version", "binding_status", "candidate_state", "source_sha", "dependency_lock_digest", "public_asset", "immutable_deployment", "public_alias", "reason_codes"];
   const reasonCodes = Array.isArray(value.reason_codes) ? value.reason_codes : [];
   const validReasons = reasonCodes.every((code) => typeof code === "string" && RELEASE_MANIFEST_ERROR_CODES.includes(code as ReleaseManifestErrorCode))
     && new Set(reasonCodes).size === reasonCodes.length
@@ -241,7 +226,6 @@ export function validateReleaseManifest(value: unknown): ReleaseManifestErrorCod
     && value.binding_status === "unbound"
     && value.candidate_state === "unknown"
     && value.source_sha === "unknown"
-    && value.build_time === "unknown"
     && value.dependency_lock_digest === "unknown"
     && hasExactKeys(value.public_asset, ["status"]) && value.public_asset.status === "unknown"
     && hasExactKeys(value.immutable_deployment, ["status"]) && value.immutable_deployment.status === "unknown"
