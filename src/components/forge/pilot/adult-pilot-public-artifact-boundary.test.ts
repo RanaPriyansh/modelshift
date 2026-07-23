@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   ADULT_PILOT_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS,
+  assertNoAdultPilotPublicArtifactLeaks,
   findAdultPilotPublicArtifactLeaks,
-  scanAdultPilotProductionPublicAssets,
 } from "./adult-pilot-public-artifact-boundary";
 
 describe("adult pilot public artifact boundary", () => {
@@ -16,7 +16,9 @@ describe("adult pilot public artifact boundary", () => {
     expect(findAdultPilotPublicArtifactLeaks([{ path: "static/chunks/pilot.js", contents: "generic unavailable route shell" }])).toEqual([]);
   });
 
-  it.runIf(process.env.FORGE_VERIFY_PILOT_PUBLIC_ARTIFACTS === "1")("greps every emitted production public static asset", () => {
-    expect(scanAdultPilotProductionPublicAssets()).toEqual([]);
+  it("fails the ordinary build boundary when any reviewed fixture marker is found", () => {
+    expect(() => assertNoAdultPilotPublicArtifactLeaks([
+      { path: ".next/static/chunks/pilot.js", marker: "reading.fixture.equal-quantities" },
+    ])).toThrow("Reviewed adult-pilot fixture data reached public build assets");
   });
 });

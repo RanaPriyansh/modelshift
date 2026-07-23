@@ -64,6 +64,14 @@ export function findAdultPilotPublicArtifactLeaks(
   ))));
 }
 
+export function assertNoAdultPilotPublicArtifactLeaks(
+  leaks: readonly AdultPilotPublicArtifactLeak[],
+): void {
+  if (leaks.length > 0) {
+    throw new Error(`Reviewed adult-pilot fixture data reached public build assets:\n${leaks.map((leak) => `${leak.path}: ${leak.marker}`).join("\n")}`);
+  }
+}
+
 function publicStaticFiles(directory: string): readonly string[] {
   const entries = readdirSync(directory, { withFileTypes: true });
   return entries.flatMap((entry) => {
