@@ -1,7 +1,7 @@
 # FORGE Expansion Evaluation
 
 **Candidate date:** 22 July 2026  
-**Claim sought:** C1 interactive foundation; G1 candidate  
+**Claim sought:** C1 interactive foundation; DG1 candidate
 **Not evaluated:** educational efficacy, homeschool readiness, legal compliance, provider quality, or child-safety operations
 
 ## Evaluation objective

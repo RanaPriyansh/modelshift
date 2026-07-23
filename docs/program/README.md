@@ -4,11 +4,17 @@
 
 **Current release record:** [`WAVE_4_PLAN.md`](./WAVE_4_PLAN.md) — Wave 4 migration, all-World conformance, exact release gate, and the bounded post-release tuple for `c7d4011`. The implementation plan and release amendment are distinct; the documentation amendment is not deployed.
 
+**Proposed successor:** [`WAVE_6_PLAN.md`](./WAVE_6_PLAN.md) — adult practical capability maps, governed multimodal resources, a fixture-only external-video adapter, projects, protected proof, and educator review. It is architecture/planning only until the principal accepts the predecessor SHA and dispatches bounded packets.
+
+**Long-range strategy:** [`AI_ERA_LEARNING_THESIS.md`](./AI_ERA_LEARNING_THESIS.md) — the corrected internet/AI analogy, 5/10/15/20-year scenarios, robust commitments, first credible wedge, operating model, and evidence gates.
+
+**Terminal independent audit:** [`PRINCIPAL_PRODUCTION_AUDIT_MANDATE.md`](./PRINCIPAL_PRODUCTION_AUDIT_MANDATE.md) — the one-pass SOL Ultra whole-system review to run read-only against the exact frozen planning SHA; it is recommendation-only and creates no release authority.
+
 **Authority:** principal architecture/review task  
 **Canonical repository:** `/Users/Priyansh/Documents/codex-buildweek/education`  
 **Product baseline before program control:** `846158a492039b14381eae3c2fbb1f309d049ea5`
 **Initial control-room commit:** `5b0bceb`
-**Program posture:** C1 interactive foundation; G1 candidate; broad product vision, narrow claims
+**Program posture:** C1 interactive foundation; DG1 candidate; broad product vision, narrow claims. `PG#` denotes a program goal; `DG#` denotes a delivery/claim gate.
 
 ## North Star
 
@@ -27,7 +33,7 @@ The product is not a larger course catalog or a friendlier chatbot. It is a repl
 
 FORGE counters those failures with one governing loop:
 
-> learner question → explicit starting model → plausible readings → separating experience → reconstruction → assistance withdrawal → unfamiliar proof → bounded evidence → deliberate return or application
+> learner question → explicit starting model → exactly two uncertain plausible readings → point of disagreement → separating experience → reconstruction → assistance withdrawal → unfamiliar proof → bounded evidence → deliberate return or application
 
 ## Product constitution
 
@@ -85,6 +91,10 @@ The current public code SHA is `c7d401101791faa80ac0ba61c73044928a2da7b6`, serve
 9. [Wave 4 all-World runtime plan and release record](WAVE_4_PLAN.md)
 10. [Wave 5 trustworthy-continuity and curriculum-expansion plan](WAVE_5_PLAN.md)
 11. [Curriculum graph implementation specification](CURRICULUM_GRAPH_SPEC.md)
-11. [Argument & Evidence World implementation packet](ARGUMENT_EVIDENCE_WORLD_SPEC.md)
+12. [Argument & Evidence World implementation packet](ARGUMENT_EVIDENCE_WORLD_SPEC.md)
+13. [AI-era learning strategy and scenario thesis](AI_ERA_LEARNING_THESIS.md)
+14. [Proposed Wave 6 practical map and resource-orchestration plan](WAVE_6_PLAN.md)
+15. [Append-only founder idea and decision log](FOUNDER_IDEA_LOG.md)
+16. [Proposed ADR-009 practical multimodal learning paths](../adr/0009-practical-multimodal-learning-paths.md)
 
 These files are principal-owned. Workers may cite them and propose changes in their handoff, but must not edit them unless the principal assigns a documentation-only amendment.

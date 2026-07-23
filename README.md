@@ -2,7 +2,26 @@
 
 FORGE is a learner-owned learning-system foundation for children learning with a grown-up, teenagers, and adults. Its long-term direction is broad: help someone enter with a question or capability goal, find a rigorous path across subjects, use AI without surrendering the thinking, and keep bounded evidence of what they could do independently.
 
-This repository is currently a **C1 interactive foundation and G1 candidate**, not the finished institution described by the product vision. It demonstrates four authored learning Worlds, a deterministic planning boundary, a typed event spine, a privacy-minimal browser evidence trail, optional device/cloud access surfaces, and a provider-neutral AI lesson-draft compiler. It does not yet constitute a complete curriculum, a homeschool replacement, a child-safety operation, or evidence that FORGE improves learning.
+This repository is currently a **C1 interactive foundation and DG1 candidate**, not the finished institution described by the product vision. `DG#` denotes a delivery/claim gate; `PG#` denotes a program goal. It demonstrates four authored learning Worlds, a deterministic planning boundary, a typed event spine, a privacy-minimal browser evidence trail, optional device/cloud access surfaces, and a provider-neutral AI lesson-draft compiler. It does not yet constitute a complete curriculum, a homeschool replacement, a child-safety operation, or evidence that FORGE improves learning.
+
+## Proposed next direction
+
+FORGE's next product layer is a practical goal-to-capability system:
+
+```text
+what I want to understand, do, or make
+  → editable map of concepts, prerequisites, capabilities, and gaps
+  → reviewed text, demonstrations, videos, simulations, sources, and people
+  → active practice and a real project
+  → AI and hints withdraw
+  → unfamiliar proof and later return
+```
+
+FORGE will federate excellent external material rather than pretend it can pre-author everything. External video, including YouTube, remains a reviewed, replaceable resource with an active checkpoint, current lifecycle record, provider/privacy disclosure, and a reviewed alternative whose construct effect is explicit. A construct-changing alternative cannot inherit the original capability claim. A video, generated explanation, or completed lesson never proves capability.
+
+The strategic thesis is that AI makes provisional cognitive assistance abundant, while judgment, trust, sound pedagogy, practical experience, relationships, and independent proof remain scarce. FORGE aims to organize those complements so people become more capable and less dependent on the product. See the [AI-era learning thesis](docs/program/AI_ERA_LEARNING_THESIS.md), [founder idea log](docs/program/FOUNDER_IDEA_LOG.md), proposed [Wave 6 plan](docs/program/WAVE_6_PLAN.md), proposed [ADR-009](docs/adr/0009-practical-multimodal-learning-paths.md), and [independent production-audit mandate](docs/program/PRINCIPAL_PRODUCTION_AUDIT_MANDATE.md).
+
+This is a documented target, not an implemented feature or release claim.
 
 ## What is implemented
 
@@ -44,7 +63,7 @@ The local ledger deliberately excludes identity, raw chat, learner explanations,
 
 ### A typed event spine
 
-`src/forge/events.ts` and `src/forge/event-journal.ts` define the canonical, append-only event vocabulary and replay rules for journey, assistance, proof, access, and rights operations. `supabase/migrations/202607220002_forge_event_spine.sql` stages the durable counterpart with SQL contract tests. The browser UI does not yet replay every screen from this durable journal, so G1 remains a candidate rather than a pass.
+`src/forge/events.ts` and `src/forge/event-journal.ts` define the canonical, append-only event vocabulary and replay rules for journey, assistance, proof, access, and rights operations. `supabase/migrations/202607220002_forge_event_spine.sql` stages the durable counterpart with SQL contract tests. The browser UI does not yet replay every screen from this durable journal, so DG1 remains a candidate rather than a pass.
 
 ### A staged database boundary
 
@@ -151,6 +170,7 @@ This is `DEPLOYED_CANDIDATE`, never `PRODUCTION_VERIFIED`: live-provider operati
 - It is not yet a homeschool solution, accredited pathway, credential, or jurisdiction-specific compliance system.
 - There is no live Supabase project, verified-age or guardian onboarding, cloud evidence sync, people network, storage pipeline, privacy worker, or abuse-control service connected to this app.
 - The current four Worlds do not establish breadth across everything someone may want to learn.
+- The proposed editable capability-map, external-resource registry, YouTube connector, representation registry, practical project compiler, and educator review port are not implemented or enabled.
 - Provider adapters and structured parsing are tested with mocks, not live provider credentials; generated drafts are not source-reviewed curriculum.
 - No representative learner, educator, minor-safety, external accessibility, assessment-validity, delayed-retention, efficacy, equity, workload, or scale result has been established for broad FORGE.
 - One immediate transfer result is bounded evidence from one task, not mastery, intelligence, retention, or a permanent learner label.
@@ -165,6 +185,9 @@ This is `DEPLOYED_CANDIDATE`, never `PRODUCTION_VERIFIED`: live-provider operati
 - [Design System](docs/FORGE_DESIGN_SYSTEM.md)
 - [Control Room](docs/FORGE_CONTROL_ROOM.md)
 - [Database Architecture](docs/FORGE_DATABASE.md)
+- [AI-era Strategy and Scenario Thesis](docs/program/AI_ERA_LEARNING_THESIS.md)
+- [Proposed Wave 6 Practical Learning Plan](docs/program/WAVE_6_PLAN.md)
+- [Founder Idea Log](docs/program/FOUNDER_IDEA_LOG.md)
 
 ## Historical ModelShift v1 artifacts
 

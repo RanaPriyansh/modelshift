@@ -1,8 +1,11 @@
 # FORGE Architecture
 
-**Status:** C1 interactive foundation; G1 candidate only (partial implementation, no gate pass recorded, not production-validated)  
-**Version:** 0.1  
-**Date:** 22 July 2026  
+**Status:** C1 interactive foundation; DG1 candidate only (partial implementation, no gate pass recorded, not production-validated)
+
+**Version:** 0.2
+
+**Date:** 23 July 2026
+
 **Product authority:** `../FORGE_PRODUCT_SPEC.md`
 
 ## 0. Architecture decision in one paragraph
@@ -849,3 +852,170 @@ Before approving an implementation slice, reviewers must be able to answer:
 - What would falsify the pedagogical choice, and is the comparison strong enough?
 - What happens to a child if the guardian, institution, model, source, or mentor is wrong?
 - What claim is permitted at the current gate—and what tempting claim remains forbidden?
+
+## 22. Practical learning-path and external-resource amendment
+
+**Status:** Target architecture; implementation remains gated by [`docs/program/WAVE_6_PLAN.md`](./program/WAVE_6_PLAN.md) and proposed [`ADR-009`](./adr/0009-practical-multimodal-learning-paths.md).
+
+FORGE cannot pre-author every useful lesson. The architecture therefore adds a governed orchestration layer between universal intake and the World runtime:
+
+```text
+LearningIntent
+  -> existing forge-planner policy gateway
+  -> CapabilityMapProposal
+  -> deterministic validation against reviewed CurriculumGraphPackage
+  -> learner edit patch
+  -> MapReview
+  -> eligible Resource + Representation + Project route
+  -> existing World/Capability Journey runtime
+  -> protected proof
+  -> bounded evidence and return
+```
+
+This layer assembles reviewed capabilities and resources. It does not create authority from model fluency or resource popularity.
+
+### 22.1 New internal capability interfaces
+
+| Interface | Input | Output | Authority |
+| --- | --- | --- | --- |
+| Existing `forge-planner` policy gateway | local captured intent and declared route context | current fail-closed plan/policy result | deterministic current authority; no bypass |
+| `IntentClarifier.propose` | sanitized adult learner summary and bounded closed constraints | uncertainty-preserving structured interpretation | model or authored proposal only |
+| `CapabilityMapCompiler.compile` | sanitized intent, bounded immutable graph neighborhood, allowed vocabularies | candidate map with reviewed IDs and explicit gaps | proposal only |
+| `CapabilityMapValidator.validate` | map, graph/package identities, audience/access policy | stable ordered errors or validated candidate | deterministic |
+| `CapabilityMapReview.decide` | validated candidate, domain/source/learning/access decisions | immutable reviewed/withdrawn revision | authenticated scoped review authority |
+| `CapabilityMapPublisher.publish` | accepted review revision and current dependency projections | immutable publication event or ordered rejection | separate authenticated publisher authority |
+| `ResourceObserver.observe` | official provider metadata or internal package | time-bounded observation-record and review-signal digests | factual observation, not eligibility |
+| `ResourceEligibility.evaluate` | current observation, review revision, audience, region/access constraints | eligible/ineligible plus reasons | deterministic |
+| `ResourceOrchestrator.select` | current eligible snapshot, capability/role/access contract, versioned selection policy | bounded stable route, visible reason codes, learner choices, reviewed fallbacks | deterministic; no provider popularity, engagement, sponsorship, or model rank |
+| `RepresentationRegistry.resolve` | capability, route constraints, reviewed packages | eligible observation/simulation/diagram/analogy alternatives | deterministic over reviewed packages |
+| `ProjectCompiler.compile` | reviewed project, capability map, material/access constraints | active project route or explicit unavailable reason | deterministic |
+| `EducatorReview.decide` | candidate map/resource/project and named role | approve/reject/replace/annotate event | human authority; learner-visible |
+
+The proposal interfaces have no write authority. Publication, review, evidence, age policy, identity, sharing, people contact, and provider enablement remain outside them.
+
+### 22.2 Capability-map invariants
+
+- raw learner wording is immutable learner-owned local/private evidence; only an accepted sanitized summary/digest enters map, model, or discovery records by default;
+- every reviewed capability ID resolves at the exact curriculum graph version;
+- candidate concepts or resources have candidate IDs and cannot impersonate registry IDs;
+- required prerequisites, common entitlement, safety nodes, project, proof, and return policy are visible;
+- route order is deterministic for the same validated package and declared preferences;
+- a learner edit is a patch against a version, never mutation of the reviewed package;
+- optional changes revalidate; capability, prerequisite, project, or proof changes create a new candidate revision;
+- unknown topics return gaps or exploratory candidates, never an assignable generated course;
+- map publication and learner assignment are separate events.
+
+### 22.3 Resource identity and review
+
+An external resource has two identities:
+
+1. **provider locator:** provider plus external ID/canonical URL;
+2. **reviewed observation:** provider locator plus observed metadata, observed time, provider version/ETag where available, an observation-record digest, and a timestamp-independent review-signal digest.
+
+The provider locator is not presumed content-addressed. A resource review is valid only for its reviewed observation and named audience/capability/pedagogical role.
+
+Required review dimensions are independent:
+
+- **epistemic/source:** which claims, if any, the item may support;
+- **learning:** which capability and active operation it serves;
+- **access:** captions, transcript authorization, audio/visual dependence, keyboard behavior, low-bandwidth alternative, and explicit construct-preserving/changing status;
+- **safety/rights:** age, sensitive content, physical risk, advertising/sponsorship, tracking, region, license/use basis, attribution, and platform terms.
+
+Eligibility requires all mandatory decisions and an unexpired matching observation. A model cannot sign a review. A resource may be pedagogically eligible while carrying no source authority, or authoritative as a source while being a poor teaching representation.
+
+### 22.4 Resource lifecycle
+
+```text
+discovered
+  -> observed
+  -> candidate
+  -> reviewed
+  -> eligible
+
+candidate -> rejected
+reviewed/eligible -> expired | superseded | withdrawn | incident_hold
+incident_hold -> new_observation_and_review_revision | withdrawn
+```
+
+Assignment freezes when a required review, alternative, current observation, or policy field is absent. Playback success does not refresh eligibility. A route remains usable through a reviewed alternative when the external provider fails; only a construct-preserving alternative inherits the original capability claim.
+
+### 22.5 YouTube adapter contract
+
+The adapter is a discoverer and metadata mapper, never a curriculum publisher or player-feed owner.
+
+It MUST:
+
+- accept only a sanitized capability query, audience, language, duration/access constraints, and bounded page budget;
+- call official allowlisted endpoints from the server under separately approved credentials;
+- return provider-neutral candidates with source metadata and no eligibility;
+- retain only policy-authorized metadata and support required refresh/delete intervals;
+- expose quota, region, age, made-for-kids, embeddable, captions, license, advertising/tracking, and availability signals where the official API provides them;
+- treat descriptions, titles, captions, and linked content as untrusted data;
+- never scrape captions, download audiovisual media, or accept arbitrary provider URLs;
+- produce no FORGE-owned feed, autoplay, comments, engagement ranking, or provider ranking as pedagogy; official-player related-video and ad surfaces remain provider-controlled and disclosed;
+- fail closed when policy-critical metadata, provider terms, or refresh operations cannot be satisfied.
+
+The player contract uses a reviewed eligible resource, explicit learner click, privacy-enhanced configuration when applicable, provider disclosure, an adjacent checkpoint outside the player, and a reviewed alternative with construct status. It does not gate playback, cover or suppress standard controls/branding/links/ads, store a watch-behavior profile, or create capability evidence from playback.
+
+### 22.6 Representation authority
+
+The registry distinguishes:
+
+| Kind | What it can establish | Required authority |
+| --- | --- | --- |
+| Observation/measurement | What was observed under stated conditions | provenance, method, units, limits, review |
+| Deterministic simulation | Consequences inside a declared model | validator version, assumptions, variables, synchronized outputs |
+| Diagram/timeline/map | A reviewed explanatory representation | sources, labels, omissions, access alternative |
+| Reconstruction | A reviewed rendering of incomplete historical/source evidence | source basis, uncertainty, no literal-observation claim |
+| Analogy | A selected similarity that may aid understanding | explicit non-literal boundary and known breakdown point |
+| Generated visual draft | A candidate representation | source/domain/access review before learner publication |
+
+Generated imagery or video cannot establish empirical or historical truth by looking realistic.
+
+### 22.7 Context and privacy budget
+
+Any authorized map-proposal call receives only:
+
+- a learner-previewed sanitized adult intent, sanitization-policy identity, acceptance receipt, and closed constraint tokens;
+- a bounded reviewed graph neighborhood;
+- allowed node, project, proof, and resource-role vocabularies;
+- explicit candidate/gap requirements;
+- strict structured-output schema.
+
+It does not receive the complete learner journal, private educator notes, unrelated artifacts, raw guardian information, or an unrestricted resource catalog. The system records the task, provider/model/version, policy/version, input-source identities, token/cost/latency, schema result, and retained-output class without creating a raw-chat archive.
+
+External resource discovery similarly receives a capability-bound query rather than raw learner prose or sensitive context.
+
+Any model job that handles learner-controlled or external text has no tools, credentials, direct network, publication/review/evidence writer, or policy-mutation authority. External fields remain tainted through prompt assembly, parsing, rendering, logs, and errors. Returned IDs must exactly match the supplied bounded neighborhood, and deterministic authorization runs after output. Byte, graph, retrieval, concurrency, retry, latency, and spend limits are explicit.
+
+### 22.8 Target event families
+
+- `learning_intent.created|clarified|withdrawn`
+- `capability_map.proposed|validation_failed|learner_edited|reviewed|published|assigned|expired|withdrawn|superseded`
+- `resource.observed|reviewed|rejected|assigned|refresh_due|changed|expired|incident_held|withdrawn|replaced`
+- `representation.reviewed|assigned|invalidated|withdrawn`
+- `project.assigned|artifact_recorded|critique_recorded|revised|defended|closed`
+- `educator_review.requested|decided|contested|expired`
+
+These names are target vocabulary, not currently legal events. The accepted journal currently supports only the reviewed `world_run` and `world_package` aggregate families. W6-0 must define additive aggregate types, event-envelope/schema versions, transition/projector authority, v1/v2 replay and rollback behavior, migration, unknown-event rejection, and writer/tenant rules before any target event enters the canonical journal. Until then, fixture work uses a separate non-authoritative journal. Corrections append; provider payloads that must expire/delete remain in a TTL store, while the immutable journal retains only policy-approved receipts or tombstones.
+
+### 22.9 Operational controls
+
+Before a live external connector is enabled, the owning release must prove:
+
+- server-owned secret authority and no browser credential path;
+- allowlisted endpoints, timeouts, bounded retries, quota, cost, and circuit breaker;
+- current provider-policy review, required metadata refresh/delete, and data-flow disclosure;
+- content-change, withdrawal, region, age, captions, embed, rights, and outage fixtures;
+- prompt-injection isolation for all external strings;
+- a checked-in-fixture/reviewed-HTTPS-link-out first posture with no arbitrary iframe, script, HTML, file execution/preview, learner-supplied URL execution, or server fetch;
+- for any later fetcher: protocol/host/egress allowlists, redirect and DNS/IP/rebinding defenses, size/MIME limits, malware scanning, timeout, CSP/sandbox, and safe external-link behavior;
+- an incident hold, global kill switch, replacement path, and last-known-good rollback;
+- current reviewed alternatives with construct status so the learning route survives provider failure;
+- total review/operations capacity and an error budget that freezes publication when spent.
+
+### 22.10 First deployment and claim boundary
+
+The first eligible deployment is a small, reviewed-catalog pilot for a closed, server-entitled, externally recruited 18+ cohort. Client audience metadata or self-attestation creates no authority. It shows reviewed resources only. Candidate exploration is a separately accepted later adult study in which candidates are unmistakably quarantined and cannot become assignments, sources, or evidence. Minors receive no open external discovery. Child-facing use requires a later, narrower allowlisted catalog and independent rights/safety authority.
+
+Even after implementation, a successful Wave 6 pilot can establish only its exact engineering, usability, resource-lifecycle, workload, and population/domain-bounded learning results. It cannot establish universal topic coverage, mastery, homeschool readiness, accreditation, teacher replacement, or broad educational efficacy.

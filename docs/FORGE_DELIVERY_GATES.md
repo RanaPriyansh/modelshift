@@ -1,15 +1,19 @@
 # FORGE Delivery Gates and Honest Claim Protocol
 
-**Status:** Governing delivery contract; current implementation is a C1 interactive foundation and G1 candidate only  
-**Version:** 0.1  
-**Date:** 22 July 2026  
+**Status:** Governing delivery contract; current implementation is a C1 interactive foundation and DG1 candidate only
+**Version:** 0.2
+
+**Date:** 23 July 2026
+
 **Applies to:** Every FORGE world, learner band, domain, institution, and public claim
 
 ## 0. Current status and exact honest claim boundary
 
-**Current gate posture: G1 candidate — partial interactive foundation; no G1 PASS packet or production release recorded.**
+`DG#` means a delivery/claim gate in this document. `PG#` means a program goal in `docs/program/MASTER_PLAN.md`. Bare `G#` references are deprecated because the two sequences are not equivalent.
 
-As of 22 July 2026:
+**Current gate posture: DG1 candidate — partial interactive foundation; no DG1 PASS packet or production release recorded.**
+
+As of 23 July 2026:
 
 - the four FORGE governing documents exist, and the two local research reports have been translated into product and architecture decisions;
 - four authored learning Worlds are interactive: force and motion, proportional reasoning, learning with AI, and primary-source reasoning;
@@ -18,14 +22,15 @@ As of 22 July 2026:
 - Supabase/PostgreSQL migrations and SQL contract tests exist for the learning data model and typed event spine and have been exercised in a disposable database, but they are staged only: no live Supabase project, cloud evidence sync, or production privacy operation is connected;
 - a privacy-minimal device profile and optional cloud-auth adapter exist, but cloud identity is not provisioned on the public deployment and grants no guardian, sharing, evidence, or verified-age authority;
 - a provider-neutral Lesson Studio compiles strict unverified drafts through fixed OpenAI, Anthropic, Gemini, and OpenRouter adapters; provider calls are not live-credential verified and drafts cannot publish or grade proof;
-- these slices support a C1 interactive-foundation claim, but G1 remains a candidate because the complete gate packet, end-to-end durable replay/idempotency evidence, independent review, and formal PASS decision have not been recorded;
+- these slices support a C1 interactive-foundation claim, but DG1 remains a candidate because the complete gate packet, end-to-end durable replay/idempotency evidence, independent review, and formal PASS decision have not been recorded;
 - no identity/guardian operation, people network, comprehensive source service, complete curriculum, homeschool pathway, or rights workflow has passed a FORGE gate;
 - no representative usability, child-safety, privacy-operation, accessibility, source-accuracy, assessment-validity, delayed-retention, efficacy, workload, equity, or scale result exists for broad FORGE;
 - the historical ModelShift code and artifacts remain a narrow prior prototype and one FORGE World; they cannot be promoted into evidence for the broader system.
+- a practical-path strategy, proposed ADR, and proposed Wave 6 plan now describe editable capability maps, external-resource review, visual representations, practical projects, educator review, and an adult-first pilot; these are C0/request-only documents and add no implementation or efficacy evidence.
 
 The strongest currently permitted claim is:
 
-> **FORGE is a C1 interactive foundation and G1 candidate. Four authored learning Worlds demonstrate bounded planner-to-World, proof-after-help, browser-local evidence, and an unverified AI lesson-draft compiler. The broader curriculum, trust core, homeschool use, educational effects, child-safety operation, live provider behavior, and production identity/persistence remain unproven.**
+> **FORGE is a C1 interactive foundation and DG1 candidate. Four authored learning Worlds demonstrate bounded planner-to-World, proof-after-help, browser-local evidence, and an unverified AI lesson-draft compiler. The broader curriculum, trust core, homeschool use, educational effects, child-safety operation, live provider behavior, and production identity/persistence remain unproven.**
 
 No word such as *works*, *safe for children*, *validated*, *effective*, *personalized*, *mastery*, *credential*, *school replacement*, *homeschool solution*, or *production-ready* may be used without the specific scope and gate evidence defined below.
 
@@ -87,23 +92,23 @@ Sign-offs and dissent
 
 | Phase | Gate | Product focus | Default audience | Highest possible claim |
 |---|---|---|---|---|
-| A | G0 | Constitution, traceability, architecture, claim protocol | internal reviewers | C0 |
-| B | G1 | Deterministic vertical slice and event spine | team/synthetic users | C1 |
-| C | G2 | Trust core: identity, consent, evidence, rights, model/source boundaries | staff/adult test accounts | C2 for trust slice |
-| D | G3 | W0/W1 foundation + guided model world | adult first, then separately gated minor band | C3; C4 only after measurement gate |
-| E | G4 | W2 source-grounded inquiry | adult first; curated minor sub-scope later | C3/C4 in exact scope |
-| F | G5 | W3 project studio and contribution provenance | adult/older learner pilot | C3/C4 in exact scope |
-| G | G6 | W5 independent evidence and assessment validation | research participants | C4/C5 |
-| H | G7 | Minor/guardian/privacy/safeguarding operational release | one named age band/jurisdiction/context | C2/C3 safety-operability wording only |
-| I | G8 | W4 people and practice network | adults first; minors only after separate gate | C3 for bounded operations |
-| J | G9 | Comparative learning pilot | preregistered study population | C6 |
-| K | G10 | Replication, cross-domain and institutional/pathway expansion | exact validated population/context | C7/C8 only as earned |
+| A | DG0 | Constitution, traceability, architecture, claim protocol | internal reviewers | C0 |
+| B | DG1 | Deterministic vertical slice and event spine | team/synthetic users | C1 |
+| C | DG2 | Trust core: identity, consent, evidence, rights, model/source boundaries | staff/adult test accounts | C2 for trust slice |
+| D | DG3 | W0/W1 foundation + guided model world | adult first, then separately gated minor band | C3; C4 only after measurement gate |
+| E | DG4 | W2 source-grounded inquiry | adult first; curated minor sub-scope later | C3/C4 in exact scope |
+| F | DG5 | W3 project studio and contribution provenance | adult/older learner pilot | C3/C4 in exact scope |
+| G | DG6 | W5 independent evidence and assessment validation | research participants | C4/C5 |
+| H | DG7 | Minor/guardian/privacy/safeguarding operational release | one named age band/jurisdiction/context | C2/C3 safety-operability wording only |
+| I | DG8 | W4 people and practice network | adults first; minors only after separate gate | C3 for bounded operations |
+| J | DG9 | Comparative learning pilot | preregistered study population | C6 |
+| K | DG10 | Replication, cross-domain and institutional/pathway expansion | exact validated population/context | C7/C8 only as earned |
 
-Dependencies are strict even if teams work in parallel. A W4 minor pilot cannot begin because its UI is ready; it depends on G2, G7, and its own G8 controls. An efficacy study cannot begin before G6 validates the outcome measures.
+Dependencies are strict even if teams work in parallel. A W4 minor pilot cannot begin because its UI is ready; it depends on DG2, DG7, and its own DG8 controls. An efficacy study cannot begin before DG6 validates the outcome measures.
 
-For the first minor cohort, G3 and G7 use a two-step, non-circular protocol: (1) G3 content, engineering, adult/synthetic usability, and authored-fallback evidence pass without child participation; (2) G7 operational controls pass drills and independent review, authorizing only a small supervised research cohort; (3) minor-specific G3 usability and G7 comprehension/rights evidence are collected in that cohort; (4) both packets must pass before any ordinary minor release. Source, project, or people layers follow the same pattern and add their own gates.
+For the first minor cohort, DG3 and DG7 use a two-step, non-circular protocol: (1) DG3 content, engineering, adult/synthetic usability, and authored-fallback evidence pass without child participation; (2) DG7 operational controls pass drills and independent review, authorizing only a small supervised research cohort; (3) minor-specific DG3 usability and DG7 comprehension/rights evidence are collected in that cohort; (4) both packets must pass before any ordinary minor release. Source, project, or people layers follow the same pattern and add their own gates.
 
-## 5. Gate G0 — Governing baseline
+## 5. Gate DG0 — Governing baseline
 
 ### Objective
 
@@ -112,7 +117,7 @@ Establish an internally coherent contract before implementation fans out.
 ### Required evidence
 
 - all four governing documents exist and cross-reference one authority model;
-- historical `AGENTS.md` and `FINAL_PRODUCT_SPEC.md` are unchanged and labeled as ModelShift v1 artifacts;
+- current `AGENTS.md` defines repository operating authority and precedence; historical `FINAL_PRODUCT_SPEC.md` remains labeled as a ModelShift v1 artifact;
 - product constitution covers foundations, inquiry, projects, people, evidence, child/guardian rights, privacy, accessibility, homeschool quality, source/AI boundaries, and exact non-goals;
 - architecture covers logical services, schemas, world tiers, state/event diagrams, tool side effects, context budget, observability, replay, failure modes, and first issues;
 - research matrix maps systemic failures to mechanisms, measures, guardrails, and limitations;
@@ -124,7 +129,7 @@ Establish an internally coherent contract before implementation fans out.
 **PASS:** C0 wording only.  
 **FAIL:** conflicting rights/authority, missing claim boundary, or architecture that lets models control permissions/evidence.
 
-## 6. Gate G1 — Deterministic vertical slice
+## 6. Gate DG1 — Deterministic vertical slice
 
 ### Objective
 
@@ -157,7 +162,7 @@ Demonstrate one complete capability loop without relying on generative intellige
 **PASS:** C1 “interactive prototype demonstrates the intended flow.”  
 **STOP/REDESIGN:** random clicking can complete the protected capability, the consequence is model-generated, or the first meaningful discrepancy cannot be understood in moderated tests.
 
-## 7. Gate G2 — Trust core
+## 7. Gate DG2 — Trust core
 
 ### Objective
 
@@ -192,7 +197,7 @@ Verify the architectural rights and authority spine before persistent child data
 **PASS:** C2 only for the tested trust slice/environment. It is not a legal compliance or production-security claim.  
 **STOP:** any hidden guardian surveillance path, model-controlled permission, unverifiable evidence mutation, or deletion design that cannot include backups/derived stores.
 
-## 8. Gate G3 — W0/W1 foundation and model-world feasibility
+## 8. Gate DG3 — W0/W1 foundation and model-world feasibility
 
 ### Objective
 
@@ -200,7 +205,7 @@ Establish that representative learners can use a foundation/guided world, unders
 
 ### Prerequisites
 
-G1 and relevant G2 modules pass. Adult/synthetic evidence is collected first. Minor participation follows the joint G3/G7 supervised-cohort protocol in Section 4; neither gate alone authorizes ordinary minor release.
+DG1 and relevant DG2 modules pass. Adult/synthetic evidence is collected first. Minor participation follows the joint DG3/DG7 supervised-cohort protocol in Section 4; neither gate alone authorizes ordinary minor release.
 
 ### Content acceptance
 
@@ -230,7 +235,7 @@ The numeric thresholds are product feasibility gates adopted from the research b
 **NARROW:** publish only the authored route if model diagnosis does not improve next-move accuracy or introduces unacceptable errors.  
 **STOP:** users reach transfer through interface cues rather than the target capability, or any subgroup/access mode is structurally blocked.
 
-## 9. Gate G4 — W2 source-grounded inquiry
+## 9. Gate DG4 — W2 source-grounded inquiry
 
 ### Objective
 
@@ -241,6 +246,10 @@ Demonstrate a bounded research workflow in which sources, claims, uncertainty, a
 - declared question, scope, audience, source eligibility, risk/age band, tool budget, and stop condition;
 - separate pedagogical and epistemic retrieval routes;
 - immutable source record with origin, date, license, snapshot/hash where permitted, jurisdiction/population, and quality notes;
+- for mutable external media, a provider locator plus a time-bounded reviewed observation; the URL or platform ID alone is not immutable content identity;
+- separate candidate, reviewed external, anchored learning object, published-reviewed/assignable pathway, expired, withdrawn, superseded, and incident-hold states;
+- independent decisions for epistemic/source authority, pedagogical role, accessibility, and safety/rights;
+- provider terms, authorized metadata storage/refresh/deletion, advertising/sponsorship, tracking, region, age, captions/transcript rights, embedding, attribution, and reviewed-alternative/construct-status requirements;
 - claim-level locators and relations (`supports`, `contradicts`, `qualifies`, `contextualizes`, `insufficient`);
 - citation rendering distinguishes quotation, paraphrase, extraction, and system inference;
 - external text cannot alter prompt/policy, invoke tools, or authorize side effects;
@@ -250,7 +259,11 @@ Demonstrate a bounded research workflow in which sources, claims, uncertainty, a
 ### Evaluation acceptance
 
 - curated fixture set includes primary/secondary sources, outdated sources, retractions/corrections, disagreement, missing evidence, prompt injection, poisoned metadata, inaccessible URLs, and licensing limits;
+- external-resource fixtures include provider edit, deletion, privacy change, region/age block, missing or inaccurate captions, embed refusal, ads/sponsorship, quota/outage, expired review, malicious metadata, platform-policy change, and fallback;
 - 100% rendered citations resolve to the intended stored source/locator in fixtures;
+- 100% assigned external resources have a current matching observation, named review, audience/capability/pedagogical role, expiry, active learner operation, and reviewed alternative with explicit construct status;
+- zero unreviewed external candidates reach a minor; minors receive no open web/video search result;
+- FORGE provides no autoplay, comments, recommendation feed, watch-time ranking, or engagement signal that can complete a capability node or upgrade evidence; provider-controlled related-video/ad surfaces are disclosed rather than claimed removable;
 - zero fabricated source IDs/locators accepted by validators;
 - claim-citation entailment and source-quality judgments meet a preregistered target set only after human-labeled evaluation; exact results are reported rather than hidden behind “high accuracy”;
 - injection fixtures cause zero external write/contact/policy mutation;
@@ -262,7 +275,9 @@ Demonstrate a bounded research workflow in which sources, claims, uncertainty, a
 **PASS:** C3/C4 wording only for the evaluated inquiry construct.  
 **STOP:** citations are decorative, source content can steer tools, or the system collapses contested evidence into a single confident answer.
 
-## 10. Gate G5 — W3 Project Studio
+External-resource operation may remain disabled even when the broader W2 gate passes. A live media provider requires its own exact adapter, policy, privacy, rights, outage, age, accessibility, incident, rollback, quota, cost, and terms-revalidation packet.
+
+## 10. Gate DG5 — W3 Project Studio
 
 ### Objective
 
@@ -278,6 +293,7 @@ Show that a project can preserve foundations, authorship, process, critique, and
 - contribution/provenance ledger for learner, peer, mentor, AI, and reused work;
 - milestone plan, tests/critique, revision, and final individual defence;
 - accessible, no-material/no-travel alternative for any common-entitlement requirement;
+- for video/visual preparation, a reviewed non-video/low-bandwidth alternative with explicit construct-preserving/changing status and an active prediction, comparison, reconstruction, reproduction, source judgment, or practice operation;
 - no mandatory public posting, home imagery, precise location, or private contact.
 
 ### Acceptance
@@ -287,6 +303,7 @@ Show that a project can preserve foundations, authorship, process, critique, and
 - project completion alone does not emit an independent capability claim;
 - every participant completes an individual knowledge/transfer/defence check where the project is used as learning evidence;
 - reviewers measure parent/teacher/mentor preparation and review time, not only learner completion;
+- net educator/reviewer time includes generation, verification, correction, setup, onboarding, tool switching, escalation, and return work;
 - a blinded audit can reconstruct major decisions, sources, tests, and revisions for at least 90% of sampled project components;
 - subgroup analysis checks whether resources, adult production, device access, or language drive artifact quality.
 
@@ -295,7 +312,7 @@ Show that a project can preserve foundations, authorship, process, critique, and
 **PASS:** “Project Studio preserved declared provenance and individual checks in [scope].”  
 **STOP/REDESIGN:** polished artifacts systematically exceed independent explanations, adult/AI substitution cannot be distinguished, or required participation depends on unequal private resources.
 
-## 11. Gate G6 — W5 measurement validity
+## 11. Gate DG6 — W5 measurement validity
 
 ### Objective
 
@@ -328,7 +345,7 @@ Validate the measurement instrument before claiming that FORGE changes capabilit
 **REMOVE AUTOMATION:** if open scoring has unacceptable language/demographic/access error, use objective tasks, clarification, and human review.  
 **STOP:** weak transfer validity, item leakage, or company-owned task tuning makes the outcome uninterpretable.
 
-## 12. Gate G7 — Minor, guardian, privacy, and safeguarding operations
+## 12. Gate DG7 — Minor, guardian, privacy, and safeguarding operations
 
 ### Objective
 
@@ -336,7 +353,7 @@ Authorize one exact minor-facing scope only after rights work in practice.
 
 ### Prerequisites
 
-G2 passes; the relevant world/source/project content and adult/synthetic portions pass; jurisdiction and age band are named. A small supervised research cohort may then collect the minor-specific G3/G7 evidence described in Section 4. Ordinary minor release requires both completed packets.
+DG2 passes; the relevant world/source/project content and adult/synthetic portions pass; jurisdiction and age band are named. A small supervised research cohort may then collect the minor-specific DG3/DG7 evidence described in Section 4. Ordinary minor release requires both completed packets.
 
 ### Required operational evidence
 
@@ -367,7 +384,7 @@ G2 passes; the relevant world/source/project content and adult/synthetic portion
 **PASS:** minor release for the exact band/jurisdiction/world scope; wording is “operational controls passed the specified gate,” not “safe for all children” or “legally compliant everywhere.”  
 **STOP:** the product requires raw surveillance data, covert guardian access, an unstaffed escalation promise, or open adult-minor communication.
 
-## 13. Gate G8 — W4 People & Practice Network
+## 13. Gate DG8 — W4 People & Practice Network
 
 ### Objective
 
@@ -382,7 +399,7 @@ Verify a bounded human workflow before presenting people as a product layer.
 
 ### Additional minor requirements
 
-- G7 passes for the exact age/jurisdiction;
+- DG7 passes for the exact age/jurisdiction;
 - guardian authority and learner assent are valid for each engagement class;
 - no open DMs, public profiles, popularity ranking, unscheduled contact, off-platform solicitation, or private file access;
 - supervised/recorded-as-policy channels balance safeguarding and privacy, with a disclosed retention rule;
@@ -405,7 +422,7 @@ Verify a bounded human workflow before presenting people as a product layer.
 **PASS:** C3 bounded operational wording for the evaluated role/context.  
 **STOP:** safety depends on “community goodwill,” unmoderated external channels, hidden volunteer labour, or unverifiable adult identity.
 
-## 14. Gate G9 — Comparative learning pilot
+## 14. Gate DG9 — Comparative learning pilot
 
 ### Objective
 
@@ -413,7 +430,7 @@ Estimate whether the integrated Capability Journey improves delayed independent 
 
 ### Prerequisites
 
-G3 and G6 pass; G4/G5/G8 pass only if those mechanisms are part of the study; G7 passes for minors.
+DG3 and DG6 pass; DG4/DG5/DG8 pass only if those mechanisms are part of the study; DG7 passes for minors.
 
 ### Default pilot design
 
@@ -462,7 +479,7 @@ After **one targeted redesign**, narrow or abandon the mechanism when:
 **NARROW:** remove AI if fixed policy matches it; remove reality/people components if burden outweighs incremental value.  
 **FAIL:** satisfaction or beating conventional self-study alone cannot rescue the gate.
 
-## 15. Gate G10 — Replication, domain expansion, and institutional/pathway use
+## 15. Gate DG10 — Replication, domain expansion, and institutional/pathway use
 
 ### 15.1 Replicated efficacy
 
@@ -480,7 +497,7 @@ Only then is C7 available for the exact domain/population/outcome.
 
 ### 15.2 Cross-domain expansion
 
-Each new domain returns to G0/G1 for its domain representation and evidence theory, then passes relevant content, source, project, measurement, and pilot gates. Shared platform verification may be reused only when versions and risk are unchanged.
+Each new domain returns to DG0/DG1 for its domain representation and evidence theory, then passes relevant content, source, project, measurement, and pilot gates. Shared platform verification may be reused only when versions and risk are unchanged.
 
 Forbidden inference:
 
@@ -545,6 +562,9 @@ One partnership, employer endorsement, school contract, or regulator conversatio
 - evidence forgery, silent mutation, lost correction, or invalid proof mode;
 - model/source output controlling consent, permission, contact, or irreversible side effect;
 - advertising identifier or sale/behavioural targeting of learner data;
+- unreviewed external resource exposure to a minor;
+- external content/provider change remaining assignable after its reviewed observation no longer matches;
+- a video/resource consumption event upgrading a capability or protected-proof claim;
 - unresolved P0/P1 safety, privacy, authorization, or evidence-integrity defect.
 
 “Zero tolerance” means no known defect is accepted for release; it is not a claim that real-world risk is mathematically zero.
@@ -560,6 +580,7 @@ Re-run affected gates when:
 - a model/provider/version materially changes behaviour;
 - a world kernel, rubric, transfer family, entitlement, protected operation, or assistance policy changes;
 - a source is corrected/retracted or source eligibility changes;
+- an external provider changes content, metadata, deletion/privacy status, age/region/embed/caption/license/advertising/tracking behavior, terms, quota model, or connector policy;
 - a new learner band, language, accessibility mode, jurisdiction, organization type, or deployment context is added;
 - data purpose, retention, third party, guardian visibility, or research use changes;
 - a new human role, contact channel, physical mission class, public share, payment, or credential use appears;

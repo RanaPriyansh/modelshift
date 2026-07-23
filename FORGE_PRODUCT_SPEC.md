@@ -1,25 +1,28 @@
 # FORGE — Governing Product Specification
 
 **Status:** Design baseline; implementation and efficacy unproven  
-**Version:** 0.1  
-**Date:** 22 July 2026  
+**Version:** 0.2
+
+**Date:** 23 July 2026
 **Scope:** The humane learning architecture named FORGE  
 **Normative words:** **MUST**, **MUST NOT**, **SHOULD**, and **MAY** have their usual requirements meaning.
 
 ## 0. Authority, history, and claim boundary
 
-This document governs the new FORGE product direction. It supersedes the old narrow scope only for future FORGE work. `AGENTS.md` and `FINAL_PRODUCT_SPEC.md` remain unchanged historical ModelShift v1 artifacts. They are evidence of a useful mechanics prototype contract; they do not govern FORGE and do not prove the broader system described here.
+This document governs the FORGE product direction. Repository-level operating authority and document precedence remain defined by the current `AGENTS.md`. `FINAL_PRODUCT_SPEC.md` is an unchanged historical ModelShift v1 artifact: evidence of a useful mechanics prototype contract, not authority for or proof of the broader FORGE system.
 
 The four governing FORGE documents are:
 
 1. `FORGE_PRODUCT_SPEC.md` — product purpose, rights, promises, boundaries, and acceptance contract.
 2. `docs/FORGE_ARCHITECTURE.md` — service, data, state, safety, and observability architecture.
-3. `docs/FORGE_RESEARCH_TO_SYSTEM.md` — traceability from the two local research reports to system countermeasures.
+3. `docs/FORGE_RESEARCH_TO_SYSTEM.md` — traceability from the local research reports and current research amendments to system countermeasures.
 4. `docs/FORGE_DELIVERY_GATES.md` — delivery phases, evaluations, stop rules, and permitted claims.
+
+The strategy and programme documents `docs/program/AI_ERA_LEARNING_THESIS.md`, `docs/program/FOUNDER_IDEA_LOG.md`, and `docs/program/WAVE_6_PLAN.md` preserve the founder direction, current research synthesis, and proposed execution sequence. They do not supersede the four governing documents or authorize implementation, providers, publication, research, or release by themselves.
 
 When they conflict, this product specification governs product intent and rights; the architecture governs technical interpretation; the delivery gates govern whether a claim may be made. A later change to a child right, evidence standard, or constitutional invariant requires an explicit decision record and review by product, learning, safety/privacy, accessibility, and domain owners.
 
-**Exact claim boundary today:** FORGE is a proposed architecture grounded in two local research syntheses. No broad FORGE implementation, educational efficacy, child-safety operation, privacy compliance, source accuracy, assessment validity, human network, homeschool quality, or production-scale claim has yet been demonstrated. The existing ModelShift implementation may be cited only as a narrow historical prototype, never as validation of FORGE.
+**Exact claim boundary today:** FORGE is a proposed broad architecture informed by local research syntheses, current primary sources, and a bounded working engineering foundation. No broad educational efficacy, child-safety operation, privacy compliance, source accuracy, assessment validity, human network, homeschool quality, universal topic coverage, or production-scale claim has yet been demonstrated. The existing bounded implementation and historical ModelShift World may be cited only for their exact accepted engineering behaviors, never as validation of the broader FORGE thesis.
 
 ## 1. Product in one sentence
 
@@ -83,6 +86,8 @@ Every FORGE experience MUST satisfy these constitutional rules.
 13. **Quiet completion beats capture.** No streak loss, emotional pressure, infinite feed, manipulative notification, or relationship bait. The system should close when the learning purpose is complete.
 14. **Portability limits platform power.** Learners can export their questions, sources, artifacts, process records, and evidence statements in human-readable and machine-readable forms. Lock-in is not a learning feature.
 15. **Claims remain falsifiable.** FORGE publishes version, population, comparison, duration, attrition, subgroup, and uncertainty context. Negative evidence changes the product and the words used about it.
+16. **Practical purpose organizes the route.** A substantial journey connects concepts and representations to something the learner can investigate, make, repair, design, explain, perform, decide, or contribute. Passive consumption never completes the capability.
+17. **External abundance remains governed.** A popular video, fluent explanation, generated map, or high-ranked search result is a candidate until its identity, claims, rights, age, safety, access, pedagogical role, lifecycle, and review state are known.
 
 An experience that violates these rules is not a FORGE world, regardless of branding.
 
@@ -94,6 +99,8 @@ The atomic FORGE object is a **Capability Claim**, not a lesson, course, message
 
 A **Capability Journey** is the governed path that builds and tests one or more such claims:
 
+Every proof-bearing Journey preserves the domain-appropriate signature loop: learner question → explicit starting model → exactly two uncertain plausible readings → point of disagreement → separating experience → reconstruction → assistance withdrawal → unfamiliar proof → bounded evidence → deliberate return or application. The separating experience may be an experiment, source comparison, execution, critique, observation, performance, or accountable review; it is never model confidence.
+
 ```text
 Orient → Diagnose → Build foundations → Practise → Investigate
        → Make or contribute → Receive human/world critique
@@ -101,6 +108,27 @@ Orient → Diagnose → Build foundations → Practise → Investigate
 ```
 
 Not every journey uses every phase. A young learner repairing subtraction may remain in foundations and application. An adult auditing a policy claim may begin with inquiry. A long project may cycle through diagnosis, targeted foundation repair, building, critique, and proof many times. The evidence requirements remain explicit.
+
+### 6.1 Intent-to-capability map
+
+FORGE does not require a complete internal lesson catalog before it can help a person begin. It MUST turn a legitimate learning intent into a transparent, editable map that distinguishes:
+
+- the learner's exact question, practical objective, constraints, and desired depth;
+- target capabilities stated as meaningful actions;
+- reviewed concepts and prerequisites;
+- optional depth, alternative routes, and the consequence of skipping a dependency;
+- reviewed internal and external resources by pedagogical role;
+- candidate resources and capability gaps that remain unverified or unavailable;
+- representations, practice, people, and one or more practical applications;
+- the proof conditions and return interval required for any capability claim.
+
+The map is a governed proposal, not an automatically published syllabus. The learner can contest the interpretation, choose among eligible routes, and change reversible preferences. AI may propose nodes and wording, but deterministic validation and named human review control reviewed identities, entitlement, source eligibility, publication, age/access policy, and evidence requirements.
+
+### 6.2 Multimodal route
+
+A journey MAY use text, worked examples, primary sources, diagrams, real-world demonstrations, reviewed videos, deterministic simulations, audio, discussion, practice, projects, and people. Each resource declares what learner action it supports. Preference for a modality is a reversible route choice, never a fixed “learning style.”
+
+Video and visual completion are not evidence. A reviewed resource MUST lead to an active operation such as prediction, explanation, comparison, reproduction, source judgment, practice, or transfer, and MUST have a reviewed alternative labeled `construct-preserving` or `construct-changing`. A construct-changing access route remains valid, but it cannot inherit the original capability claim.
 
 ## 7. World tiers
 
@@ -193,6 +221,22 @@ FORGE MUST combine evidence types rather than collapse a person into one score:
 
 Evidence MUST state task/content version, assistance mode, accommodations, validator or assessor, date, relevant source versions, and uncertainty. A capability statement is never a medical, psychological, admissions, employment, or child-custody judgment. High-stakes use requires an independent validation and appeals regime outside the learning product.
 
+### 8.6 Practical multimodal paths
+
+FORGE MUST:
+
+- compile an assignable or executable route only against versioned reviewed graph, World, source, resource, project, and proof identities; exploratory compilation may retain unmistakable candidate and gap records but cannot assign or create a capability claim;
+- keep reviewed, candidate, unavailable, expired, withdrawn, contradicted, and gap states distinct;
+- explain why a resource appears and which capability, prerequisite, representation, or project operation it serves;
+- select only from the current eligible snapshot using a versioned deterministic policy, visible reason codes, stable tie-breaks, bounded learner choice, and reviewed fallback; provider/search popularity, engagement, sponsorship, paid placement, and model preference are prohibited ordering inputs;
+- separate pedagogical fit from authority for factual claims;
+- provide reviewed non-video and low-bandwidth alternatives for video-dependent route operations, label their construct effect, and preserve the original claim only when the assessed construct is preserved;
+- treat external provider identifiers as locators rather than immutable content hashes;
+- detect and recover from resource edit, withdrawal, expiry, region, caption, embed, rights, access, safety, and provider failures;
+- prevent autoplay, comments, recommendation feeds, advertising rank, watch time, and engagement metrics from becoming the learning route or capability evidence;
+- bind substantial paths to active practice, practical application, independent transfer, and delayed return;
+- let educators approve, replace, annotate, and adapt routes under named authority while keeping learner evidence, privacy, and contest rights intact.
+
 ## 9. Domain model
 
 The product language is fixed as follows:
@@ -211,6 +255,12 @@ The product language is fixed as follows:
 | Assistance event | A support action classified by overlap with the protected operation, timing, and provenance |
 | Evidence event | An immutable observation or correction record used to support or contradict a claim |
 | Source record | A versioned work with origin, author/publisher, date, license, quality notes, and eligible uses |
+| Learning intent | A learner-owned local capture of the learner's words plus a separately accepted sanitized summary, desired action, practical outcome, depth, closed constraints, and reversible route preferences |
+| Capability map | A versioned graph connecting an intent to reviewed and candidate capabilities, prerequisites, resources, projects, gaps, and proof |
+| Resource observation | A time-bounded record of what an internal or external resource was observed to be, including provider metadata and access/risk signals |
+| Resource review | Named decisions about pedagogical fit, source authority, accessibility, safety/rights, eligible audience, expiry, and alternatives |
+| Representation package | A versioned observation, simulation, diagram, reconstruction, or analogy with assumptions, authority, controls, and reviewed alternatives whose construct effect is explicit |
+| Practical project | A capability-bound build, investigation, repair, design, explanation, performance, or contribution with constraints, artifacts, critique, and defence |
 | Claim-evidence link | A typed relation: supports, contradicts, qualifies, contextualizes, or is insufficient |
 | Artifact | A learner or group output with provenance, versions, permissions, and retention class |
 | Human engagement | A consented, purpose-bound interaction with role, participants, safeguards, and closure state |
@@ -254,6 +304,17 @@ For externally factual content:
 - an unavailable source produces “unsupported/unavailable,” not a fabricated citation;
 - open-web access for minors is risk-tiered, filtered through the source service, and disabled in younger bands;
 - source content is data, never executable policy or prompt instruction.
+
+External media and resource connectors additionally MUST:
+
+- receive a sanitized capability-bound query rather than raw sensitive learner text;
+- bind sanitization policy/version and learner-preview acceptance to the exact permitted use; closed access/material tokens are preferred, and client audience metadata creates no external authority;
+- use official provider contracts and server-owned credentials;
+- obey provider storage, refresh, deletion, child-directed, embedding, attribution, and usage requirements;
+- never scrape transcripts, download media, or persist provider data without explicit authorization;
+- revalidate review eligibility against the current observation and expire or hold changed material;
+- expose tracking, advertising, region, age, access, and alternative-route conditions before use;
+- fail closed to a reviewed internal or alternative route when policy-critical metadata is absent; a construct-changing alternative uses a distinct evidence condition.
 
 ## 11. Child, guardian, and privacy contract
 
@@ -418,6 +479,7 @@ FORGE is not:
 - a replacement for childcare, meals, disability services, peer community, sport, art, nature, or safeguarding;
 - a claim that school, homeschooling, university, or apprenticeship is universally superior;
 - a universal curriculum authored in real time by a language model;
+- an engagement-ranked playlist, open video feed, or passive course-consumption tracker;
 - a deterministic ranking of people, career destiny engine, or credential mill;
 - a mentor marketplace until verification, safeguarding, operations, and appeals independently pass their gates;
 - a public social feed;
@@ -437,6 +499,9 @@ A FORGE release is acceptable only when:
 8. safety, source, model, content, and human-interaction incidents have owners and disable paths;
 9. evaluations meet the current delivery gate and no broader claim is made;
 10. negative or uncertain evidence is preserved in the release decision.
+11. every external resource is bound to a current observation, named review, expiry, audience, active learner operation, and reviewed alternative with explicit construct status;
+12. provider outage, resource drift, withdrawal, missing captions, region failure, and policy change have tested fail-closed behavior and a named recovery owner;
+13. unknown-topic output visibly remains an exploratory map with gaps or candidates until publication gates pass;
 
 The detailed thresholds and permitted wording live in `docs/FORGE_DELIVERY_GATES.md`.
 

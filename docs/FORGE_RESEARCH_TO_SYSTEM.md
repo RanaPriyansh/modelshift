@@ -1,8 +1,9 @@
 # FORGE Research-to-System Traceability
 
 **Status:** Governing rationale; source-grounded design synthesis, not an efficacy result  
-**Version:** 0.1  
-**Date:** 22 July 2026
+**Version:** 0.2
+
+**Date:** 23 July 2026
 
 ## 0. Purpose and evidence base
 
@@ -11,7 +12,13 @@ This document explains why FORGE has the product and architecture specified in `
 1. `../rebuilding_education_for_the_ai_age.html` — broad diagnosis of education's purposes, failures, learning science, opt-out pathways, AI-era capabilities, reform portfolios, and institutional limits.
 2. `../forge_ai_native_learning_system_report.html` — product selection, failure archaeology, Capability Loop, assistance governor, measurement, architecture, safety/privacy, pilots, and falsification plan.
 
-The reports were read as structured syntheses, including their limitations and red teams. This document does not independently re-run their literature search or convert every cited study into a new causal claim. The reports' component evidence constrains the design; it does **not** validate the integrated FORGE system.
+The reports were read as structured syntheses, including their limitations and red teams. This document does not convert every cited study into a new causal claim. The reports' component evidence constrains the design; it does **not** validate the integrated FORGE system.
+
+The 23 July 2026 practical-path amendment also uses current primary or official material recorded in [`program/AI_ERA_LEARNING_THESIS.md`](./program/AI_ERA_LEARNING_THESIS.md) and the repository research ledger. That supplemental research covers AI/work scenarios, active and multimodal learning, external-resource policy, platform lifecycle, teacher augmentation, and operating controls. It extends this traceability; it does not retroactively validate FORGE.
+
+### Legacy traceability limitation
+
+Rows 1–28 in the inherited matrix below are report-level syntheses of the two local reports. They have not been retrospectively decomposed here into claim-level source citations, so their confidence labels are not a claim-by-claim source audit. The practical-path amendment supplies explicit source links for its added decisions; neither it nor this document claims exhaustive source traceability. The research resolves current architecture choices and constraints, while the empirical efficacy questions remain open in Sections 12 and 15.
 
 ## 1. How to read the traceability
 
@@ -240,3 +247,63 @@ FORGE may not currently say:
 - that building the specified system is operationally or economically sustainable.
 
 Those claims become eligible only through the corresponding delivery gates. Research grounding is a reason to test the architecture carefully, not permission to market the result in advance.
+
+## 14. Practical-path research amendment
+
+The founder's new practical-path direction creates five additional system questions:
+
+1. Can FORGE help with an unfamiliar topic without pretending to own or validate a complete course?
+2. When does video or another visual representation improve understanding rather than create passive familiarity?
+3. How can an external resource remain useful when its content, rights, tracking, captions, region, or availability changes?
+4. How should AI assistance complement teachers and independent learning without replacing protected learner work?
+5. Which AI-era product decisions remain good under slow, fast, concentrated, or broadly shared capability progress?
+
+### 14.1 Finding-to-system matrix
+
+| Finding | Evidence class and limit | FORGE translation | Required falsification or gate |
+| --- | --- | --- | --- |
+| AI currently changes task composition more defensibly than it erases whole occupations | [ILO 2025](https://www.ilo.org/publications/generative-ai-and-jobs-refined-global-index-occupational-exposure); exposure is not realized displacement | Teach tool use, judgment, verification, and portable domain capability; do not build a curriculum around one job forecast | Quarterly labor/apprenticeship signposts and versioned capability updates |
+| Assisted output may diverge from independent learning | [OECD 2026](https://www.oecd.org/en/publications/2026/01/oecd-digital-education-outlook-2026_940e0dd8.html), [PNAS 2025](https://doi.org/10.1073/pnas.2422633122); bounded systems and populations | Attempt before help, governed support, explicit withdrawal, cold transfer, delayed return | Compare with strong authored/human-guided baselines; report assistance and delayed outcomes |
+| Active learning, retrieval, worked examples, representations, and explanatory questions are useful design families | [IES practice guide](https://ies.ed.gov/ncee/wwc/PracticeGuide/1); its recommendation-level evidence ratings vary, and application remains domain/context sensitive | Resources prepare observable learner actions; guidance fades; practice and return are structural | Domain review, learner studies, negative effects, access effects, and no universal recipe claim |
+| Current evidence does not justify fixed “learning style” labels or matching routes | [Pashler et al.](https://digitalcommons.usf.edu/psy_facpub/1765/); preferences and access still matter | Representation chosen by content/task; learner may choose among reviewed alternatives with explicit construct status; no fixed visual/auditory label | Audit profiles, copy, route decisions, and subgroup outcomes |
+| The Noetel review is higher-education-only and reports heterogeneous educational-video results | [Noetel et al.](https://doi.org/10.3102/0034654321990713); it does not establish K–12, modality-wide, or durable-transfer efficacy, and “watch is not evidence” is a FORGE inference | Reviewed video for process/demonstration, active checkpoint, construct-labeled alternative, transfer after viewing | Measure independent and delayed performance, not clicks or completion |
+| Projects can support application, but results are implementation-sensitive and counterevidence must remain visible | [IES PBL review](https://ies.ed.gov/ncee/WWC/Study/92570), [EEF Year 7 REAL Projects trial](https://educationendowmentfoundation.org.uk/projects-and-evaluation/projects/project-based-learning): no clear literacy, engagement, or attendance benefit, with attrition/crossover limitations; implementation findings are not universal efficacy | Explicit prerequisites, milestones, critique, revision, provenance, concept checks, and individual defence | “Project polish is not proof” is a FORGE evidentiary rule, not an outcome of either study; compare and double-score where consequential |
+| External video is mutable, tracked, rights-constrained platform content | [YouTube Developer Policies](https://developers.google.com/youtube/terms/developer-policies), [policy guide](https://developers.google.com/youtube/terms/developer-policies-guide), [video resource contract](https://developers.google.com/youtube/v3/docs/videos), [player parameters](https://developers.google.com/youtube/player_parameters), [embed privacy guidance](https://support.google.com/youtube/answer/171780), and [embedded-ad guidance](https://support.google.com/youtube/answer/132596) | Provider locator plus reviewed observation, candidate/review states, refresh/expiry, click-to-load, no FORGE feed/autoplay, disclosed provider surfaces, construct-labeled alternative | Drift, removal, region, caption, embed, tracking, age, quota, advertising, and terms-change fixtures |
+| A YouTube ID does not prove immutable audiovisual content | YouTube permits trimming while preserving URL, views, and comments. [Editor guidance](https://support.google.com/youtube/answer/9057455) | Bind review to time-bounded observation-record and review-signal digests; re-review on material change or expiry | Changed fixture invalidates the review; affected paths hold or replace |
+| Child-directed external discovery introduces more than content-quality risk | YouTube policies impose child-client duties; `madeForKids` is not an independent suitability review | No open external discovery for minors; younger learners use internal/licensed or named adult-curated routes | Zero unreviewed minor exposure in adversarial tests; separate legal/safety/operations authority |
+| Teacher augmentation requires professional agency plus context-specific outcome and workload evidence | [UNESCO teacher framework](https://www.unesco.org/en/articles/ai-competency-framework-teachers) is a framework, not an efficacy result; [Tutor CoPilot](https://eric.ed.gov/?id=ED661562) tested human tutors in live virtual K–12 mathematics and measured intervention-period topic mastery, not delayed transfer, cross-domain effects, or autonomous tutor replacement | Educator or tutor can approve, replace, annotate, and adapt suggested support; measure total verification/training/correction time | Stop expansion if workload or decision quality worsens without compensating benefit; evaluate delayed, independent, and equity outcomes separately |
+| AI capability, deployment, productivity, and access may progress unevenly | [NBER workplace study](https://www.nber.org/papers/w31161) is one deployment; [OECD productivity scenarios](https://www.oecd.org/en/publications/macroeconomic-productivity-gains-from-artificial-intelligence-in-g7-economies_a5319ab5-en.html), [Stanford AI Index economy](https://hai.stanford.edu/ai-index/2026-ai-index-report/economy), [METR](https://metr.org/time-horizons/), and [OECD trajectories](https://www.oecd.org/en/publications/exploring-possible-ai-trajectories-through-2030_cb41117a-en.html) do not yield one point forecast; [ITU 2025](https://www.itu.int/itu-d/reports/statistics/facts-figures-2025/) and [World Bank 2025](https://www.worldbank.org/en/publication/dptr2025-ai-foundations/report) preserve access constraints | Provider neutrality, offline/low-bandwidth alternatives, local language, scenario observatory, no provider-critical route | Provider removal drill, access parity study, quarterly scenario/signpost review |
+
+### 14.2 Operating-method translation
+
+The practical-path supply chain also adapts mature operating methods:
+
+- immutable package revisions and independent approval for high-risk changes;
+- author, specialist, whole-product, accessibility, and safety/rights review as separate responsibilities;
+- candidate, reviewed, anchored, and published-reviewed/assignable maturity tiers;
+- correction, withdrawal, incident hold, reporting, appeal, and rollback;
+- error budgets that freeze catalog expansion when availability, correction, safety, access, or review reliability falls below the accepted threshold;
+- total cost and workload accounting, including review, licensing, accessibility, professional learning, provider failure, and incident recovery.
+
+These are operating controls, not learning evidence.
+
+For operating examples only, [OpenStax's faculty-contributor and peer-review process](https://help.openstax.org/s/article/Do-OpenStax-textbooks-favor-any-particular-schools-of-thought-or-specific-teaching-approaches), [errata correction process](https://help.openstax.org/s/article/Errata-correction-process), and [accessibility guidance](https://help.openstax.org/s/article/Do-OpenStax-materials-meet-ADA-guidelines), along with [Open edX's explicit exercise/tool enablement](https://docs.openedx.org/en/latest/educators/concepts/exercise_tools/about_problems_exercises_tools.html), inform reviewed revisions, correction paths, accessibility status, and explicit activation boundaries. They are maintainer practices and tooling examples—not learning-effect evidence, product endorsement, or exhaustive traceability for FORGE.
+
+## 15. New research questions
+
+1. How reliably can AI propose prerequisite maps across humanities, languages, vocational skills, arts, sciences, and practical domains at an affordable review cost?
+2. Which external-resource metadata changes are sufficient to require machine refresh, human re-review, learner notification, or immediate withdrawal?
+3. Which video-plus-action patterns improve delayed transfer rather than only immediate performance or engagement?
+4. When should guidance fade for different conceptual, procedural, perceptual, creative, and motor capabilities?
+5. Can teacher planning assistance reduce net workload after verification, correction, training, and tool switching are included?
+6. Which practical projects establish useful evidence without privileging money, materials, travel, adult help, language fluency, or polished presentation?
+7. What forms of map choice increase agency without overwhelming novices or narrowing common entitlement?
+8. Can a provider-neutral resource layer remain operationally and economically sustainable without ads, learner-data profiling, or hidden volunteer review?
+9. How do sustained AI use and novice-task automation affect expert formation?
+10. Which rights, human relationships, curriculum, assessment, safeguarding, legal, and continuity operations must pass before a named homeschool pathway can be studied?
+
+## 16. Amended claim boundary
+
+FORGE may say that it is **designed** to federate reviewed resources and practical projects around editable capability maps while preserving independent proof. It may describe YouTube and models as proposed replaceable inputs under a lifecycle and review contract.
+
+FORGE may not yet say that the proposed path compiler, resource registry, visual layer, project compiler, teacher copilot, external connector, or adult pilot is implemented, effective, safe, accessible, economical, production-authorized, suitable for minors, homeschool-ready, or capable of validating arbitrary topics.

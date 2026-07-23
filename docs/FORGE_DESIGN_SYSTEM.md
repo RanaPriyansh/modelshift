@@ -2,7 +2,9 @@
 
 Status: governing visual and interaction direction for the FORGE expansion.
 
-Primary behavioral reference: <https://modelshift-design-lab.priyansh-rana.chatgpt.site/>
+Primary behavioral reference: <https://forge-design-lab.priyansh-rana.chatgpt.site/>
+
+Historical narrow protocol study: <https://modelshift-design-lab.priyansh-rana.chatgpt.site/>
 
 Repository concepts:
 
@@ -34,7 +36,7 @@ The World progressively assembles only the instruments required to challenge the
 ### Scene ownership
 
 1. **Cinematic Mystery** owns Encounter and Commit. Begin with an event, object, source, performance, or problem—not a lesson title or dashboard.
-2. **Mental Model Canvas** owns one brief compiler moment. Preserve learner-authored language, show at most two plausible readings, identify the disagreement, and select the smallest test.
+2. **Mental Model Canvas** owns one brief compiler moment. Preserve learner-authored language, show exactly two uncertain plausible readings, identify the disagreement, and select the smallest test.
 3. **Scientific Instrument** owns Test and Explore. The medium that can disagree—simulation, exact arithmetic, source set, executable code, rubric, observation, or human review—is primary.
 4. **Quiet Proof** owns withdrawal and evidence. Assistance visibly leaves. Access features remain. The result states only what this attempt demonstrated and what remains untested.
 

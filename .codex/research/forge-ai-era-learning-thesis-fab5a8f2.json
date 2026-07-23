@@ -1,0 +1,274 @@
+{
+  "schema_version": 1,
+  "topic": "forge-ai-era-learning-thesis",
+  "created_at": "2026-07-23T10:22:01.371Z",
+  "questions": [
+    {
+      "question": "Which 5, 10, 15, and 20 year scenario constraints should govern FORGE's current architecture choices, while empirical forecasts remain open?",
+      "status": "resolved"
+    },
+    {
+      "question": "Which current design constraints should make a question a customizable capability map rather than a generated course, while comparative efficacy remains open?",
+      "status": "resolved"
+    },
+    {
+      "question": "Which safety, accessibility, and lifecycle constraints should govern external video and other resources, while empirical learning effects remain open?",
+      "status": "resolved"
+    },
+    {
+      "question": "Which component-informed design constraints should FORGE adopt for explanation, visualization, practice, projects, proof, transfer, and educator support, while empirical combinations remain open?",
+      "status": "resolved"
+    },
+    {
+      "question": "Which product wedge, operating model, and evidence gates should FORGE prototype credibly, while product efficacy and scale questions remain open?",
+      "status": "resolved"
+    }
+  ],
+  "sources": [
+    {
+      "claim": "Current evidence supports task transformation as a more defensible near-term labor conclusion than wholesale occupation replacement.",
+      "url": "https://www.ilo.org/publications/generative-ai-and-jobs-refined-global-index-occupational-exposure",
+      "confidence": "High",
+      "note": "ILO 2025 task-level global exposure analysis; scenario invariant, not a point forecast.",
+      "accessed_at": "2026-07-23T10:25:19.375Z"
+    },
+    {
+      "claim": "Teacher-facing AI strategy should protect human agency and complement rather than erase teachers.",
+      "url": "https://www.unesco.org/en/articles/ai-competency-framework-teachers",
+      "confidence": "High",
+      "note": "UNESCO human-centred competency framework and implementation stance.",
+      "accessed_at": "2026-07-23T10:25:19.455Z"
+    },
+    {
+      "claim": "IES guidance supports several design families, including worked examples, representations, concrete-abstract links, retrieval, and explanatory questions, but its recommendation-level evidence ratings vary and application remains domain-sensitive.",
+      "url": "https://ies.ed.gov/ncee/wwc/PracticeGuide/1",
+      "confidence": "High",
+      "note": "IES practice guide; do not compress varied recommendation-level evidence ratings into a single strength or a universal recipe. The active-video checkpoint rule is a FORGE inference, not a direct IES finding.",
+      "accessed_at": "2026-07-23T10:25:19.495Z"
+    },
+    {
+      "claim": "Classroom implementation of cognitive-science techniques is less settled than laboratory evidence and requires context-specific evaluation.",
+      "url": "https://educationendowmentfoundation.org.uk/projects-and-evaluation/research-agenda-themes-priority-areas/research-agenda-theme-cognitive-science",
+      "confidence": "High",
+      "note": "EEF 2026 agenda explicitly preserves mixed/null implementation findings.",
+      "accessed_at": "2026-07-23T10:25:19.535Z"
+    },
+    {
+      "claim": "Unrestricted generative assistance can raise assisted performance while reducing later unassisted performance; guardrails and unaided proof are therefore architectural rather than cosmetic.",
+      "url": "https://doi.org/10.1073/pnas.2422633122",
+      "confidence": "High",
+      "note": "Preregistered high-school mathematics field experiment; domain/population limits remain.",
+      "accessed_at": "2026-07-23T10:25:19.574Z"
+    },
+    {
+      "claim": "YouTube embedding shares data with YouTube, privacy-enhanced mode does not eliminate ads or all data flows, child-directed clients have additional obligations, and non-authorized API data generally must be refreshed or deleted within 30 days.",
+      "url": "https://developers.google.com/youtube/terms/developer-policies",
+      "confidence": "High",
+      "note": "Current official API policy; connector must remain separately gated, lifecycle-governed, and revalidated rather than treating provider results as immutable curriculum.",
+      "accessed_at": "2026-07-23T10:25:19.612Z"
+    },
+    {
+      "claim": "A YouTube video ID is not an immutable content hash because creators can trim content while retaining URL, views, and comments.",
+      "url": "https://support.google.com/youtube/answer/9057455",
+      "confidence": "High",
+      "note": "Requires reviewed observation/version and re-review, not URL-only authority.",
+      "accessed_at": "2026-07-23T10:25:19.686Z"
+    },
+    {
+      "claim": "AI use in education is already widespread while institutional policy clarity lags.",
+      "url": "https://hai.stanford.edu/ai-index/2026-ai-index-report/education",
+      "confidence": "Medium",
+      "note": "AI Index aggregates US student and teacher survey evidence; geography-limited.",
+      "accessed_at": "2026-07-23T10:25:29.408Z"
+    },
+    {
+      "claim": "Frontier agent task horizons are improving on a narrow software-heavy benchmark, but the methodology warns against economy-wide generalization.",
+      "url": "https://metr.org/time-horizons/",
+      "confidence": "High",
+      "note": "Supports scenario planning and provider evaluation, not a forecast.",
+      "accessed_at": "2026-07-23T10:40:52.441Z"
+    },
+    {
+      "claim": "Falling model cost does not eliminate access inequality; 2.2 billion people remained offline in 2025.",
+      "url": "https://www.itu.int/itu-d/reports/statistics/facts-figures-2025/",
+      "confidence": "High",
+      "note": "Requires low-bandwidth and offline architecture.",
+      "accessed_at": "2026-07-23T10:40:52.619Z"
+    },
+    {
+      "claim": "The Noetel review concerns higher education and reports heterogeneous effects of educational video; it does not establish K-12, modality-wide, or durable-transfer efficacy.",
+      "url": "https://doi.org/10.3102/0034654321990713",
+      "confidence": "Medium",
+      "note": "FORGE's rule that watch behavior is not capability evidence is a product inference requiring independent and delayed proof, not an outcome established by this review.",
+      "accessed_at": "2026-07-23T10:40:52.701Z"
+    },
+    {
+      "claim": "Matching instruction to visual or auditory learning-style labels lacks the crossover evidence required for product use.",
+      "url": "https://digitalcommons.usf.edu/psy_facpub/1765/",
+      "confidence": "High",
+      "note": "Preferences remain reversible choices and accessibility needs.",
+      "accessed_at": "2026-07-23T10:40:52.779Z"
+    },
+    {
+      "claim": "Project-based learning evidence is implementation-sensitive and does not by itself establish that an artifact demonstrates underlying capability.",
+      "url": "https://ies.ed.gov/ncee/WWC/Study/92570",
+      "confidence": "Medium",
+      "note": "Prerequisites, critique, individual defence, and the rule that polish is not proof are FORGE evidentiary design inferences, not direct outcomes of the cited review; the EEF counterevidence is recorded separately.",
+      "accessed_at": "2026-07-23T10:40:52.858Z"
+    },
+    {
+      "claim": "AI risk governance should document intended scope, error costs, human oversight, third-party risk, testing, provenance, and incidents.",
+      "url": "https://airc.nist.gov/airmf-resources/airmf/5-sec-core/",
+      "confidence": "High",
+      "note": "Informs connector and publication operating controls.",
+      "accessed_at": "2026-07-23T10:40:52.938Z"
+    },
+    {
+      "claim": "Reliability error budgets are an applicable operating analogy for freezing expansion when safety, correction, accessibility, or review reliability falls below accepted thresholds.",
+      "url": "https://sre.google/sre-book/service-best-practices/",
+      "confidence": "Medium",
+      "note": "Operating analogy, not learning evidence.",
+      "accessed_at": "2026-07-23T10:40:53.019Z"
+    },
+    {
+      "claim": "Protected high-risk changes benefit from immutable revisions and independent trusted review.",
+      "url": "https://slsa.dev/spec/v1.2/source-requirements",
+      "confidence": "High",
+      "note": "Applied by analogy to child-facing and proof-bearing content packages.",
+      "accessed_at": "2026-07-23T10:40:53.097Z"
+    },
+    {
+      "claim": "Human and AI combinations do not automatically outperform the better component; task structure and oversight matter.",
+      "url": "https://www.nature.com/articles/s41562-024-02024-1",
+      "confidence": "High",
+      "note": "Supports named human authority and measured educator outcomes.",
+      "accessed_at": "2026-07-23T10:40:53.178Z"
+    },
+    {
+      "claim": "A field study of 5,179 customer-support agents found productivity gains from a generative-AI assistant with large variation across workers; it is bounded workplace evidence, not an economy-wide forecast.",
+      "url": "https://www.nber.org/papers/w31161",
+      "confidence": "High",
+      "note": "NBER Working Paper 31161; one customer-support deployment and outcome family.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "OECD models three 10-year G7 productivity scenarios whose estimates vary with AI exposure, adoption, sector composition, and assumptions.",
+      "url": "https://www.oecd.org/en/publications/macroeconomic-productivity-gains-from-artificial-intelligence-in-g7-economies_a5319ab5-en.html",
+      "confidence": "High",
+      "note": "Scenario model for G7 economies; not a point forecast or an education outcome.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "OECD's 2026 Digital Education Outlook synthesizes emerging evidence that pedagogically guided educational GenAI can differ from unstructured general-purpose use, while effects remain context-dependent.",
+      "url": "https://www.oecd.org/en/publications/2026/01/oecd-digital-education-outlook-2026_940e0dd8.html",
+      "confidence": "High",
+      "note": "Official evidence synthesis; it does not validate FORGE or establish universal, durable, cross-domain efficacy.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "A controlled Harvard physics-course study reported immediate learning gains from a carefully designed AI tutor with pre-authored materials; its setting does not establish broad or delayed-transfer efficacy.",
+      "url": "https://www.nature.com/articles/s41598-025-97652-6",
+      "confidence": "Medium",
+      "note": "One higher-education physics course and a specific tutor design; retain course, population, and outcome limits.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "The World Bank's 2025 AI-foundations framework distinguishes connectivity, compute, context, and competency as separate conditions for inclusive AI adoption.",
+      "url": "https://www.worldbank.org/en/publication/dptr2025-ai-foundations/report",
+      "confidence": "High",
+      "note": "Strategic framework for AI readiness; it is not an outcome study of FORGE or a low-bandwidth product evaluation.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "OECD's 2030 AI-trajectory work presents four scenarios ranging across possible acceleration and slowdown rather than a single forecast.",
+      "url": "https://www.oecd.org/en/publications/exploring-possible-ai-trajectories-through-2030_cb41117a-en.html",
+      "confidence": "High",
+      "note": "Scenario-planning input only; it does not predict a date for autonomous teaching or economy-wide replacement.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "Stanford's 2026 AI Index Economy chapter describes recent investment, adoption, productivity-study, and labor-market indicators, which are snapshots rather than causal forecasts.",
+      "url": "https://hai.stanford.edu/ai-index/2026-ai-index-report/economy",
+      "confidence": "Medium",
+      "note": "Aggregated indicators and cited studies; do not convert them into a single labor-market prediction.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "YouTube Privacy-Enhanced Mode changes embed behavior and advertising personalization, but playback still begins a YouTube interaction and remains subject to platform terms.",
+      "url": "https://support.google.com/youtube/answer/171780",
+      "confidence": "High",
+      "note": "Official embed guidance; privacy-enhanced mode is not a zero-data-flow or ad-free guarantee.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "Embedded YouTube videos honor creator ad enablement, and embed hosts cannot directly disable ads for embedded videos only.",
+      "url": "https://support.google.com/youtube/answer/132596",
+      "confidence": "High",
+      "note": "Official advertising guidance; ad exposure remains a review and age/risk consideration.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "The YouTube Data API video resource supplies current platform metadata, but metadata is not an immutable audiovisual-content hash.",
+      "url": "https://developers.google.com/youtube/v3/docs/videos",
+      "confidence": "High",
+      "note": "Use for lifecycle observation together with a reviewed observation fingerprint and expiry, not URL-only authority.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "YouTube player parameters control documented embedded-player behavior; enabling autoplay starts playback without user interaction and can trigger collection and sharing on page load.",
+      "url": "https://developers.google.com/youtube/player_parameters",
+      "confidence": "High",
+      "note": "Official player contract; parameter support and deprecations can change and must be revalidated.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "YouTube's developer-policy guide requires compliance with the API policies and warns against blocking standard playback features, ads, or policy signals.",
+      "url": "https://developers.google.com/youtube/terms/developer-policies-guide",
+      "confidence": "High",
+      "note": "Operational policy guidance, not pedagogical evidence; legal and child-directed use require separate review.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "The EEF's Year 7 REAL Projects trial found no clear positive effect on literacy, engagement, or attendance and reported low-security findings because of attrition and crossover.",
+      "url": "https://educationendowmentfoundation.org.uk/projects-and-evaluation/projects/project-based-learning",
+      "confidence": "High",
+      "note": "Specific secondary-school PBL implementation; reported process benefits do not establish general PBL efficacy.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "Tutor CoPilot's preregistered live virtual-math RCT involved 900 tutors and 1,800 K-12 students from historically under-served communities and measured topic mastery during the intervention.",
+      "url": "https://eric.ed.gov/?id=ED661562",
+      "confidence": "High",
+      "note": "Evidence for a human tutor copilot in one live tutoring context; it does not establish delayed transfer, cross-domain effects, or autonomous tutor replacement.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "OpenStax describes a faculty-contributor and peer-review development process for its course-specific textbooks.",
+      "url": "https://help.openstax.org/s/article/Do-OpenStax-textbooks-favor-any-particular-schools-of-thought-or-specific-teaching-approaches",
+      "confidence": "High",
+      "note": "Published operating practice that informs review-role analogies; it is not evidence that FORGE's content is effective.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "OpenStax routes proposed textbook corrections through subject-matter review and publishes revisions on a stated cadence.",
+      "url": "https://help.openstax.org/s/article/Errata-correction-process",
+      "confidence": "High",
+      "note": "Published correction workflow that informs revision and withdrawal controls; it is not a FORGE quality guarantee.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "OpenStax distinguishes accessibility commitments and current remediation status across formats, including an errata path for accessibility issues.",
+      "url": "https://help.openstax.org/s/article/Do-OpenStax-materials-meet-ADA-guidelines",
+      "confidence": "High",
+      "note": "Published accessibility operating practice; FORGE still needs its own accessibility review and equivalent routes.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    },
+    {
+      "claim": "Open edX documents that course authors explicitly enable and configure exercises and tools, including contributed XBlock components.",
+      "url": "https://docs.openedx.org/en/latest/educators/concepts/exercise_tools/about_problems_exercises_tools.html",
+      "confidence": "High",
+      "note": "Published platform tooling pattern that informs explicit eligibility/configuration controls, not a learning-effect claim.",
+      "accessed_at": "2026-07-23T10:55:00.000Z"
+    }
+  ]
+}
