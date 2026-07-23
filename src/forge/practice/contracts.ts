@@ -17,7 +17,10 @@ const semverSchema = z.string().regex(/^\d+\.\d+\.\d+$/);
 const codeSchema = z.string().trim().min(1).max(160).regex(/^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/);
 const strictTimestampSchema = z.string()
   .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
-  .refine((value) => Number.isFinite(Date.parse(value)), "Use a valid millisecond-precision UTC timestamp.");
+  .refine((value) => {
+    const parsed = new Date(value);
+    return !Number.isNaN(parsed.valueOf()) && parsed.toISOString() === value;
+  }, "Use a valid canonical millisecond-precision UTC timestamp.");
 
 function compare(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;

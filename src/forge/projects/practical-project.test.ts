@@ -10,6 +10,7 @@ import {
   FIRST_PILOT_PRACTICE_TEMPLATE,
   createPracticePackage,
   practiceContentDigest,
+  practicePackageSchema,
   type PracticePackageInput,
 } from "../practice/contracts";
 import {
@@ -24,6 +25,7 @@ import {
   createProjectCompletionEvent,
   delayedReturnPolicyContentDigest,
   practicalProjectContentDigest,
+  strictProjectTimestampSchema,
   type PracticalProjectAttemptInput,
   type PracticalProjectPackageInput,
 } from "./contracts";
@@ -777,6 +779,28 @@ describe("W6-E one-way sealed practical project compiler", () => {
     const offset = clone(attemptSetup.attempt) as unknown as Record<string, unknown>;
     (offset.individualDefence as Record<string, unknown>).completedAt = "2026-07-23T17:30:00.000+05:30";
     expect((await evaluatePracticalProjectAttempt(setup.project, offset, context)).protectedProofStatus).toBe("invalid");
+  });
+
+  it("rejects calendar-impossible UTC timestamps across project, practice, and fixture-grant boundaries", async () => {
+    const impossibleTimestamp = "2026-02-30T00:00:00.000Z";
+    expect(strictProjectTimestampSchema.safeParse(impossibleTimestamp).success).toBe(false);
+
+    const setup = await practiceFixture();
+    expect(practicePackageSchema.safeParse({
+      ...setup.practice,
+      review: { ...setup.practice.review, reviewedAt: impossibleTimestamp },
+    }).success).toBe(false);
+
+    expect(() => testOnlyMintProjectFixtureGrant({
+      grantMarker: "fixture-grant.impossible-time",
+      scope: "practice-package-review",
+      subjectRef: DIGEST("a"),
+      actorRef: "identity.fixture.impossible-time",
+      issuedAt: impossibleTimestamp,
+      expiresAt: EXPIRES_AT,
+      allowedContributionIds: [],
+      allowedOperationIds: [],
+    })).toThrow("Fixture grant timestamps must be strict UTC instants");
   });
 
   it("derives delayed return only from exact policy, completion event, timestamps, and terminal events", async () => {

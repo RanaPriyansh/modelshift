@@ -29,7 +29,9 @@ export type ProjectFixtureGrantInput = Omit<ProjectFixtureGrant, typeof GRANT_BR
 const STRICT_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 function validTimestamp(value: string): boolean {
-  return STRICT_TIMESTAMP.test(value) && Number.isFinite(Date.parse(value));
+  if (!STRICT_TIMESTAMP.test(value)) return false;
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString() === value;
 }
 
 function compare(left: string, right: string): number {
