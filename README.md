@@ -4,6 +4,10 @@ FORGE is a learner-owned learning-system foundation for children learning with a
 
 This repository is currently a **C1 interactive foundation and DG1 candidate**, not the finished institution described by the product vision. `DG#` denotes a delivery/claim gate; `PG#` denotes a program goal. It demonstrates four authored learning Worlds, a deterministic planning boundary, a typed event spine, a privacy-minimal browser evidence trail, optional device/cloud access surfaces, and a provider-neutral AI lesson-draft compiler. It does not yet constitute a complete curriculum, a homeschool replacement, a child-safety operation, or evidence that FORGE improves learning.
 
+## Current release locator
+
+The canonical public release record is [Current Public Release Record](docs/operations/CURRENT_RELEASE.md). It names the only current public tuple and its unresolved release-provenance gates; a local commit, build, or worker handoff never changes that record into a deployment.
+
 ## Proposed next direction
 
 FORGE's next product layer is a practical goal-to-capability system:
@@ -148,6 +152,7 @@ PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
 | `/learn/proportional-reasoning` | Working exact-math Model World |
 | `/learn/ai-and-learning` | Working source/evidence World |
 | `/learn/primary-source-reasoning` | Working historical-literacy World using authentic archival images |
+| `/paths/source-corroboration` | Fixture-only adult presentation route; no assignment, entitlement, evidence write, or homeschool authority |
 | `/studio` | Public explanation of the provider-neutral unverified-draft workflow; connector locked |
 | `/login` and `/account` | Private device profile plus optional, separately configured cloud identity |
 | `/trail` | Local evidence summary plus the intended question-to-capability trail |
@@ -160,14 +165,13 @@ PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
 
 The complete application requires a Next.js/Node-compatible host because it includes server routes. Vercel is the intended deployment target for this foundation; a static-site host can publish design or research artifacts but cannot replace the planner and interpretation APIs without a separate backend.
 
-The current bounded FORGE engineering release is source `c7d401101791faa80ac0ba61c73044928a2da7b6` at [modelshift.vercel.app](https://modelshift.vercel.app), production deployment `dpl_6MUabxtnuMVzwxHf1vbM5Y1LxNfs`, and immutable URL `https://forge-learning-2sh2loxy1-ranapriyanshs-projects.vercel.app`. Exact-main CI `29944461461` and pre-main `workflow_dispatch` CI `29944088585` passed; local/public browser evidence was 70 pass / 22 intentional skips / 0 fail; all-World conformance was 18/18, terminal routed conformance 8/8, and the final local/public bound verifier was 187/187. Runtime is `fallback_only`; BYOK is request-only; cloud accounts, evidence sync, and managed providers are disabled. Public error-level and 5xx scans were empty.
-
-This is `DEPLOYED_CANDIDATE`, never `PRODUCTION_VERIFIED`: live-provider operation, durable cloud evidence, manual assistive-technology/Safari/Firefox/representative-learner sessions, efficacy/retention, broad curriculum, homeschool readiness, certification, and rollback rehearsal are not proven. The prior deployment `dpl_4eY4F3vMV1hado7TG1BZN11Mgzvt` was replaced rather than accepted because its build time and digests were unknown. The documentation-only commit containing this record is not deployed.
+The recorded public candidate is source `cdc4bf5a2ceef7b4431832e5eb1e9e75f241d32c` at [modelshift.vercel.app](https://modelshift.vercel.app), deployment `dpl_EdtJDSaDS4bwN1anLUi2rqNqLi4E`, immutable URL `https://forge-learning-aie8l0ycz-ranapriyanshs-projects.vercel.app`. Public health identifies the SHA, but its canonical build time and retained digests are unknown; the current release remains `DEPLOYED_CANDIDATE` and is not retroactively bound by this local code change. See the [canonical record](docs/operations/CURRENT_RELEASE.md) for the exact tuple, blocking gates, and non-mutating rollback procedure.
 
 ## What is not yet claimed
 
 - FORGE is not a complete cross-domain curriculum or a replacement for school, teachers, guardians, peers, care, safeguarding, disability services, or public institutions.
 - It is not yet a homeschool solution, accredited pathway, credential, or jurisdiction-specific compliance system.
+- It is not a minor operational release and has no verified guardian service, adult entitlement service, or operational safeguarding proof.
 - There is no live Supabase project, verified-age or guardian onboarding, cloud evidence sync, people network, storage pipeline, privacy worker, or abuse-control service connected to this app.
 - The current four Worlds do not establish breadth across everything someone may want to learn.
 - The proposed editable capability-map, external-resource registry, YouTube connector, representation registry, practical project compiler, and educator review port are not implemented or enabled.

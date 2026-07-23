@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
@@ -14,6 +14,7 @@ import {
   assertRetainedContentPackageManifest,
   packageIntegrityHash,
   primarySourceRuntimeBindingDigest,
+  readPublicAssetDigest,
   readReleaseDigests,
   runtimeBindingDigest,
 } from "../../scripts/ops/release-digests";
@@ -282,6 +283,39 @@ describe("immutable dependency identity", () => {
       expect(() => assertCanonicalLockfileDigest(canonicalDigest, mutatedDigest)).toThrow(/changed after its canonical preinstall dependency identity/);
       expect(() => assertCanonicalLockfileDigest(undefined, mutatedDigest)).toThrow(/--expected-lockfile-digest/);
       expect(() => assertCanonicalLockfileDigest(canonicalDigest.toUpperCase(), mutatedDigest)).toThrow(/--expected-lockfile-digest/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("public asset identity", () => {
+  it("changes when either emitted bytes or their path changes", () => {
+    const root = mkdtempSync(resolve(tmpdir(), "forge-public-assets-"));
+    try {
+      const staticRoot = resolve(root, ".next/static/chunks");
+      mkdirSync(staticRoot, { recursive: true });
+      writeFileSync(resolve(staticRoot, "one.js"), "one", "utf8");
+      const initial = readPublicAssetDigest(root);
+      writeFileSync(resolve(staticRoot, "one.js"), "two", "utf8");
+      expect(readPublicAssetDigest(root)).not.toBe(initial);
+      writeFileSync(resolve(staticRoot, "two.js"), "two", "utf8");
+      expect(readPublicAssetDigest(root)).not.toBe(initial);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("fails closed rather than following a symlink from the public static tree", () => {
+    const root = mkdtempSync(resolve(tmpdir(), "forge-public-assets-symlink-"));
+    try {
+      const staticRoot = resolve(root, ".next/static/chunks");
+      mkdirSync(staticRoot, { recursive: true });
+      writeFileSync(resolve(staticRoot, "one.js"), "one", "utf8");
+      const outside = resolve(root, "outside.js");
+      writeFileSync(outside, "outside", "utf8");
+      symlinkSync(outside, resolve(staticRoot, "escape.js"));
+      expect(() => readPublicAssetDigest(root)).toThrow(/symlink/);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

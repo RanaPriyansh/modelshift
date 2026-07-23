@@ -2,7 +2,7 @@
 
 **Active implementation plan:** [`WAVE_5_PLAN.md`](./WAVE_5_PLAN.md) — trustworthy continuity, additive ADR-001 v2 persistence, source/curriculum authority, and a language/literacy World factory acceptance case. Nothing in the plan is released merely because it is assigned or implemented.
 
-**Current release record:** [`WAVE_4_PLAN.md`](./WAVE_4_PLAN.md) — Wave 4 migration, all-World conformance, exact release gate, and the bounded post-release tuple for `c7d4011`. The implementation plan and release amendment are distinct; the documentation amendment is not deployed.
+**Current release record:** [`CURRENT_RELEASE.md`](../operations/CURRENT_RELEASE.md) — the only normative current public tuple, status, release-provenance gaps, and non-mutating rollback procedure. Wave 4 remains historical evidence for `c7d4011` only.
 
 **Proposed successor:** [`WAVE_6_PLAN.md`](./WAVE_6_PLAN.md) — adult practical capability maps, governed multimodal resources, a fixture-only external-video adapter, projects, protected proof, and educator review. It is architecture/planning only until the principal accepts the predecessor SHA and dispatches bounded packets.
 
@@ -16,9 +16,15 @@
 **Initial control-room commit:** `5b0bceb`
 **Program posture:** C1 interactive foundation; DG1 candidate; broad product vision, narrow claims. `PG#` denotes a program goal; `DG#` denotes a delivery/claim gate.
 
-## North Star
+## Normative North Star, current claim, and next wedge
 
-FORGE should let a child learning with a grown-up, a teenager, or an adult begin with any legitimate question and leave with a stronger model of the world, an ability they can exercise without AI help, a truthful record of the conditions under which they demonstrated it, and a clear next path that preserves their agency.
+**Long-term aim:** help a learner of any age, under age-appropriate human authority, turn a real question or practical goal into a reviewed, accessible path of explanation, practice, project work, and independent proof, preserving agency, source provenance, privacy, and the distinction between AI-assisted performance and demonstrated capability.
+
+**Current claim:** C1/DG1 candidate with four authored bounded Worlds and a fixture-only adult presentation route; not a broad curriculum, minor-safe operation, homeschool system, efficacy-proven product, or terminal production release.
+
+**Next wedge:** one server-entitled, externally recruited 18+ cohort completes one reviewed practical capability journey with active multimodal learning, support withdrawal, independent transfer, and delayed return.
+
+Authority for this block is this control-room North Star, [FORGE Product Specification](../../FORGE_PRODUCT_SPEC.md) learner rights, and [FORGE Delivery Gates](../FORGE_DELIVERY_GATES.md) claim ladder. This wording is a product-direction and claim boundary, not implementation, cohort, efficacy, safety, or release evidence.
 
 The product is not a larger course catalog or a friendlier chatbot. It is a replacement architecture for the parts of education that routinely fail learners:
 
@@ -66,7 +72,7 @@ The accepted implementation contains four working Learning Worlds, a determinist
 
 It does **not** contain a complete curriculum, verified cloud identity operation, guardian-consent service, live evidence sync, people network, accredited pathway, representative learner study, efficacy evidence, or a live-credential evaluation of the four provider adapters.
 
-The current public code SHA is `c7d401101791faa80ac0ba61c73044928a2da7b6`, served by accepted deployment `dpl_6MUabxtnuMVzwxHf1vbM5Y1LxNfs` at `https://modelshift.vercel.app` with immutable URL `https://forge-learning-2sh2loxy1-ranapriyanshs-projects.vercel.app`. Pre-main CI `29944088585` and exact-main CI `29944461461` passed; local/public browser evidence was 70 pass / 22 intentional skips / 0 fail; all-World conformance was 18/18, terminal routed conformance 8/8, final local/public bound verification 187/187, and error-level/5xx scans were empty. It remains `DEPLOYED_CANDIDATE`, not terminal `PRODUCTION_VERIFIED`, because live-provider and rollback-rehearsal authority remain absent. The rejected deployment `dpl_4eY4F3vMV1hado7TG1BZN11Mgzvt` was replaced because build time and digests were unknown. Read-only unbound workflow `29945127093` is an operational lock-digest reproducibility follow-up, not a product/public verifier failure. A public release is identified only by its immutable deployment URL, alias, `/api/health` SHA/digests, retained verification artifact, and principal decision—not by a worker handoff or documentation-only commit.
+The current public tuple is source `cdc4bf5a2ceef7b4431832e5eb1e9e75f241d32c`, production deployment `dpl_EdtJDSaDS4bwN1anLUi2rqNqLi4E`, alias `https://modelshift.vercel.app`, and immutable URL `https://forge-learning-aie8l0ycz-ranapriyanshs-projects.vercel.app`. Public health identifies the exact SHA but has unknown canonical build time and retained digests, so the candidate is `DEPLOYED_CANDIDATE`, never terminal `PRODUCTION_VERIFIED`. The local manifest/verifier repair is not deployed and cannot upgrade the existing tuple. The [current release record](../operations/CURRENT_RELEASE.md) is the single locator for exact state and rollback gates.
 
 ## Cost-aware operating model
 
@@ -88,13 +94,14 @@ The current public code SHA is `c7d401101791faa80ac0ba61c73044928a2da7b6`, serve
 6. [Requirement-by-requirement completion and evidence matrix](COMPLETION_MATRIX.md)
 7. [Wave 2 architecture and claim boundary](WAVE_2_ARCHITECTURE.md)
 8. [Wave 3 Ratio runtime and release record](WAVE_3_ARCHITECTURE.md)
-9. [Wave 4 all-World runtime plan and release record](WAVE_4_PLAN.md)
-10. [Wave 5 trustworthy-continuity and curriculum-expansion plan](WAVE_5_PLAN.md)
-11. [Curriculum graph implementation specification](CURRICULUM_GRAPH_SPEC.md)
-12. [Argument & Evidence World implementation packet](ARGUMENT_EVIDENCE_WORLD_SPEC.md)
-13. [AI-era learning strategy and scenario thesis](AI_ERA_LEARNING_THESIS.md)
-14. [Proposed Wave 6 practical map and resource-orchestration plan](WAVE_6_PLAN.md)
-15. [Append-only founder idea and decision log](FOUNDER_IDEA_LOG.md)
-16. [Proposed ADR-009 practical multimodal learning paths](../adr/0009-practical-multimodal-learning-paths.md)
+9. [Current public release record](../operations/CURRENT_RELEASE.md)
+10. [Wave 4 all-World runtime plan and historical release record](WAVE_4_PLAN.md)
+11. [Wave 5 trustworthy-continuity and curriculum-expansion plan](WAVE_5_PLAN.md)
+12. [Curriculum graph implementation specification](CURRICULUM_GRAPH_SPEC.md)
+13. [Argument & Evidence World implementation packet](ARGUMENT_EVIDENCE_WORLD_SPEC.md)
+14. [AI-era learning strategy and scenario thesis](AI_ERA_LEARNING_THESIS.md)
+15. [Proposed Wave 6 practical map and resource-orchestration plan](WAVE_6_PLAN.md)
+16. [Append-only founder idea and decision log](FOUNDER_IDEA_LOG.md)
+17. [Proposed ADR-009 practical multimodal learning paths](../adr/0009-practical-multimodal-learning-paths.md)
 
 These files are principal-owned. Workers may cite them and propose changes in their handoff, but must not edit them unless the principal assigns a documentation-only amendment.
