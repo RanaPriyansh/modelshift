@@ -948,7 +948,7 @@
 .forge-source-path-action-state {
   display: block;
   margin-top: 10px;
-  color: var(--forge-dim);
+  color: var(--forge-muted);
   font-family: var(--forge-mono);
   font-size: 10px;
   line-height: 1.5;

@@ -261,7 +261,7 @@ export function projectSourceCorroborationPreview(input?: unknown): SourceCorrob
   const providerAvailable = (input === undefined || !!candidates && candidateIsKnown(candidates.youtubePolicy, DISABLED_YOUTUBE_POLICY))
     && DISABLED_YOUTUBE_PLAN.kind === "no-iframe-request"
     && DISABLED_YOUTUBE_PLAN.reason === "provider-disabled";
-  const primaryAvailable = runtimeAvailable && projectAvailable && publicAvailable;
+  const primaryAvailable = runtimeAvailable && projectAvailable && practiceAvailable && publicAvailable;
 
   return deepFreeze({
     route: SOURCE_CORROBORATION_PATH_ROUTE,
@@ -271,7 +271,7 @@ export function projectSourceCorroborationPreview(input?: unknown): SourceCorrob
       available: primaryAvailable,
       text: primaryAvailable
         ? "A bounded source-corroboration World with local, non-persistent practice."
-        : "This path is unavailable because its required public World, runtime, or project manifest is not the exact known package.",
+        : "This path is unavailable because its required public World, runtime, project, or practice manifest is not the exact known package.",
     },
     steps: [
       {
@@ -333,7 +333,7 @@ export function projectSourceCorroborationPreview(input?: unknown): SourceCorrob
       id: "action.source-corroboration.learner-operation" as const,
       label: "Start the practical evidence operation",
       available: primaryAvailable,
-      unavailableReason: primaryAvailable ? null : !runtimeAvailable ? "runtime-binding-unavailable" : !projectAvailable ? "project-template-unavailable" : "public-world-unavailable",
+      unavailableReason: primaryAvailable ? null : !runtimeAvailable ? "runtime-binding-unavailable" : !projectAvailable ? "project-template-unavailable" : !practiceAvailable ? "practice-template-unavailable" : "public-world-unavailable",
     },
     boundaries: [
       { id: "source-metadata", status: "legacy-source-metadata", text: "Research references are not reviewed source packages." },

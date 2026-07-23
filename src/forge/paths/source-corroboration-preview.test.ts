@@ -123,6 +123,8 @@ describe("source corroboration path preview", () => {
       projectTemplate: FIRST_PILOT_PROJECT_TEMPLATE,
       practiceTemplate,
     });
+    expect(preview.banner).toMatchObject({ status: "path-unavailable", available: false });
+    expect(preview.primaryAction).toMatchObject({ available: false, unavailableReason: "practice-template-unavailable" });
     expect(preview.steps.find((step) => step.id === "practice")?.action).toMatchObject({ available: false, unavailableReason: "practice-template-unavailable" });
   });
 

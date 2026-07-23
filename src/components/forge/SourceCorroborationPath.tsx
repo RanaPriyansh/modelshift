@@ -26,16 +26,22 @@ const LINEAR_MAP = [
     tone: "legacy",
   },
   {
-    id: "provider",
-    label: "External video",
-    fallback: "Disabled in this fixture path. No player, iframe, or external request is loaded here.",
-    tone: "disabled",
-  },
-  {
     id: "project",
     label: "Fixture written-explanation project",
     fallback: "Use a short written explanation to make the missing support and your revision inspectable in this page session.",
     tone: "fixture",
+  },
+  {
+    id: "practice",
+    label: "Foundation practice",
+    fallback: "Rehearse one prerequisite with a new example; it has no autonomous score or mastery claim.",
+    tone: "fixture",
+  },
+  {
+    id: "provider",
+    label: "External video",
+    fallback: "Disabled in this fixture path. No player, iframe, or external request is loaded here.",
+    tone: "disabled",
   },
   {
     id: "proof",

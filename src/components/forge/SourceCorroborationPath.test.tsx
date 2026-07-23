@@ -19,6 +19,16 @@ describe("SourceCorroborationPath", () => {
     expect(screen.getByText(SOURCE_CORROBORATION_PATH_PREVIEW.banner.text)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open the working source-corroboration World" })).toHaveAttribute("href", "/learn/ai-and-learning");
     expect(screen.getByText("Working source-corroboration World").closest("li")).toHaveAttribute("data-projection-status", "working-world");
+    expect(screen.getByText("Foundation practice").closest("li")).toHaveAttribute("data-projection-status", "fixture-template-only");
+    expect(Array.from(document.querySelectorAll(".forge-source-path-map strong"), (element) => element.textContent)).toEqual([
+      "Working source-corroboration World",
+      "Legacy source metadata",
+      "Fixture written-explanation project",
+      "Foundation practice",
+      "External video",
+      "Honour-based local cold transfer",
+      "Delayed return",
+    ]);
     expect(screen.getByText("Legacy source metadata")).toBeInTheDocument();
     expect(screen.getByText("Delayed return")).toBeInTheDocument();
     expect(screen.getAllByText("Action unavailable in this presentation.")).toHaveLength(2);
@@ -42,6 +52,25 @@ describe("SourceCorroborationPath", () => {
 
     expect(screen.queryByRole("link", { name: "Open the working source-corroboration World" })).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("The working World action is unavailable in this presentation: runtime-binding-unavailable.");
+  });
+
+  it("keeps the CTA unavailable when the required practice tuple drifts", () => {
+    render(
+      <SourceCorroborationPath
+        preview={{
+          ...SOURCE_CORROBORATION_PATH_PREVIEW,
+          banner: { ...SOURCE_CORROBORATION_PATH_PREVIEW.banner, status: "path-unavailable", available: false },
+          primaryAction: { ...SOURCE_CORROBORATION_PATH_PREVIEW.primaryAction, available: false, unavailableReason: "practice-template-unavailable" },
+          steps: SOURCE_CORROBORATION_PATH_PREVIEW.steps.map((step) => step.id !== "practice" || !step.action
+            ? step
+            : { ...step, action: { ...step.action, available: false, unavailableReason: "practice-template-unavailable" } }),
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole("link", { name: "Open the working source-corroboration World" })).not.toBeInTheDocument();
+    expect(screen.getByText("Foundation practice").closest("li")).toHaveTextContent("Action unavailable in this presentation.");
+    expect(screen.getByRole("status")).toHaveTextContent("practice-template-unavailable");
   });
 
   it("removes editable scratchpad controls when the exact project action is unavailable", () => {
