@@ -1,6 +1,6 @@
 # FORGE Program Control Room
 
-**Active implementation plan:** [`WAVE_6_PLAN.md`](./WAVE_6_PLAN.md) — adult practical capability maps, governed multimodal resources, projects, protected proof, and educator review. Bounded contracts, a fixture route, and a non-routed controller kernel exist; the end-to-end pilot remains incomplete.
+**Active implementation plan:** [`WAVE_6_PLAN.md`](./WAVE_6_PLAN.md) — adult practical capability maps, governed multimodal resources, projects, protected proof, and educator review. Bounded contracts, a fixture presentation route, the controller kernel, and a fail-closed server-gated review shell exist; the externally recruited end-to-end pilot remains incomplete.
 
 **Current release record:** [`CURRENT_RELEASE.md`](../operations/CURRENT_RELEASE.md) — the only normative current public tuple, status, release-provenance gaps, and non-mutating rollback procedure. Wave 4 remains historical evidence for `c7d4011` only.
 
@@ -20,7 +20,7 @@
 
 **Long-term aim:** help a learner of any age, under age-appropriate human authority, turn a real question or practical goal into a reviewed, accessible path of explanation, practice, project work, and independent proof, preserving agency, source provenance, privacy, and the distinction between AI-assisted performance and demonstrated capability.
 
-**Current claim:** C1/DG1 candidate with four authored bounded Worlds, a fixture-only adult presentation route, and a non-routed adult-pilot controller kernel. The exact-source app is public, but release verification is `DEPLOYMENT_BLOCKED`; it is not a broad curriculum, minor-safe operation, homeschool system, efficacy-proven product, or terminal production release.
+**Current claim:** C1/DG1 candidate with four authored bounded Worlds, a fixture-only adult presentation route, and a fail-closed adult-pilot review shell around the accepted controller. The currently recorded public deployment predates these new slices and remains `DEPLOYMENT_BLOCKED`; it is not a broad curriculum, minor-safe operation, homeschool system, efficacy-proven product, or terminal production release.
 
 **Next wedge:** one server-entitled, externally recruited 18+ cohort completes one reviewed practical capability journey with active multimodal learning, support withdrawal, independent transfer, and delayed return.
 

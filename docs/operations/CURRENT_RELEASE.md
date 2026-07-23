@@ -41,18 +41,18 @@ The app remains public because its same-origin route, header, CSP, source-SHA, d
 
 ## Required binding for a later candidate
 
-The current `GET /api/health` contract cannot satisfy the corrected asset-proof boundary because it binds a pre-build digest. The replacement gate must preserve its fail-closed source/platform checks while requiring the following complete candidate tuple:
+The current public deployment cannot satisfy the corrected asset-proof boundary because it predates the accepted provider-receipt contract. A later candidate must preserve fail-closed source/platform checks and supply this complete tuple:
 
 - `FORGE_RELEASE_CANDIDATE_STATE=DEPLOYED_CANDIDATE`
-- exact `FORGE_RELEASE_SHA`, equal to the platform-owned `VERCEL_GIT_COMMIT_SHA`
-- canonical UTC-millisecond `FORGE_BUILD_TIME`
+- platform-owned exact `VERCEL_GIT_COMMIT_SHA`; caller `FORGE_RELEASE_SHA` is ignored for a bound candidate
+- `FORGE_BUILD_TIME`, if present, is diagnostic metadata only
 - exact `FORGE_LOCKFILE_DIGEST`
 - no claim that a locally precomputed `.next/static` digest is the platform-emitted digest
 - platform-owned `VERCEL_DEPLOYMENT_ID`, `VERCEL_URL`, and `VERCEL_PROJECT_ID` matching the checked-in FORGE project/immutable-host policy; `FORGE_RELEASE_DEPLOYMENT_ID` or `FORGE_RELEASE_IMMUTABLE_URL` cannot override them
 - the checked-in public alias only; no caller-provided alias-resolution timestamp or alias override is accepted in the deployment artifact
-- a post-build provider-observed receipt bound to the exact deployment ID, project ID, source SHA, immutable URL, build time, and platform-emitted public-asset digest, with its trust source stated explicitly
+- a same-process authenticated provider receipt bound to the exact production deployment ID, project ID, provider Git source/repository identity, source SHA, immutable URL, provider creation/log timestamps, and platform-emitted public-asset digest
 
-Any malformed field, missing platform field, project/source-SHA drift, caller alias receipt, or receipt/deployment mismatch must produce `unbound`. The next verifier must block a remote candidate unless the manifest alias exactly matches its target, the immutable URL and project ID pass the checked-in FORGE Vercel policy, the manifest build time is no later than the verifier's post-fetch alias receipt, and a post-build provider receipt is bound to the same exact deployment tuple. A caller-authored receipt without provider evidence must retain an explicit lower trust ceiling and cannot promote the release.
+Any malformed field, missing platform field, project/source-SHA drift, caller alias receipt, preview target, CLI/local source, or receipt/deployment mismatch must remain blocked. The accepted verifier requires the manifest alias to match its checked-in target, the immutable URL and project ID to pass policy, the provider-owned GitHub repository ID/ref/SHA and repository fields to match, the production deployment creation/log/alias timestamps to be ordered, and the exact emitted digest marker to come from the authenticated provider event stream. Plain receipt JSON cannot recreate the process-local capability and cannot promote a candidate.
 
 The production binding path remains a Vercel remote build/runtime with System Environment Variables exposed, because it needs the platform-owned deployment ID, URL, project ID, and commit SHA. The current deployment was initiated by the Vercel CLI and built remotely; a local prebuilt deployment does not receive those system variables at build time unless it has separately configured custom identity. This repository does not treat caller `FORGE_*` identity as an equivalent fallback. The verifier produces the post-deploy `alias_verified_at` receipt only after fetching the alias; a separate post-build provider observation must produce the asset receipt. Neither the deployment artifact nor this documentation can manufacture either fact.
 
@@ -61,8 +61,8 @@ The production binding path remains a Vercel remote build/runtime with System En
 This is a runnable decision checklist, not permission to change Vercel. It requires a separately authorized operator and never treats a documentation record as rollback evidence.
 
 1. Freeze a signed/retained decision packet naming the current bound candidate, a prior READY rollback deployment ID, its immutable URL, exact source SHA, expected alias, and the independent approver. If any value is absent, stop as `NOT_EVALUATED`.
-2. Run the read-only verifier against the current alias with its exact SHA, retained source digests, and post-build provider receipt. It must pass the complete bound health-manifest, all ten canonical routes (four Worlds, `/paths/source-corroboration`, and shell routes), CSP, initial-asset secret scan, and candidate identity checks. The currently recorded candidate cannot pass until the receipt design is repaired and a later exact-source candidate satisfies it.
-3. Run the same read-only verifier against the proposed rollback immutable URL with its own exact source/digests. Confirm the provider reports READY, the URL/ID/SHA match the decision packet, and its manifest is bound. Do not continue on a human label, alias history, or a SHA-only health response.
+2. Run the read-only verifier against the current alias with its exact SHA, retained source digests, exact production Vercel deployment ID, and a Vercel API token named through `--vercel-token-env`. The verifier creates the receipt capability in-process; saved receipt JSON cannot replace it. It must pass the complete bound health-manifest, all canonical routes, CSP, initial-asset secret scan, and candidate identity checks. The currently recorded legacy CLI candidate cannot pass this Git-source gate.
+3. Collect the proposed rollback deployment's provider metadata/receipt separately and compare its READY ID/URL/SHA/project tuple with the decision packet. The alias verifier remains pinned to the checked-in public target. Do not continue on a human label, alias history, saved receipt JSON, or SHA-only health.
 4. The authorized operator records `proceed` or `hold`. `hold` is mandatory for any SHA, manifest, route, secret-scan, digest, readiness, or authority mismatch. This lane does not execute the provider alias action.
 5. Only after a separately authorized provider alias change, re-run step 2 against the alias using the rollback tuple. Record the before/after alias resolution, verifier reports, decision time, and any failure. A failed post-change verifier requires the incident procedure; it never becomes `ROLLED_BACK` by assertion.
 
