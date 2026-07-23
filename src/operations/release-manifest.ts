@@ -144,10 +144,13 @@ export function buildReleaseManifest(environment: ReleaseEnvironment = process.e
   const failures: ReleaseManifestErrorCode[] = [];
   if (requestedState !== "DEPLOYED_CANDIDATE") failures.push("candidate_state");
 
-  const sourceSha = canonicalSha(environment.FORGE_RELEASE_SHA);
+  // The only candidate source identity is Vercel's Git integration SHA.
+  // FORGE_RELEASE_SHA is intentionally ignored here: a project environment
+  // variable cannot be maintained per commit and must never override provider
+  // provenance. The remote verifier compares this value with its own expected
+  // SHA and the provider receipt.
+  const sourceSha = canonicalSha(environment.VERCEL_GIT_COMMIT_SHA);
   if (!sourceSha) failures.push("source_sha");
-  const platformSha = canonicalSha(environment.VERCEL_GIT_COMMIT_SHA);
-  if (!platformSha || !sourceSha || platformSha !== sourceSha) failures.push("source_drift");
 
   const lockDigest = canonicalDigest(environment.FORGE_LOCKFILE_DIGEST);
   if (!lockDigest) failures.push("dependency_lock_digest");

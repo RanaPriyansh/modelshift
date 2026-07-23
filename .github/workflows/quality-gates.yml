@@ -61,8 +61,6 @@ jobs:
           printf 'FORGE_EVALUATOR_BASELINE_DIGEST=%s\n' "$(shasum -a 256 scripts/ops/evaluation-baseline.json | cut -d' ' -f1)" >> "$GITHUB_ENV"
           printf 'FORGE_DATABASE_MIGRATION_IDENTITY=not_configured\n' >> "$GITHUB_ENV"
       - name: Build production artifact
-        env:
-          FORGE_RELEASE_SHA: ${{ github.sha }}
         run: pnpm build
       - name: Install Chromium test runtime
         run: pnpm exec playwright install --with-deps chromium

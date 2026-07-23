@@ -12,7 +12,8 @@ const TEST_DEPLOYMENT_TARGET = {
   hostname: "forge.example",
   project_id: "prj_SnTYtzLicYKYlHvXCNwq9J7ehQZB",
   team_id: "team_lr0E9GlEDc3XYJP7xrx8po2W",
-  git_source: { type: "github", repository: "RanaPriyansh/modelshift", ref: "main" },
+  git_source: { type: "github", ref: "main", repository_id: 1308085427 },
+  git_repository: { namespace: "RanaPriyansh", name: "modelshift", path: "RanaPriyansh/modelshift", type: "github", default_branch: "main" },
   immutable_deployment: {
     hostname_prefix: "forge-learning-",
     hostname_suffix: "-ranapriyanshs-projects.vercel.app",

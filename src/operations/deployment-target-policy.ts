@@ -12,8 +12,17 @@ export const DEPLOYMENT_TARGETS = {
     team_id: "team_lr0E9GlEDc3XYJP7xrx8po2W",
     git_source: {
       type: "github",
-      repository: "RanaPriyansh/modelshift",
       ref: "main",
+      // GitHub's stable numeric repository ID. This is compared with the
+      // provider-owned Vercel gitSource.repoId field, never deployment meta.
+      repository_id: 1308085427,
+    },
+    git_repository: {
+      namespace: "RanaPriyansh",
+      name: "modelshift",
+      path: "RanaPriyansh/modelshift",
+      type: "github",
+      default_branch: "main",
     },
     immutable_deployment: {
       hostname_prefix: "forge-learning-",
@@ -24,13 +33,15 @@ export const DEPLOYMENT_TARGETS = {
 
 export type DeploymentTargetId = keyof typeof DEPLOYMENT_TARGETS;
 export type ImmutableDeploymentTargetPolicy = Readonly<{ hostname_prefix: string; hostname_suffix: string }>;
-export type GitSourceTargetPolicy = Readonly<{ type: "github"; repository: string; ref: string }>;
+export type GitSourceTargetPolicy = Readonly<{ type: "github"; ref: string; repository_id: number }>;
+export type GitRepositoryTargetPolicy = Readonly<{ namespace: string; name: string; path: string; type: "github"; default_branch: string }>;
 export type DeploymentTarget = Readonly<{
   origin: string;
   hostname: string;
   project_id: string;
   team_id: string;
   git_source: GitSourceTargetPolicy;
+  git_repository: GitRepositoryTargetPolicy;
   immutable_deployment: ImmutableDeploymentTargetPolicy;
 }>;
 
