@@ -145,4 +145,54 @@ test.describe("FORGE expanded learning system", () => {
     await page.setViewportSize({ width: 320, height: 800 });
     expect(await page.locator("html").evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
   });
+
+  test("keeps the source-corroboration fixture path local, explicit, and refresh-clear", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    const requestUrls: string[] = [];
+    page.on("request", (request) => requestUrls.push(request.url()));
+    await page.goto("/paths/source-corroboration");
+    const localStorageBefore = await page.evaluate(() => ({ ...localStorage }));
+
+    await expect(page.getByRole("heading", { name: "Verify before you trust." })).toBeVisible();
+    await expect(page.getByText("Adult presentation · fixture path · not assigned")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open the working source-corroboration World" })).toHaveAttribute("href", "/learn/ai-and-learning");
+    await expect(page.getByText("External video", { exact: true })).toBeVisible();
+    await expect(page.getByText("Delayed return", { exact: true })).toBeVisible();
+    expect(await page.locator("iframe").count()).toBe(0);
+    expect(await page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>("[src], [href]"))
+      .map((element) => element.getAttribute("src") ?? element.getAttribute("href") ?? "")
+      .filter((value) => /youtube|youtu\.be/i.test(value)))).toEqual([]);
+
+    const draft = page.getByRole("textbox", { name: "Draft an evidence-labelled explanation" });
+    await draft.fill("This source supports a narrower claim than the headline.");
+    const marker = page.getByRole("button", { name: "Mark this revision in this session" });
+    await draft.press("Tab");
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    await expect(marker).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Revision noted only in this open page. Refreshing clears it.")).toBeVisible();
+    expect(await page.locator("html").evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+
+    await page.reload();
+    await expect(draft).toHaveValue("");
+    await expect(page.getByText("This scratchpad stays in this open page and clears on refresh.")).toBeVisible();
+    expect(await page.evaluate(() => ({ ...localStorage }))).toEqual(localStorageBefore);
+
+    const pageOrigin = new URL(page.url()).origin;
+    expect(requestUrls.filter((url) => {
+      try {
+        return new URL(url).origin !== pageOrigin;
+      } catch {
+        return false;
+      }
+    })).toEqual([]);
+
+    await page.emulateMedia({ forcedColors: "active", reducedMotion: "reduce" });
+    await page.reload();
+    expect(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)).toBe(true);
+    expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
+    await expect(page.getByRole("heading", { name: "Verify before you trust." })).toBeVisible();
+    await expect(marker).toBeVisible();
+  });
 });

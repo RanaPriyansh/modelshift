@@ -9,6 +9,7 @@ const ROUTES = [
   { path: "/learn/proportional-reasoning", heading: "The two citrus mixes", main: "#world-content" },
   { path: "/learn/ai-and-learning", heading: "Commit before the evidence appears.", main: "#world-content" },
   { path: "/learn/primary-source-reasoning", heading: "What can this photograph prove?", main: "#world-content" },
+  { path: "/paths/source-corroboration", heading: "Verify before you trust.", main: "#forge-main" },
   { path: "/evidence", heading: "Proof should say exactly what happened.", main: "#forge-main" },
   { path: "/trail", heading: "A map of questions and evidence—not a level.", main: "#forge-main" },
   { path: "/pathways", heading: "What FORGE can—and cannot—offer today.", main: "#forge-main" },

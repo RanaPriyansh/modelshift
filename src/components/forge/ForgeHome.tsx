@@ -438,14 +438,18 @@ function ProjectsAndPeople() {
       />
       <div className="forge-projects-layout">
         <article>
-          <span>Project compiler · planned</span>
-          <h3>“Build a low-cost air-quality monitor.”</h3>
-          <p>Break one ambition into electronics, measurement, calibration, uncertainty, documentation, and a safe field protocol.</p>
+          <span>Fixture written-explanation path</span>
+          <h3>“Verify a source before you trust its claim.”</h3>
+          <p>Trace one model-generated factual claim through its available support, name what remains unsupported, and revise a bounded explanation.</p>
           <dl>
-            <div><dt>Foundation</dt><dd>Circuits, units, data quality</dd></div>
-            <div><dt>Artifact</dt><dd>Working monitor + calibration note</dd></div>
-            <div><dt>Proof</dt><dd>Explain one failure and redesign choice</dd></div>
+            <div><dt>Foundation</dt><dd>Source labels, claim scope, missing support</dd></div>
+            <div><dt>Artifact</dt><dd>Fixture-only written explanation</dd></div>
+            <div><dt>Boundary</dt><dd>No automatic status or evidence claim</dd></div>
           </dl>
+          <Link className="forge-secondary-action forge-project-fixture-link" href="/paths/source-corroboration">
+            Open fixture path
+            <ForgeArrow />
+          </Link>
         </article>
         <aside>
           <span>People layer · planned</span>

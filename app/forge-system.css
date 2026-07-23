@@ -818,6 +818,318 @@
   line-height: 1.45;
 }
 
+/* Fixture-only source corroboration presentation path. */
+.forge-source-path {
+  width: min(1040px, calc(100% - 64px));
+  margin: 0 auto;
+  padding: 94px 0 126px;
+}
+
+.forge-source-path-hero { max-width: 760px; }
+
+.forge-source-path-hero .forge-kicker { margin-bottom: 18px; color: var(--forge-cyan-deep); }
+
+.forge-source-path h1,
+.forge-source-path h2 {
+  margin: 0;
+  color: var(--forge-ink);
+  font-family: var(--forge-sans);
+  font-weight: 560;
+  letter-spacing: -0.055em;
+}
+
+.forge-source-path h1 {
+  max-width: 700px;
+  font-size: clamp(52px, 7vw, 88px);
+  line-height: 0.91;
+}
+
+.forge-source-path-hero > p {
+  max-width: 650px;
+  margin: 27px 0 0;
+  color: var(--forge-muted);
+  font-size: 16px;
+  line-height: 1.72;
+}
+
+.forge-source-path-banner {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.5fr) minmax(0, 1fr);
+  gap: 28px;
+  margin-top: 52px;
+  border-top: 1px solid var(--forge-line-strong);
+  border-bottom: 1px solid var(--forge-line);
+  background: var(--forge-surface);
+  padding: 25px 28px;
+}
+
+.forge-source-path-banner .forge-status { align-self: start; }
+
+.forge-source-path-banner-copy { display: grid; gap: 8px; }
+
+.forge-source-path-banner-copy p {
+  margin: 0;
+  color: var(--forge-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.forge-source-path-section,
+.forge-source-scratchpad { padding-top: 88px; }
+
+.forge-source-path-heading { max-width: 690px; }
+
+.forge-source-path-heading > span,
+.forge-source-unavailable > span {
+  display: block;
+  margin-bottom: 13px;
+  color: var(--forge-cyan-deep);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.forge-source-path-heading h2,
+.forge-source-unavailable h2 {
+  font-size: clamp(34px, 4.7vw, 54px);
+  line-height: 0.98;
+}
+
+.forge-source-path-heading p {
+  margin: 17px 0 0;
+  color: var(--forge-muted);
+  font-size: 14px;
+  line-height: 1.68;
+}
+
+.forge-source-path-map {
+  margin: 35px 0 0;
+  border-top: 1px solid var(--forge-line-strong);
+  padding: 0;
+  list-style: none;
+}
+
+.forge-source-path-step {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 22px;
+  border-bottom: 1px solid var(--forge-line);
+  padding: 26px 4px;
+}
+
+.forge-source-path-index {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--forge-line-strong);
+  color: var(--forge-cyan-deep);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+}
+
+.forge-source-path-step strong {
+  color: var(--forge-ink);
+  font-family: var(--forge-sans);
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.forge-source-path-step p {
+  max-width: 700px;
+  margin: 7px 0 0;
+  color: var(--forge-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.forge-source-path-action-state {
+  display: block;
+  margin-top: 10px;
+  color: var(--forge-dim);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.forge-source-path-step--disabled,
+.forge-source-path-step--unavailable { background: color-mix(in srgb, var(--forge-surface-strong) 38%, transparent); }
+.forge-source-path-step--disabled .forge-source-path-index,
+.forge-source-path-step--unavailable .forge-source-path-index { color: var(--forge-dim); }
+
+.forge-source-path-cta { margin-top: 30px; }
+
+.forge-source-path-cta--unavailable {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--forge-line-strong);
+  color: var(--forge-muted);
+  padding: 0 15px;
+  font-size: 12px;
+}
+
+.forge-source-scratchpad {
+  border-top: 1px solid var(--forge-line);
+  margin-top: 90px;
+}
+
+.forge-source-scratchpad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 33px;
+}
+
+.forge-source-scratchpad-unavailable {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  margin: 28px 0 0;
+  border: 1px solid var(--forge-line-strong);
+  color: var(--forge-muted);
+  padding: 0 15px;
+  font-family: var(--forge-mono);
+  font-size: 11px;
+}
+
+.forge-source-scratchpad-unavailable code {
+  margin-left: 8px;
+  color: var(--forge-dim);
+  font: inherit;
+}
+
+.forge-source-scratchpad-grid label {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  border: 1px solid var(--forge-line);
+  background: var(--forge-surface);
+  padding: 18px;
+}
+
+.forge-source-scratchpad-grid label > span:first-child {
+  color: var(--forge-ink);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.forge-source-scratchpad-grid :is(textarea, input) {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--forge-line-strong);
+  border-radius: 0;
+  background: #fff;
+  color: var(--forge-ink);
+  padding: 11px 12px;
+  line-height: 1.5;
+}
+
+.forge-source-scratchpad-grid textarea { resize: vertical; }
+.forge-source-scratchpad-grid :is(textarea, input)::placeholder { color: var(--forge-dim); }
+
+.forge-source-path-count {
+  color: var(--forge-dim);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  text-align: right;
+}
+
+.forge-source-scratchpad-footer {
+  min-height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--forge-line);
+}
+
+.forge-source-scratchpad-footer button {
+  min-height: 44px;
+  border: 1px solid var(--forge-line-strong);
+  border-radius: 0;
+  background: var(--forge-surface);
+  color: var(--forge-ink);
+  padding: 0 15px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.forge-source-scratchpad-footer button:hover:not(:disabled) { border-color: var(--forge-cyan); }
+.forge-source-scratchpad-footer button:disabled { cursor: not-allowed; opacity: 0.55; }
+
+.forge-source-scratchpad-footer p {
+  max-width: 440px;
+  margin: 0;
+  color: var(--forge-muted);
+  font-size: 11px;
+  line-height: 1.55;
+  text-align: right;
+}
+
+.forge-source-unavailable {
+  margin-top: 90px;
+  border: 1px solid var(--forge-line-strong);
+  border-left: 4px solid var(--forge-amber);
+  background: var(--forge-surface-strong);
+  padding: 26px 28px 28px;
+}
+
+.forge-source-unavailable > span { color: var(--forge-amber-deep); }
+
+.forge-source-unavailable ul {
+  display: grid;
+  gap: 10px;
+  margin: 23px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.forge-source-unavailable li {
+  color: var(--forge-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.forge-source-unavailable li::before { content: "—"; margin-right: 8px; color: var(--forge-amber-deep); }
+
+@media (max-width: 760px) {
+  .forge-source-path { width: calc(100% - 32px); padding: 74px 0 94px; }
+
+  .forge-source-path h1 { font-size: clamp(45px, 13.4vw, 58px); overflow-wrap: anywhere; }
+
+  .forge-source-path-banner {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-top: 40px;
+    padding: 21px;
+  }
+
+  .forge-source-path-section,
+  .forge-source-scratchpad { padding-top: 70px; }
+
+  .forge-source-path-step { grid-template-columns: 35px minmax(0, 1fr); gap: 12px; padding: 23px 0; }
+
+  .forge-source-scratchpad { margin-top: 70px; }
+
+  .forge-source-scratchpad-grid { grid-template-columns: 1fr; }
+
+  .forge-source-scratchpad-footer {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 16px 0;
+  }
+
+  .forge-source-scratchpad-footer button { width: 100%; }
+  .forge-source-scratchpad-footer p { text-align: left; }
+  .forge-source-unavailable { margin-top: 70px; padding: 23px 21px; }
+}
+
 @media (max-width: 760px) {
   .forge-pathways-page { width: calc(100% - 32px); padding: 76px 0 94px; }
 
@@ -1015,7 +1327,14 @@
   .forge-live-ledger,
   .forge-proof-sheet,
   .forge-device-access,
-  .forge-cloud-access { border: 1px solid CanvasText; }
+  .forge-cloud-access,
+  .forge-source-path-banner,
+  .forge-source-path-step,
+  .forge-source-scratchpad-grid label,
+  .forge-source-unavailable { border-color: CanvasText; }
+
+  .forge-source-scratchpad-grid :is(textarea, input),
+  .forge-source-scratchpad-footer button { border-color: CanvasText; background: Canvas; color: CanvasText; }
 }
 
 @media (prefers-reduced-motion: reduce) {
