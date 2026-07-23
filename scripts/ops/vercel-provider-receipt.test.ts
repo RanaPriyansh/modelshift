@@ -85,7 +85,10 @@ describe("Vercel provider deployment receipt", () => {
     ["missing nested deployment ID", DEPLOYMENT, [{ ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, deploymentId: undefined } }]],
     ["cross-deployment nested marker", DEPLOYMENT, [{ ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, deploymentId: "dpl_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm" } }]],
     ["cross-deployment marker alongside matching marker", DEPLOYMENT, [...LIVE_EVENTS, { ...LIVE_EVENTS[0], created: 1_784_764_861_000, payload: { ...LIVE_EVENTS[0].payload, id: "evt_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm", deploymentId: "dpl_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm" } }]],
+    ["missing nested marker date", DEPLOYMENT, [{ ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, date: undefined } }]],
     ["malformed nested marker date", DEPLOYMENT, [{ ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, date: "not-a-timestamp" } }]],
+    ["two matching markers with the same digest in one nested payload", DEPLOYMENT, [{ ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, text: `${LIVE_EVENTS[0].payload.text}\n${LIVE_EVENTS[0].payload.text}` } }]],
+    ["two matching markers with different digests in one nested payload", DEPLOYMENT, [{ ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, text: `${LIVE_EVENTS[0].payload.text}\nPublic build boundary verified across 39 static assets; public asset digest ${"b".repeat(64)}.` } }]],
     ["duplicate matching digest markers", DEPLOYMENT, [...LIVE_EVENTS, { ...LIVE_EVENTS[0], created: 1_784_764_861_000, payload: { ...LIVE_EVENTS[0].payload, id: "evt_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm" } }]],
   ])("fails closed for %s", (_label, deployment, events) => {
     expect(() => normalizeVercelProviderReceipt(deployment, events, TARGET, "2026-07-23T00:02:00.000Z")).toThrow();
