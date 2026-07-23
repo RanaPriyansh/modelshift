@@ -128,3 +128,30 @@ FORGE should eventually let an authorized user choose among multiple LLM/AI prov
 ### Evidence required before enablement
 
 Live provider or BYOK operation remains a separate adult-only release decision. It requires server-owned secret authority, no-browser-exposure proof, provider-specific privacy/data-flow review, bounded budgets and abuse controls, deletion/rotation recovery, model/version receipts, held-out evaluation, kill switch, incident runbook, and an exact-SHA configured integration result. Minor-facing provider use requires a later independent child-rights, consent, safety, legal, and operations gate.
+
+---
+
+## 2026-07-23 — Ship reviewable slices while keeping the North Star
+
+### Founder intent
+
+FORGE should start existing as a usable product now and become stronger through repeated review. The team should keep building and shipping visible features instead of waiting for the entire education-system vision to be perfect on paper. Reviewers should be able to inspect the product as it grows, find what is weak or missing, and use that evidence to choose the next implementation slice.
+
+Speed does not change the destination. The North Star remains a broad, practical, source-grounded learning system that helps children through adults understand deeply, make things, receive appropriate support, and demonstrate what they can do independently. The near-term product should reveal that architecture honestly without pretending that an exploratory map, fixture contract, generated draft, or polished screen already teaches any topic or can operate a homeschool.
+
+### Execution interpretation
+
+1. **Build vertical, inspectable seams.** Prefer small slices that connect visible learner need to an explicit contract and a testable boundary.
+2. **Show unfinished states.** Unknown topics, missing sources, unavailable representations, absent projects, and unreviewed proof should appear as named work rather than fabricated completeness.
+3. **Bind every shipped claim to evidence.** Record the exact code, tests, runtime authority, and exclusions for each slice so review can improve the real system.
+4. **Keep momentum through modularity.** Capability maps, resources, representations, projects, proof, and educator operations should advance independently behind stable fail-closed interfaces.
+5. **Do not borrow future authority.** A local fixture may justify the next integration task, but it does not authorize publication, providers, persistent learner data, minors, outcomes claims, or institutional use.
+6. **Review and revise continuously.** Product, learning, accessibility, source, security/privacy, safety, and operations critiques should change the backlog without turning every early slice into a release ceremony.
+
+### Current product consequence
+
+The first implementation response is deliberately narrow: fixture-only capability-map, resource, representation, and project/practice contracts plus a contestable exploratory-map preview. The learner can see that FORGE has preserved their question and can challenge missing review gates, while the interface explicitly says that no reviewed route has yet been compiled or saved. This makes part of the future system reviewable without claiming a live learning path.
+
+### Evidence required before the next stronger statement
+
+The next stronger product statement requires one exact, bounded adult route that connects an accepted capability map to reviewed resources, a construct-aware representation, safe practical work, support withdrawal, unfamiliar proof, and return scheduling. It also requires trusted source/reviewer authority, server-owned adult entitlement, persistence and deletion boundaries, rendered accessibility evidence, failure/fallback behavior, and an exact-SHA release packet. Minor, homeschool, teacher-replacement, mastery, safety, and efficacy claims remain later independent gates.
