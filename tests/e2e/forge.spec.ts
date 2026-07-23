@@ -274,8 +274,7 @@ test.describe("FORGE cross-route release contract", () => {
     expect(failures).toEqual([]);
   });
 
-  test("home planner renders grounded and exploratory paths from real typed questions", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== "desktop", "Planner semantics are viewport-independent; home layout runs in both projects.");
+  test("home planner renders grounded and exploratory paths from real typed questions", async ({ page }) => {
     const failures = capturePageFailures(page);
     await page.goto("/");
 
@@ -295,6 +294,17 @@ test.describe("FORGE cross-route release contract", () => {
     const exploratory = page.getByTestId("forge-plan-exploratory");
     await expect(exploratory).toBeVisible();
     await expect(exploratory).toContainText("not yet verified");
+    await expect(exploratory.getByText("How do fungi and tree roots trade nutrients under a forest floor?")).toBeVisible();
+    await expect(exploratory.getByRole("heading", { name: "Your goal has a visible route to review." })).toBeVisible();
+    await expect(exploratory.getByRole("button", { name: "Ask to revise" })).toHaveCount(4);
+    await question.fill("A different question that has not been submitted.");
+    await expect(exploratory.getByText("How do fungi and tree roots trade nutrients under a forest floor?")).toBeVisible();
+    await expect(exploratory).not.toContainText("A different question that has not been submitted.");
+    await exploratory.getByRole("button", { name: "Ask to revise" }).first().click();
+    await exploratory.getByLabel(/^What should change/).fill("Keep the scope focused on nutrient exchange.");
+    await expect(exploratory.getByText("1 local revision request — not submitted or saved.")).toBeVisible();
+    expect(await page.evaluate(() => localStorage.length)).toBe(0);
+    await expect(exploratory).toContainText("Safe practical project and practice sequence");
     await expect(exploratory).toContainText("Your question was used for this response and was not added to a learner profile.");
     expect(failures).toEqual([]);
   });
@@ -652,7 +662,7 @@ test.describe("FORGE cross-route release contract", () => {
     await expect(ledger).toContainText("1 bounded record");
     await ledger.getByRole("button", { name: "Yes, clear all" }).click();
     await expect(ledger).toContainText("0 bounded records");
-    await expect(ledger).toContainText("No proof records yet.");
+    await expect(ledger).toContainText("No local evidence records yet.");
     await expect(ledger.getByRole("heading", { name: "Your evidence, under your control." })).toBeFocused();
     await expect.poll(() => page.evaluate(() => window.localStorage.getItem("forge.evidence-ledger"))).toBeNull();
     expect(failures).toEqual([]);
@@ -673,7 +683,13 @@ test.describe("FORGE cross-route release contract", () => {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/learn\/force-and-motion$/);
     await expect(page.getByTestId("stage-predict")).toBeVisible();
+    await expect.poll(() => page.evaluate(() => (
+      Boolean(document.querySelector("#world-content")?.contains(document.activeElement))
+    ))).toBe(true);
 
+    // A client-side route transition moves focus directly into the World. On a
+    // fresh document load, the skip link remains the first keyboard stop.
+    await page.goto("/learn/force-and-motion");
     await page.keyboard.press("Tab");
     const worldSkip = page.getByRole("link", { name: "Skip to learning world" });
     await expect(worldSkip).toBeFocused();

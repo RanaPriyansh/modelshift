@@ -613,6 +613,211 @@
 .forge-pathways-home-link,
 .forge-foundations-link { margin-top: 29px; }
 
+.forge-map-preview {
+  margin-top: 22px;
+  border-top: 1px solid var(--forge-line-strong);
+  padding-top: 22px;
+}
+
+.forge-map-preview__header > span,
+.forge-map-intent > span,
+.forge-map-unavailable > span,
+.forge-map-gates__copy > span {
+  display: block;
+  color: var(--forge-cyan);
+  font-family: var(--forge-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.forge-map-preview__header h4 {
+  max-width: 620px;
+  margin: 8px 0 0;
+  color: var(--forge-ink);
+  font-family: var(--forge-serif);
+  font-size: clamp(25px, 3vw, 34px);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.forge-map-preview__header p {
+  max-width: 680px;
+  margin: 10px 0 0;
+  color: var(--forge-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.forge-map-intent {
+  margin-top: 22px;
+  border-left: 3px solid var(--forge-amber);
+  background: #171711;
+  padding: 18px 20px;
+}
+
+.forge-map-intent > span { color: var(--forge-amber); }
+
+.forge-map-intent blockquote {
+  margin: 9px 0 8px;
+  color: var(--forge-ink);
+  font-family: var(--forge-serif);
+  font-size: clamp(19px, 2.2vw, 27px);
+  line-height: 1.24;
+}
+
+.forge-map-intent small {
+  color: var(--forge-dim);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.forge-plan-result .forge-map-gates {
+  display: grid;
+  gap: 0;
+  margin: 18px 0 0;
+  border-top: 1px solid var(--forge-line);
+  padding: 0;
+  list-style: none;
+}
+
+.forge-plan-result .forge-map-gates > li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  border-bottom: 1px solid var(--forge-line);
+  padding: 18px 0;
+}
+
+.forge-plan-result .forge-map-gates > li.has-revision {
+  box-shadow: inset 3px 0 0 var(--forge-amber);
+  padding-left: 13px;
+}
+
+.forge-map-gates__index {
+  display: grid !important;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--forge-line-strong);
+  color: var(--forge-cyan) !important;
+  font-family: var(--forge-mono);
+  font-size: 9px !important;
+}
+
+.forge-map-gates__copy {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.forge-map-gates__copy > span { color: var(--forge-dim); }
+
+.forge-map-gates__copy > strong {
+  color: var(--forge-ink);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.forge-map-gates__copy > small {
+  color: var(--forge-muted) !important;
+  font-size: 10px !important;
+  line-height: 1.55 !important;
+}
+
+.forge-map-gates button,
+.forge-map-preview__footer button {
+  min-height: 44px;
+  border: 1px solid var(--forge-line-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--forge-ink);
+  padding: 0 13px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.forge-map-gates button:hover,
+.forge-map-preview__footer button:hover { border-color: var(--forge-cyan); }
+
+.forge-map-gates__copy label {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.forge-map-gates__copy label > span {
+  color: var(--forge-amber);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.forge-map-gates__copy textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--forge-line-strong);
+  border-radius: 0;
+  background: #080d12;
+  color: var(--forge-ink);
+  padding: 11px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.forge-map-gates__copy textarea::placeholder { color: var(--forge-dim); }
+
+.forge-map-unavailable {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.32fr) minmax(0, 1fr);
+  gap: 24px;
+  margin-top: 18px;
+  border: 1px solid var(--forge-line);
+  padding: 18px 20px;
+}
+
+.forge-map-unavailable > span { color: var(--forge-danger, #e89292); }
+
+.forge-map-unavailable ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.forge-map-unavailable li {
+  color: var(--forge-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.forge-map-unavailable li::before {
+  content: "—";
+  margin-right: 8px;
+  color: var(--forge-dim);
+}
+
+.forge-map-preview__footer {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid var(--forge-line);
+}
+
+.forge-map-preview__footer p {
+  margin: 0;
+  color: var(--forge-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
 @media (max-width: 760px) {
   .forge-pathways-page { width: calc(100% - 32px); padding: 76px 0 94px; }
 
@@ -644,6 +849,24 @@
 
   .forge-pathways-home-link,
   .forge-foundations-link { width: 100%; }
+
+  .forge-plan-result .forge-map-gates > li {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 11px;
+  }
+
+  .forge-map-gates > li > button {
+    grid-column: 2;
+    width: 100%;
+  }
+
+  .forge-map-unavailable { grid-template-columns: 1fr; gap: 12px; }
+
+  .forge-map-preview__footer {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 14px 0;
+  }
 }
 
 @media (forced-colors: active) {
@@ -652,6 +875,11 @@
   .forge-pathways-control > ul { border-color: CanvasText; }
 
   .forge-pathway-open { border-color: CanvasText; background: Canvas; color: CanvasText; }
+
+  .forge-map-intent,
+  .forge-map-unavailable,
+  .forge-map-gates button,
+  .forge-map-preview__footer button { border-color: CanvasText; }
 }
 
 @media (max-width: 1120px) {

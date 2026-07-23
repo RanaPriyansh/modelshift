@@ -12,6 +12,7 @@ import {
   ForgeStatus,
   ForgeTrustLine,
 } from "./ForgePrimitives";
+import { LearningMapPreview } from "./LearningMapPreview";
 import { ForgeArrow, ForgeShell } from "./ForgeShell";
 
 const AGE_MODES = [
@@ -114,11 +115,13 @@ function LearningIntake() {
   const [depth, setDepth] = useState<string>("standard");
   const [guardianPresent, setGuardianPresent] = useState(false);
   const [plan, setPlan] = useState<ForgePlanContract | null>(null);
+  const [plannedQuestion, setPlannedQuestion] = useState("");
   const [planning, setPlanning] = useState(false);
   const [plannerError, setPlannerError] = useState("");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const submittedQuestion = question.trim();
     setPlanning(true);
     setPlan(null);
     setPlannerError("");
@@ -128,7 +131,7 @@ function LearningIntake() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question: question.trim(),
+          question: submittedQuestion,
           ageMode,
           depth,
           startingPoint,
@@ -139,6 +142,7 @@ function LearningIntake() {
       });
       const contract = (await response.json()) as ForgePlanContract;
       if (!response.ok && contract.contractKind !== "refusal") throw new Error("planner_unavailable");
+      setPlannedQuestion(submittedQuestion);
       setPlan(contract);
     } catch {
       setPlannerError("The path service is unavailable. Your question was not saved; choose a reviewed World below.");
@@ -217,13 +221,19 @@ function LearningIntake() {
 
       <div className="forge-intake-response" aria-live="polite">
         {plannerError ? <p>{plannerError}</p> : null}
-        {plan ? <LearningPlanResult plan={plan} /> : null}
+        {plan ? <LearningPlanResult learnerQuestion={plannedQuestion} plan={plan} /> : null}
       </div>
     </form>
   );
 }
 
-function LearningPlanResult({ plan }: { plan: ForgePlanContract }) {
+function LearningPlanResult({
+  learnerQuestion,
+  plan,
+}: {
+  learnerQuestion: string;
+  plan: ForgePlanContract;
+}) {
   if (plan.contractKind === "refusal") {
     return (
       <div className="forge-plan-result forge-plan-result--restricted" data-testid="forge-plan-refusal">
@@ -240,11 +250,11 @@ function LearningPlanResult({ plan }: { plan: ForgePlanContract }) {
         <span>Exploratory · not yet verified</span>
         <h3>{plan.exploration.title}</h3>
         <p>{plan.grounding.claimBoundary}</p>
-        <ol>
-          {plan.exploration.steps.slice(0, 3).map((step) => (
-            <li key={step.id}><strong>{step.objective}</strong><small>{step.exitGate}</small></li>
-          ))}
-        </ol>
+        <LearningMapPreview
+          key={`${learnerQuestion}:${plan.exploration.steps.map((step) => step.id).join(",")}`}
+          learnerQuestion={learnerQuestion}
+          plan={plan}
+        />
         <p className="forge-plan-privacy">Your question was used for this response and was not added to a learner profile.</p>
       </div>
     );
