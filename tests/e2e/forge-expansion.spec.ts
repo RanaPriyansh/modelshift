@@ -158,6 +158,30 @@ test.describe("FORGE expanded learning system", () => {
     await expect(page.getByRole("link", { name: "Open the working source-corroboration World" })).toHaveAttribute("href", "/learn/ai-and-learning");
     await expect(page.getByText("External video", { exact: true })).toBeVisible();
     await expect(page.getByText("Delayed return", { exact: true })).toBeVisible();
+    await expect(page.getByText("Foundation practice", { exact: true })).toBeVisible();
+    const sourceActionContrast = await page.locator(".forge-source-path-action-state").first().evaluate((element) => {
+      type Rgb = [number, number, number];
+      const parseColor = (value: string): Rgb => {
+        const channels = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [];
+        if (channels.length !== 3) throw new Error(`Unable to parse rendered color: ${value}`);
+        return [channels[0]!, channels[1]!, channels[2]!];
+      };
+      const luminance = ([red, green, blue]: Rgb) => {
+        const channels = [red, green, blue].map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+      };
+      const background = Array.from(function* () {
+        for (let current: Element | null = element; current; current = current.parentElement) yield getComputedStyle(current).backgroundColor;
+      }()).find((color) => !color.endsWith(", 0)"));
+      if (!background) throw new Error("Source-path action label has no opaque background");
+      const [lighter, darker] = [luminance(parseColor(getComputedStyle(element).color)), luminance(parseColor(background))]
+        .sort((left, right) => right - left);
+      return (lighter + 0.05) / (darker + 0.05);
+    });
+    expect(sourceActionContrast).toBeGreaterThanOrEqual(4.5);
     expect(await page.locator("iframe").count()).toBe(0);
     expect(await page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>("[src], [href]"))
       .map((element) => element.getAttribute("src") ?? element.getAttribute("href") ?? "")

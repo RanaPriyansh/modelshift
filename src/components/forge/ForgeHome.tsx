@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { PUBLIC_WORLD_CATALOG } from "@/src/forge/worlds";
 import type { ForgePlanContract } from "@/src/lib/forge-planner";
@@ -38,6 +38,8 @@ const DEPTH_MODES = [
   { id: "standard", label: "Working knowledge", note: "Build and transfer the model" },
   { id: "deep", label: "Deep study", note: "Trace assumptions and limits" },
 ] as const;
+
+const PLANNER_REQUEST_TIMEOUT_MS = 8_000;
 
 const WORLD_ROWS = [
   ...PUBLIC_WORLD_CATALOG.map((world) => ({
@@ -118,10 +120,32 @@ function LearningIntake() {
   const [plannedQuestion, setPlannedQuestion] = useState("");
   const [planning, setPlanning] = useState(false);
   const [plannerError, setPlannerError] = useState("");
+  const activePlannerRequestRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(false);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      activePlannerRequestRef.current?.abort();
+      activePlannerRequestRef.current = null;
+    };
+  }, []);
+
+  async function requestPlan() {
     const submittedQuestion = question.trim();
+    activePlannerRequestRef.current?.abort();
+    const controller = new AbortController();
+    activePlannerRequestRef.current = controller;
+    const timeout = window.setTimeout(() => {
+      if (activePlannerRequestRef.current !== controller) return;
+      controller.abort();
+      activePlannerRequestRef.current = null;
+      if (!mountedRef.current) return;
+      setPlanning(false);
+      setPlannerError("The path request took too long. Your question was not saved. Try again or choose a reviewed World below.");
+    }, PLANNER_REQUEST_TIMEOUT_MS);
+
     setPlanning(true);
     setPlan(null);
     setPlannerError("");
@@ -139,16 +163,26 @@ function LearningIntake() {
           guardianManaged: ageMode === "child" && guardianPresent,
           sourceMode: "curated",
         }),
+        signal: controller.signal,
       });
       const contract = (await response.json()) as ForgePlanContract;
       if (!response.ok && contract.contractKind !== "refusal") throw new Error("planner_unavailable");
+      if (!mountedRef.current || activePlannerRequestRef.current !== controller || controller.signal.aborted) return;
       setPlannedQuestion(submittedQuestion);
       setPlan(contract);
     } catch {
+      if (!mountedRef.current || activePlannerRequestRef.current !== controller || controller.signal.aborted) return;
       setPlannerError("The path service is unavailable. Your question was not saved; choose a reviewed World below.");
     } finally {
-      setPlanning(false);
+      window.clearTimeout(timeout);
+      if (activePlannerRequestRef.current === controller) activePlannerRequestRef.current = null;
+      if (mountedRef.current && !controller.signal.aborted) setPlanning(false);
     }
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void requestPlan();
   }
 
   return (
@@ -220,7 +254,12 @@ function LearningIntake() {
       </div>
 
       <div className="forge-intake-response" aria-live="polite">
-        {plannerError ? <p>{plannerError}</p> : null}
+        {plannerError ? (
+          <div role="alert">
+            <p>{plannerError}</p>
+            <button disabled={planning} onClick={() => { void requestPlan(); }} type="button">Try again</button>
+          </div>
+        ) : null}
         {plan ? <LearningPlanResult learnerQuestion={plannedQuestion} plan={plan} /> : null}
       </div>
     </form>
