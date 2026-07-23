@@ -9,7 +9,6 @@ const TIME = "2026-07-23T00:00:00.000Z";
 function candidate(overrides: Record<string, string | undefined> = {}) {
   return buildReleaseManifest({
     FORGE_RELEASE_CANDIDATE_STATE: "DEPLOYED_CANDIDATE",
-    FORGE_RELEASE_SHA: SHA,
     VERCEL_GIT_COMMIT_SHA: SHA,
     VERCEL_DEPLOYMENT_ID: "dpl_AbCdEfGhIjKlMnOpQrStUvWxYz12",
     VERCEL_URL: "forge-learning-test123-ranapriyanshs-projects.vercel.app",
@@ -68,7 +67,7 @@ describe("release manifest", () => {
     ["IP-literal immutable origin", { VERCEL_URL: "203.0.113.1" }, "immutable_deployment"],
     ["wrong Vercel project", { VERCEL_PROJECT_ID: "prj_AbCdEfGhIjKlMnOpQrStUvWxYz12" }, "deployment_project"],
     ["caller identity conflicts with platform identity", { FORGE_RELEASE_DEPLOYMENT_ID: "dpl_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm" }, "immutable_deployment"],
-    ["unexpected source drift", { VERCEL_GIT_COMMIT_SHA: "f".repeat(40) }, "source_drift"],
+    ["missing provider Git SHA", { VERCEL_GIT_COMMIT_SHA: undefined }, "source_sha"],
   ])("fails closed for %s", (_label, overrides, expected) => {
     const manifest = candidate(overrides);
     expect(isBoundReleaseManifest(manifest)).toBe(false);
@@ -110,5 +109,11 @@ describe("release manifest", () => {
     const manifest = candidate({ FORGE_RELEASE_ALIAS_RESOLVED_AT: TIME });
     expect(manifest).toMatchObject({ binding_status: "unbound", reason_codes: expect.arrayContaining(["public_alias"]) });
     expect(JSON.stringify(manifest)).not.toContain("resolved_at");
+  });
+
+  it("uses the platform Git SHA as the only bound source and ignores a caller override", () => {
+    const manifest = candidate({ FORGE_RELEASE_SHA: "f".repeat(40) });
+    expect(manifest).toMatchObject({ binding_status: "bound", source_sha: SHA });
+    expect(JSON.stringify(manifest)).not.toContain("f".repeat(40));
   });
 });

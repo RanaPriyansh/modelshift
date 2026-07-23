@@ -40,6 +40,10 @@ describe("release health", () => {
     expect(resolveReleaseSha({ VERCEL_GIT_COMMIT_SHA: SHA })).toBe(SHA);
     expect(resolveReleaseSha({ VERCEL_GIT_COMMIT_SHA: "preview-latest" })).toBe("unknown");
   });
+  it("does not let a caller release SHA override a platform Git SHA", () => {
+    expect(resolveReleaseSha({ FORGE_RELEASE_SHA: "f".repeat(40), VERCEL_GIT_COMMIT_SHA: SHA })).toBe(SHA);
+    expect(resolveReleaseSha({ FORGE_RELEASE_SHA: SHA, VERCEL_GIT_COMMIT_SHA: "preview-latest" })).toBe("unknown");
+  });
   it("keeps cloud and managed provider state explicit without exposing values", () => {
     const health = buildReleaseHealth({ FORGE_CLOUD_ACCOUNTS_ENABLED: "true", FORGE_SUPABASE_URL: "https://example.supabase.co", FORGE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test_key_1234567890", FORGE_LESSON_STUDIO_OPENAI_ENABLED: "true", OPENAI_API_KEY: "must-not-appear" });
     expect(health.cloud_accounts_enabled).toBe(false);

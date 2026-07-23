@@ -60,7 +60,12 @@ function validMigrationIdentity(value: string | undefined): string | "unknown" {
 }
 
 export function resolveReleaseSha(environment: ReleaseEnvironment = process.env): string | "unknown" {
-  return validSha(environment.FORGE_RELEASE_SHA ?? environment.VERCEL_GIT_COMMIT_SHA);
+  // A Vercel Git integration SHA is provider-owned. Prefer it whenever it is
+  // available so a caller-supplied diagnostic/local SHA cannot override health
+  // during a deployed candidate. Local, unbound artifacts may still expose
+  // their explicit build SHA for deterministic local verification.
+  if (environment.VERCEL_GIT_COMMIT_SHA !== undefined) return validSha(environment.VERCEL_GIT_COMMIT_SHA);
+  return validSha(environment.FORGE_RELEASE_SHA);
 }
 
 export function buildReleaseHealth(environment: ReleaseEnvironment = process.env): ReleaseHealth {

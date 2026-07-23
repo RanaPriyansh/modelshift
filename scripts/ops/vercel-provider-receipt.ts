@@ -107,6 +107,10 @@ function canonicalTextId(value: unknown): string | null {
   return typeof value === "string" && /^[A-Za-z0-9._:-]{1,256}$/.test(value) ? value : null;
 }
 
+function canonicalRepositoryId(value: unknown): number | null {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+
 /** Strictly validate the portable, sanitized receipt schema before use. */
 export function validateVercelProviderReceipt(value: unknown): string[] {
   if (!hasExactKeys(value, ["schema_version", "receipt_kind", "provider", "collected_at", "deployment", "public_asset"])) return ["schema"];
@@ -141,17 +145,26 @@ export function isVercelProviderReceipt(value: unknown): value is VercelProvider
 }
 
 /**
- * Only Vercel's deployment gitSource object establishes source provenance.
- * Deployment meta is caller-settable (including by the CLI), so it may only
- * provide a consistency check and can never supply a missing source identity.
+ * Vercel's provider-owned gitSource and gitRepo objects jointly establish
+ * source provenance. gitSource supplies the exact SHA/ref/type/repository ID;
+ * gitRepo supplies the checked owner/name/path. Deployment meta is
+ * caller-settable (including by the CLI), so it may only provide a consistency
+ * check and can never supply a missing source or repository identity.
  */
 function readProviderGitSource(deployment: VercelApiDeployment, target: DeploymentTarget): string | null {
   const gitSource = isRecord(deployment.gitSource) ? deployment.gitSource : null;
-  if (!gitSource) return null;
+  const gitRepo = isRecord(deployment.gitRepo) ? deployment.gitRepo : null;
+  if (!gitSource || !gitRepo) return null;
   const sourceSha = canonicalSha(gitSource.sha);
+  const repositoryId = canonicalRepositoryId(gitSource.repoId);
   if (gitSource.type !== target.git_source.type
-    || gitSource.repo !== target.git_source.repository
     || gitSource.ref !== target.git_source.ref
+    || repositoryId !== target.git_source.repository_id
+    || gitRepo.type !== target.git_repository.type
+    || gitRepo.namespace !== target.git_repository.namespace
+    || gitRepo.name !== target.git_repository.name
+    || gitRepo.path !== target.git_repository.path
+    || gitRepo.defaultBranch !== target.git_repository.default_branch
     || !sourceSha) return null;
 
   const metadata = isRecord(deployment.meta) ? deployment.meta : {};
@@ -159,7 +172,7 @@ function readProviderGitSource(deployment: VercelApiDeployment, target: Deployme
   const metadataRepo = metadata.githubRepo;
   const metadataRef = metadata.githubCommitRef;
   if ((metadataSha !== undefined && canonicalSha(metadataSha) !== sourceSha)
-    || (metadataRepo !== undefined && metadataRepo !== target.git_source.repository)
+    || (metadataRepo !== undefined && metadataRepo !== target.git_repository.path)
     || (metadataRef !== undefined && metadataRef !== target.git_source.ref)) return null;
   return sourceSha;
 }

@@ -9,7 +9,8 @@ const TARGET = {
   hostname: "modelshift.vercel.app",
   project_id: "prj_SnTYtzLicYKYlHvXCNwq9J7ehQZB",
   team_id: "team_lr0E9GlEDc3XYJP7xrx8po2W",
-  git_source: { type: "github", repository: "RanaPriyansh/modelshift", ref: "main" },
+  git_source: { type: "github", ref: "main", repository_id: 1308085427 },
+  git_repository: { namespace: "RanaPriyansh", name: "modelshift", path: "RanaPriyansh/modelshift", type: "github", default_branch: "main" },
   immutable_deployment: { hostname_prefix: "forge-learning-", hostname_suffix: "-ranapriyanshs-projects.vercel.app" },
 } as const;
 const DEPLOYMENT = {
@@ -18,7 +19,10 @@ const DEPLOYMENT = {
   url: "forge-learning-7a63ywsp5-ranapriyanshs-projects.vercel.app",
   readyState: "READY",
   createdAt: 1_784_764_800_000,
-  gitSource: { type: "github", repo: "RanaPriyansh/modelshift", ref: "main", sha: SHA },
+  // Matches Vercel's documented Git deployment shape: the source object uses
+  // repoId, while repository owner/name/path are in the separate gitRepo.
+  gitSource: { type: "github", repoId: 1308085427, ref: "main", sha: SHA },
+  gitRepo: { namespace: "RanaPriyansh", name: "modelshift", path: "RanaPriyansh/modelshift", type: "github", defaultBranch: "main" },
 };
 const EVENTS = {
   events: [{
@@ -50,6 +54,9 @@ describe("Vercel provider deployment receipt", () => {
     ["conflicting caller meta SHA", { ...DEPLOYMENT, meta: { githubCommitSha: "f".repeat(40) } }, EVENTS],
     ["conflicting caller meta repository", { ...DEPLOYMENT, meta: { githubRepo: "attacker/other" } }, EVENTS],
     ["dirty local-source archive without provider gitSource", { ...DEPLOYMENT, gitSource: undefined, meta: { githubCommitSha: SHA, githubRepo: "RanaPriyansh/modelshift", githubCommitRef: "main" } }, EVENTS],
+    ["missing provider git repository", { ...DEPLOYMENT, gitRepo: undefined }, EVENTS],
+    ["wrong provider repository ID", { ...DEPLOYMENT, gitSource: { ...DEPLOYMENT.gitSource, repoId: 99 } }, EVENTS],
+    ["wrong provider git repository path", { ...DEPLOYMENT, gitRepo: { ...DEPLOYMENT.gitRepo, path: "attacker/other" } }, EVENTS],
     ["wrong provider git ref", { ...DEPLOYMENT, gitSource: { ...DEPLOYMENT.gitSource, ref: "feature/dirty" } }, EVENTS],
     ["ambiguous digest logs", DEPLOYMENT, { events: [...EVENTS.events, { ...EVENTS.events[0], id: "evt_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm", created: 1_784_764_861_000 }] }],
   ])("fails closed for %s", (_label, deployment, events) => {
