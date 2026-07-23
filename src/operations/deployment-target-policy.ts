@@ -9,6 +9,7 @@ export const DEPLOYMENT_TARGETS = {
     origin: "https://modelshift.vercel.app",
     hostname: "modelshift.vercel.app",
     project_id: "prj_SnTYtzLicYKYlHvXCNwq9J7ehQZB",
+    team_id: "team_lr0E9GlEDc3XYJP7xrx8po2W",
     immutable_deployment: {
       hostname_prefix: "forge-learning-",
       hostname_suffix: "-ranapriyanshs-projects.vercel.app",
@@ -22,6 +23,7 @@ export type DeploymentTarget = Readonly<{
   origin: string;
   hostname: string;
   project_id: string;
+  team_id: string;
   immutable_deployment: ImmutableDeploymentTargetPolicy;
 }>;
 

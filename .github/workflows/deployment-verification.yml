@@ -13,8 +13,8 @@ on:
         description: Full 40-character Git SHA expected at the inspected origin
         required: true
         type: string
-      expected_public_asset_digest:
-        description: Caller-retained lowercase SHA-256 digest of the emitted public .next/static tree
+      vercel_deployment_id:
+        description: Exact READY Vercel deployment ID whose authenticated build logs will be collected
         required: true
         type: string
 
@@ -34,7 +34,10 @@ jobs:
       OPENAI_FORGE_PLANNER_ENABLED: "false"
       TARGET_ID: ${{ inputs.target_id }}
       EXPECTED_RELEASE_SHA: ${{ inputs.expected_sha }}
-      EXPECTED_PUBLIC_ASSET_DIGEST: ${{ inputs.expected_public_asset_digest }}
+      VERCEL_DEPLOYMENT_ID: ${{ inputs.vercel_deployment_id }}
+      # A separately configured, least-privilege read-only Vercel API token.
+      # It is consumed only by the collector process and never written to a receipt or report.
+      VERCEL_RECEIPT_TOKEN: ${{ secrets.VERCEL_RECEIPT_TOKEN }}
     steps:
       - name: Check out verifier source
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
@@ -65,7 +68,8 @@ jobs:
           pnpm exec tsx scripts/ops/deployment-verifier.ts
           --target-id "$TARGET_ID"
           --expected-sha "$EXPECTED_RELEASE_SHA"
-          --expected-public-asset-digest "$EXPECTED_PUBLIC_ASSET_DIGEST"
+          --vercel-deployment-id "$VERCEL_DEPLOYMENT_ID"
+          --vercel-token-env VERCEL_RECEIPT_TOKEN
           --expected-lockfile-digest "$FORGE_LOCKFILE_DIGEST"
           --expected-content-manifest-digest "$FORGE_CONTENT_MANIFEST_DIGEST"
           --expected-evaluator-baseline-digest "$FORGE_EVALUATOR_BASELINE_DIGEST"

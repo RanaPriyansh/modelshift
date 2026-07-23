@@ -4,6 +4,7 @@ import type { AddressInfo, LookupFunction } from "node:net";
 
 import { CANONICAL_DEPLOYMENT_ROUTES, createPinnedLookup, IANA_IPV6_GLOBAL_UNICAST_POLICY_VERSION, IANA_SPECIAL_PURPOSE_POLICY_VERSION, INITIAL_HTML_CLIENT_ASSET_BUDGET, validateTargetUrl, verifyDeployment, type DeploymentVerificationReport } from "../../scripts/ops/deployment-verifier";
 import { matchesImmutableDeploymentTarget, resolveDeploymentTarget } from "../../scripts/ops/deployment-target-policy";
+import type { ProviderReceiptInput } from "../../scripts/ops/vercel-provider-receipt";
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
 const DIGEST = "a".repeat(64);
@@ -11,6 +12,7 @@ const TEST_DEPLOYMENT_TARGET = {
   origin: "https://forge.example",
   hostname: "forge.example",
   project_id: "prj_SnTYtzLicYKYlHvXCNwq9J7ehQZB",
+  team_id: "team_lr0E9GlEDc3XYJP7xrx8po2W",
   immutable_deployment: {
     hostname_prefix: "forge-learning-",
     hostname_suffix: "-ranapriyanshs-projects.vercel.app",
@@ -25,9 +27,30 @@ const RELEASE_MANIFEST = {
   source_sha: SHA,
   build_time: "2026-07-22T00:00:00.000Z",
   dependency_lock_digest: DIGEST,
-  public_asset: { status: "recorded", digest: DIGEST },
+  public_asset: { status: "provider_receipt_required", gate: "provider_observed_asset_digest_required_before_promotion" },
   immutable_deployment: { id: DEPLOYMENT_ID, url: "https://forge-learning-test123-ranapriyanshs-projects.vercel.app/", project_id: TEST_DEPLOYMENT_TARGET.project_id },
   public_alias: { url: "https://forge.example/" },
+} as const;
+const PROVIDER_RECEIPT = {
+  schema_version: "1.0",
+  receipt_kind: "vercel_authenticated_build_log",
+  provider: "vercel",
+  collected_at: "2026-07-22T00:00:02.000Z",
+  deployment: {
+    id: DEPLOYMENT_ID,
+    project_id: TEST_DEPLOYMENT_TARGET.project_id,
+    source_sha: SHA,
+    immutable_url: RELEASE_MANIFEST.immutable_deployment.url,
+    ready_state: "READY",
+    created_at: "2026-07-22T00:00:00.000Z",
+  },
+  public_asset: {
+    algorithm: "sha256",
+    digest: DIGEST,
+    source: "vercel_build_log_marker",
+    event_id: "evt_AbCdEfGhIjKlMnOpQrStUvWxYz12",
+    observed_at: "2026-07-22T00:00:01.000Z",
+  },
 } as const;
 const pages: Record<string, string> = {
   "/": "FORGE",
@@ -51,7 +74,7 @@ function mockFetch(asset = "self.__next_f=[]", defaultAssets: readonly string[] 
     return new Response(`<html><body>${pages[url.pathname] ?? ""}${scripts.map(scriptTag).join("")}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "content-security-policy": CSP, "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "strict-origin-when-cross-origin", "permissions-policy": "camera=(), microphone=(), geolocation=()" } });
   };
 }
-async function run(fetchImpl = mockFetch()): Promise<DeploymentVerificationReport> { return verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:00.000Z", expectedLockfileDigest: DIGEST, expectedPublicAssetDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", deploymentTarget: TEST_DEPLOYMENT_TARGET, resolveHostname: async () => ["8.8.8.8"] }); }
+async function run(fetchImpl = mockFetch(), providerReceipt: ProviderReceiptInput = { authority: "authenticated_vercel_api", receipt: PROVIDER_RECEIPT }): Promise<DeploymentVerificationReport> { return verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:03.000Z", expectedLockfileDigest: DIGEST, providerReceipt, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", deploymentTarget: TEST_DEPLOYMENT_TARGET, resolveHostname: async () => ["8.8.8.8"] }); }
 describe("deployment verifier", () => {
   it("uses the Node all-address lookup shape while pinning the validated address", async () => {
     const server = createServer((_request, response) => response.end("pinned"));
@@ -121,7 +144,7 @@ describe("deployment verifier", () => {
     expect(report.checks.find((item) => item.id === "release_identity.state_bound")?.status).toBe("fail");
   });
   it("fails closed for malformed and contradictory public candidate manifests", async () => {
-    const malformed = await run(mockFetch("self.__next_f=[]", ["/_next/static/app.js"], {}, { ...RELEASE_MANIFEST, public_asset: { status: "recorded", digest: "short" } }) as typeof fetch);
+    const malformed = await run(mockFetch("self.__next_f=[]", ["/_next/static/app.js"], {}, { ...RELEASE_MANIFEST, public_asset: { status: "provider_receipt_required", gate: "wrong" } }) as typeof fetch);
     expect(malformed.status).toBe("fail");
     expect(malformed.checks.find((item) => item.id === "health.release_manifest.schema")?.status).toBe("fail");
 
@@ -174,21 +197,40 @@ describe("deployment verifier", () => {
     expect(report.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
     expect(report.checks.find((item) => item.id === "health.release_manifest.schema")?.status).toBe("fail");
   });
-  it("requires a caller-retained recorded public asset digest for remote candidate status", async () => {
+  it("requires an in-process authenticated provider receipt instead of a caller-retained asset digest", async () => {
     const missingExpected = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", deploymentTarget: TEST_DEPLOYMENT_TARGET, resolveHostname: async () => ["8.8.8.8"] });
     expect(missingExpected.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
-    expect(missingExpected.checks.find((item) => item.id === "health.release_manifest.public_asset_authority")?.status).toBe("fail");
+    expect(missingExpected.checks.find((item) => item.id === "provider_receipt.schema")?.status).toBe("fail");
 
-    const mismatch = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, expectedLockfileDigest: DIGEST, expectedPublicAssetDigest: "b".repeat(64), expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", deploymentTarget: TEST_DEPLOYMENT_TARGET, resolveHostname: async () => ["8.8.8.8"] });
-    expect(mismatch.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
-    expect(mismatch.checks.find((item) => item.id === "health.release_manifest.public_asset_authority")?.status).toBe("fail");
+    const selfReported = await run(mockFetch(), { authority: "external_evidence", receipt: PROVIDER_RECEIPT });
+    expect(selfReported.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
+    expect(selfReported.checks.find((item) => item.id === "provider_receipt.authority")?.status).toBe("fail");
 
-    const absent = await run(mockFetch("self.__next_f=[]", ["/_next/static/app.js"], {}, {
-      ...RELEASE_MANIFEST,
-      public_asset: { status: "absent_with_gate", gate: "public_asset_digest_required_before_promotion" },
-    }) as typeof fetch);
-    expect(absent.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
-    expect(absent.checks.find((item) => item.id === "health.release_manifest.public_asset_authority")?.status).toBe("fail");
+    const malformed = await run(mockFetch(), { authority: "authenticated_vercel_api", receipt: { ...PROVIDER_RECEIPT, public_asset: { ...PROVIDER_RECEIPT.public_asset, digest: "short" } } });
+    expect(malformed.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
+    expect(malformed.checks.find((item) => item.id === "provider_receipt.schema")?.status).toBe("fail");
+  });
+  it("fails closed for provider receipt deployment, project, source, URL, and stale-time mismatches", async () => {
+    const cases = [
+      { deployment: { ...PROVIDER_RECEIPT.deployment, id: "dpl_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm" } },
+      { deployment: { ...PROVIDER_RECEIPT.deployment, project_id: "prj_AbCdEfGhIjKlMnOpQrStUvWxYz12" } },
+      { deployment: { ...PROVIDER_RECEIPT.deployment, source_sha: "f".repeat(40) } },
+      { deployment: { ...PROVIDER_RECEIPT.deployment, immutable_url: "https://forge-learning-other999-ranapriyanshs-projects.vercel.app/" } },
+      { public_asset: { ...PROVIDER_RECEIPT.public_asset, observed_at: "2026-07-21T23:59:59.000Z" }, collected_at: "2026-07-22T00:00:02.000Z" },
+    ];
+    for (const overrides of cases) {
+      const report = await run(mockFetch(), { authority: "authenticated_vercel_api", receipt: { ...PROVIDER_RECEIPT, ...overrides } });
+      expect(report.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED");
+      expect(report.checks.find((item) => item.id === "health.release_manifest.binding")?.status).toBe("fail");
+    }
+  });
+  it("accepts two provider-observed deployments of the same source with different emitted asset digests", async () => {
+    const first = await run(mockFetch(), { authority: "authenticated_vercel_api", receipt: { ...PROVIDER_RECEIPT, public_asset: { ...PROVIDER_RECEIPT.public_asset, digest: "a".repeat(64) } } });
+    const second = await run(mockFetch(), { authority: "authenticated_vercel_api", receipt: { ...PROVIDER_RECEIPT, public_asset: { ...PROVIDER_RECEIPT.public_asset, digest: "b".repeat(64) } } });
+    expect(first.release_identity.candidate_state).toBe("DEPLOYED_CANDIDATE");
+    expect(second.release_identity.candidate_state).toBe("DEPLOYED_CANDIDATE");
+    expect(first.status).toBe("pass");
+    expect(second.status).toBe("pass");
   });
   it.each([
     "::",
@@ -229,7 +271,7 @@ describe("deployment verifier", () => {
       calls += 1;
       return mockFetch()(input);
     };
-    const report = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:00.000Z", expectedLockfileDigest: DIGEST, expectedPublicAssetDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", deploymentTarget: TEST_DEPLOYMENT_TARGET, resolveHostname: async () => [address] });
+    const report = await verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:03.000Z", expectedLockfileDigest: DIGEST, providerReceipt: { authority: "authenticated_vercel_api", receipt: PROVIDER_RECEIPT }, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", deploymentTarget: TEST_DEPLOYMENT_TARGET, resolveHostname: async () => [address] });
     expect(report.checks.find((item) => item.id === "target.dns_policy")?.status).toBe("pass");
     expect(report.status).toBe("pass");
     expect(calls).toBeGreaterThan(0);

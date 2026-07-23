@@ -28,14 +28,12 @@ describe("release health", () => {
       VERCEL_PROJECT_ID: "prj_SnTYtzLicYKYlHvXCNwq9J7ehQZB",
       FORGE_BUILD_TIME: "2026-07-22T00:00:00.000Z",
       FORGE_LOCKFILE_DIGEST: DIGEST,
-      FORGE_PUBLIC_ASSET_DIGEST_STATUS: "absent_with_gate",
-      FORGE_PUBLIC_ASSET_DIGEST_GATE: "public_asset_digest_required_before_promotion",
     });
     expect(health.release_manifest).toMatchObject({
       binding_status: "bound",
       candidate_state: "DEPLOYED_CANDIDATE",
       source_sha: SHA,
-      public_asset: { status: "absent_with_gate", gate: "public_asset_digest_required_before_promotion" },
+      public_asset: { status: "provider_receipt_required", gate: "provider_observed_asset_digest_required_before_promotion" },
     });
   });
   it("uses a platform SHA only when it is full length", () => {

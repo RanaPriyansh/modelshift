@@ -2,7 +2,7 @@ import { isIP, type LookupFunction } from "node:net";
 import { lookup } from "node:dns/promises";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -23,8 +23,14 @@ import {
   resolveDeploymentTarget,
   type DeploymentTarget,
 } from "./deployment-target-policy";
+import {
+  collectVercelProviderReceipt,
+  isVercelProviderReceipt,
+  validateVercelProviderReceipt,
+  type ProviderReceiptInput,
+} from "./vercel-provider-receipt";
 
-export const DEPLOYMENT_VERIFIER_VERSION = "2.2.0";
+export const DEPLOYMENT_VERIFIER_VERSION = "2.3.0";
 export const WORKER_CANDIDATE_STATES = ["BUILT_LOCAL", "PUSHED", "DEPLOYMENT_BLOCKED", "DEPLOYED_CANDIDATE"] as const;
 const SHA = /^[0-9a-f]{40}$/i;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
@@ -101,8 +107,8 @@ export type VerifyDeploymentOptions = {
   decisionName?: string;
   consoleVerification?: "pass" | "fail" | "not_evaluated";
   expectedLockfileDigest?: string;
-  /** A caller-retained emitted-asset digest; health cannot attest this itself. */
-  expectedPublicAssetDigest?: string;
+  /** Provider receipt collected during this verification, or explicitly external evidence. */
+  providerReceipt?: ProviderReceiptInput;
   expectedContentManifestDigest?: string;
   expectedEvaluatorBaselineDigest?: string;
   expectedDatabaseMigrationIdentity?: string;
@@ -226,7 +232,6 @@ async function safeResolvedAddresses(hostname: string, resolver: (hostname: stri
 }
 
 function normalizeSha(value: string): string { if (!SHA.test(value)) throw new Error("expected release SHA must be a full 40-character Git SHA"); return value.toLowerCase(); }
-function normalizeExpectedDigest(value: string | undefined): string | undefined { return value && DIGEST.test(value) ? value.toLowerCase() : undefined; }
 export function validateTargetUrl(raw: string, allowedHosts: readonly string[] = [], allowLocalhost = false): URL {
   let url: URL;
   try { url = new URL(raw); } catch { throw new Error("base URL must be an absolute URL"); }
@@ -350,8 +355,12 @@ function headerChecks(checks: VerificationCheck[], response: Response, prefix: s
 export async function verifyDeployment(options: VerifyDeploymentOptions): Promise<DeploymentVerificationReport> {
   if (options.candidateState && !WORKER_CANDIDATE_STATES.includes(options.candidateState as (typeof WORKER_CANDIDATE_STATES)[number])) throw new Error("worker verifier cannot emit terminal ADR-006 states");
   if (options.liveEvaluationStatus && options.liveEvaluationStatus !== "not_evaluated") throw new Error("worker verifier cannot consume live evaluation proof; use the separately approved eval:live gate");
-  const expected = normalizeSha(options.expectedSha); const target = validateTargetUrl(options.baseUrl, options.allowedHosts, options.allowLocalhost); const origin = target.origin; const targetOrigin = target.toString(); const expectedPublicAssetDigest = normalizeExpectedDigest(options.expectedPublicAssetDigest); const fetchImpl = options.fetchImpl ?? fetch; const timeoutMs = options.timeoutMs ?? 10_000; const checks: VerificationCheck[] = []; let observed: string | "unknown" = "unknown"; let runtimeMode = "unknown"; let cloudProviderFlags: Record<string, boolean | string> = { cloud_accounts_enabled: "not_evaluated", cloud_auth_configured: "not_evaluated", provider_mode: "not_evaluated" }; const assets = new Map<string, URL>();
+  const expected = normalizeSha(options.expectedSha); const target = validateTargetUrl(options.baseUrl, options.allowedHosts, options.allowLocalhost); const origin = target.origin; const targetOrigin = target.toString(); const fetchImpl = options.fetchImpl ?? fetch; const timeoutMs = options.timeoutMs ?? 10_000; const checks: VerificationCheck[] = []; let observed: string | "unknown" = "unknown"; let runtimeMode = "unknown"; let cloudProviderFlags: Record<string, boolean | string> = { cloud_accounts_enabled: "not_evaluated", cloud_auth_configured: "not_evaluated", provider_mode: "not_evaluated" }; const assets = new Map<string, URL>();
   const generatedAt = options.generatedAt ?? new Date().toISOString();
+  const receiptFailures = options.providerReceipt ? validateVercelProviderReceipt(options.providerReceipt.receipt) : ["missing"];
+  const providerReceipt = options.providerReceipt && isVercelProviderReceipt(options.providerReceipt.receipt)
+    ? options.providerReceipt.receipt
+    : null;
   const resolver = options.resolveHostname ?? defaultResolveHostname;
   let targetAddresses: readonly string[] | undefined;
   if (LOCAL_HOSTS.has(target.hostname)) {
@@ -420,18 +429,35 @@ export async function verifyDeployment(options: VerifyDeploymentOptions): Promis
           candidateManifest.public_alias.url,
           options.deploymentTarget,
         );
-        const publicAssetMatchesAuthority = candidateManifest.public_asset.status === "recorded"
-          && expectedPublicAssetDigest !== undefined
-          && candidateManifest.public_asset.digest === expectedPublicAssetDigest;
+        const requiresProviderReceipt = candidateManifest.public_asset.status === "provider_receipt_required"
+          && candidateManifest.public_asset.gate === "provider_observed_asset_digest_required_before_promotion";
+        const receiptAuthorityIsProviderApi = options.providerReceipt?.authority === "authenticated_vercel_api";
+        const receiptMatchesCandidate = providerReceipt !== null
+          && providerReceipt.deployment.id === candidateManifest.immutable_deployment.id
+          && providerReceipt.deployment.project_id === candidateManifest.immutable_deployment.project_id
+          && providerReceipt.deployment.source_sha === candidateManifest.source_sha
+          && providerReceipt.deployment.immutable_url === candidateManifest.immutable_deployment.url
+          && providerReceipt.deployment.source_sha === expected
+          && matchesImmutableDeploymentTarget(
+            { id: providerReceipt.deployment.id, project_id: providerReceipt.deployment.project_id, url: providerReceipt.deployment.immutable_url },
+            candidateManifest.public_alias.url,
+            options.deploymentTarget,
+          );
+        const buildPrecedesProviderObservation = providerReceipt !== null
+          && new Date(candidateManifest.build_time).getTime() <= new Date(providerReceipt.public_asset.observed_at).getTime();
         const buildPrecedesAliasVerification = aliasVerifiedAt !== "not_verified"
           && new Date(candidateManifest.build_time).getTime() <= new Date(aliasVerifiedAt).getTime();
         record(checks, "health.release_manifest.alias_target", aliasMatchesTarget, "manifest public alias exactly matches the normalized verified target origin");
         record(checks, "health.release_manifest.build_time_order", buildPrecedesAliasVerification, "manifest build time is no later than the verifier's post-fetch alias receipt timestamp");
         record(checks, "health.release_manifest.immutable_target", immutableMatchesPolicy, "immutable deployment uses the checked-in FORGE Vercel hostname and non-placeholder deployment-ID policy");
-        record(checks, "health.release_manifest.public_asset_authority", publicAssetMatchesAuthority, "recorded public asset digest matches the caller-retained expected digest");
-        const boundCandidate = matchesHealth && matchesExpectedSource && aliasMatchesTarget && buildPrecedesAliasVerification && immutableMatchesPolicy && publicAssetMatchesAuthority;
+        record(checks, "provider_receipt.schema", receiptFailures.length === 0, receiptFailures.length === 0 ? "provider receipt uses the exact versioned schema" : `provider receipt is missing or malformed: ${receiptFailures.join(", ")}`);
+        record(checks, "provider_receipt.authority", receiptAuthorityIsProviderApi, receiptAuthorityIsProviderApi ? "receipt was collected in-process through the authenticated read-only Vercel API adapter" : "JSON or other external evidence is not provider-authenticated proof");
+        record(checks, "provider_receipt.tuple", receiptMatchesCandidate, "provider receipt exactly matches health deployment ID, project ID, source SHA, immutable URL, and checked-in target policy");
+        record(checks, "provider_receipt.build_time_order", buildPrecedesProviderObservation, "health build time is no later than the provider-observed build-log digest event");
+        record(checks, "provider_receipt.public_asset", requiresProviderReceipt && providerReceipt !== null, "health requires a post-build provider-observed public-asset digest; health never self-attests it");
+        const boundCandidate = matchesHealth && matchesExpectedSource && aliasMatchesTarget && buildPrecedesAliasVerification && immutableMatchesPolicy && requiresProviderReceipt && receiptAuthorityIsProviderApi && receiptFailures.length === 0 && receiptMatchesCandidate && buildPrecedesProviderObservation;
         if (boundCandidate) releaseManifest = candidateManifest;
-        record(checks, "health.release_manifest.binding", boundCandidate, "bound candidate tuple matches health, verified alias target and receipt time, source SHA, immutable-target policy, and retained public asset digest");
+        record(checks, "health.release_manifest.binding", boundCandidate, "bound candidate tuple matches health, verified alias, provider-authenticated exact deployment receipt, source SHA, immutable-target policy, and post-build asset observation");
       } else {
         const localUnbound = LOCAL_HOSTS.has(target.hostname)
           && isRecord(payload.release_manifest)
@@ -500,7 +526,7 @@ export async function verifyDeployment(options: VerifyDeploymentOptions): Promis
 
 export function renderDeploymentMarkdown(report: DeploymentVerificationReport): string {
   const rows = report.checks.map((item) => `| ${item.id} | ${item.status.toUpperCase()} | ${item.detail} |`).join("\n");
-  return `# FORGE Deployment Verification\n\n- Status: **${report.status.toUpperCase()}**\n- Target origin: \`${report.target_origin}\`\n- Expected release: \`${report.expected_release_sha}\`\n- Observed release: \`${report.observed_release_sha}\`\n- Alias verified at: ${report.alias_verified_at}\n- Candidate state: \`${report.release_identity.candidate_state}\`\n- Verifier: \`${report.verifier_version}\`\n- Generated: ${report.generated_at}\n\nThis report contains only bounded, same-origin GET evidence. It never deploys, calls a provider, submits learner data, retains response bodies, or mutates state. Initial HTML script references are checked; runtime-loaded chunks discovered only after hydration are not exhaustively enumerated by this read-only verifier.\n\n| Check | Status | Evidence |\n| --- | --- | --- |\n${rows}\n\n## ADR-006 release identity tuple\n\n\`\`\`json\n${JSON.stringify(report.release_identity, null, 2)}\n\`\`\`\n`;
+  return `# FORGE Deployment Verification\n\n- Status: **${report.status.toUpperCase()}**\n- Target origin: \`${report.target_origin}\`\n- Expected release: \`${report.expected_release_sha}\`\n- Observed release: \`${report.observed_release_sha}\`\n- Alias verified at: ${report.alias_verified_at}\n- Candidate state: \`${report.release_identity.candidate_state}\`\n- Verifier: \`${report.verifier_version}\`\n- Generated: ${report.generated_at}\n\nThe app inspection contains only bounded, same-origin GET evidence. A remote candidate may additionally include an in-process, authenticated read-only Vercel metadata/build-log receipt; a saved JSON receipt remains external evidence and is blocked. Neither path deploys, promotes, submits learner data, retains raw provider/app response bodies, or mutates state. Initial HTML script references are checked; runtime-loaded chunks discovered only after hydration are not exhaustively enumerated by this read-only verifier.\n\n| Check | Status | Evidence |\n| --- | --- | --- |\n${rows}\n\n## ADR-006 release identity tuple\n\n\`\`\`json\n${JSON.stringify(report.release_identity, null, 2)}\n\`\`\`\n`;
 }
 export async function writeDeploymentReport(report: DeploymentVerificationReport, outputDirectory: string): Promise<void> { await mkdir(outputDirectory, { recursive: true }); await Promise.all([writeFile(resolve(outputDirectory, "deployment-verification.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8"), writeFile(resolve(outputDirectory, "deployment-verification.md"), renderDeploymentMarkdown(report), "utf8")]); }
 const arg = (name: string): string | undefined => { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : undefined; };
@@ -518,9 +544,29 @@ async function main() {
   if (["--deployment-id", "--deployment-url", "--alias-url", "--alias-resolved-at"].some((name) => arg(name) !== undefined)) {
     throw new Error("deployment and alias identity are accepted only from the bound public health manifest");
   }
-  const expectedPublicAssetDigest = arg("--expected-public-asset-digest");
-  if (approvedTarget && (!expectedPublicAssetDigest || !DIGEST.test(expectedPublicAssetDigest))) {
-    throw new Error("--expected-public-asset-digest must be a caller-retained lowercase SHA-256 digest for a checked-in remote target");
+  if (arg("--expected-public-asset-digest")) throw new Error("--expected-public-asset-digest is retired; collect the post-build Vercel provider receipt instead");
+  const tokenEnvironmentName = arg("--vercel-token-env");
+  const requestedDeploymentId = arg("--vercel-deployment-id");
+  const externalReceiptPath = arg("--external-provider-receipt");
+  if (tokenEnvironmentName && externalReceiptPath) throw new Error("choose either an authenticated Vercel receipt collection or explicitly external receipt evidence");
+  if (requestedDeploymentId && !tokenEnvironmentName) throw new Error("--vercel-deployment-id requires --vercel-token-env so a JSON receipt cannot be promoted by itself");
+  let providerReceipt: ProviderReceiptInput | undefined;
+  if (approvedTarget && tokenEnvironmentName) {
+    if (!requestedDeploymentId) throw new Error("--vercel-deployment-id is required with --vercel-token-env for a checked-in remote target");
+    const token = process.env[tokenEnvironmentName];
+    if (!token) throw new Error(`Vercel receipt token environment variable ${tokenEnvironmentName} is empty`);
+    providerReceipt = {
+      authority: "authenticated_vercel_api",
+      receipt: await collectVercelProviderReceipt({ deploymentId: requestedDeploymentId, token, target: approvedTarget }),
+    };
+  } else if (externalReceiptPath) {
+    const serialized = await readFile(resolve(externalReceiptPath), "utf8");
+    if (Buffer.byteLength(serialized, "utf8") > 1_000_000) throw new Error("external provider receipt exceeds the bounded input size");
+    try {
+      providerReceipt = { authority: "external_evidence", receipt: JSON.parse(serialized) };
+    } catch {
+      throw new Error("external provider receipt is not JSON");
+    }
   }
   const outputDirectory = resolve(arg("--output-dir") ?? "test-results/release-ops");
   const requestedState = arg("--candidate-state");
@@ -544,7 +590,7 @@ async function main() {
     decisionName: arg("--decision-name"),
     consoleVerification: arg("--console-verification") as "pass" | "fail" | "not_evaluated" | undefined,
     expectedLockfileDigest: arg("--expected-lockfile-digest"),
-    expectedPublicAssetDigest,
+    providerReceipt,
     expectedContentManifestDigest: arg("--expected-content-manifest-digest"),
     expectedEvaluatorBaselineDigest: arg("--expected-evaluator-baseline-digest"),
     expectedDatabaseMigrationIdentity: arg("--expected-database-migration-identity"),
