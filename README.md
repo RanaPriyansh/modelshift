@@ -165,7 +165,7 @@ PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
 
 The complete application requires a Next.js/Node-compatible host because it includes server routes. Vercel is the intended deployment target for this foundation; a static-site host can publish design or research artifacts but cannot replace the planner and interpretation APIs without a separate backend.
 
-The recorded public candidate is source `cdc4bf5a2ceef7b4431832e5eb1e9e75f241d32c` at [modelshift.vercel.app](https://modelshift.vercel.app), deployment `dpl_EdtJDSaDS4bwN1anLUi2rqNqLi4E`, immutable URL `https://forge-learning-aie8l0ycz-ranapriyanshs-projects.vercel.app`. Public health identifies the SHA, but its canonical build time and retained digests are unknown; the current release remains `DEPLOYED_CANDIDATE` and is not retroactively bound by this local code change. See the [canonical record](docs/operations/CURRENT_RELEASE.md) for the exact tuple, blocking gates, and non-mutating rollback procedure.
+The current public app is exact source `35a1d2c5bd28c7b794b26414c6bdfe8f18097027` at [modelshift.vercel.app](https://modelshift.vercel.app), deployment `dpl_Er7rVecXt3iga56P4uPDoLnWt9V4`, immutable URL `https://forge-learning-7a63ywsp5-ranapriyanshs-projects.vercel.app`. Public health binds the SHA, platform identity, build time, lock/content/evaluator digests, and disabled cloud/provider posture. The release state is nevertheless `DEPLOYMENT_BLOCKED`: Vercel emitted public-asset digest `aad493295...`, while the artifact asserted the locally precomputed `b1f8d95f...`; the verifier passed 206 checks and failed four release-identity checks. See the [canonical record](docs/operations/CURRENT_RELEASE.md) for the exact tuple, evidence ceiling, repair gate, and non-mutating rollback procedure.
 
 ## What is not yet claimed
 
@@ -174,7 +174,7 @@ The recorded public candidate is source `cdc4bf5a2ceef7b4431832e5eb1e9e75f241d32
 - It is not a minor operational release and has no verified guardian service, adult entitlement service, or operational safeguarding proof.
 - There is no live Supabase project, verified-age or guardian onboarding, cloud evidence sync, people network, storage pipeline, privacy worker, or abuse-control service connected to this app.
 - The current four Worlds do not establish breadth across everything someone may want to learn.
-- The proposed editable capability-map, external-resource registry, YouTube connector, representation registry, practical project compiler, and educator review port are not implemented or enabled.
+- Fixture/local contracts and previews exist for capability maps, governed resource candidates, a disabled YouTube metadata adapter, representations, and practical project/practice packets. They are not connected or enabled as an integrated reviewed learner path; the educator review port remains unimplemented.
 - Provider adapters and structured parsing are tested with mocks, not live provider credentials; generated drafts are not source-reviewed curriculum.
 - No representative learner, educator, minor-safety, external accessibility, assessment-validity, delayed-retention, efficacy, equity, workload, or scale result has been established for broad FORGE.
 - One immediate transfer result is bounded evidence from one task, not mastery, intelligence, retention, or a permanent learner label.

@@ -6,45 +6,62 @@
 
 | Field | Recorded value | Verification boundary |
 | --- | --- | --- |
-| Candidate state | `DEPLOYED_CANDIDATE` | Never `PRODUCTION_VERIFIED` or a readiness claim. |
-| Deployed source | `cdc4bf5a2ceef7b4431832e5eb1e9e75f241d32c` | Public `/api/health` identified this exact SHA. |
+| Candidate state | `DEPLOYMENT_BLOCKED` | The app is public and operational, but the release identity cannot pass the retained-asset gate. Never `PRODUCTION_VERIFIED` or a readiness claim. |
+| Deployed source | `35a1d2c5bd28c7b794b26414c6bdfe8f18097027` | Vercel metadata and public `/api/health` identify this exact SHA. |
 | Public alias | `https://modelshift.vercel.app` | Public target only; alias resolution is not a terminal decision. |
-| Immutable deployment | `dpl_EdtJDSaDS4bwN1anLUi2rqNqLi4E` | `https://forge-learning-aie8l0ycz-ranapriyanshs-projects.vercel.app` |
-| Build time | `UNKNOWN` | The deployed health payload has no accepted canonical build time. |
-| Lock, content, evaluator, and public-asset digests | `UNKNOWN` | No deployed digest binding was retained for this tuple. |
-| Release-manifest binding | `UNBOUND` | The deployment predates the manifest/health contract in this repository. |
+| Immutable deployment | `dpl_Er7rVecXt3iga56P4uPDoLnWt9V4` | `https://forge-learning-7a63ywsp5-ranapriyanshs-projects.vercel.app` |
+| Build time | `2026-07-23T16:27:07.977Z` | Platform build record; health exposes the same canonical instant. |
+| Lock digest | `12f19d4483c15fec5463c7114ddb496b61bcd850f5822fbb49bd3d2d93f3323b` | Public health matches the checked-in dependency lock. |
+| Content-manifest digest | `5f0124bd6ffc1365880279318cc8161e251eaa27da1181e29a928b9e5af74836` | Public health matches the checked-in content package manifest. |
+| Evaluator-baseline digest | `9bb3f7e7cfd7a3dac351a06757f8b0b5f704024a39dc0f7fa4cd951e1c317b35` | Public health matches the checked-in evaluator baseline. |
+| Database migration identity | `not_configured` | The public candidate has no configured database authority. |
+| Manifest public-asset digest | `b1f8d95f0d31ce1e365f56e1c189d0a4aea138ddff7491dd6d20accd956119c7` | Precomputed local build input; it does not match the platform-emitted tree. |
+| Platform-emitted public-asset digest | `aad49329533835e0ae319c56990f01afff52ebd35f98b130b44f2e56c1dcc3b1` | Observed from the retained Vercel remote-build output for this exact deployment. |
+| Release-manifest binding | `BLOCKED_ASSET_RECEIPT` | Public verification passed 206 checks and failed four identity checks because the artifact self-report and provider-emitted asset digest differ. |
 | Rollback rehearsal | `NOT_EVALUATED` | No alias change or rehearsal was performed by this repair lane. |
 
 This record is evidence about the named deployed source only. The commit that adds or changes this document is local review material; it is not deployed merely by existing in Git.
 
 ## What this candidate does and does not establish
 
-The source contains four authored bounded Worlds and the fixture-only adult presentation route at `/paths/source-corroboration`. Engineering checks can establish only the exact software behavior they exercised.
+The source contains four authored bounded Worlds, the fixture-only adult presentation route at `/paths/source-corroboration`, frontend route/accessibility repairs, and a deterministic non-routed adult-pilot controller kernel. Engineering checks can establish only the exact software behavior they exercised.
 
 It does **not** establish a minor operational release, verified guardian service, adult entitlement service, broad curriculum, homeschool operation/readiness, learning efficacy, retention, certification, durable evidence, live provider operation, manual assistive-technology coverage, or terminal production readiness.
 
+## Current deployment-blocking finding
+
+The integrated manifest assumed that a `.next/static` digest computed before deployment could be retained as the expected digest for the Vercel remote build. Production disproved that assumption:
+
+- the exact-source deployment above asserted the local digest `b1f8d95f...` but emitted `aad493295...`;
+- a second, non-promoted production-target build of the same source asserted `aad493295...` and emitted `83e1de1a3...`.
+
+The emitted asset tree is therefore deployment-specific in this environment. Repeating a deployment with the previous output bound as the next expected input does not create reproducible proof. The public verifier correctly returned `DEPLOYMENT_BLOCKED` with 206 passes and four failures: `health.release_manifest.public_asset_authority`, `health.release_manifest.binding`, `release_identity.contract`, and `release_identity.state_bound`.
+
+The app remains public because its same-origin route, header, CSP, source-SHA, digest, secret-scan, and browser checks passed; that operational evidence must not be promoted into a verified-release claim.
+
 ## Required binding for a later candidate
 
-`GET /api/health` now exposes one exact `release_manifest` only when all fields below agree. A local build may expose its normal build SHA and retained metadata, but `release_manifest` remains `unbound` with unknown provenance unless this complete candidate tuple is configured:
+The current `GET /api/health` contract cannot satisfy the corrected asset-proof boundary because it binds a pre-build digest. The replacement gate must preserve its fail-closed source/platform checks while requiring the following complete candidate tuple:
 
 - `FORGE_RELEASE_CANDIDATE_STATE=DEPLOYED_CANDIDATE`
 - exact `FORGE_RELEASE_SHA`, equal to the platform-owned `VERCEL_GIT_COMMIT_SHA`
 - canonical UTC-millisecond `FORGE_BUILD_TIME`
 - exact `FORGE_LOCKFILE_DIGEST`
-- `FORGE_PUBLIC_ASSET_DIGEST` from the emitted `.next/static` tree, matching a separately retained caller/verifier digest; the exact absence gate `FORGE_PUBLIC_ASSET_DIGEST_STATUS=absent_with_gate` and `FORGE_PUBLIC_ASSET_DIGEST_GATE=public_asset_digest_required_before_promotion` is permitted only to report a known blocker
+- no claim that a locally precomputed `.next/static` digest is the platform-emitted digest
 - platform-owned `VERCEL_DEPLOYMENT_ID`, `VERCEL_URL`, and `VERCEL_PROJECT_ID` matching the checked-in FORGE project/immutable-host policy; `FORGE_RELEASE_DEPLOYMENT_ID` or `FORGE_RELEASE_IMMUTABLE_URL` cannot override them
 - the checked-in public alias only; no caller-provided alias-resolution timestamp or alias override is accepted in the deployment artifact
+- a post-build provider-observed receipt bound to the exact deployment ID, project ID, source SHA, immutable URL, build time, and platform-emitted public-asset digest, with its trust source stated explicitly
 
-Any malformed field, duplicate asset declaration, missing platform field, project/source-SHA drift, or caller alias receipt produces `unbound`; the read-only verifier blocks a remote `DEPLOYED_CANDIDATE` result unless the manifest alias exactly matches its target, the immutable URL and project ID pass the checked-in FORGE Vercel policy, the manifest build time is no later than the verifier's post-fetch alias receipt, and the recorded public-asset digest matches retained verifier input. That comparison binds the manifest's asserted build input to retained expectation; it is not byte-for-byte proof of every remotely served asset. A gated absent asset digest is blocked and never yields `DEPLOYED_CANDIDATE`.
+Any malformed field, missing platform field, project/source-SHA drift, caller alias receipt, or receipt/deployment mismatch must produce `unbound`. The next verifier must block a remote candidate unless the manifest alias exactly matches its target, the immutable URL and project ID pass the checked-in FORGE Vercel policy, the manifest build time is no later than the verifier's post-fetch alias receipt, and a post-build provider receipt is bound to the same exact deployment tuple. A caller-authored receipt without provider evidence must retain an explicit lower trust ceiling and cannot promote the release.
 
-The production binding path is a Vercel Git remote build/runtime with System Environment Variables exposed, because it needs the platform-owned deployment ID, URL, project ID, and commit SHA. A prebuilt deployment does not receive those system variables at build time unless it has separately configured custom identity; this repository does not treat caller `FORGE_*` identity as an equivalent fallback. The verifier produces the post-deploy `alias_verified_at` receipt only after fetching the alias; this local commit cannot manufacture that fact.
+The production binding path remains a Vercel remote build/runtime with System Environment Variables exposed, because it needs the platform-owned deployment ID, URL, project ID, and commit SHA. The current deployment was initiated by the Vercel CLI and built remotely; a local prebuilt deployment does not receive those system variables at build time unless it has separately configured custom identity. This repository does not treat caller `FORGE_*` identity as an equivalent fallback. The verifier produces the post-deploy `alias_verified_at` receipt only after fetching the alias; a separate post-build provider observation must produce the asset receipt. Neither the deployment artifact nor this documentation can manufacture either fact.
 
 ## Rollback rehearsal and decision procedure — not executed
 
 This is a runnable decision checklist, not permission to change Vercel. It requires a separately authorized operator and never treats a documentation record as rollback evidence.
 
 1. Freeze a signed/retained decision packet naming the current bound candidate, a prior READY rollback deployment ID, its immutable URL, exact source SHA, expected alias, and the independent approver. If any value is absent, stop as `NOT_EVALUATED`.
-2. Run the read-only verifier against the current alias with its exact SHA, retained source digests, and independently retained public-asset digest. It must pass the complete bound health-manifest, all ten canonical routes (four Worlds, `/paths/source-corroboration`, and shell routes), CSP, initial-asset secret scan, and candidate identity checks. The currently recorded candidate cannot pass this new gate until it is replaced by a deployment that publishes the binding.
+2. Run the read-only verifier against the current alias with its exact SHA, retained source digests, and post-build provider receipt. It must pass the complete bound health-manifest, all ten canonical routes (four Worlds, `/paths/source-corroboration`, and shell routes), CSP, initial-asset secret scan, and candidate identity checks. The currently recorded candidate cannot pass until the receipt design is repaired and a later exact-source candidate satisfies it.
 3. Run the same read-only verifier against the proposed rollback immutable URL with its own exact source/digests. Confirm the provider reports READY, the URL/ID/SHA match the decision packet, and its manifest is bound. Do not continue on a human label, alias history, or a SHA-only health response.
 4. The authorized operator records `proceed` or `hold`. `hold` is mandatory for any SHA, manifest, route, secret-scan, digest, readiness, or authority mismatch. This lane does not execute the provider alias action.
 5. Only after a separately authorized provider alias change, re-run step 2 against the alias using the rollback tuple. Record the before/after alias resolution, verifier reports, decision time, and any failure. A failed post-change verifier requires the incident procedure; it never becomes `ROLLED_BACK` by assertion.

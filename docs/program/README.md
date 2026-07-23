@@ -1,10 +1,10 @@
 # FORGE Program Control Room
 
-**Active implementation plan:** [`WAVE_5_PLAN.md`](./WAVE_5_PLAN.md) — trustworthy continuity, additive ADR-001 v2 persistence, source/curriculum authority, and a language/literacy World factory acceptance case. Nothing in the plan is released merely because it is assigned or implemented.
+**Active implementation plan:** [`WAVE_6_PLAN.md`](./WAVE_6_PLAN.md) — adult practical capability maps, governed multimodal resources, projects, protected proof, and educator review. Bounded contracts, a fixture route, and a non-routed controller kernel exist; the end-to-end pilot remains incomplete.
 
 **Current release record:** [`CURRENT_RELEASE.md`](../operations/CURRENT_RELEASE.md) — the only normative current public tuple, status, release-provenance gaps, and non-mutating rollback procedure. Wave 4 remains historical evidence for `c7d4011` only.
 
-**Proposed successor:** [`WAVE_6_PLAN.md`](./WAVE_6_PLAN.md) — adult practical capability maps, governed multimodal resources, a fixture-only external-video adapter, projects, protected proof, and educator review. It is architecture/planning only until the principal accepts the predecessor SHA and dispatches bounded packets.
+**Accepted predecessor:** [`WAVE_5_PLAN.md`](./WAVE_5_PLAN.md) — trustworthy-continuity and curriculum-authority slices remain bounded local foundations, not deployed durable authority.
 
 **Long-range strategy:** [`AI_ERA_LEARNING_THESIS.md`](./AI_ERA_LEARNING_THESIS.md) — the corrected internet/AI analogy, 5/10/15/20-year scenarios, robust commitments, first credible wedge, operating model, and evidence gates.
 
@@ -20,7 +20,7 @@
 
 **Long-term aim:** help a learner of any age, under age-appropriate human authority, turn a real question or practical goal into a reviewed, accessible path of explanation, practice, project work, and independent proof, preserving agency, source provenance, privacy, and the distinction between AI-assisted performance and demonstrated capability.
 
-**Current claim:** C1/DG1 candidate with four authored bounded Worlds and a fixture-only adult presentation route; not a broad curriculum, minor-safe operation, homeschool system, efficacy-proven product, or terminal production release.
+**Current claim:** C1/DG1 candidate with four authored bounded Worlds, a fixture-only adult presentation route, and a non-routed adult-pilot controller kernel. The exact-source app is public, but release verification is `DEPLOYMENT_BLOCKED`; it is not a broad curriculum, minor-safe operation, homeschool system, efficacy-proven product, or terminal production release.
 
 **Next wedge:** one server-entitled, externally recruited 18+ cohort completes one reviewed practical capability journey with active multimodal learning, support withdrawal, independent transfer, and delayed return.
 
@@ -72,7 +72,7 @@ The accepted implementation contains four working Learning Worlds, a determinist
 
 It does **not** contain a complete curriculum, verified cloud identity operation, guardian-consent service, live evidence sync, people network, accredited pathway, representative learner study, efficacy evidence, or a live-credential evaluation of the four provider adapters.
 
-The current public tuple is source `cdc4bf5a2ceef7b4431832e5eb1e9e75f241d32c`, production deployment `dpl_EdtJDSaDS4bwN1anLUi2rqNqLi4E`, alias `https://modelshift.vercel.app`, and immutable URL `https://forge-learning-aie8l0ycz-ranapriyanshs-projects.vercel.app`. Public health identifies the exact SHA but has unknown canonical build time and retained digests, so the candidate is `DEPLOYED_CANDIDATE`, never terminal `PRODUCTION_VERIFIED`. The local manifest/verifier repair is not deployed and cannot upgrade the existing tuple. The [current release record](../operations/CURRENT_RELEASE.md) is the single locator for exact state and rollback gates.
+The current public tuple is source `35a1d2c5bd28c7b794b26414c6bdfe8f18097027`, production deployment `dpl_Er7rVecXt3iga56P4uPDoLnWt9V4`, alias `https://modelshift.vercel.app`, and immutable URL `https://forge-learning-7a63ywsp5-ranapriyanshs-projects.vercel.app`. Public health binds the exact source, platform identity, build time, retained source digests, and disabled cloud/provider posture. Production verification is `DEPLOYMENT_BLOCKED`, not `DEPLOYED_CANDIDATE` or terminal `PRODUCTION_VERIFIED`, because the deployment-specific Vercel asset tree differs from the precomputed manifest asset digest. The [current release record](../operations/CURRENT_RELEASE.md) is the single locator for exact state and rollback gates.
 
 ## Cost-aware operating model
 
