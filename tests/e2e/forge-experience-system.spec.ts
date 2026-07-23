@@ -25,7 +25,7 @@ const CONTRAST_SAMPLES = [
   { route: "/", name: "Home muted body text", selector: ".forge-hero-heading > p:last-child" },
   { route: "/", name: "Home dark intake label", selector: ".forge-question-field > span" },
   { route: "/", name: "Home evidence status text", selector: ".forge-world-row--ready .forge-status" },
-  { route: "/", name: "Home quiet planned status text", selector: ".forge-world-row--planned .forge-status" },
+  { route: "/", name: "Home selected representation", selector: ".forge-modality-group label.is-selected" },
   { route: "/", name: "Home primary action", selector: ".forge-primary-action" },
   { route: "/studio", name: "Studio dark-instrument heading", selector: ".lesson-studio-heading h1" },
   { route: "/studio", name: "Studio muted instrument text", selector: ".lesson-studio-heading > p" },
@@ -210,13 +210,54 @@ test.describe("FORGE Packet A experience system", () => {
     await page.goto("/");
     const question = page.getByRole("textbox", { name: "Your question" });
     await question.fill("Help me understand force and motion after a push ends.");
+    await page.getByPlaceholder("Optional: name relevant knowledge, experience, or the point where you get stuck.").fill(
+      "I can read a simple graph but I confuse force with motion.",
+    );
+    await page.getByPlaceholder("Optional: explain a decision, build an artifact, solve a real problem, or perform a skill.").fill(
+      "Predict and explain a new velocity graph without hints.",
+    );
+    await page.getByRole("combobox", { name: "Time available now" }).selectOption("2_hours");
+    await page.getByRole("checkbox", { name: "Hands-on" }).check();
     await page.getByRole("button", { name: "Shape my first move" }).click();
     const grounded = page.getByTestId("forge-plan-grounded");
     await expect(grounded).toBeVisible();
     await expect(grounded.locator(".forge-plan-sources a")).not.toHaveCount(0);
+    await expect(grounded).toContainText("I can read a simple graph but I confuse force with motion.");
+    await expect(grounded).toContainText("Predict and explain a new velocity graph without hints.");
+    await expect(grounded).toContainText("Up to two hours");
+    await expect(grounded).toContainText("Hands-on work");
+    await expect(grounded.getByRole("link", { name: "Enter working World" })).toHaveCount(0);
+    await grounded.getByRole("button", { name: "Accept reviewed route" }).click();
+    await expect(grounded.getByRole("link", { name: "Enter working World" })).toHaveAttribute(
+      "href",
+      "/learn/force-and-motion",
+    );
     const populatedContract = await mobileContract(page);
     expect(populatedContract.undersized, "a populated reviewed plan should preserve 44px source and action targets").toEqual([]);
     expect(populatedContract.inlineCitationExceptions.every((citation) => citation.display === "inline" && citation.inProse), "a populated plan can exempt only explicit inline-prose citations").toBe(true);
+  });
+
+  test("an unknown topic remains an unverified, rejectable map and never activates a lesson", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("textbox", { name: "Your question" }).fill(
+      "How did Roman aqueduct maintenance shape city planning?",
+    );
+    await page.getByRole("button", { name: "Shape my first move" }).click();
+
+    const exploratory = page.getByTestId("forge-plan-exploratory");
+    await expect(exploratory).toBeVisible();
+    await expect(exploratory).toContainText("Source verification required");
+    await expect(exploratory.getByRole("link", { name: "Enter working World" })).toHaveCount(0);
+
+    await exploratory.getByRole("button", { name: "Keep question map" }).click();
+    await expect(exploratory).toContainText(
+      "This unverified question map is retained only in this page. No lesson, source, or learning claim was activated.",
+    );
+    await expect(exploratory.getByRole("link", { name: "Enter working World" })).toHaveCount(0);
+
+    await exploratory.getByRole("button", { name: "Reject this map" }).click();
+    await expect(exploratory).toContainText("Map rejected for this page.");
+    await expect(exploratory.getByRole("link", { name: "Enter working World" })).toHaveCount(0);
   });
 
   test("the home question stays inside its gutters with wide fallback font metrics", async ({ page }) => {

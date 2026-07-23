@@ -10,7 +10,7 @@ const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; section: ForgeSect
   { href: "/studio", label: "Studio", section: "studio" },
   { href: "/trail", label: "Trail", section: "trail" },
   { href: "/evidence", label: "Evidence", section: "evidence" },
-  { href: "/account", label: "Account", section: "account" },
+  { href: "/account", label: "Access", section: "account" },
 ];
 
 function ForgeMark() {

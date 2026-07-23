@@ -284,6 +284,8 @@ test.describe("FORGE cross-route release contract", () => {
     const grounded = page.getByTestId("forge-plan-grounded");
     await expect(grounded).toBeVisible();
     await expect(grounded).toContainText("Current working World route");
+    await expect(grounded.getByRole("link", { name: /Enter working World/ })).toHaveCount(0);
+    await grounded.getByRole("button", { name: "Accept reviewed route" }).click();
     await expect(grounded.getByRole("link", { name: /Enter working World/ })).toHaveAttribute(
       "href",
       "/learn/force-and-motion",
@@ -406,6 +408,8 @@ test.describe("FORGE cross-route release contract", () => {
     await page.getByRole("button", { name: /Shape my first move/ }).click();
     const grounded = page.getByTestId("forge-plan-grounded");
     await expect(grounded).toBeVisible();
+    await expect(grounded.getByRole("link", { name: /Enter working World/ })).toHaveCount(0);
+    await grounded.getByRole("button", { name: "Accept reviewed route" }).click();
     await expect(grounded.getByRole("link", { name: /Enter working World/ })).toHaveAttribute(
       "href",
       "/learn/proportional-reasoning?audience=child_with_grown_up",

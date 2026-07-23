@@ -101,6 +101,11 @@ async function fixture() {
     depth: "standard",
     startingPoint: "I can compare quantities but I do not yet know how to scale a ratio.",
     successShape: "I can solve a new ratio problem without help.",
+    currentKnowledge: "I can compare quantities.",
+    practicalOutcome: "Scale a recipe and explain why the relationship stays equivalent.",
+    timeAvailable: "2_hours",
+    modalityNeeds: ["text", "visual", "hands_on"],
+    constraints: "Use ordinary household materials.",
     guardianManaged: false,
     sourceMode: "curated",
   };

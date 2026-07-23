@@ -39,40 +39,34 @@ const DEPTH_MODES = [
   { id: "deep", label: "Deep study", note: "Trace assumptions and limits" },
 ] as const;
 
+const TIME_OPTIONS = [
+  { id: "15_min", label: "15 minutes" },
+  { id: "45_min", label: "45 minutes" },
+  { id: "2_hours", label: "Up to 2 hours" },
+  { id: "ongoing", label: "An ongoing path" },
+] as const;
+
+const MODALITY_OPTIONS = [
+  { id: "text", label: "Text" },
+  { id: "video", label: "Video" },
+  { id: "visual", label: "Visuals" },
+  { id: "audio", label: "Audio" },
+  { id: "hands_on", label: "Hands-on" },
+  { id: "low_bandwidth", label: "Low bandwidth" },
+  { id: "screen_reader", label: "Screen reader" },
+] as const;
+
 const PLANNER_REQUEST_TIMEOUT_MS = 8_000;
 
-const WORLD_ROWS = [
-  ...PUBLIC_WORLD_CATALOG.map((world) => ({
-    eyebrow: `Working ${world.kind} World · v${world.version}`,
-    title: world.title,
-    description: world.summary,
-    detail: `${world.evidenceTier} evidence · ${world.ageModes.includes("under-13") ? "child + grown-up, teen, adult" : "teen + adult"}`,
-    href: world.route,
-    action: "Open world",
-    tone: "ready" as const,
-  })),
-  {
-    eyebrow: "Planned world",
-    title: "How money compounds",
-    description: "Compare rates, time, fees, and uncertainty before making everyday financial decisions.",
-    detail: "Not built yet",
-    tone: "planned",
-  },
-  {
-    eyebrow: "Planned world",
-    title: "How language carries meaning",
-    description: "Trace voice, structure, ambiguity, and interpretation across literature without outsourcing judgment.",
-    detail: "Not built yet",
-    tone: "planned",
-  },
-  {
-    eyebrow: "Planned world",
-    title: "Cells, energy & systems",
-    description: "Move between mechanisms, diagrams, and observable consequences in a living system.",
-    detail: "Not built yet",
-    tone: "planned",
-  },
-] as const;
+const WORLD_ROWS = PUBLIC_WORLD_CATALOG.map((world) => ({
+  eyebrow: `Working ${world.kind} World · v${world.version}`,
+  title: world.title,
+  description: world.summary,
+  detail: `${world.evidenceTier} evidence · ${world.ageModes.includes("under-13") ? "child + grown-up, teen, adult" : "teen + adult"}`,
+  href: world.route,
+  action: "Open world",
+  tone: "ready" as const,
+}));
 
 function ChoiceGroup({
   legend,
@@ -111,10 +105,15 @@ function ChoiceGroup({
 
 function LearningIntake() {
   const [question, setQuestion] = useState("");
-  const [ageMode, setAgeMode] = useState<string>("teen");
+  const [ageMode, setAgeMode] = useState<string>("adult");
   const [startingPoint, setStartingPoint] = useState<string>("curious");
   const [successShape, setSuccessShape] = useState<string>("explain");
   const [depth, setDepth] = useState<string>("standard");
+  const [currentKnowledge, setCurrentKnowledge] = useState("");
+  const [practicalOutcome, setPracticalOutcome] = useState("");
+  const [timeAvailable, setTimeAvailable] = useState("45_min");
+  const [modalityNeeds, setModalityNeeds] = useState<string[]>(["text", "visual"]);
+  const [constraints, setConstraints] = useState("");
   const [guardianPresent, setGuardianPresent] = useState(false);
   const [plan, setPlan] = useState<ForgePlanContract | null>(null);
   const [plannedQuestion, setPlannedQuestion] = useState("");
@@ -160,6 +159,11 @@ function LearningIntake() {
           depth,
           startingPoint,
           successShape,
+          currentKnowledge,
+          practicalOutcome,
+          timeAvailable,
+          modalityNeeds,
+          constraints,
           guardianManaged: ageMode === "child" && guardianPresent,
           sourceMode: "curated",
         }),
@@ -229,6 +233,85 @@ function LearningIntake() {
         />
         <ChoiceGroup legend="Depth" name="depth" options={DEPTH_MODES} value={depth} onChange={setDepth} />
       </div>
+
+      <div className="forge-intake-context">
+        <label>
+          <span>What can you already do?</span>
+          <textarea
+            rows={2}
+            maxLength={280}
+            value={currentKnowledge}
+            onChange={(event) => setCurrentKnowledge(event.target.value)}
+            placeholder="Optional: name relevant knowledge, experience, or the point where you get stuck."
+          />
+          <small>{currentKnowledge.length} / 280</small>
+        </label>
+        <label>
+          <span>What do you want to do or make?</span>
+          <textarea
+            rows={2}
+            maxLength={280}
+            value={practicalOutcome}
+            onChange={(event) => setPracticalOutcome(event.target.value)}
+            placeholder="Optional: explain a decision, build an artifact, solve a real problem, or perform a skill."
+          />
+          <small>{practicalOutcome.length} / 280</small>
+        </label>
+        <label className="forge-time-field">
+          <span>Time available now</span>
+          <select value={timeAvailable} onChange={(event) => setTimeAvailable(event.target.value)}>
+            {TIME_OPTIONS.map((option) => (
+              <option key={option.id} value={option.id}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Constraints to respect</span>
+          <textarea
+            rows={2}
+            maxLength={280}
+            value={constraints}
+            onChange={(event) => setConstraints(event.target.value)}
+            placeholder="Optional: equipment, cost, language, mobility, location, bandwidth, or deadline."
+          />
+          <small>{constraints.length} / 280</small>
+        </label>
+      </div>
+
+      <fieldset className="forge-modality-group">
+        <legend>Representations that help</legend>
+        <p>Choose one to four. Access needs remain available during independent proof.</p>
+        <div>
+          {MODALITY_OPTIONS.map((option) => {
+            const selected = modalityNeeds.includes(option.id);
+            const disabled = !selected && modalityNeeds.length >= 4;
+            return (
+              <label
+                key={option.id}
+                className={[selected ? "is-selected" : "", disabled ? "is-disabled" : ""].filter(Boolean).join(" ") || undefined}
+              >
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  disabled={disabled}
+                  onChange={() => {
+                    setModalityNeeds((current) => {
+                      if (current.includes(option.id)) {
+                        return current.length === 1 ? current : current.filter((id) => id !== option.id);
+                      }
+                      return current.length >= 4 ? current : [...current, option.id];
+                    });
+                  }}
+                />
+                <span>{option.label}</span>
+              </label>
+            );
+          })}
+        </div>
+        <small>
+          {modalityNeeds.length} selected{modalityNeeds.length === 4 ? " · limit reached" : ""} · held only for this planning response
+        </small>
+      </fieldset>
 
       {ageMode === "child" ? (
         <label className="forge-guardian-check">
@@ -318,9 +401,12 @@ function LearningPlanResult({
           <a key={source.id} href={source.locator} target="_blank" rel="noreferrer">{source.title}</a>
         ))}
       </div>
-      <Link className="forge-primary-action" href={route}>
-        Enter working World <ForgeArrow />
-      </Link>
+      <LearningMapPreview
+        key={`${learnerQuestion}:${plan.route.worldId}:${plan.route.worldVersion}`}
+        learnerQuestion={learnerQuestion}
+        plan={plan}
+        routeHref={route}
+      />
       <p className="forge-plan-privacy">This route is a current working path, not a universal curriculum or evidence claim. Its authored sources and route cannot be changed by an optional AI rephrase.</p>
     </div>
   );
@@ -333,7 +419,7 @@ function WorldCatalog() {
         id="worlds-title"
         label="Honest catalog"
         title="Enter through a world, not a course list."
-        description="Four working World routes are available across simulation, exact mathematics, AI literacy, and primary-source reasoning. The rest name intended breadth without implying that the curriculum already exists."
+        description="Four working World routes are available now across simulation, exact mathematics, AI literacy, and primary-source reasoning. Unbuilt subjects stay off this primary surface instead of masquerading as a catalog."
       />
 
       <div className="forge-world-list">
@@ -346,14 +432,10 @@ function WorldCatalog() {
               <p>{world.description}</p>
             </div>
             <span className="forge-world-detail">{world.detail}</span>
-            {"href" in world ? (
-              <Link href={world.href} className="forge-world-link" aria-label={`Open ${world.title} World`}>
-                {world.action}
-                <ForgeArrow />
-              </Link>
-            ) : (
-              <span className="forge-world-link forge-world-link--disabled">Roadmap only</span>
-            )}
+            <Link href={world.href} className="forge-world-link" aria-label={`Open ${world.title} World`}>
+              {world.action}
+              <ForgeArrow />
+            </Link>
           </article>
         ))}
       </div>
@@ -537,7 +619,7 @@ function BrandFooter() {
   return (
     <>
       <div><strong>FORGE</strong><span>Learning OS</span></div>
-      <p>A working prototype. No required account, diagnosis, grade, or claim of mastery.</p>
+      <p>An evolving Learning OS. No required account, diagnosis, grade, or claim of mastery.</p>
       <ForgeTrustLine />
     </>
   );

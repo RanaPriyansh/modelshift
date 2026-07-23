@@ -1,6 +1,8 @@
 # FORGE Program Control Room
 
-**Active implementation plan:** [`WAVE_6_PLAN.md`](./WAVE_6_PLAN.md) — adult practical capability maps, governed multimodal resources, projects, protected proof, and educator review. Bounded contracts, a fixture presentation route, the controller kernel, and a fail-closed server-gated review shell exist; the externally recruited end-to-end pilot remains incomplete.
+**Active implementation board:** [`V1_EXECUTION_BOARD.md`](./V1_EXECUTION_BOARD.md) — the real-product v1 path from universal intake through learner-controlled map activation, governed resources, practical work, protected proof, and truthful release. Hackathon, demo-video, judging, and submission work is retired.
+
+**Accepted strategic input:** [`WAVE_6_PLAN.md`](./WAVE_6_PLAN.md) — adult practical capability maps, governed multimodal resources, projects, protected proof, and educator review. Bounded contracts, a fixture presentation route, the controller kernel, and a fail-closed server-gated review shell exist; the externally recruited end-to-end pilot remains incomplete.
 
 **Current release record:** [`CURRENT_RELEASE.md`](../operations/CURRENT_RELEASE.md) — the only normative current public tuple, status, release-provenance gaps, and non-mutating rollback procedure. Wave 4 remains historical evidence for `c7d4011` only.
 

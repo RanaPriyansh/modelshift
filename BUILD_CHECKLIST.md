@@ -1,5 +1,7 @@
 # ModelShift — Build Checklist
 
+> **RETIRED HISTORICAL ARTIFACT — 2026-07-23.** This deadline and submission checklist no longer governs FORGE. Demo video, YouTube, Devpost, judging, and hackathon-scoped exclusions are not active work. The real-product implementation board is [`docs/program/V1_EXECUTION_BOARD.md`](docs/program/V1_EXECUTION_BOARD.md); broad FORGE claims remain constrained by the product specification and delivery gates.
+
 **Submission deadline:** July 21, 2026 at 5:00 p.m. Pacific / July 22, 2026 at 5:30 a.m. IST  
 **Research cut-off used for this plan:** July 20, 2026 at approximately 5:02 a.m. IST  
 **Time available at cut-off:** approximately 48.5 hours  

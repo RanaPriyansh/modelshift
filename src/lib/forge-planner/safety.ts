@@ -23,8 +23,19 @@ export function containsAdversarialText(text: string): boolean {
   return ADVERSARIAL_PATTERN.test(text);
 }
 
+function plannerTextFields(input: ForgePlanRequest): string {
+  return [
+    input.question,
+    input.startingPoint,
+    input.successShape,
+    input.currentKnowledge,
+    input.practicalOutcome,
+    input.constraints,
+  ].join("\n");
+}
+
 export function isAdversarialPlannerInput(input: ForgePlanRequest): boolean {
-  return containsAdversarialText([input.question, input.startingPoint, input.successShape].join("\n"));
+  return containsAdversarialText(plannerTextFields(input));
 }
 
 export function isRestrictedTopic(question: string): boolean {
@@ -37,7 +48,7 @@ export function containsPrivateData(text: string): boolean {
 
 export function policyRefusal(input: ForgePlanRequest): RefusalReason | null {
   if (isAdversarialPlannerInput(input)) return "adversarial_input";
-  if (isRestrictedTopic(input.question)) return "unsafe_topic";
+  if (isRestrictedTopic(plannerTextFields(input))) return "unsafe_topic";
   if (input.ageMode === "child" && !input.guardianManaged) return "guardian_required";
   if (input.ageMode === "child" && (input.sourceMode === "open_web" || input.sourceMode === "unrestricted")) {
     return "child_source_mode_disallowed";

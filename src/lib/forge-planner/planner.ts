@@ -38,6 +38,11 @@ function summarizeRequest(request: ForgePlanRequest): RequestSummary {
     depth: request.depth,
     startingPoint: request.startingPoint,
     successShape: request.successShape,
+    currentKnowledge: request.currentKnowledge,
+    practicalOutcome: request.practicalOutcome,
+    timeAvailable: request.timeAvailable,
+    modalityNeeds: [...request.modalityNeeds],
+    constraints: request.constraints,
     guardianManaged: request.guardianManaged,
     sourceMode: request.sourceMode,
   };
@@ -82,7 +87,7 @@ function groundedContract(
       sourceIds: [...topic.sourceIds],
       sources: sourcesForTopic(topic),
       claimBoundary:
-        "Only the authored objective, milestones, and registered source references are grounded. The requested success shape is learner-provided, and any model rephrase is explicitly unverified.",
+        "Only the authored objective, milestones, and registered source references are grounded. Current knowledge, practical outcome, time, representation needs, constraints, and success shape are learner-provided; any model rephrase is explicitly unverified.",
     },
     learning: {
       title: topic.title,
@@ -128,8 +133,9 @@ function exploratoryContract(
       steps: [
         {
           id: "clarify_scope",
-          objective: "Turn the learner question, starting point, and success shape into a bounded research question.",
-          exitGate: "The scope excludes unsafe, unrestricted, and unsupported outcomes.",
+          objective:
+            "Turn the learner question, current knowledge, practical outcome, available time, representation needs, constraints, and success shape into a bounded research question.",
+          exitGate: "The learner accepts the scope and it excludes unsafe, unrestricted, and unsupported outcomes.",
         },
         {
           id: "identify_candidate_sources",

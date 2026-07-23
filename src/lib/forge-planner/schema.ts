@@ -5,6 +5,16 @@ import { SOURCE_IDS, TOPIC_IDS, WORLD_IDS, WORLD_ROUTES } from "./catalog";
 export const ageModeSchema = z.enum(["child", "teen", "adult"]);
 export const depthSchema = z.enum(["quick", "standard", "deep"]);
 export const sourceModeSchema = z.enum(["authored_only", "curated", "open_web", "unrestricted"]);
+export const timeAvailableSchema = z.enum(["15_min", "45_min", "2_hours", "ongoing"]);
+export const modalityNeedSchema = z.enum([
+  "text",
+  "video",
+  "visual",
+  "audio",
+  "hands_on",
+  "low_bandwidth",
+  "screen_reader",
+]);
 
 export const forgePlanRequestSchema = z.strictObject({
   question: z.string().trim().min(3).max(600),
@@ -12,6 +22,19 @@ export const forgePlanRequestSchema = z.strictObject({
   depth: depthSchema,
   startingPoint: z.string().trim().min(1).max(280),
   successShape: z.string().trim().min(1).max(280),
+  currentKnowledge: z.string().trim().max(280).default(""),
+  practicalOutcome: z.string().trim().max(280).default(""),
+  timeAvailable: timeAvailableSchema.default("45_min"),
+  modalityNeeds: z.array(modalityNeedSchema).min(1).max(4).superRefine((needs, context) => {
+    const seen = new Set<string>();
+    needs.forEach((need, index) => {
+      if (seen.has(need)) {
+        context.addIssue({ code: "custom", path: [index], message: "Representation needs must be unique." });
+      }
+      seen.add(need);
+    });
+  }).default(["text", "visual"]),
+  constraints: z.string().trim().max(280).default(""),
   guardianManaged: z.boolean().default(false),
   sourceMode: sourceModeSchema.default("curated"),
 });
@@ -62,7 +85,17 @@ export type RefusalReason =
 
 export type RequestSummary = Pick<
   ForgePlanRequest,
-  "ageMode" | "depth" | "startingPoint" | "successShape" | "guardianManaged" | "sourceMode"
+  | "ageMode"
+  | "depth"
+  | "startingPoint"
+  | "successShape"
+  | "currentKnowledge"
+  | "practicalOutcome"
+  | "timeAvailable"
+  | "modalityNeeds"
+  | "constraints"
+  | "guardianManaged"
+  | "sourceMode"
 >;
 
 export type GroundedLearningContract = {

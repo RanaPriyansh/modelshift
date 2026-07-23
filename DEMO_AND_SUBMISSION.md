@@ -1,5 +1,7 @@
 # ModelShift — Demo and Submission Package
 
+> **RETIRED HISTORICAL ARTIFACT — 2026-07-23.** FORGE is no longer being built for a hackathon. No demo video, narration, judging path, YouTube upload, Devpost submission, or submission deadline is active product work. This file is preserved only as provenance for the earlier narrow ModelShift build and must not be used as a current execution plan, release gate, or product claim. Current work is governed by [`docs/program/V1_EXECUTION_BOARD.md`](docs/program/V1_EXECUTION_BOARD.md).
+
 **Track:** OpenAI Build Week — Education  
 **Decision:** REFRAME Forge into ModelShift  
 **Working subtitle:** Proof after help  

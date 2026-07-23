@@ -4,10 +4,10 @@ import type { ReactNode } from "react";
 import { ForgeArrow, ForgeShell } from "./ForgeShell";
 import { EvidenceLedgerPanel } from "./EvidenceLedgerPanel";
 
-function PrototypeNotice({ children }: { children: ReactNode }) {
+function CurrentBoundary({ children }: { children: ReactNode }) {
   return (
-    <aside className="forge-prototype-notice" aria-label="Prototype limitation">
-      <span>Prototype boundary</span>
+    <aside className="forge-prototype-notice" aria-label="Current operating boundary">
+      <span>Current boundary</span>
       <p>{children}</p>
     </aside>
   );
@@ -26,11 +26,11 @@ export function TrailPrototype() {
           </p>
         </header>
 
-        <PrototypeNotice>
+        <CurrentBoundary>
           No account is required. When storage is available, browser-local records can retain bounded outcomes, can be exported or
           deleted below, and deliberately exclude raw explanations and identity. Optional adult cloud continuity does not upload this
           device ledger.
-        </PrototypeNotice>
+        </CurrentBoundary>
 
         <EvidenceLedgerPanel compact />
 
@@ -83,11 +83,11 @@ export function EvidencePrototype() {
           </p>
         </header>
 
-        <PrototypeNotice>
+        <CurrentBoundary>
           When storage is available, Working Worlds can retain bounded outcomes in this browser and schedule return dates after a
           protected transfer attempt matches that World’s current criteria.
           “Educator copy” only marks records for a learner-triggered download; FORGE sends nothing to another person.
-        </PrototypeNotice>
+        </CurrentBoundary>
 
         <EvidenceLedgerPanel />
 
@@ -121,7 +121,7 @@ export function EvidencePrototype() {
         </section>
 
         <div className="forge-info-actions">
-          <Link className="forge-primary-action" href="/learn/force-and-motion">Generate a session result<ForgeArrow /></Link>
+          <Link className="forge-primary-action" href="/learn/force-and-motion">Start a proof-capable World<ForgeArrow /></Link>
           <Link className="forge-secondary-action" href="/trail">See the Trail contract</Link>
         </div>
       </main>

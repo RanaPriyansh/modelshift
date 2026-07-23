@@ -196,12 +196,13 @@ The current public app is exact source `04eab4263658725d7a228c67682c40fc469757b1
 
 ## Historical ModelShift v1 artifacts
 
-FORGE preserves the narrow ModelShift experiment as one useful World and as build history. These documents remain historical; they do not govern or validate broad FORGE:
+FORGE preserves the narrow ModelShift experiment as one useful World and as build history. These documents remain historical; they do not govern or validate broad FORGE. The demo/submission package and deadline checklist are explicitly retired: FORGE has no active hackathon, demo-video, judging, YouTube, or Devpost deliverable.
 
 - [ModelShift v1 Final Product Specification](FINAL_PRODUCT_SPEC.md)
 - [ModelShift v1 Architecture](docs/ARCHITECTURE.md)
 - [ModelShift v1 Evaluation](docs/EVALUATION.md)
-- [ModelShift v1 Demo and Submission](DEMO_AND_SUBMISSION.md)
+- [Retired ModelShift v1 Demo and Submission](DEMO_AND_SUBMISSION.md)
+- [Retired ModelShift v1 Build Checklist](BUILD_CHECKLIST.md)
 - [Pre-existing Work Boundary](docs/PREEXISTING_WORK.md)
 
 ## License

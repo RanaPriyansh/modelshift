@@ -11,7 +11,7 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-describe("FORGE prototype evidence copy", () => {
+describe("FORGE local evidence copy", () => {
   it("describes Trail records as browser-local and storage-dependent", () => {
     render(<TrailPrototype />);
 
