@@ -40,9 +40,13 @@ export function providerAuthorityFixture(
       eligibilityBasisRef: "eligibility-record-1",
       issuerAuthorityRef: "operator-issuer-1",
       policyRef: { id: "policy-provider-1", version: "1.0.0", digest: DIGEST },
+      dependencyRef: { id: "provider-dependency-1", version: "1.0.0", digest: DIGEST },
+      inputDigest: DIGEST,
+      permittedOperations: ["provider-transport"],
       issuedAt: relativeTimestamp(-86_400_000),
       expiresAt: relativeTimestamp(86_400_000),
       revokedAt: null,
+      revocationReason: null,
     },
     consent: {
       authority: "server-provider-consent.v1",

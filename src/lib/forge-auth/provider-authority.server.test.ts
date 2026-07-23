@@ -10,6 +10,7 @@ import {
   PROVIDER_AUTHORITY_TEST_EXPIRED_AT,
   PROVIDER_AUTHORITY_TEST_NOW as NOW,
   PROVIDER_AUTHORITY_TEST_REVOKED_AT,
+  approvedProviderAuthorityForTest,
   providerAuthorityFixture as fixture,
 } from "./provider-authority.test-helpers";
 
@@ -72,13 +73,33 @@ describe("server-owned provider authority", () => {
       consent: { ...fixture().consent, providerPurposes: ["interpretation", "unreviewed-purpose"] },
     };
     const extraField = { ...fixture(), browserAdultClaim: true };
+    const uppercaseDigest = { ...fixture(), entitlement: { ...fixture().entitlement, inputDigest: `sha256:${"A".repeat(64)}` } };
+    const nonSemver = { ...fixture(), entitlement: { ...fixture().entitlement, policyRef: { ...fixture().entitlement.policyRef, version: "1" } } };
+    const inconsistentRevocation = { ...fixture(), entitlement: { ...fixture().entitlement, revokedAt: null, revocationReason: "operator-revoked" } };
 
-    for (const malformed of [stringPurposes, duplicatePurposes, unknownPurpose, extraField]) {
+    for (const malformed of [stringPurposes, duplicatePurposes, unknownPurpose, extraField, uppercaseDigest, nonSemver, inconsistentRevocation]) {
       expect(evaluateServerOwnedProviderAuthority("interpretation", malformed, NOW)).toEqual({
         allowed: false,
         reason: "malformed_server_record",
       });
     }
+  });
+
+  it("rejects a hostile synthetic reader snapshot without invoking getters", () => {
+    const hostile = { ...fixture() } as Record<string, unknown>;
+    let getterReads = 0;
+    Object.defineProperty(hostile, "entitlement", {
+      enumerable: true,
+      get: () => {
+        getterReads += 1;
+        throw new Error("provider preflight must not read this getter");
+      },
+    });
+    expect(evaluateServerOwnedProviderAuthority("interpretation", hostile, NOW)).toEqual({
+      allowed: false,
+      reason: "malformed_server_record",
+    });
+    expect(getterReads).toBe(0);
   });
 
   it("makes transport grants short-lived and single-use", () => {
@@ -94,6 +115,17 @@ describe("server-owned provider authority", () => {
       "interpretation",
       new Date(NOW.getTime() + 15_001),
     )).toBe(false);
+  });
+
+  it("checks process-local issuance before reading a forged getter or clone", () => {
+    const issued = approvedProviderAuthorityForTest("interpretation");
+    const getter = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(getter, "allowed", { enumerable: true, get: () => { throw new Error("must not read forged grant"); } });
+    expect(providerAuthorityAllows(getter as never, "interpretation", NOW)).toBe(false);
+    expect(providerAuthorityAllows({ ...issued }, "interpretation", NOW)).toBe(false);
+    expect(providerAuthorityAllows(JSON.parse(JSON.stringify(issued)), "interpretation", NOW)).toBe(false);
+    expect(consumeProviderAuthorityForTransport(issued, "interpretation", NOW)).toBe(true);
+    expect(consumeProviderAuthorityForTransport(issued, "interpretation", NOW)).toBe(false);
   });
 
   it("keeps the real reader disabled even when provider transport flags are present", async () => {
