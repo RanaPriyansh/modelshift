@@ -1,6 +1,6 @@
 # FORGE Argument & Evidence World — Implementation Packet
 
-**Status:** principal design contract; package implementation authorized, curriculum/public release remain pending
+**Status:** retained internal package accepted at local code baseline `7ba70ef60c038883bd4ae9ca89c974d9bec61cea`; curriculum binding, public route, browser journey, and release remain pending
 
 **Decision date:** 22 July 2026
 
@@ -271,9 +271,9 @@ The IES/What Works Clearinghouse practice guide *Teaching Secondary Students to 
 
 If that external source is not accepted, the package may remain a local, unavailable authored-fixture artifact; the implementation must not invent a reviewed binding. Its initial runtime provenance is explicitly incomplete and cannot satisfy the curriculum graph's new-publication gate. A later bound source tuple requires the real immutable source package, locators, rights, all seven scoped review decisions, correction/withdrawal replay, and separate publication authority.
 
-The canonical content bytes live only at `public/worlds/argument-evidence/authored-fixture.json`. Domain code parses and projects those bytes; it must not maintain a second hand-copied truth fixture. Exact byte length and digest are tested.
+The canonical content bytes live only at `src/worlds/argument-evidence/fixtures/authored-fixture.json`. Domain code parses and projects those bytes; it must not maintain a second hand-copied truth fixture. Exact byte length (`5749`) and SHA-256 (`8ce3d6a8138f49a499202cacf4d38b58e03d7978bf151b3138020bdf24ce9ed9`) are tested.
 
-Until the source schema gains a first-class bundled-asset locator, the manifest's required URL-shaped field uses the non-network canonical reference `forge-asset:/worlds/argument-evidence/authored-fixture.json`. It is not an HTTP URL, deployment claim, or acquisition proof; runtime code must not fetch it, and its review/provenance status remains incomplete.
+The retained manifest uses the opaque internal locator `forge-internal:source.argument-evidence.authored-fixture`. It is not an HTTP URL, deployment claim, acquisition proof, or permission to expose the bytes. Runtime code loads the checked-in internal fixture rather than fetching a public asset. `/learn/argument-evidence`, the former public fixture/provenance paths, and `/learn/model-shift` return `404` on the integrated production build; its review/provenance status remains incomplete.
 
 ## 12. File ownership for the implementation task
 
@@ -282,6 +282,9 @@ Expected new files:
 ```text
 src/worlds/argument-evidence/
   content.ts
+  fixtures/
+    authored-fixture.json
+    PROVENANCE.md
   index.ts
   reducer.ts
   types.ts
@@ -298,20 +301,16 @@ src/forge/world-runtime/
   argument-evidence-binding.ts
   argument-evidence.ts
   argument-evidence.test.ts
-
-app/learn/argument-evidence/page.tsx
-public/worlds/argument-evidence/
-  authored-fixture.json
-  PROVENANCE.md
 ```
 
 Expected narrow edits after review:
 
-- built-in World registry/pack export;
+- internal World registry/pack export;
 - canonical deterministic validator registry;
-- learner route and planner catalog;
 - retained content manifest and runtime-binding digest;
-- all-World conformance and browser fixture lists.
+- internal all-World conformance fixtures.
+
+The learner route, public planner/catalog entry, public asset directory, curriculum binding, and browser fixture list are intentionally absent. They require a separate source/registry/publication and release decision.
 
 The implementation task does not edit SQL, auth, provider routes, public feature flags, or deployment configuration.
 
@@ -337,6 +336,8 @@ The implementation task does not edit SQL, auth, provider routes, public feature
 - altered validator result, criteria order, task code, source tuple, runtime digest, or support fact fails closed.
 
 ### Browser and accessibility
+
+These checks are a later public-route acceptance gate. The retained internal package has component/contract coverage, not a public-route journey or manual assistive-technology proof.
 
 - complete desktop and 320 CSS px keyboard journeys;
 - focus never moves behind hidden stages;
