@@ -20,7 +20,7 @@
 
 **Long-term aim:** help a learner of any age, under age-appropriate human authority, turn a real question or practical goal into a reviewed, accessible path of explanation, practice, project work, and independent proof, preserving agency, source provenance, privacy, and the distinction between AI-assisted performance and demonstrated capability.
 
-**Current claim:** C1/DG1 candidate with four authored bounded Worlds, a fixture-only adult presentation route, and a fail-closed adult-pilot review shell around the accepted controller. The currently recorded public deployment predates these new slices and remains `DEPLOYMENT_BLOCKED`; it is not a broad curriculum, minor-safe operation, homeschool system, efficacy-proven product, or terminal production release.
+**Current claim:** C1/DG1 candidate with four authored bounded Worlds, a fixture-only adult presentation route, and a public but default-unavailable adult-pilot review shell around the accepted controller. Exact source `04eab4263658725d7a228c67682c40fc469757b1` is operational at the public alias, but provider-authenticated release verification remains `DEPLOYMENT_BLOCKED`; this is not a broad curriculum, minor-safe operation, homeschool system, efficacy-proven product, or terminal production release.
 
 **Next wedge:** one server-entitled, externally recruited 18+ cohort completes one reviewed practical capability journey with active multimodal learning, support withdrawal, independent transfer, and delayed return.
 
@@ -72,7 +72,7 @@ The accepted implementation contains four working Learning Worlds, a determinist
 
 It does **not** contain a complete curriculum, verified cloud identity operation, guardian-consent service, live evidence sync, people network, accredited pathway, representative learner study, efficacy evidence, or a live-credential evaluation of the four provider adapters.
 
-The current public tuple is source `35a1d2c5bd28c7b794b26414c6bdfe8f18097027`, production deployment `dpl_Er7rVecXt3iga56P4uPDoLnWt9V4`, alias `https://modelshift.vercel.app`, and immutable URL `https://forge-learning-7a63ywsp5-ranapriyanshs-projects.vercel.app`. Public health binds the exact source, platform identity, build time, retained source digests, and disabled cloud/provider posture. Production verification is `DEPLOYMENT_BLOCKED`, not `DEPLOYED_CANDIDATE` or terminal `PRODUCTION_VERIFIED`, because the deployment-specific Vercel asset tree differs from the precomputed manifest asset digest. The [current release record](../operations/CURRENT_RELEASE.md) is the single locator for exact state and rollback gates.
+The current public tuple is source `04eab4263658725d7a228c67682c40fc469757b1`, production deployment `dpl_ET6nUWvjeVMEdacWJgCbxVsCT1qn`, alias `https://modelshift.vercel.app`, and immutable URL `https://forge-learning-r5lgrxkg0-ranapriyanshs-projects.vercel.app`. Public health binds the exact source, platform identity, retained source digests, disabled cloud/provider posture, and provider-receipt requirement. Production verification is `DEPLOYMENT_BLOCKED`, not terminal `PRODUCTION_VERIFIED`: the exact CLI deployment is healthy and emitted digest `02aef5b...`, but authenticated provider metadata contains no `gitSource` or `gitRepo`. Verification passed 207 checks and failed the eight receipt and dependent binding checks. The [current release record](../operations/CURRENT_RELEASE.md) is the single locator for exact state and rollback gates.
 
 ## Cost-aware operating model
 

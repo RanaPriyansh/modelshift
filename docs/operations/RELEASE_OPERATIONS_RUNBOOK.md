@@ -69,6 +69,8 @@ Request-only BYOK remains a per-request boundary. A managed provider or cloud-au
 
 The verifier accepts a checked-in `--target-id` for remote inspection (or explicit `--allow-localhost` for a local artifact only), a full 40-character expected SHA, and—only for a remote candidate—an exact production Vercel deployment ID plus the name of an environment variable holding an API token. It collects bounded deployment metadata and build events from `api.vercel.com`, issues an opaque process-local receipt capability, and then performs bounded same-origin `GET` requests with redirects disabled to `/api/health`, all four Worlds, `/paths/source-corroboration`, `/pathways`, `/studio`, `/login`, `/account`, and same-origin versioned Next.js scripts. It checks exact SHA, the checked-in alias, immutable/project identity, the authenticated provider tuple, source/repository policy, provider event ordering, security headers, route markers, and client secret-pattern absence. It never submits forms or calls model/API write paths, and it does not claim byte-for-byte proof of every remote edge asset.
 
+The observed Vercel events response is an array of envelopes whose log identity is nested at `event.payload.{deploymentId,id,date,text,info}`, with `event.created` on the envelope. A nested canonical marker must use its own `payload.date` and bind `payload.deploymentId` to the normalized deployment ID. The parser rejects duplicate markers within one text or across events, cross-deployment IDs, missing nested timestamps, and any event that mixes nested marker fields with top-level `text`, `id`, `deploymentId`, or `date`. A separately retained top-level legacy shape is accepted only with its own explicit deployment ID and creation timestamp. This parsing never turns saved JSON into the process-local receipt capability.
+
 The script scan is a hard initial-HTML contract: it unions the distinct allowed `/_next/static/` script URLs referenced by those ten pages, requires a nonempty set of at most 32, then fetches and scans every admitted asset. The public-asset digest is over the complete emitted `.next/static` tree; the read-only network scan is deliberately limited to initial HTML assets. Hydration-only chunks are outside the network scan. Increasing the budget requires a new observed-count measurement, boundary-test update, and release-operations review.
 
 Example (read-only; do not run against an unapproved origin):
@@ -85,6 +87,12 @@ pnpm exec tsx scripts/ops/deployment-verifier.ts \
   --expected-database-migration-identity not_configured \
   --output-dir test-results/release-ops
 ```
+
+## Current CLI-source deployment diagnosis (read-only, 2026-07-23)
+
+Exact source `04eab4263658725d7a228c67682c40fc469757b1` is operational at the public alias through production deployment `dpl_ET6nUWvjeVMEdacWJgCbxVsCT1qn`. The remote build emitted the canonical 42-asset marker and digest `02aef5b03c6a2fa016e202b23d1541ad712a295b17e15805d093efa239d2790b`. Public health binds the exact source and expected disabled posture, and production browser checks passed 5/5 plus the default pilot denial.
+
+The complete verifier remains `DEPLOYMENT_BLOCKED` at 207 pass / 8 fail because the authenticated deployment record reports CLI source with `gitSource: null` and `gitRepo: null`. The failures are limited to the provider receipt schema/authority/tuple/time/asset checks and their dependent manifest/state bindings. Vercel Git connection and documented Git-source API creation both failed while GitHub exposed the requested public repository and exact `main` SHA. Do not repeat CLI uploads: an authorized owner must install or authorize the Vercel GitHub App for `RanaPriyansh/modelshift`, connect project `forge-learning-os`, and create a fresh production deployment from `main`.
 
 ## Blocked deployment diagnosis (read-only, 2026-07-22)
 

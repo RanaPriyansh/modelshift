@@ -153,7 +153,7 @@ PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
 | `/learn/ai-and-learning` | Working source/evidence World |
 | `/learn/primary-source-reasoning` | Working historical-literacy World using authentic archival images |
 | `/paths/source-corroboration` | Fixture-only adult presentation route; no assignment, entitlement, evidence write, or homeschool authority |
-| `/pilot` | Local-candidate fixture review route, absent from the recorded public `35a1d2c` deployment; fail-closed and unavailable by default |
+| `/pilot` | Publicly routed but fail-closed adult fixture review shell; unavailable by default, with reviewed fixture markers excluded from public static assets |
 | `/studio` | Public explanation of the provider-neutral unverified-draft workflow; connector locked |
 | `/login` and `/account` | Private device profile plus optional, separately configured cloud identity |
 | `/trail` | Local evidence summary plus the intended question-to-capability trail |
@@ -166,7 +166,7 @@ PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
 
 The complete application requires a Next.js/Node-compatible host because it includes server routes. Vercel is the intended deployment target for this foundation; a static-site host can publish design or research artifacts but cannot replace the planner and interpretation APIs without a separate backend.
 
-The current public app is exact source `35a1d2c5bd28c7b794b26414c6bdfe8f18097027` at [modelshift.vercel.app](https://modelshift.vercel.app), deployment `dpl_Er7rVecXt3iga56P4uPDoLnWt9V4`, immutable URL `https://forge-learning-7a63ywsp5-ranapriyanshs-projects.vercel.app`. Public health binds the SHA, platform identity, build time, lock/content/evaluator digests, and disabled cloud/provider posture. The release state is nevertheless `DEPLOYMENT_BLOCKED`: Vercel emitted public-asset digest `aad493295...`, while the artifact asserted the locally precomputed `b1f8d95f...`; the verifier passed 206 checks and failed four release-identity checks. Local main now contains the replacement provider-authenticated receipt contract, but that code has not yet been exercised on a fresh Git-connected deployment. See the [canonical record](docs/operations/CURRENT_RELEASE.md) for the exact tuple, evidence ceiling, repair gate, and non-mutating rollback procedure.
+The current public app is exact source `04eab4263658725d7a228c67682c40fc469757b1` at [modelshift.vercel.app](https://modelshift.vercel.app), deployment `dpl_ET6nUWvjeVMEdacWJgCbxVsCT1qn`, immutable URL `https://forge-learning-r5lgrxkg0-ranapriyanshs-projects.vercel.app`. Public health binds the SHA, platform identity, lock/content/evaluator digests, disabled cloud/provider posture, and the requirement for a provider-observed asset receipt. The app and default-denied pilot route are operational, but release verification remains `DEPLOYMENT_BLOCKED` at 207 pass / 8 fail because Vercel reports a CLI source with `gitSource` and `gitRepo` absent. The build emitted asset digest `02aef5b...`; caller metadata cannot supply the missing provider Git provenance. Local main additionally hardens the collector against the live nested event envelope, duplicate markers, cross-deployment IDs, missing nested timestamps, and mixed event shapes; that later verifier-only code is not part of the deployed source. See the [canonical record](docs/operations/CURRENT_RELEASE.md) for the exact tuple, evidence ceiling, repair gate, and non-mutating rollback procedure.
 
 ## What is not yet claimed
 

@@ -155,3 +155,24 @@ The first implementation response is deliberately narrow: fixture-only capabilit
 ### Evidence required before the next stronger statement
 
 The next stronger product statement requires one exact, bounded adult route that connects an accepted capability map to reviewed resources, a construct-aware representation, safe practical work, support withdrawal, unfamiliar proof, and return scheduling. It also requires trusted source/reviewer authority, server-owned adult entitlement, persistence and deletion boundaries, rendered accessibility evidence, failure/fallback behavior, and an exact-SHA release packet. Minor, homeschool, teacher-replacement, mastery, safety, and efficacy claims remain later independent gates.
+
+---
+
+## 2026-07-23 — Goal audit after the first integrated pilot shipment
+
+### Audited goal
+
+Build FORGE into the place a person can bring any real question or capability goal, at any age and depth, and receive an age-appropriate, source-visible path through explanation, active representation, practice, authentic work, support withdrawal, independent proof, and deliberate return. AI should expand the quality, variety, and speed of instruction while remaining a replaceable proposal layer; learner agency, reviewed sources, human responsibility, access, privacy, and evidence boundaries own the system.
+
+This retains the founder's education-replacement ambition as a long-range design constraint while making the present product claim testable. FORGE earns homeschool or institutional reliance only pathway by pathway, population by population, and jurisdiction by jurisdiction. It does not become a replacement because the interface, model, or founder says so.
+
+### What now exists
+
+- Exact source `04eab4263658725d7a228c67682c40fc469757b1` is publicly operational with four bounded Worlds, a source-corroboration presentation, and a default-unavailable adult pilot shell.
+- The pilot visibly connects model interpretation, a separating operation, governed resources, reconstruction, practice/project/critique/defence, assistance withdrawal, unfamiliar proof, and delayed return.
+- The build excludes reviewed pilot fixture markers from public static assets and the public route fails closed without the server review flag.
+- Production release verification still blocks promotion because the CLI deployment lacks provider-owned Git provenance. This is an operations boundary, not permission to weaken source authority.
+
+### Next product slice
+
+The next learner-value step is not another disconnected demo. It is one server-entitled adult journey using reviewed source/resource authority, real persistence and deletion controls, a human review queue, and one externally recruited cohort. The next release step is a fresh Vercel Git-connected deployment after GitHub App authorization. Minor operation, broad curriculum, efficacy, homeschool readiness, and credential claims remain later gates.
