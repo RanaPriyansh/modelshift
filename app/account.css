@@ -226,12 +226,33 @@
 .forge-account-contract dt { color: var(--account-cyan); font: 800 10px/1.5 "SFMono-Regular", Consolas, monospace; text-transform: uppercase; }
 .forge-account-contract dd { margin: 0; color: var(--account-muted); font-size: 13px; }
 
+.forge-account-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 22px 0 0;
+}
+
+.forge-account-links a {
+  box-sizing: border-box;
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  border: 1px solid var(--account-line);
+  color: var(--account-cyan);
+  padding: 10px 12px;
+  text-underline-offset: 4px;
+}
+
 @media (max-width: 760px) {
   .forge-account-page { min-height: calc(100svh - 130px); padding: 54px 16px 96px; }
   .forge-account-grid { grid-template-columns: 1fr; margin-top: 38px; }
   .forge-device-access,
   .forge-cloud-access { min-height: 0; padding: 26px 20px; }
   .forge-account-contract div { grid-template-columns: 1fr; gap: 6px; }
+  .forge-account-links { flex-direction: column; }
+  .forge-account-links a { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

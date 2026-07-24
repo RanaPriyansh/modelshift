@@ -1,11 +1,14 @@
 import { z } from "zod";
 
+import { exceedsUtf8ByteLimit } from "../storage/raw-byte-limit";
+
 // These schemas also run in strict-CSP browser surfaces. Disable Zod's
 // optional Function-constructor fast path so CSP reports remain clean.
 z.config({ jitless: true });
 
 export const EVIDENCE_LEDGER_SCHEMA_VERSION = 1 as const;
 export const EVIDENCE_LEDGER_EXPORT_FORMAT = "forge-evidence-ledger" as const;
+export const MAX_EVIDENCE_LEDGER_RAW_BYTES = 5 * 1024 * 1024;
 
 const IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -190,9 +193,15 @@ export function createEmptyEvidenceLedger(): EvidenceLedger {
   return { schemaVersion: EVIDENCE_LEDGER_SCHEMA_VERSION, entries: [] };
 }
 
-/** Unknown and malformed data is replaced, never migrated field-by-field. */
+/** Unknown and malformed data is represented as empty without rewriting storage. */
 export function decodeEvidenceLedger(raw: string | null): EvidenceLedgerDecodeResult {
-  if (raw === null || raw.trim() === "") {
+  if (raw === null) {
+    return { ledger: createEmptyEvidenceLedger(), status: "empty" };
+  }
+  if (exceedsUtf8ByteLimit(raw, MAX_EVIDENCE_LEDGER_RAW_BYTES)) {
+    return { ledger: createEmptyEvidenceLedger(), status: "reset_malformed" };
+  }
+  if (raw.trim() === "") {
     return { ledger: createEmptyEvidenceLedger(), status: "empty" };
   }
 
@@ -220,5 +229,7 @@ export function decodeEvidenceLedger(raw: string | null): EvidenceLedgerDecodeRe
 
 export function encodeEvidenceLedger(ledger: EvidenceLedger): string | null {
   const parsed = evidenceLedgerSchema.safeParse(ledger);
-  return parsed.success ? JSON.stringify(parsed.data) : null;
+  if (!parsed.success) return null;
+  const encoded = JSON.stringify(parsed.data);
+  return exceedsUtf8ByteLimit(encoded, MAX_EVIDENCE_LEDGER_RAW_BYTES) ? null : encoded;
 }

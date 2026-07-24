@@ -31,22 +31,31 @@ import {
   type AuthenticatedVercelReceiptHandle,
 } from "./vercel-provider-receipt";
 
-export const DEPLOYMENT_VERIFIER_VERSION = "2.4.0";
+export const DEPLOYMENT_VERIFIER_VERSION = "2.5.0";
 export const WORKER_CANDIDATE_STATES = ["BUILT_LOCAL", "PUSHED", "DEPLOYMENT_BLOCKED", "DEPLOYED_CANDIDATE"] as const;
 const SHA = /^[0-9a-f]{40}$/i;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 export const CANONICAL_DEPLOYMENT_ROUTES = [
   { id: "home", path: "/", marker: /FORGE|What do you want to understand/i },
+  { id: "path_start", path: "/start", marker: /Turn a goal into a credible first path/i },
+  { id: "public_paths", path: "/paths", marker: /Learn toward something you want to do|No complete broad path is published yet/i },
+  { id: "how_forge_works", path: "/how-forge-works", marker: /A path is credible when every move earns its place|Goal(?: |&rarr;|→)path(?: |&rarr;|→)action/i },
+  { id: "learner_today", path: "/app", marker: /Reading learner-owned device continuity|Begin with something you want to do/i },
+  { id: "learner_paths", path: "/app/path", marker: /Reading path history|Inspect what you accepted/i },
+  { id: "learner_study", path: "/app/study", marker: /Preparing action brief|There is no reviewed next action to open/i },
+  { id: "learner_evidence", path: "/app/evidence", marker: /Proof should say exactly what happened/i },
+  { id: "trust", path: "/trust", marker: /FORGE should be inspectable before it is impressive/i },
   { id: "world_force_motion", path: "/learn/force-and-motion", marker: /Force & motion|force-and-motion/i },
   { id: "world_ai_learning", path: "/learn/ai-and-learning", marker: /AI & learning|ai-and-learning/i },
   { id: "world_proportional_reasoning", path: "/learn/proportional-reasoning", marker: /Proportional|proportional-reasoning/i },
   { id: "world_primary_source_reasoning", path: "/learn/primary-source-reasoning", marker: /Primary source|primary-source-reasoning/i },
   { id: "source_corroboration_path", path: "/paths/source-corroboration", marker: /Verify before you trust|source-corroboration/i },
-  { id: "pathway_availability", path: "/pathways", marker: /What FORGE can(?:—|&mdash;|&#x2014;)and cannot(?:—|&mdash;|&#x2014;)offer today|Availability map only/i },
-  { id: "studio", path: "/studio", marker: /Lesson Studio|provider-neutral|learning question/i },
-  { id: "device_profile_login", path: "/login", marker: /device profile|Cloud identity · not configured|Pick where your learning trail lives/i },
+  { id: "pathway_availability", path: "/coverage", marker: /What FORGE can(?:—|&mdash;|&#x2014;)and cannot(?:—|&mdash;|&#x2014;)offer today|Availability map only/i },
+  { id: "author_gate", path: "/author", marker: /author workspace is not available|Author role required/i },
+  { id: "device_profile_sign_in", path: "/sign-in", marker: /device profile|Cloud identity · structurally disabled|Pick where your learning trail lives/i },
   { id: "device_profile_account", path: "/account", marker: /device evidence|No cloud account active|Your access/i },
+  { id: "internal_pilot_denial", path: "/internal/pilot", marker: /This route is not available in this deployment/i },
 ] as const;
 const FORBIDDEN_CLIENT_PATTERNS = [
   { id: "openai_secret_name", pattern: /OPENAI_API_KEY/i },
@@ -60,10 +69,9 @@ const MAX_HEALTH = 32_000;
 const MAX_ASSET = 2_000_000;
 /**
  * Hard cap for the distinct, same-origin Next.js scripts referenced by the
- * initial HTML of every canonical route. Wave 4 currently emits 25 such
- * chunks across the ten inspected routes; 32 leaves seven deliberate slots
- * for reviewed top-level product growth while keeping the read-only scan
- * bounded. This does not enumerate hydration-only chunks.
+ * initial HTML of every canonical route. The limit keeps the read-only scan
+ * bounded while the exact observed count remains a release measurement. This
+ * does not enumerate hydration-only chunks.
  *
  * Raise this only with a new observed-count measurement, this boundary-test
  * update, and a release-operations contract review. The verifier must still
@@ -418,7 +426,7 @@ async function verifyDeploymentWithCapability(
       record(checks, "health.disabled_cloud", payload.cloud_accounts_enabled === false && payload.cloud_auth_configured === false && payload.device_profiles === "device_only" && payload.learner_evidence_sync === "disabled", "cloud identity and learner evidence sync are disabled");
       const flags = payload.managed_provider_flags;
       const surfaces = payload.managed_surface_flags;
-      record(checks, "health.disabled_providers", payload.runtime_mode === "fallback_only" && payload.provider_mode === "request_only_byok" && isRecord(flags) && flags.openai === false && flags.anthropic === false && flags.gemini === false && flags.openrouter === false && isRecord(surfaces) && surfaces.lesson_studio === false && surfaces.interpretation === false && surfaces.planner === false, "all managed provider surfaces are disabled; request-only BYOK remains the explicit boundary");
+      record(checks, "health.disabled_providers", payload.runtime_mode === "fallback_only" && payload.provider_mode === "disabled" && isRecord(flags) && flags.openai === false && flags.anthropic === false && flags.gemini === false && flags.openrouter === false && isRecord(surfaces) && surfaces.lesson_studio === false && surfaces.interpretation === false && surfaces.planner === false, "all managed provider and BYOK request surfaces are disabled");
       record(checks, "health.digest_shape", typeof payload.dependency_lock_digest === "string" && DIGEST.test(payload.dependency_lock_digest) && typeof payload.content_package_manifest_digest === "string" && DIGEST.test(payload.content_package_manifest_digest) && typeof payload.evaluator_baseline_digest === "string" && DIGEST.test(payload.evaluator_baseline_digest) && typeof payload.database_migration_identity === "string" && /^(?:not_configured|[A-Za-z0-9._:-]{1,160})$/.test(payload.database_migration_identity), "release metadata digests and migration identity are well formed");
       record(checks, "health.digest_lockfile", payload.dependency_lock_digest === options.expectedLockfileDigest, "dependency lock digest matches the checked-in source");
       record(checks, "health.digest_content_manifest", payload.content_package_manifest_digest === options.expectedContentManifestDigest, "content package manifest digest matches the checked-in source");

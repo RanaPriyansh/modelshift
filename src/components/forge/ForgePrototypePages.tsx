@@ -15,7 +15,7 @@ function CurrentBoundary({ children }: { children: ReactNode }) {
 
 export function TrailPrototype() {
   return (
-    <ForgeShell active="trail">
+    <ForgeShell active="trail" surface="public">
       <main className="forge-info-page" id="forge-main" tabIndex={-1}>
         <header className="forge-info-hero">
           <span>Your Trail</span>
@@ -72,7 +72,7 @@ export function TrailPrototype() {
 
 export function EvidencePrototype() {
   return (
-    <ForgeShell active="evidence">
+    <ForgeShell active="evidence" surface="app">
       <main className="forge-info-page forge-info-page--paper" id="forge-main" tabIndex={-1}>
         <header className="forge-info-hero">
           <span>Evidence</span>
@@ -84,8 +84,9 @@ export function EvidencePrototype() {
         </header>
 
         <CurrentBoundary>
-          When storage is available, Working Worlds can retain bounded outcomes in this browser and schedule return dates after a
-          protected transfer attempt matches that World’s current criteria.
+          When storage is available, working Worlds can retain bounded outcomes in this browser.
+          The reviewed Force &amp; motion path can schedule one device-local delayed-return task only after
+          an exact independently proved session; other released Worlds do not schedule a return date.
           “Educator copy” only marks records for a learner-triggered download; FORGE sends nothing to another person.
         </CurrentBoundary>
 
@@ -121,8 +122,8 @@ export function EvidencePrototype() {
         </section>
 
         <div className="forge-info-actions">
-          <Link className="forge-primary-action" href="/learn/force-and-motion">Start a proof-capable World<ForgeArrow /></Link>
-          <Link className="forge-secondary-action" href="/trail">See the Trail contract</Link>
+          <Link className="forge-primary-action" href="/start">Shape a proof-capable path<ForgeArrow /></Link>
+          <Link className="forge-secondary-action" href="/app/path">Inspect accepted paths</Link>
         </div>
       </main>
     </ForgeShell>

@@ -20,6 +20,11 @@ import {
   type SourceProvenance,
 } from "./contracts";
 import { deepFreeze } from "./deep-freeze";
+import {
+  FORCE_MOTION_RETURN_COMPLETION_WINDOW_DAYS,
+  FORCE_MOTION_RETURN_DELAY_DAYS,
+  FORCE_MOTION_RETURN_TASK_FAMILY_ID,
+} from "./delayed-return/force-motion-policy";
 import { FORCE_AND_MOTION_RUNTIME_BINDING } from "./world-runtime/force-and-motion-binding";
 import { PRIMARY_SOURCE_RUNTIME_BINDING } from "./world-runtime/primary-source-binding";
 import { PROPORTIONAL_REASONING_RUNTIME_BINDING } from "./world-runtime/proportional-reasoning-binding";
@@ -156,12 +161,13 @@ export const FORCE_AND_MOTION_WORLD = deepFreeze({
   manifest: {
     schemaVersion: "1.0",
     id: "world.force-and-motion",
-    version: "1.0.1",
+    version: "1.0.2",
     route: "/learn/force-and-motion",
     title: "Force & motion",
     summary:
       "A deterministic force-and-motion world in which learners commit a model, test it against authored physics, and complete a cold transfer with assistance removed.",
     kind: "model",
+    activityProtocol: "modelshift",
     evidenceTier: "verified",
     ageModes: ["13-17", "18-plus"],
     depthModes: ["introductory", "core"],
@@ -177,8 +183,10 @@ export const FORCE_AND_MOTION_WORLD = deepFreeze({
       modelMayChangePolicy: false,
     },
     returnProof: {
-      enabled: false,
-      reason: "No reviewed delayed task family or scheduler is published.",
+      enabled: true,
+      delayDays: [FORCE_MOTION_RETURN_DELAY_DAYS],
+      completionWindowDays: FORCE_MOTION_RETURN_COMPLETION_WINDOW_DAYS,
+      taskFamilyId: FORCE_MOTION_RETURN_TASK_FAMILY_ID,
       aiBoundary: AI_OFF,
     },
     safety: {
@@ -252,6 +260,7 @@ export const SOURCE_CORROBORATION_WORLD = deepFreeze({
     summary:
       "A source-evidence world for tracing a model-generated factual claim to reviewed research sources, comparing support, and stating uncertainty without treating model fluency as proof.",
     kind: "evidence",
+    activityProtocol: "activity",
     evidenceTier: "grounded",
     ageModes: ["13-17", "18-plus"],
     depthModes: ["introductory", "core", "advanced"],
@@ -348,6 +357,7 @@ export const PROPORTIONAL_REASONING_WORLD = deepFreeze({
     summary:
       "An exact-arithmetic model world in which learners compare two mixture relationships, normalize a shared quantity, reconstruct proportionality, and transfer the relationship to an unfamiliar map scale.",
     kind: "model",
+    activityProtocol: "activity",
     evidenceTier: "verified",
     ageModes: ["under-13", "13-17", "18-plus"],
     depthModes: ["introductory", "core"],
@@ -432,6 +442,7 @@ export const PRIMARY_SOURCE_REASONING_WORLD = deepFreeze({
     summary:
       "A primary-source investigation that separates visible observation, catalog metadata, inference, and open questions before an unfamiliar cold transfer.",
     kind: "evidence",
+    activityProtocol: "activity",
     evidenceTier: "grounded",
     ageModes: ["under-13", "13-17", "18-plus"],
     depthModes: ["introductory", "core"],
@@ -576,9 +587,11 @@ export const PUBLIC_WORLD_CATALOG = deepFreeze(
     title: manifest.title,
     summary: manifest.summary,
     kind: manifest.kind,
+    activityProtocol: manifest.activityProtocol,
     evidenceTier: manifest.evidenceTier,
     ageModes: [...manifest.ageModes],
     depthModes: [...manifest.depthModes],
+    sourceIds: manifest.sources.map((source) => source.id),
   })),
 );
 export const BUILT_IN_DETERMINISTIC_VALIDATORS = deepFreeze([

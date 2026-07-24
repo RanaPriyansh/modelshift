@@ -2,13 +2,13 @@
 
 FORGE is a learner-owned learning-system foundation for children learning with a grown-up, teenagers, and adults. Its long-term direction is broad: help someone enter with a question or capability goal, find a rigorous path across subjects, use AI without surrendering the thinking, and keep bounded evidence of what they could do independently.
 
-This repository is currently a **C1 interactive foundation and DG1 candidate**, not the finished institution described by the product vision. `DG#` denotes a delivery/claim gate; `PG#` denotes a program goal. It demonstrates four authored learning Worlds, a deterministic planning boundary, a typed event spine, a privacy-minimal browser evidence trail, optional device/cloud access surfaces, and a provider-neutral AI lesson-draft compiler. It does not yet constitute a complete curriculum, a homeschool replacement, a child-safety operation, or evidence that FORGE improves learning.
+This repository is currently a **C1 interactive foundation and DG1 candidate**, not the finished institution described by the product vision. `DG#` denotes a delivery/claim gate; `PG#` denotes a program goal. It demonstrates four authored learning Worlds, a deterministic planning boundary, a typed event spine, a privacy-minimal browser evidence trail, device-local access plus a structurally disabled cloud-auth explanation surface, and a provider-neutral AI lesson-draft compiler. It does not yet constitute a complete curriculum, a homeschool replacement, a child-safety operation, or evidence that FORGE improves learning.
 
 ## Current release locator
 
 The canonical public release record is [Current Public Release Record](docs/operations/CURRENT_RELEASE.md). It names the only current public tuple and its unresolved release-provenance gates; a local commit, build, or worker handoff never changes that record into a deployment.
 
-## Proposed next direction
+## Product direction
 
 FORGE's next product layer is a practical goal-to-capability system:
 
@@ -25,7 +25,11 @@ FORGE will federate excellent external material rather than pretend it can pre-a
 
 The strategic thesis is that AI makes provisional cognitive assistance abundant, while judgment, trust, sound pedagogy, practical experience, relationships, and independent proof remain scarce. FORGE aims to organize those complements so people become more capable and less dependent on the product. See the [AI-era learning thesis](docs/program/AI_ERA_LEARNING_THESIS.md), [founder idea log](docs/program/FOUNDER_IDEA_LOG.md), proposed [Wave 6 plan](docs/program/WAVE_6_PLAN.md), proposed [ADR-009](docs/adr/0009-practical-multimodal-learning-paths.md), and [independent production-audit mandate](docs/program/PRINCIPAL_PRODUCTION_AUDIT_MANDATE.md).
 
-This is a documented target, not an implemented feature or release claim.
+The current local P0 implements the goal-to-reviewed-World spine, explicit path
+acceptance, one meaningful next action, resumable device-local study sessions,
+bounded evidence, and one Force delayed return. The broader resource, project,
+account, authoring, and curriculum architecture remains a governed target, not
+an implementation or release claim.
 
 ## What is implemented
 
@@ -42,7 +46,9 @@ Each World is authored and versioned. Deterministic code owns state transitions,
 
 ### A bounded path compiler
 
-The home route at [`/`](http://127.0.0.1:3000/) submits a typed request to `POST /api/forge/plan`.
+The public home explains the product and hands a learner-owned goal draft to
+[`/start`](http://127.0.0.1:3000/start). Only the learner’s explicit action
+submits a typed request to `POST /api/forge/plan`.
 
 - Known topics resolve to registered World and source IDs with authored milestones.
 - Unknown topics receive an explicitly unverified source-verification plan, not an invented course.
@@ -51,19 +57,40 @@ The home route at [`/`](http://127.0.0.1:3000/) submits a typed request to `POST
 
 The earlier physics-specific `POST /api/interpret` route remains for the historical ModelShift World. Its model path is optional and has a deterministic neutral fallback.
 
-### A provider-neutral Lesson Studio
+### A fail-closed author boundary
 
-[`/studio`](http://127.0.0.1:3000/studio) is a public explanation of the bounded lesson-draft workflow; its provider connector is structurally locked. Neither a request-only key, target-audience selection, nor page copy establishes authority. Public managed and BYOK Studio calls remain unavailable until active adult server-owned authority plus separately approved quota, abuse, privacy, and review controls exist. There is no managed Studio credential or environment switch.
+[`/studio`](http://127.0.0.1:3000/studio) redirects to
+[`/author`](http://127.0.0.1:3000/author), which is a non-bypassable unavailable
+gate in this build. Neither a profile, query string, target-audience selection,
+page copy, nor request-only provider key establishes author authority. Managed
+and BYOK requests remain unavailable until active adult server-owned authority
+and separately approved quota, abuse, privacy, source-review, and publication
+controls exist. There is no managed Studio credential or environment switch.
 
 Any future authorized adapter must return the same strict schema: opening phenomenon, exactly two plausible readings, a separating test, reconstruction, unfamiliar cold transfer, source-review needs, safety notes, and explicit limitations. Its output is always an **unverified editable draft**. It cannot publish a World, verify its own claims, select a correct proof answer, grade cold transfer, or create mastery evidence. Adapter tests are mocked; no live provider call has been verified in this release because no provider credential is available in the workspace.
 
 ### A privacy-minimal local evidence ledger
 
-Completed World outcomes can be written to browser `localStorage` and inspected at [`/evidence`](http://127.0.0.1:3000/evidence) or [`/trail`](http://127.0.0.1:3000/trail). The ledger supports schema validation, bounded assistance provenance, return dates, learner export, learner-selected educator export, per-record deletion, and full local deletion.
+Completed path-backed World outcomes can be written to browser `localStorage`
+and inspected at [`/app/evidence`](http://127.0.0.1:3000/app/evidence).
+`/evidence` redirects there; `/trail` remains a compatibility explanation, not
+primary navigation. The ledger supports schema validation, bounded assistance
+provenance, return dates, learner export, learner-selected educator export,
+per-record deletion, and full local deletion.
 
 The local ledger deliberately excludes identity, raw chat, learner explanations, confidence, personality or emotion inference, and mastery scores. It is browser-local only: there is no evidence sync, background sharing, or recovery across devices.
 
-[`/login`](http://127.0.0.1:3000/login) and [`/account`](http://127.0.0.1:3000/account) provide a working privacy-minimal device profile and an optional adult-entry cloud-auth adapter. Device profiles store only a random ID, learner mode, guardian-present confirmation, schema version, and timestamp. Cloud auth is code-complete for a separately provisioned Supabase project, but intentionally unavailable when the three server variables are absent. Cloud identity grants no adult, guardian, sharing, or evidence privileges, and no live project is connected in this release.
+[`/sign-in`](http://127.0.0.1:3000/sign-in) and
+[`/app/settings`](http://127.0.0.1:3000/app/settings) provide a working
+privacy-minimal device profile and an inert adult cloud-auth explanation
+surface. `/login` and `/account` remain compatibility entries. Device profiles
+store only a random ID, learner mode, guardian-present confirmation, schema
+version, and timestamp. Cloud auth is structurally disabled:
+`readForgeCloudAuthConfig` returns `null` for every environment input, so no
+current variable set can enable sign-in. A future authorized integration must
+replace that boundary and separately prove CAPTCHA, durable abuse controls,
+configured-project isolation, and rights operations. No live project is
+connected, and no cloud identity privilege exists in this release.
 
 ### A typed event spine
 
@@ -97,7 +124,7 @@ The implementation is a modular Next.js monolith with explicit internal boundari
 - `src/worlds/` and `src/components/worlds/` - domain-owned content, reducers, models, validators, and interfaces;
 - `src/lib/forge-evidence/` - privacy-minimal local ledger, export, deletion, scheduling, and evidence-state derivation;
 - `src/lib/lesson-studio/` - provider adapters, strict lesson-draft schema, source/safety boundaries, and fail-closed parsing;
-- `src/lib/forge-auth/` and `src/lib/forge-profile/` - hardened optional cloud session boundary and privacy-minimal device profile;
+- `src/lib/forge-auth/` and `src/lib/forge-profile/` - structurally disabled, non-env-enableable cloud-auth boundary plus privacy-minimal device profile;
 - `supabase/` - staged durable-data migration and SQL contract tests.
 
 The broader architecture deliberately remains a modular monolith with a typed event/evidence spine until measured scale or isolation needs justify a split. See [FORGE Architecture](docs/FORGE_ARCHITECTURE.md).
@@ -143,21 +170,25 @@ To check an already deployed origin with the production browser spec:
 PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
 ```
 
-## Routes
+## Canonical routes
 
 | Route | Boundary |
 | --- | --- |
-| `/` | Universal question intake, deterministic learning contract, and World catalog |
+| `/` | Public product story and learner-owned goal draft |
+| `/start` | Progressive guest-first goal clarification and inspectable path candidate |
+| `/paths`, `/how-forge-works`, `/trust`, `/coverage` | Public path, method, evidence, and current-availability chapters |
+| `/sign-in` | Device-local continuity entry; cloud identity remains unavailable |
+| `/app` | Today view with one next action, active path, and due-return boundary |
+| `/app/path`, `/app/study`, `/app/evidence`, `/app/returns` | Learner-owned path, action brief, bounded evidence, and delayed-return work |
+| `/focus/modelshift/[sessionId]` | Exact path-backed ModelShift session |
+| `/focus/activity/[sessionId]` | Exact path-backed standard reviewed World session |
 | `/learn/force-and-motion` | Working Model World using the historical ModelShift protocol |
 | `/learn/proportional-reasoning` | Working exact-math Model World |
 | `/learn/ai-and-learning` | Working source/evidence World |
 | `/learn/primary-source-reasoning` | Working historical-literacy World using authentic archival images |
 | `/paths/source-corroboration` | Fixture-only adult presentation route; no assignment, entitlement, evidence write, or homeschool authority |
-| `/pilot` | Publicly routed but fail-closed adult fixture review shell; unavailable by default, with reviewed fixture markers excluded from public static assets |
-| `/studio` | Public explanation of the provider-neutral unverified-draft workflow; connector locked |
-| `/login` and `/account` | Private device profile plus optional, separately configured cloud identity |
-| `/trail` | Local evidence summary plus the intended question-to-capability trail |
-| `/evidence` | Local evidence controls and the bounded evidence contract |
+| `/internal/pilot` | Fail-closed adult fixture review shell; unavailable by default |
+| `/author` | Fail-closed author-role boundary; no provider or publication controls rendered |
 | `POST /api/forge/plan` | Strict same-origin FORGE planner API |
 | `POST /api/forge/lesson-draft` | Strict same-origin, fixed-endpoint provider adapter for unverified drafts |
 | `POST /api/interpret` | Historical bounded physics interpretation API |
@@ -166,7 +197,12 @@ PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
 
 The complete application requires a Next.js/Node-compatible host because it includes server routes. Vercel is the intended deployment target for this foundation; a static-site host can publish design or research artifacts but cannot replace the planner and interpretation APIs without a separate backend.
 
-The current public app is exact source `04eab4263658725d7a228c67682c40fc469757b1` at [modelshift.vercel.app](https://modelshift.vercel.app), deployment `dpl_ET6nUWvjeVMEdacWJgCbxVsCT1qn`, immutable URL `https://forge-learning-r5lgrxkg0-ranapriyanshs-projects.vercel.app`. Public health binds the SHA, platform identity, lock/content/evaluator digests, disabled cloud/provider posture, and the requirement for a provider-observed asset receipt. The app and default-denied pilot route are operational, but release verification remains `DEPLOYMENT_BLOCKED` at 207 pass / 8 fail because Vercel reports a CLI source with `gitSource` and `gitRepo` absent. The build emitted asset digest `02aef5b...`; caller metadata cannot supply the missing provider Git provenance. Local main additionally hardens the collector against the live nested event envelope, duplicate markers, cross-deployment IDs, missing nested timestamps, and mixed event shapes; that later verifier-only code is not part of the deployed source. See the [canonical record](docs/operations/CURRENT_RELEASE.md) for the exact tuple, evidence ceiling, repair gate, and non-mutating rollback procedure.
+This refoundation candidate is local and has not been deployed. The existing
+public tuple remains historical release evidence only and is unchanged by a
+local build or commit. Its unresolved Git/provider provenance gates remain
+blocked. See the [canonical record](docs/operations/CURRENT_RELEASE.md) for the
+exact deployed tuple, evidence ceiling, repair gate, and non-mutating rollback
+procedure.
 
 ## What is not yet claimed
 

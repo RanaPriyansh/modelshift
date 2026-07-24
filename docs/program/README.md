@@ -1,5 +1,7 @@
 # FORGE Program Control Room
 
+**Normative product re-foundation:** [`PRODUCT_REFOUNDATION.md`](./PRODUCT_REFOUNDATION.md) — the real-product thesis, learner journey, canonical objects and authority boundaries, route migration, guest/account model, resources, sessions, ModelShift, projects, evidence, safety, failure behavior, falsification plan, and P0/P1/P2 acceptance gates. It supersedes historical submission framing for future FORGE work.
+
 **Active implementation board:** [`V1_EXECUTION_BOARD.md`](./V1_EXECUTION_BOARD.md) — the real-product v1 path from universal intake through learner-controlled map activation, governed resources, practical work, protected proof, and truthful release. Hackathon, demo-video, judging, and submission work is retired.
 
 **Accepted strategic input:** [`WAVE_6_PLAN.md`](./WAVE_6_PLAN.md) — adult practical capability maps, governed multimodal resources, projects, protected proof, and educator review. Bounded contracts, a fixture presentation route, the controller kernel, and a fail-closed server-gated review shell exist; the externally recruited end-to-end pilot remains incomplete.
@@ -22,7 +24,7 @@
 
 **Long-term aim:** help a learner of any age, under age-appropriate human authority, turn a real question or practical goal into a reviewed, accessible path of explanation, practice, project work, and independent proof, preserving agency, source provenance, privacy, and the distinction between AI-assisted performance and demonstrated capability.
 
-**Current claim:** C1/DG1 candidate with four authored bounded Worlds, a fixture-only adult presentation route, and a public but default-unavailable adult-pilot review shell around the accepted controller. Exact source `04eab4263658725d7a228c67682c40fc469757b1` is operational at the public alias, but provider-authenticated release verification remains `DEPLOYMENT_BLOCKED`; this is not a broad curriculum, minor-safe operation, homeschool system, efficacy-proven product, or terminal production release.
+**Current claim:** the local C1/DG1 candidate now joins a public product entry, progressive goal intake, explicit path acceptance, four protocol-bound authored Worlds, resumable device-local study sessions, bounded evidence, and one Force delayed return. Under-18 operation remains device-only and fail-closed; cloud identity, author/provider authority, live database use, and production promotion remain blocked. The older exact public tuple remains operational at its alias but is not this refoundation candidate. Neither tuple is a broad curriculum, homeschool system, efficacy-proven product, or terminal production release.
 
 **Next wedge:** one server-entitled, externally recruited 18+ cohort completes one reviewed practical capability journey with active multimodal learning, support withdrawal, independent transfer, and delayed return.
 
@@ -70,7 +72,7 @@ FORGE is successful only if it improves all five dimensions without hiding harm 
 
 ## Current truth
 
-The accepted implementation contains four working Learning Worlds, a deterministic path compiler, browser-local evidence, a typed event journal, privacy-minimal device profiles, and the shared bounded runtime across Primary Source Reasoning, Proportional Reasoning, Force and Motion, and AI & Learning. It also contains a replay-validated provider-neutral Lesson Studio draft pipeline, staged Supabase schemas, and bounded unit/browser engineering coverage. Runtime mode is `fallback_only`; BYOK is request-only; cloud accounts, evidence sync, and managed providers remain disabled.
+The accepted local implementation contains four working Learning Worlds, a deterministic path compiler, explicit learner acceptance, exact registry-owned activity-protocol bindings, browser-local evidence, resumable device-local sessions, a typed event journal, privacy-minimal device profiles, and the shared bounded runtime across Primary Source Reasoning, Proportional Reasoning, Force and Motion, and AI & Learning. It also contains a replay-validated provider-neutral lesson-draft compiler behind a fail-closed author boundary, staged Supabase schemas, and bounded unit/browser engineering coverage. Runtime mode is `fallback_only`; managed and BYOK provider requests, cloud accounts, and evidence sync remain disabled.
 
 It does **not** contain a complete curriculum, verified cloud identity operation, guardian-consent service, live evidence sync, people network, accredited pathway, representative learner study, efficacy evidence, or a live-credential evaluation of the four provider adapters.
 
@@ -88,22 +90,23 @@ The current public tuple is source `04eab4263658725d7a228c67682c40fc469757b1`, p
 
 ## Canonical program documents
 
-1. [Architecture baseline](ARCHITECTURE.md)
-2. [Accepted principal architecture decisions](ARCHITECTURE_DECISIONS.md)
-3. [Dependency-ordered master plan](MASTER_PLAN.md)
-4. [Worker thread ledger and work packets](THREAD_LEDGER.md)
-5. [Principal review and integration protocol](REVIEW_PROTOCOL.md)
-6. [Requirement-by-requirement completion and evidence matrix](COMPLETION_MATRIX.md)
-7. [Wave 2 architecture and claim boundary](WAVE_2_ARCHITECTURE.md)
-8. [Wave 3 Ratio runtime and release record](WAVE_3_ARCHITECTURE.md)
-9. [Current public release record](../operations/CURRENT_RELEASE.md)
-10. [Wave 4 all-World runtime plan and historical release record](WAVE_4_PLAN.md)
-11. [Wave 5 trustworthy-continuity and curriculum-expansion plan](WAVE_5_PLAN.md)
-12. [Curriculum graph implementation specification](CURRICULUM_GRAPH_SPEC.md)
-13. [Argument & Evidence World implementation packet](ARGUMENT_EVIDENCE_WORLD_SPEC.md)
-14. [AI-era learning strategy and scenario thesis](AI_ERA_LEARNING_THESIS.md)
-15. [Proposed Wave 6 practical map and resource-orchestration plan](WAVE_6_PLAN.md)
-16. [Append-only founder idea and decision log](FOUNDER_IDEA_LOG.md)
-17. [Proposed ADR-009 practical multimodal learning paths](../adr/0009-practical-multimodal-learning-paths.md)
+1. [Normative product re-foundation](PRODUCT_REFOUNDATION.md)
+2. [Architecture baseline](ARCHITECTURE.md)
+3. [Accepted principal architecture decisions](ARCHITECTURE_DECISIONS.md)
+4. [Dependency-ordered master plan](MASTER_PLAN.md)
+5. [Worker thread ledger and work packets](THREAD_LEDGER.md)
+6. [Principal review and integration protocol](REVIEW_PROTOCOL.md)
+7. [Requirement-by-requirement completion and evidence matrix](COMPLETION_MATRIX.md)
+8. [Wave 2 architecture and claim boundary](WAVE_2_ARCHITECTURE.md)
+9. [Wave 3 Ratio runtime and release record](WAVE_3_ARCHITECTURE.md)
+10. [Current public release record](../operations/CURRENT_RELEASE.md)
+11. [Wave 4 all-World runtime plan and historical release record](WAVE_4_PLAN.md)
+12. [Wave 5 trustworthy-continuity and curriculum-expansion plan](WAVE_5_PLAN.md)
+13. [Curriculum graph implementation specification](CURRICULUM_GRAPH_SPEC.md)
+14. [Argument & Evidence World implementation packet](ARGUMENT_EVIDENCE_WORLD_SPEC.md)
+15. [AI-era learning strategy and scenario thesis](AI_ERA_LEARNING_THESIS.md)
+16. [Proposed Wave 6 practical map and resource-orchestration plan](WAVE_6_PLAN.md)
+17. [Append-only founder idea and decision log](FOUNDER_IDEA_LOG.md)
+18. [Proposed ADR-009 practical multimodal learning paths](../adr/0009-practical-multimodal-learning-paths.md)
 
 These files are principal-owned. Workers may cite them and propose changes in their handoff, but must not edit them unless the principal assigns a documentation-only amendment.

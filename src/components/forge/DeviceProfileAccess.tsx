@@ -55,7 +55,12 @@ export function DeviceProfileAccess({ compact = false }: { compact?: boolean }) 
   }
 
   function reset() {
-    clearForgeDeviceProfile(window.localStorage);
+    const result = clearForgeDeviceProfile(window.localStorage);
+    if (!result.ok) {
+      setStorageAvailable(false);
+      return;
+    }
+    setStorageAvailable(true);
     window.dispatchEvent(new Event(FORGE_DEVICE_PROFILE_EVENT));
   }
 
@@ -69,9 +74,14 @@ export function DeviceProfileAccess({ compact = false }: { compact?: boolean }) 
           Evidence stays in this browser. This is a device profile, not verified identity and not a cloud backup.
         </p>
         <div className="forge-account-actions">
-          <Link className="forge-account-primary" href="/#worlds">Choose a World</Link>
+          <Link className="forge-account-primary" href="/paths">Choose a World</Link>
           <button type="button" onClick={reset}>Remove device profile</button>
         </div>
+        {!storageAvailable ? (
+          <p className="forge-account-status" role="alert">
+            FORGE could not confirm removal from browser storage. The existing device mode remains active.
+          </p>
+        ) : null}
       </section>
     );
   }

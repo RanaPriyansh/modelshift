@@ -25,7 +25,7 @@ const validPhysicsModelOutput = {
   schemaVersion: "1.1" as const,
   route: "force_motion" as const,
   worldId: "world.force-and-motion" as const,
-  worldVersion: "1.0.1",
+  worldVersion: "1.0.2",
   worldRoute: "/learn/force-and-motion" as const,
   sourceIds: ["source.openstax.newtons-first-law" as const],
   rephrasedQuestion: "How can I explain what motion does after a brief push ends?",
@@ -40,7 +40,7 @@ describe("deterministic Forge path compiler", () => {
       route: {
         topicId: "force_motion",
         worldId: "world.force-and-motion",
-        worldVersion: "1.0.1",
+        worldVersion: "1.0.2",
         worldRoute: "/learn/force-and-motion",
         confidence: "authored_match",
       },

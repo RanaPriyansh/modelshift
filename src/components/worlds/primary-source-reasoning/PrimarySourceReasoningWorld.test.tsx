@@ -2,14 +2,30 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { MAX_WORLD_SESSION_CHECKPOINT_BYTES } from "../../../lib/forge-continuity/world-session-checkpoint";
 import {
   TRANSFER_STATEMENTS,
   WORKED_STATEMENTS,
 } from "../../../worlds/primary-source-reasoning";
 import { PrimarySourceReasoningWorld } from "./PrimarySourceReasoningWorld";
+
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+  vi.restoreAllMocks();
+});
+
+const CHECKPOINT_IDENTITY = {
+  sessionId: "study-session.primary-source-checkpoint",
+  worldId: "world.primary-source-reasoning",
+  worldVersion: "1.0.2",
+} as const;
+
+const CHECKPOINT_KEY =
+  "forge.world-session-checkpoint:v1:study-session.primary-source-checkpoint:world.primary-source-reasoning:1.0.2";
 
 function chooseRadio(name: string) {
   fireEvent.click(screen.getByRole("radio", { name }));
@@ -153,5 +169,75 @@ describe("PrimarySourceReasoningWorld", () => {
     });
     fireEvent.click(screen.getByTestId("accept-compiler"));
     expect(screen.getByTestId("stage-test")).toBeInTheDocument();
+  });
+
+  it("restores the canonical stage and the bounded explanation draft", async () => {
+    const first = render(
+      <PrimarySourceReasoningWorld checkpointIdentity={CHECKPOINT_IDENTITY} />,
+    );
+    await screen.findByTestId("stage-mystery");
+    chooseRadio("The photograph was commissioned to advertise the shoe store.");
+    fireEvent.click(screen.getByTestId("commit-initial"));
+    fireEvent.change(screen.getByLabelText("What made this claim seem supported?"), {
+      target: {
+        value: "This is a draft that remains bound to the exact local session.",
+      },
+    });
+    await waitFor(() => {
+      const raw = localStorage.getItem(CHECKPOINT_KEY);
+      expect(raw).toContain('"type":"COMMIT_INITIAL"');
+      expect(raw).toContain("This is a draft that remains bound");
+    });
+    first.unmount();
+
+    render(
+      <PrimarySourceReasoningWorld checkpointIdentity={{ ...CHECKPOINT_IDENTITY }} />,
+    );
+    expect(await screen.findByTestId("stage-explain")).toBeInTheDocument();
+    expect(screen.getByLabelText("What made this claim seem supported?")).toHaveValue(
+      "This is a draft that remains bound to the exact local session.",
+    );
+  });
+
+  it("preserves oversized bytes until explicit discard, then restarts fresh", async () => {
+    const raw = "x".repeat(MAX_WORLD_SESSION_CHECKPOINT_BYTES + 1);
+    localStorage.setItem(CHECKPOINT_KEY, raw);
+    const onCheckpointError = vi.fn();
+    render(
+      <PrimarySourceReasoningWorld
+        checkpointIdentity={CHECKPOINT_IDENTITY}
+        onCheckpointError={onCheckpointError}
+      />,
+    );
+    expect(await screen.findByTestId("world-checkpoint-error")).toHaveTextContent(
+      "too_large",
+    );
+    expect(onCheckpointError).toHaveBeenCalledWith("too_large");
+    expect(localStorage.getItem(CHECKPOINT_KEY)).toBe(raw);
+
+    fireEvent.click(screen.getByTestId("discard-world-checkpoint"));
+    expect(await screen.findByTestId("stage-mystery")).toBeInTheDocument();
+    await waitFor(() => {
+      const restarted = localStorage.getItem(CHECKPOINT_KEY);
+      expect(restarted).not.toBe(raw);
+      expect(JSON.parse(restarted ?? "{}")).toMatchObject({
+        schemaVersion: "world-session-checkpoint.v1",
+        ...CHECKPOINT_IDENTITY,
+        events: [],
+        ui: {
+          mysteryChoice: null,
+          initialExplanation: "",
+          transferExplanation: "",
+        },
+      });
+    });
+  });
+
+  it("does not access checkpoint storage without a session identity", () => {
+    const getItem = vi.spyOn(Storage.prototype, "getItem");
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    render(<PrimarySourceReasoningWorld />);
+    expect(getItem).not.toHaveBeenCalled();
+    expect(setItem).not.toHaveBeenCalled();
   });
 });

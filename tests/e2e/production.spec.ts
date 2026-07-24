@@ -22,30 +22,6 @@ const FALLBACK_INTERPRETATION = {
   policyId: "policy.force-and-motion.interpretation.v1",
 };
 
-const ADAPTIVE_INTERPRETATION = {
-  schema_version: "1.0",
-  hypotheses: [
-    {
-      id: "continuous_force_required",
-      support: "high",
-      evidence_spans: ["motion needs a continuing push"],
-      rationale: "The learner connects continued motion to a continuing push.",
-    },
-  ],
-  missing_distinctions: [
-    "force_changes_velocity_not_velocity_itself",
-    "zero_net_force_means_zero_acceleration",
-  ],
-  recommended_probe_id: "friction_contrast",
-  recommended_level_1_question_id: "what_differs_between_cases",
-  abstain: false,
-  abstain_reason: "none",
-  source: "model",
-  providerId: "openai",
-  modelId: "test-model",
-  policyId: "policy.force-and-motion.interpretation.v1",
-};
-
 const EXPLANATION = "The craft may slow because I think motion needs a continuing push.";
 const REFLECTION = "Only the friction track changes velocity after the push ends.";
 const RECONSTRUCTION = "Net force causes acceleration, and acceleration changes velocity; zero net force keeps velocity constant.";
@@ -70,16 +46,6 @@ async function installNoKeyFallback(page: Page) {
   });
 }
 
-async function installAdaptiveInterpretation(page: Page) {
-  await page.route("**/api/interpret", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(ADAPTIVE_INTERPRETATION),
-    });
-  });
-}
-
 async function commitInitialPrediction(page: Page) {
   await page.getByRole("radio", { name: "Gradually slows" }).press("Space");
   await page.getByRole("slider", { name: "How confident are you?" }).fill("55");
@@ -95,7 +61,7 @@ async function reachProofMode(page: Page, useSupport: boolean) {
   await expect(page.getByRole("heading", { name: "The test that separates the models" })).toBeVisible();
   await expect(page.getByRole("status")).toContainText("baseline test");
   await page.getByText("How this test was chosen").click();
-  await expect(page.getByText(/Deterministic fallback \(missing_key\)/)).toBeVisible();
+  await expect(page.getByText(/Deterministic fallback \(disabled\)/)).toBeVisible();
 
   await page.getByRole("radio", { name: /Only the friction track/ }).press("Space");
   await page.getByRole("button", { name: /Commit and open the test/ }).click();
@@ -136,6 +102,18 @@ async function keyboardType(page: Page, locator: Locator, value: string) {
 }
 
 test.describe("FORGE force-and-motion World journey", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("forge.device-profile:v1", JSON.stringify({
+        schemaVersion: 1,
+        profileId: "9be711de-d7a6-4911-b903-f2d829da83d5",
+        ageMode: "teen",
+        guardianPresent: false,
+        createdAt: "2026-07-22T00:00:00.000Z",
+      }));
+    });
+  });
+
   test("completes the no-key fallback loop and records truthful evidence", async ({ page }) => {
     const consoleFailures = captureConsoleFailures(page);
     await installNoKeyFallback(page);
@@ -214,44 +192,14 @@ test.describe("FORGE force-and-motion World journey", () => {
     expect(consoleFailures).toEqual([]);
   });
 
-  test("uses the authored fallback when the interpretation request times out", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== "desktop", "The network failure contract is viewport-independent.");
+  test("keeps interpretation transport off and selects the authored fallback locally", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "The no-transport contract is viewport-independent.");
     const consoleFailures = captureConsoleFailures(page);
-    let delayedRouteSettled = false;
+    let interpretationRequests = 0;
     await page.route("**/api/interpret", async (route) => {
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 7_600));
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify(ADAPTIVE_INTERPRETATION),
-        });
-      } catch {
-        // The client is expected to abort this still-pending request first.
-      } finally {
-        delayedRouteSettled = true;
-      }
+      interpretationRequests += 1;
+      await route.abort("blockedbyclient");
     });
-    await page.goto("/learn/force-and-motion");
-
-    await commitInitialPrediction(page);
-    await page.getByRole("textbox", { name: "Your explanation" }).fill(EXPLANATION);
-    const submittedAt = Date.now();
-    await page.getByRole("button", { name: /Use my explanation/ }).click();
-
-    await expect(page.getByRole("heading", { name: "The test that separates the models" })).toBeVisible({ timeout: 10_000 });
-    expect(Date.now() - submittedAt).toBeGreaterThanOrEqual(6_500);
-    await expect(page.getByRole("status")).toContainText("baseline test");
-    await page.getByText("How this test was chosen").click();
-    await expect(page.getByText(/Deterministic fallback \(timeout\)/)).toBeVisible();
-    await expect.poll(() => delayedRouteSettled, { timeout: 2_000 }).toBe(true);
-    expect(consoleFailures).toEqual([]);
-  });
-
-  test("completes a valid adaptive journey and reloads to a clean Predict stage", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== "desktop", "The full adaptive contract is covered once on desktop.");
-    const consoleFailures = captureConsoleFailures(page);
-    await installAdaptiveInterpretation(page);
     await page.goto("/learn/force-and-motion");
 
     await commitInitialPrediction(page);
@@ -259,13 +207,36 @@ test.describe("FORGE force-and-motion World journey", () => {
     await page.getByRole("button", { name: /Use my explanation/ }).click();
 
     await expect(page.getByRole("heading", { name: "The test that separates the models" })).toBeVisible();
-    await expect(page.getByText("Friction or no friction?", { exact: true })).toBeVisible();
+    await expect(page.getByRole("status")).toContainText("baseline test");
     await page.getByText("How this test was chosen").click();
-    await expect(page.getByText(/openai \/ test-model, after schema and semantic validation/)).toBeVisible();
+    await expect(page.getByText(/Deterministic fallback \(disabled\)/)).toBeVisible();
+    expect(interpretationRequests).toBe(0);
+    expect(consoleFailures).toEqual([]);
+  });
 
-    await page.getByRole("radio", { name: /The no-resistance puck/ }).press("Space");
+  test("rejects client-side model injection and reloads to a clean Predict stage", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "The provider-denial contract is covered once on desktop.");
+    const consoleFailures = captureConsoleFailures(page);
+    let interpretationRequests = 0;
+    await page.route("**/api/interpret", async (route) => {
+      interpretationRequests += 1;
+      await route.abort("blockedbyclient");
+    });
+    await page.goto("/learn/force-and-motion");
+
+    await commitInitialPrediction(page);
+    await page.getByRole("textbox", { name: "Your explanation" }).fill(EXPLANATION);
+    await page.getByRole("button", { name: /Use my explanation/ }).click();
+
+    await expect(page.getByRole("heading", { name: "The test that separates the models" })).toBeVisible();
+    await expect(page.getByText("The baseline coast test", { exact: true })).toBeVisible();
+    await page.getByText("How this test was chosen").click();
+    await expect(page.getByText(/Deterministic fallback \(disabled\)/)).toBeVisible();
+    expect(interpretationRequests).toBe(0);
+
+    await page.getByRole("radio", { name: /Only the friction track/ }).press("Space");
     await page.getByRole("button", { name: /Commit and open the test/ }).click();
-    await expect(page.getByRole("heading", { name: "Friction or no friction?" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "The baseline coast test" })).toBeVisible();
     await expect(page.getByRole("slider", { name: "Friction strength" })).toBeVisible();
     await page.getByRole("button", { name: /Run experiment/ }).click();
     await expect(page.getByText(/Same short push\. Different force afterward\./)).toBeVisible();
@@ -281,7 +252,7 @@ test.describe("FORGE force-and-motion World journey", () => {
     await page.getByRole("button", { name: /Submit once/ }).click();
 
     const evidence = page.getByTestId("stage-result");
-    await expect(evidence.getByText("Friction contrast", { exact: true })).toBeVisible();
+    await expect(evidence.getByText("Baseline test", { exact: true })).toBeVisible();
     await expect(evidence.getByText("No conceptual help", { exact: true })).toBeVisible();
     await expect(evidence.getByText("Matched the new representation", { exact: true })).toBeVisible();
 
@@ -292,7 +263,7 @@ test.describe("FORGE force-and-motion World journey", () => {
     await expect(page.getByRole("radio", { name: "Gradually slows" })).not.toBeChecked();
     await expect(page.getByRole("slider", { name: "How confident are you?" })).toHaveValue("70");
     await expect(page.getByTestId("stage-experiment")).toHaveCount(0);
-    await expect(page.getByText("Friction or no friction?", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("The baseline coast test", { exact: true })).toHaveCount(0);
     expect(consoleFailures).toEqual([]);
   });
 

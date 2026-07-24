@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 
-import { ForgeHome } from "@/src/components/forge/ForgeHome";
+import { PublicHome } from "@/src/components/forge/refoundation/public/PublicHome";
 
 export const metadata: Metadata = {
-  title: "FORGE — Learning OS",
-  description: "Start with a question. Act before AI explains. Build knowledge you can prove for yourself.",
+  title: "FORGE — A path from ambition to capability",
+  description:
+    "Turn a real learning goal into focused work, ModelShift experiences, and evidence that distinguishes supported practice from independent proof.",
 };
 
 export default function HomePage() {
-  return <ForgeHome />;
+  return <PublicHome />;
 }

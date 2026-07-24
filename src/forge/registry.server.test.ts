@@ -89,7 +89,7 @@ describe("TrustedWorldRegistry", () => {
 
   it("keeps every released runtime binding under its accepted package identity", () => {
     expect(trustedWorldRegistry.getPack("world.force-and-motion")).toMatchObject({
-      manifest: { version: "1.0.1" },
+      manifest: { version: "1.0.2" },
       release: { contentVersion: "1.0.0" },
     });
     expect(trustedWorldRegistry.getRuntimeBinding("world.force-and-motion")).toMatchObject({

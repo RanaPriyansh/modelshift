@@ -65,8 +65,9 @@ const GROUNDED_PLAN: GroundedLearningContract = {
   route: {
     topicId: "force_motion",
     worldId: "world.force-and-motion",
-    worldVersion: "1.0.1",
+    worldVersion: "1.0.2",
     worldRoute: "/learn/force-and-motion",
+    activityProtocol: "modelshift",
     confidence: "authored_match",
   },
   grounding: {

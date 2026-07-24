@@ -1,5 +1,6 @@
 import type { WorldRuntimeBinding } from "../contracts";
 import { deepFreeze } from "../deep-freeze";
+import { FORCE_MOTION_RETURN_POLICY_ID } from "../delayed-return/force-motion-policy";
 
 /**
  * The Force & Motion package predates durable source snapshots. Its OpenStax
@@ -87,8 +88,8 @@ export const FORCE_AND_MOTION_RUNTIME_BINDING = deepFreeze({
     ],
   },
   returnProof: {
-    enabled: false,
-    policyId: "policy.force-and-motion.return-proof.unavailable.v1",
+    enabled: true,
+    policyId: FORCE_MOTION_RETURN_POLICY_ID,
   },
   access: {
     accommodations: [

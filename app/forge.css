@@ -67,6 +67,9 @@
   z-index: 300;
   top: 10px;
   left: 16px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
   transform: translateY(-180%);
   border: 1px solid var(--forge-amber);
   background: var(--forge-amber);
@@ -188,6 +191,14 @@
   font-size: 9px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.forge-topbar-actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
 }
 
 .forge-topbar-disclosure i,
@@ -1065,6 +1076,20 @@
   min-height: calc(100vh - 72px);
 }
 
+.forge-world-entry-disclosure {
+  width: min(1220px, calc(100% - 48px));
+  margin: 14px auto;
+  border: 1px solid var(--forge-line);
+  border-left: 3px solid var(--forge-amber);
+  padding: 11px 14px;
+  color: var(--forge-muted);
+  background: var(--forge-bg);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  letter-spacing: 0.025em;
+  line-height: 1.6;
+}
+
 .forge-world-entry-gate {
   width: min(760px, calc(100% - 48px));
   min-height: calc(100vh - 72px);
@@ -1100,6 +1125,76 @@
   color: var(--forge-muted);
   font-size: 15px;
   line-height: 1.7;
+}
+
+.forge-world-entry-gate form {
+  width: min(100%, 640px);
+  display: grid;
+  gap: 18px;
+}
+
+.forge-world-entry-gate fieldset {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.forge-world-entry-gate legend {
+  margin: 0 0 12px;
+  color: var(--forge-ink);
+  font-family: var(--forge-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.forge-world-entry-gate fieldset > label {
+  min-height: 64px;
+  border: 1px solid var(--forge-line);
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-areas:
+    "control title"
+    "control note";
+  column-gap: 12px;
+  row-gap: 3px;
+  align-items: start;
+  cursor: pointer;
+}
+
+.forge-world-entry-gate fieldset > label:focus-within {
+  outline: 3px solid var(--forge-cyan);
+  outline-offset: 3px;
+}
+
+.forge-world-entry-gate fieldset > label:has(input:checked) {
+  border-color: var(--forge-cyan);
+}
+
+.forge-world-entry-gate fieldset input[type="radio"] {
+  grid-area: control;
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--forge-cyan);
+}
+
+.forge-world-entry-gate fieldset strong {
+  grid-area: title;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.forge-world-entry-gate fieldset small {
+  grid-area: note;
+  color: var(--forge-muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .forge-world-entry-gate button {

@@ -41,6 +41,7 @@ async function tabTo(page: Page, target: Locator, maximumTabs = 30): Promise<voi
 }
 
 async function reachForceProof(page: Page): Promise<Locator> {
+  await seedTeenDeviceProfile(page);
   await page.route("**/api/interpret", async (route) => {
     await route.fulfill({
       status: 200,
@@ -70,6 +71,7 @@ async function reachForceProof(page: Page): Promise<Locator> {
 }
 
 async function reachSourceCorroborationProof(page: Page): Promise<Locator> {
+  await seedTeenDeviceProfile(page);
   await page.goto("/learn/ai-and-learning");
   await page.getByRole("radio", { name: /It depends/i }).press("Space");
   await page.getByRole("textbox", { name: /Why do you hold that stance\?/i }).fill(

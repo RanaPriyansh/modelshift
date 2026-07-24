@@ -14,7 +14,7 @@ const TIME = "2026-07-22T00:00:00.000Z";
 const FLAGS: ReleaseHealthCloudProviderFlags = {
   cloud_accounts_enabled: false,
   cloud_auth_configured: false,
-  provider_mode: "request_only_byok",
+  provider_mode: "disabled",
   managed_openai: false,
   managed_anthropic: false,
   managed_gemini: false,
