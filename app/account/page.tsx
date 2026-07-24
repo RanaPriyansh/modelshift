@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import "../account.css";
 
@@ -10,7 +11,7 @@ import { readForgeCloudIdentity } from "@/src/lib/forge-auth/session.server";
 
 export const metadata: Metadata = {
   title: "Your FORGE access",
-  description: "Manage this device profile and an optional adult cloud identity.",
+  description: "Manage this device profile and inspect the unavailable cloud boundary.",
 };
 
 function maskEmail(email: string | null): string {
@@ -27,13 +28,14 @@ export default async function AccountPage() {
   ]);
 
   return (
-    <ForgeShell active="account">
+    <ForgeShell active="settings" surface="app">
       <main className="forge-account-page" id="forge-main" tabIndex={-1}>
         <header className="forge-account-heading">
           <span>Your access</span>
           <h1>Continuity is optional. Your work stays yours.</h1>
           <p>
-            FORGE separates device evidence from cloud identity. Signing in does not turn one response into mastery or make private work visible to another person.
+            FORGE separates device evidence from any future cloud identity. This build does not
+            enable sign-in or cross-device continuity, and browser-local work is not uploaded.
           </p>
         </header>
 
@@ -52,7 +54,7 @@ export default async function AccountPage() {
             {identity ? (
               <form action={signOut}><button type="submit">Sign out</button></form>
             ) : (
-              <a className="forge-account-primary" href="/login">Open access options</a>
+              <Link className="forge-account-primary" href="/sign-in">Open access options</Link>
             )}
           </section>
         </div>
@@ -63,6 +65,11 @@ export default async function AccountPage() {
           <div><dt>Children</dt><dd>Device-only with a grown-up confirmation; no child account creation.</dd></div>
           <div><dt>Sharing</dt><dd>Off. No guardian, educator, peer, or public evidence access.</dd></div>
         </dl>
+        <p className="forge-account-links">
+          <Link href="/app/goals">Inspect learner-owned goals</Link>
+          <Link href="/app/paths">Manage local paths</Link>
+          <Link href="/app/evidence">Manage local evidence</Link>
+        </p>
       </main>
     </ForgeShell>
   );

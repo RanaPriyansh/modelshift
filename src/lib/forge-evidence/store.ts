@@ -37,13 +37,21 @@ export type EvidenceLedgerMutationResult =
   | {
       ok: false;
       ledger: EvidenceLedger;
-      reason: EvidenceLedgerRejectionReason | "storage_unavailable" | "storage_error";
+      reason: EvidenceLedgerRejectionReason | "recovery_required" | "storage_unavailable" | "storage_error";
       readStatus: EvidenceLedgerReadStatus;
     };
 
 export type EvidenceLedgerStoreExportResult =
   | { ok: true; value: EvidenceExport; readStatus: EvidenceLedgerReadStatus }
-  | { ok: false; reason: "invalid_export_time" | "storage_unavailable" | "storage_error"; readStatus: EvidenceLedgerReadStatus };
+  | { ok: false; reason: "invalid_export_time" | "recovery_required" | "storage_unavailable" | "storage_error"; readStatus: EvidenceLedgerReadStatus };
+
+export type EvidenceLedgerRecoveryExportResult =
+  | {
+      ok: true;
+      raw: string;
+      status: Extract<EvidenceLedgerDecodeStatus, "reset_malformed" | "reset_unknown_version">;
+    }
+  | { ok: false; reason: "no_recovery_data" | "storage_unavailable" | "storage_error" };
 
 export interface EvidenceLedgerStore {
   read(): EvidenceLedgerReadResult;
@@ -53,6 +61,7 @@ export interface EvidenceLedgerStore {
   setSharing(entryId: string, sharing: unknown): EvidenceLedgerMutationResult;
   completeReturnProof(entryId: string, completedAt: string): EvidenceLedgerMutationResult;
   export(scope: "learner_copy" | "educator" | "project_collaborators", exportedAt: string): EvidenceLedgerStoreExportResult;
+  exportUnreadable(): EvidenceLedgerRecoveryExportResult;
 }
 
 export function createEvidenceLedgerStore(persistence: EvidenceLedgerPersistence): EvidenceLedgerStore {
@@ -66,18 +75,8 @@ export function createEvidenceLedgerStore(persistence: EvidenceLedgerPersistence
     }
 
     const decoded = decodeEvidenceLedger(persisted.value);
-    if (decoded.status === "reset_malformed" || decoded.status === "reset_unknown_version") {
-      const encoded = encodeEvidenceLedger(decoded.ledger);
-      if (encoded !== null) {
-        const repaired = persistence.write(encoded);
-        if (!repaired.ok) {
-          return {
-            ledger: decoded.ledger,
-            status: repaired.reason === "unavailable" ? "storage_unavailable" : "storage_error",
-          };
-        }
-      }
-    }
+    // Reading evidence is observational. Recovery data remains untouched until
+    // the learner explicitly downloads or clears it.
     return decoded;
   };
 
@@ -85,6 +84,14 @@ export function createEvidenceLedgerStore(persistence: EvidenceLedgerPersistence
     const before = read();
     if (before.status === "storage_unavailable" || before.status === "storage_error") {
       return { ok: false, ledger: before.ledger, reason: before.status, readStatus: before.status };
+    }
+    if (before.status === "reset_malformed" || before.status === "reset_unknown_version") {
+      return {
+        ok: false,
+        ledger: before.ledger,
+        reason: "recovery_required",
+        readStatus: before.status,
+      };
     }
 
     const transition = reduceEvidenceLedger(before.ledger, action);
@@ -127,10 +134,30 @@ export function createEvidenceLedgerStore(persistence: EvidenceLedgerPersistence
       if (current.status === "storage_unavailable" || current.status === "storage_error") {
         return { ok: false, reason: current.status, readStatus: current.status };
       }
+      if (current.status === "reset_malformed" || current.status === "reset_unknown_version") {
+        return { ok: false, reason: "recovery_required", readStatus: current.status };
+      }
       const exported = exportEvidenceLedger(current.ledger, scope, exportedAt);
       return exported.ok
         ? { ok: true, value: exported.value, readStatus: current.status }
         : { ok: false, reason: "invalid_export_time", readStatus: current.status };
+    },
+    exportUnreadable: () => {
+      const persisted = persistence.read();
+      if (!persisted.ok) {
+        return {
+          ok: false,
+          reason: persisted.reason === "unavailable" ? "storage_unavailable" : "storage_error",
+        };
+      }
+      if (persisted.value === null || persisted.value.trim() === "") {
+        return { ok: false, reason: "no_recovery_data" };
+      }
+      const decoded = decodeEvidenceLedger(persisted.value);
+      if (decoded.status !== "reset_malformed" && decoded.status !== "reset_unknown_version") {
+        return { ok: false, reason: "no_recovery_data" };
+      }
+      return { ok: true, raw: persisted.value, status: decoded.status };
     },
   };
 }

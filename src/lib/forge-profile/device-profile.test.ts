@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   FORGE_DEVICE_PROFILE_KEY,
+  MAX_FORGE_DEVICE_PROFILE_RAW_BYTES,
   clearForgeDeviceProfile,
   createForgeDeviceProfile,
   readForgeDeviceProfile,
@@ -44,8 +45,33 @@ describe("FORGE device profile", () => {
     const storage = memoryStorage();
     storage.setItem(FORGE_DEVICE_PROFILE_KEY, "not-json");
     expect(readForgeDeviceProfile(storage)).toBeNull();
-    clearForgeDeviceProfile(storage);
+    expect(clearForgeDeviceProfile(storage)).toEqual({ ok: true });
     expect(storage.getItem(FORGE_DEVICE_PROFILE_KEY)).toBeNull();
+  });
+
+  it("keeps oversized profile bytes untouched and does not parse them as authority", () => {
+    const storage = memoryStorage();
+    const raw = "x".repeat(MAX_FORGE_DEVICE_PROFILE_RAW_BYTES + 1);
+    storage.setItem(FORGE_DEVICE_PROFILE_KEY, raw);
+
+    expect(readForgeDeviceProfile(storage)).toBeNull();
+    expect(storage.getItem(FORGE_DEVICE_PROFILE_KEY)).toBe(raw);
+  });
+
+  it("reports removal failures and verifies that the value is actually absent", () => {
+    const retained = {
+      getItem: () => "still-present",
+      removeItem: () => undefined,
+    };
+    expect(clearForgeDeviceProfile(retained)).toEqual({ ok: false, reason: "value_remains" });
+
+    const unavailable = {
+      getItem: () => "still-present",
+      removeItem: () => {
+        throw new Error("blocked");
+      },
+    };
+    expect(clearForgeDeviceProfile(unavailable)).toEqual({ ok: false, reason: "storage_error" });
   });
 
   it("fails closed when a forged profile omits the required v1 fields", () => {

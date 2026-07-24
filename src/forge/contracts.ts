@@ -8,6 +8,7 @@ export const LEARNER_AGE_MODES = ["under-13", "13-17", "18-plus"] as const;
 export const LEARNER_DEPTH_MODES = ["introductory", "core", "advanced"] as const;
 export const EVIDENCE_TIERS = ["verified", "grounded", "exploratory", "restricted"] as const;
 export const WORLD_KINDS = ["model", "evidence", "practice", "project"] as const;
+export const WORLD_ACTIVITY_PROTOCOLS = ["modelshift", "activity"] as const;
 
 /**
  * The runtime speaks these semantic stages even when a World presents them as
@@ -49,6 +50,7 @@ export type LearnerAgeMode = (typeof LEARNER_AGE_MODES)[number];
 export type LearnerDepthMode = (typeof LEARNER_DEPTH_MODES)[number];
 export type EvidenceTier = (typeof EVIDENCE_TIERS)[number];
 export type WorldKind = (typeof WORLD_KINDS)[number];
+export type WorldActivityProtocol = (typeof WORLD_ACTIVITY_PROTOCOLS)[number];
 export type WorldRuntimeStage = (typeof WORLD_RUNTIME_STAGES)[number];
 export type WorldRuntimeActionKind = (typeof WORLD_RUNTIME_ACTION_KINDS)[number];
 
@@ -266,6 +268,7 @@ export const learningWorldManifestSchema = z.strictObject({
   title: shortTextSchema,
   summary: longTextSchema,
   kind: z.enum(WORLD_KINDS),
+  activityProtocol: z.enum(WORLD_ACTIVITY_PROTOCOLS),
   evidenceTier: z.enum(EVIDENCE_TIERS),
   ageModes: uniqueIdentifiers(z.enum(LEARNER_AGE_MODES), 1),
   depthModes: uniqueIdentifiers(z.enum(LEARNER_DEPTH_MODES), 1),

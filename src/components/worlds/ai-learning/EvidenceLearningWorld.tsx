@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   BOUNDED_CLAIMS,
   COLD_TRANSFER,
@@ -29,11 +29,15 @@ import type {
 } from "../../../worlds/ai-learning";
 import { recordWorldRuntimeReceipt } from "../../../lib/forge-evidence/record-world-runtime-receipt";
 import {
-  createWorldRuntimeSession,
-  dispatchWorldRuntimeCommand,
   sourceCorroborationWorldRuntimeAdapter,
   type BoundedLocalWorldRuntimeReceipt,
 } from "../../../forge/world-runtime";
+import type { WorldSessionCheckpointIdentity } from "../../../lib/forge-continuity/world-session-checkpoint";
+import {
+  useWorldSessionCheckpoint,
+  WorldCheckpointBoundary,
+  type WorldCheckpointErrorReason,
+} from "../useWorldSessionCheckpoint";
 import styles from "./EvidenceLearningWorld.module.css";
 
 function classes(...names: Array<string | false | null | undefined>): string {
@@ -109,7 +113,7 @@ function StageHeading({ number, title, body, kicker }: { number: string; title: 
       <div className={styles["forge-evidence-stage-number"]} aria-hidden="true">{number}</div>
       <div>
         <p className={styles["forge-evidence-stage-kicker"]}>{kicker}</p>
-        <h2>{title}</h2>
+        <h1>{title}</h1>
         <p className={styles["forge-evidence-stage-copy"]}>{body}</p>
       </div>
     </header>
@@ -670,12 +674,74 @@ function ResultStage({
 export interface EvidenceLearningWorldProps {
   /** Receipts are local and bounded; callers must not treat this as durability. */
   readonly onRuntimeReceipt?: (receipt: BoundedLocalWorldRuntimeReceipt) => void;
+  readonly checkpointIdentity?: WorldSessionCheckpointIdentity;
+  readonly onCheckpointError?: (reason: WorldCheckpointErrorReason) => void;
 }
 
-export function EvidenceLearningWorld({ onRuntimeReceipt }: EvidenceLearningWorldProps = {}) {
-  const [runtime, setRuntime] = useState(() => createWorldRuntimeSession(sourceCorroborationWorldRuntimeAdapter));
+type EvidenceCheckpointUi = Readonly<{
+  testPrediction: TestPredictionId | null;
+}>;
+
+function decodeEvidenceCheckpointUi(value: unknown): EvidenceCheckpointUi | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const candidate = value as Record<string, unknown>;
+  if (Object.keys(candidate).sort().join(",") !== "testPrediction") return null;
+  return candidate.testPrediction === null
+    || candidate.testPrediction === "performance-is-learning"
+    || candidate.testPrediction === "design-changes-effect"
+    ? { testPrediction: candidate.testPrediction }
+    : null;
+}
+
+const REPLACEABLE_EVIDENCE_EVENTS = new Set<EvidenceLearningAction["type"]>([
+  "SET_STANCE",
+  "SET_CONFIDENCE",
+  "SET_REASON",
+  "SET_DIFFERENCE",
+  "SET_BOUNDED_CLAIM",
+  "SET_TRANSFER_CHOICE",
+  "SET_TRANSFER_OPEN_QUESTION",
+]);
+
+function compactEvidenceEvents(
+  events: readonly EvidenceLearningAction[],
+  event: EvidenceLearningAction,
+): readonly EvidenceLearningAction[] {
+  if (REPLACEABLE_EVIDENCE_EVENTS.has(event.type)) {
+    return [...events.filter((candidate) => candidate.type !== event.type), event];
+  }
+  if (event.type === "SET_READING_VERDICT") {
+    return [
+      ...events.filter((candidate) =>
+        candidate.type !== "SET_READING_VERDICT"
+        || candidate.readingId !== event.readingId),
+      event,
+    ];
+  }
+  return [...events, event];
+}
+
+export function EvidenceLearningWorld({
+  checkpointIdentity,
+  onCheckpointError,
+  onRuntimeReceipt,
+}: EvidenceLearningWorldProps = {}) {
   const [testPrediction, setTestPrediction] = useState<TestPredictionId | null>(null);
-  const runtimeRef = useRef(runtime);
+  const checkpointUi = useMemo<EvidenceCheckpointUi>(
+    () => ({ testPrediction }),
+    [testPrediction],
+  );
+  const checkpoint = useWorldSessionCheckpoint({
+    adapter: sourceCorroborationWorldRuntimeAdapter,
+    checkpointIdentity,
+    ui: checkpointUi,
+    decodeUi: decodeEvidenceCheckpointUi,
+    restoreUi: (ui) => setTestPrediction(ui.testPrediction),
+    resetUi: () => setTestPrediction(null),
+    onCheckpointError,
+    compactEvents: compactEvidenceEvents,
+  });
+  const { runtime } = checkpoint;
   const state = runtime.state;
   const instanceId = useId();
   const shellRef = useRef<HTMLElement>(null);
@@ -685,12 +751,7 @@ export function EvidenceLearningWorld({ onRuntimeReceipt }: EvidenceLearningWorl
   const proofMode = state.stage === "transfer" || state.stage === "result";
 
   const dispatch: DomainDispatch = (event) => {
-    const result = dispatchWorldRuntimeCommand(sourceCorroborationWorldRuntimeAdapter, runtimeRef.current, {
-      kind: "domain",
-      event,
-    });
-    runtimeRef.current = result.session;
-    setRuntime(result.session);
+    checkpoint.send(event);
   };
 
   useEffect(() => {
@@ -709,6 +770,15 @@ export function EvidenceLearningWorld({ onRuntimeReceipt }: EvidenceLearningWorl
     recordWorldRuntimeReceipt(receipt);
     onRuntimeReceipt?.(receipt);
   }, [onRuntimeReceipt, runtime.receipt]);
+
+  const checkpointBoundary = WorldCheckpointBoundary({
+    label: "Evidence World",
+    onDiscard: checkpoint.canDiscardCheckpoint
+      ? checkpoint.discardCheckpointAndRestart
+      : undefined,
+    phase: checkpoint.phase,
+  });
+  if (checkpointBoundary) return checkpointBoundary;
 
   return (
     <section

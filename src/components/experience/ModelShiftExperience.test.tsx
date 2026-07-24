@@ -1,30 +1,25 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY } from "@/src/lib/forge-evidence";
+import type { WorldSessionCheckpointIdentity } from "@/src/lib/forge-continuity";
 
 import { ModelShiftExperience } from "./ModelShiftExperience";
 
-const modelInterpretation = {
-  schema_version: "1.0",
-  source: "model",
-  providerId: "openai",
-  modelId: "gpt-5.6-sol",
-  policyId: "policy.force-and-motion.interpretation.v1",
-  hypotheses: [{
-    id: "force_equals_velocity",
-    support: "high",
-    evidence_spans: ["push sets the speed"],
-    rationale: "The explanation links force to current speed.",
-  }],
-  missing_distinctions: ["zero_net_force_means_zero_acceleration"],
-  recommended_probe_id: "brief_vs_continuous_force",
-  recommended_level_1_question_id: "compare_force_and_velocity_graphs",
-  abstain: false,
-  abstain_reason: "none",
-} as const;
+const CHECKPOINT_IDENTITY: WorldSessionCheckpointIdentity = {
+  sessionId: "study-session.force-resume-test",
+  worldId: "world.force-and-motion",
+  worldVersion: "1.0.0",
+};
+
+const CHECKPOINT_STORAGE_KEY = [
+  "forge.world-session-checkpoint:v1",
+  CHECKPOINT_IDENTITY.sessionId,
+  CHECKPOINT_IDENTITY.worldId,
+  CHECKPOINT_IDENTITY.worldVersion,
+].join(":");
 
 afterEach(() => {
   cleanup();
@@ -51,8 +46,8 @@ async function reachCompiler({ fallback = false }: { readonly fallback?: boolean
   await waitFor(() => expect(screen.getByTestId("stage-interpret")).toBeTruthy());
 }
 
-async function advanceToProof({ fallback = false }: { readonly fallback?: boolean } = {}): Promise<void> {
-  fireEvent.click(screen.getByRole("radio", { name: fallback ? /Only the friction track/ : /It stays constant/ }));
+async function advanceToProof(): Promise<void> {
+  fireEvent.click(screen.getByRole("radio", { name: /Only the friction track/ }));
   fireEvent.click(screen.getByTestId("commit-probe-prediction"));
   fireEvent.click(screen.getByTestId("run-experiment"));
   fireEvent.change(screen.getByRole("textbox", { name: /What do you notice after the push ends/ }), {
@@ -68,7 +63,7 @@ async function advanceToProof({ fallback = false }: { readonly fallback?: boolea
 
 async function reachProof({ fallback = false }: { readonly fallback?: boolean } = {}): Promise<void> {
   await reachCompiler({ fallback });
-  await advanceToProof({ fallback });
+  await advanceToProof();
 }
 
 async function completeProof(): Promise<void> {
@@ -81,33 +76,35 @@ async function completeProof(): Promise<void> {
 }
 
 describe("ModelShiftExperience runtime migration", () => {
-  it.each([
-    ["empty", {}],
-    ["incomplete", { schema_version: "1.0", source: "model" }],
-  ])("routes an %s successful API payload through authored fallback", async (_label, payload) => {
+  it("keeps learner wording on-device and opens the deterministic authored compiler", async () => {
     installMotionStubs();
-    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => payload })));
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
     render(<ModelShiftExperience />);
 
     await reachCompiler();
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.queryByTestId("stage-interpret-loading")).toBeNull();
     expect(screen.getAllByTestId("compiler-reading")).toHaveLength(2);
     expect(screen.getByText("Motion needs an ongoing push")).toBeTruthy();
     expect(screen.getByText("Force changes velocity")).toBeTruthy();
+    expect(screen.getByText(/Raw wording stays on this device/i)).toBeTruthy();
   });
 
-  it("uses the runtime receipt once for model support and renders exactly two distinct compiler readings", async () => {
+  it("records the disabled-provider authored representation once and renders exactly two distinct compiler readings", async () => {
     installMotionStubs();
-    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => modelInterpretation })));
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
     const onRuntimeReceipt = vi.fn();
     render(<ModelShiftExperience onRuntimeReceipt={onRuntimeReceipt} />);
 
     await reachCompiler();
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.getAllByTestId("compiler-reading")).toHaveLength(2);
-    expect(screen.getByText("Force sets the current speed")).toBeTruthy();
     expect(screen.getByText("Motion needs an ongoing push")).toBeTruthy();
+    expect(screen.getByText("Force changes velocity")).toBeTruthy();
     fireEvent.click(screen.getByText("How this test was chosen"));
-    expect(screen.getByText("openai / gpt-5.6-sol, after schema and semantic validation")).toBeTruthy();
+    expect(screen.getByText("Deterministic fallback (disabled)")).toBeTruthy();
     await advanceToProof();
     await completeProof();
 
@@ -117,13 +114,13 @@ describe("ModelShiftExperience runtime migration", () => {
     expect(receipt).toMatchObject({
       schemaVersion: "1.1.0",
       cognitiveSupport: [{
-        actionId: "action.force-and-motion.interpretation.model",
-        source: "model",
+        actionId: "action.force-and-motion.interpretation.fallback.disabled",
+        source: "authored",
         tier: "representation",
         policyId: "policy.force-and-motion.interpretation.v1",
-        providerId: "openai",
-        modelId: "gpt-5.6-sol",
-        fallbackReason: null,
+        providerId: null,
+        modelId: null,
+        fallbackReason: "disabled",
       }],
       validator: { outcome: "pass" },
       authority: { proofAuthority: "honour_based", persistence: "not_persisted", isDurable: false },
@@ -133,7 +130,10 @@ describe("ModelShiftExperience runtime migration", () => {
     const ledger = JSON.parse(localStorage.getItem(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY) ?? "{}");
     expect(ledger.entries).toHaveLength(1);
     expect(ledger.entries[0].id).toBe(`proof.${receipt.attemptId}`);
-    expect(ledger.entries[0].assistance).toEqual([{ kind: "model_interpretation", sourceId: "action.force-and-motion.interpretation.model" }]);
+    expect(ledger.entries[0].assistance).toEqual([{
+      kind: "authored_representation",
+      sourceId: "action.force-and-motion.interpretation.fallback.disabled",
+    }]);
     expect(JSON.stringify(ledger)).not.toContain("The velocity becomes flat");
     const receiptFacts = screen.getByTestId("force-runtime-receipt").textContent;
     expect(receiptFacts).toContain("honour_based");
@@ -150,7 +150,7 @@ describe("ModelShiftExperience runtime migration", () => {
     expect(screen.getAllByTestId("compiler-reading")).toHaveLength(2);
     expect(screen.getByText("Motion needs an ongoing push")).toBeTruthy();
     expect(screen.getByText("Force changes velocity")).toBeTruthy();
-    await advanceToProof({ fallback: true });
+    await advanceToProof();
     await completeProof();
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(1));
     const firstReceipt = onRuntimeReceipt.mock.calls[0]?.[0];
@@ -202,35 +202,92 @@ describe("ModelShiftExperience runtime migration", () => {
     expect(document.activeElement?.tagName).toBe("MAIN");
   });
 
-  it("aborts an outstanding interpretation on unmount and ignores its stale response", async () => {
+  it("never creates an interpretation request that could outlive the component", async () => {
     installMotionStubs();
-    type MockResponse = { readonly ok: true; readonly json: () => Promise<typeof modelInterpretation> };
-    let resolveFetch!: (response: MockResponse) => void;
-    const pendingFetch = new Promise<MockResponse>((resolve) => { resolveFetch = resolve; });
-    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<MockResponse>>();
-    fetchMock.mockReturnValue(pendingFetch);
+    const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     const first = render(<ModelShiftExperience />);
 
-    fireEvent.click(screen.getByRole("radio", { name: "Gradually slows" }));
-    fireEvent.click(screen.getByTestId("commit-prediction"));
-    fireEvent.change(screen.getByRole("textbox", { name: /Your explanation/ }), {
-      target: { value: "A push sets the speed, so motion needs that push." },
-    });
-    fireEvent.click(screen.getByTestId("submit-explanation"));
-    await waitFor(() => expect(screen.getByTestId("stage-interpret-loading")).toBeTruthy());
-    const signal = fetchMock.mock.calls[0]?.[1]?.signal;
-
+    await reachCompiler();
     first.unmount();
-    expect(signal?.aborted).toBe(true);
     render(<ModelShiftExperience />);
-    await act(async () => {
-      resolveFetch({ ok: true, json: async () => modelInterpretation });
-      await pendingFetch;
-      await Promise.resolve();
-    });
 
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.getByTestId("stage-predict")).toBeTruthy();
     expect(screen.queryByTestId("stage-interpret")).toBeNull();
+  });
+
+  it("restores a path-backed in-progress attempt by replaying accepted events and preserving the local draft", async () => {
+    installMotionStubs();
+    const first = render(
+      <ModelShiftExperience checkpointIdentity={CHECKPOINT_IDENTITY} />,
+    );
+    await waitFor(() => expect(screen.getByTestId("stage-predict")).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("radio", { name: "Gradually slows" }));
+    fireEvent.click(screen.getByTestId("commit-prediction"));
+    const explanation = await screen.findByRole("textbox", {
+      name: /Your explanation/,
+    });
+    fireEvent.change(explanation, {
+      target: { value: "My unfinished explanation stays on this device." },
+    });
+    await waitFor(() => {
+      expect(localStorage.getItem(CHECKPOINT_STORAGE_KEY)).toContain(
+        "My unfinished explanation stays on this device.",
+      );
+    });
+    first.unmount();
+    render(<ModelShiftExperience checkpointIdentity={CHECKPOINT_IDENTITY} />);
+
+    const restored = await screen.findByRole("textbox", {
+      name: /Your explanation/,
+    });
+    expect((restored as HTMLTextAreaElement).value).toBe(
+      "My unfinished explanation stays on this device.",
+    );
+    expect(screen.queryByTestId("stage-predict")).toBeNull();
+  });
+
+  it("leaves a malformed checkpoint untouched until the learner explicitly discards it", async () => {
+    installMotionStubs();
+    const malformed = "{\"schemaVersion\":\"tampered\"}";
+    localStorage.setItem(CHECKPOINT_STORAGE_KEY, malformed);
+    const onCheckpointError = vi.fn();
+
+    render(
+      <ModelShiftExperience
+        checkpointIdentity={CHECKPOINT_IDENTITY}
+        onCheckpointError={onCheckpointError}
+      />,
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "This saved session cannot be opened safely",
+      }),
+    ).toBeTruthy();
+    expect(localStorage.getItem(CHECKPOINT_STORAGE_KEY)).toBe(malformed);
+    expect(onCheckpointError).toHaveBeenCalledWith("malformed");
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /Discard this checkpoint and start fresh/,
+      }),
+    );
+    await waitFor(() => expect(screen.getByTestId("stage-predict")).toBeTruthy());
+    expect(localStorage.getItem(CHECKPOINT_STORAGE_KEY)).not.toBe(malformed);
+  });
+
+  it("does not persist a session checkpoint for a direct guest World", () => {
+    installMotionStubs();
+    render(<ModelShiftExperience />);
+    fireEvent.click(screen.getByRole("radio", { name: "Gradually slows" }));
+    fireEvent.click(screen.getByTestId("commit-prediction"));
+
+    expect(
+      Object.keys(localStorage).filter((key) =>
+        key.startsWith("forge.world-session-checkpoint:")),
+    ).toHaveLength(0);
   });
 });

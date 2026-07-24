@@ -1,17 +1,44 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createForgePlanPost, MAX_FORGE_PLAN_REQUEST_BYTES, POST } from "../../../app/api/forge/plan/route";
+import { POST } from "../../../app/api/forge/plan/route";
+import {
+  createForgePlanPost,
+  MAX_FORGE_PLAN_REQUEST_BYTES,
+} from "./route-handler.server";
 import { planForgeLearning } from "./planner";
+import {
+  MINOR_PLANNER_PRACTICAL_OUTCOME,
+  MINOR_PLANNER_STARTING_POINT,
+  MINOR_PLANNER_SUCCESS_SHAPE,
+} from "./schema";
 
 const body = {
   question: "How do force, velocity, and motion relate after a push ends?",
-  ageMode: "teen",
+  ageMode: "adult",
   depth: "standard",
   startingPoint: "I know how to read a basic graph.",
   successShape: "Predict a new graph without help.",
   guardianManaged: false,
   sourceMode: "curated",
 };
+
+function minorBody(
+  ageMode: "child" | "teen",
+  question: "force and motion" | "equivalent ratios" = "force and motion",
+) {
+  return {
+    ...body,
+    question,
+    ageMode,
+    startingPoint: MINOR_PLANNER_STARTING_POINT,
+    successShape: MINOR_PLANNER_SUCCESS_SHAPE,
+    currentKnowledge: "",
+    practicalOutcome: MINOR_PLANNER_PRACTICAL_OUTCOME,
+    constraints: "",
+    guardianManaged: ageMode === "child",
+    sourceMode: "authored_only",
+  };
+}
 
 function request(value: unknown, headers: Record<string, string> = {}) {
   return new Request("http://localhost:3000/api/forge/plan", {
@@ -49,7 +76,7 @@ describe("POST /api/forge/plan", () => {
       route: {
         topicId: "force_motion",
         worldId: "world.force-and-motion",
-        worldVersion: "1.0.1",
+        worldVersion: "1.0.2",
         worldRoute: "/learn/force-and-motion",
       },
       model: { fallbackReason: "disabled" },
@@ -75,7 +102,10 @@ describe("POST /api/forge/plan", () => {
 
   it("returns a typed 403 refusal for under-13 requests without guardian management", async () => {
     vi.stubEnv("OPENAI_FORGE_PLANNER_DISABLED", "true");
-    const response = await POST(request({ ...body, ageMode: "child", guardianManaged: false }));
+    const response = await POST(request({
+      ...minorBody("child", "equivalent ratios"),
+      guardianManaged: false,
+    }));
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toMatchObject({
       contractKind: "refusal",
@@ -84,6 +114,62 @@ describe("POST /api/forge/plan", () => {
       sourceIds: [],
     });
   });
+
+  it.each([
+    ["teen", "question", "My private wording about force and motion"],
+    ["teen", "startingPoint", "My private starting point"],
+    ["teen", "successShape", "My private definition of success"],
+    ["teen", "currentKnowledge", "My private current knowledge"],
+    ["teen", "practicalOutcome", "My private desired outcome"],
+    ["teen", "constraints", "My private access or family context"],
+    ["teen", "sourceMode", "curated"],
+    ["teen", "guardianManaged", true],
+    ["child", "question", "My child wrote a private ratio question"],
+    ["child", "startingPoint", "My child wrote a private starting point"],
+  ] as const)(
+    "rejects a direct %s request containing arbitrary %s before planner execution",
+    async (ageMode, field, value) => {
+      const plan = vi.fn();
+      const handler = createForgePlanPost({ plan });
+      const response = await handler(request({
+        ...minorBody(ageMode, ageMode === "child" ? "equivalent ratios" : "force and motion"),
+        [field]: value,
+      }));
+
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({
+        schemaVersion: "1.0",
+        error: { code: "invalid_request", message: "The planning request is invalid." },
+      });
+      expect(plan).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["teen", "force and motion", "world.force-and-motion"],
+    ["child", "equivalent ratios", "world.proportional-reasoning"],
+  ] as const)(
+    "accepts a direct %s request made only of fixed topic and routing tokens",
+    async (ageMode, question, worldId) => {
+      vi.stubEnv("OPENAI_FORGE_PLANNER_DISABLED", "true");
+      const response = await POST(request(minorBody(ageMode, question)));
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        contractKind: "grounded_learning",
+        route: { worldId },
+        request: {
+          ageMode,
+          startingPoint: MINOR_PLANNER_STARTING_POINT,
+          successShape: MINOR_PLANNER_SUCCESS_SHAPE,
+          currentKnowledge: "",
+          practicalOutcome: MINOR_PLANNER_PRACTICAL_OUTCOME,
+          constraints: "",
+          sourceMode: "authored_only",
+        },
+      });
+    },
+  );
 
   it("rejects cross-origin, non-JSON, oversized, malformed, and extra-field requests", async () => {
     const crossOrigin = await POST(request(body, { origin: "https://attacker.example" }));

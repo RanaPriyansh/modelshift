@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import {
   AUDIENCE_COPY,
@@ -15,11 +15,15 @@ import {
   type TransferChoiceId,
 } from "../../../worlds/proportional-reasoning";
 import {
-  createWorldRuntimeSession,
-  dispatchWorldRuntimeCommand,
   proportionalReasoningWorldRuntimeAdapter,
   type BoundedLocalWorldRuntimeReceipt,
 } from "../../../forge/world-runtime";
+import type { WorldSessionCheckpointIdentity } from "../../../lib/forge-continuity/world-session-checkpoint";
+import {
+  useWorldSessionCheckpoint,
+  WorldCheckpointBoundary,
+  type WorldCheckpointErrorReason,
+} from "../useWorldSessionCheckpoint";
 
 import styles from "./ProportionalReasoningWorld.module.css";
 import {
@@ -55,6 +59,75 @@ export interface ProportionalReasoningWorldProps {
   readonly onExit?: () => void;
   /** Called once per completed local runtime attempt; never persisted here. */
   readonly onRuntimeReceipt?: (receipt: BoundedLocalWorldRuntimeReceipt) => void;
+  readonly checkpointIdentity?: WorldSessionCheckpointIdentity;
+  readonly onCheckpointError?: (reason: WorldCheckpointErrorReason) => void;
+}
+
+type RatioCheckpointUi = Readonly<{
+  prediction: InitialPredictionId | null;
+  initialConfidence: number;
+  explanation: string;
+  testPrediction: SeparatingTestPredictionId | null;
+  reconstruction: string;
+  transferChoice: TransferChoiceId | null;
+  transferExplanation: string;
+  transferConfidence: number;
+}>;
+
+function isConfidence(value: unknown): value is number {
+  return Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 100;
+}
+
+function boundedString(value: unknown, maxLength: number): value is string {
+  return typeof value === "string" && value.length <= maxLength;
+}
+
+function decodeRatioCheckpointUi(value: unknown): RatioCheckpointUi | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const candidate = value as Record<string, unknown>;
+  const expectedKeys = [
+    "explanation",
+    "initialConfidence",
+    "prediction",
+    "reconstruction",
+    "testPrediction",
+    "transferChoice",
+    "transferConfidence",
+    "transferExplanation",
+  ];
+  if (Object.keys(candidate).sort().join(",") !== expectedKeys.join(",")) return null;
+  const prediction = candidate.prediction;
+  const testPrediction = candidate.testPrediction;
+  const transferChoice = candidate.transferChoice;
+  if (
+    prediction !== null
+      && prediction !== "same_strength"
+      && prediction !== "glass_a_stronger"
+      && prediction !== "jug_b_stronger"
+    || testPrediction !== null
+      && testPrediction !== "same_strength"
+      && testPrediction !== "jug_b_stronger"
+    || transferChoice !== null
+      && transferChoice !== "18_km"
+      && transferChoice !== "24_km"
+      && transferChoice !== "32_km"
+      && transferChoice !== "96_km"
+    || !isConfidence(candidate.initialConfidence)
+    || !isConfidence(candidate.transferConfidence)
+    || !boundedString(candidate.explanation, 600)
+    || !boundedString(candidate.reconstruction, 500)
+    || !boundedString(candidate.transferExplanation, 400)
+  ) return null;
+  return {
+    prediction,
+    initialConfidence: candidate.initialConfidence,
+    explanation: candidate.explanation,
+    testPrediction,
+    reconstruction: candidate.reconstruction,
+    transferChoice,
+    transferExplanation: candidate.transferExplanation,
+    transferConfidence: candidate.transferConfidence,
+  };
 }
 
 function ConfidenceControl({
@@ -516,6 +589,8 @@ function EvidenceStage({
 
 export function ProportionalReasoningWorld({
   audience = "teen",
+  checkpointIdentity,
+  onCheckpointError,
   onExit,
   onRuntimeReceipt,
 }: ProportionalReasoningWorldProps) {
@@ -524,9 +599,6 @@ export function ProportionalReasoningWorld({
   const mainId = `forge-ratio-main-${instanceId}`;
   const mainRef = useRef<HTMLElement>(null);
   const emittedReceiptRef = useRef<BoundedLocalWorldRuntimeReceipt | null>(null);
-  const [runtime, setRuntime] = useState(() => createWorldRuntimeSession(proportionalReasoningWorldRuntimeAdapter));
-  const runtimeRef = useRef(runtime);
-  const state = runtime.state;
   const [prediction, setPrediction] = useState<InitialPredictionId | null>(null);
   const [initialConfidence, setInitialConfidence] = useState(60);
   const [explanation, setExplanation] = useState("");
@@ -535,15 +607,57 @@ export function ProportionalReasoningWorld({
   const [transferChoice, setTransferChoice] = useState<TransferChoiceId | null>(null);
   const [transferExplanation, setTransferExplanation] = useState("");
   const [transferConfidence, setTransferConfidence] = useState(60);
+  const checkpointUi = useMemo<RatioCheckpointUi>(() => ({
+    explanation,
+    initialConfidence,
+    prediction,
+    reconstruction,
+    testPrediction,
+    transferChoice,
+    transferConfidence,
+    transferExplanation,
+  }), [
+    explanation,
+    initialConfidence,
+    prediction,
+    reconstruction,
+    testPrediction,
+    transferChoice,
+    transferConfidence,
+    transferExplanation,
+  ]);
+  const checkpoint = useWorldSessionCheckpoint({
+    adapter: proportionalReasoningWorldRuntimeAdapter,
+    checkpointIdentity,
+    ui: checkpointUi,
+    decodeUi: decodeRatioCheckpointUi,
+    restoreUi: (ui) => {
+      setPrediction(ui.prediction);
+      setInitialConfidence(ui.initialConfidence);
+      setExplanation(ui.explanation);
+      setTestPrediction(ui.testPrediction);
+      setReconstruction(ui.reconstruction);
+      setTransferChoice(ui.transferChoice);
+      setTransferExplanation(ui.transferExplanation);
+      setTransferConfidence(ui.transferConfidence);
+    },
+    resetUi: () => {
+      setPrediction(null);
+      setInitialConfidence(60);
+      setExplanation("");
+      setTestPrediction(null);
+      setReconstruction("");
+      setTransferChoice(null);
+      setTransferExplanation("");
+      setTransferConfidence(60);
+    },
+    onCheckpointError,
+  });
+  const { runtime } = checkpoint;
+  const state = runtime.state;
 
   function send(event: RatioWorldEvent): boolean {
-    const result = dispatchWorldRuntimeCommand(proportionalReasoningWorldRuntimeAdapter, runtimeRef.current, {
-      kind: "domain",
-      event,
-    });
-    runtimeRef.current = result.session;
-    setRuntime(result.session);
-    return result.accepted;
+    return checkpoint.send(event)?.accepted ?? false;
   }
 
   useEffect(() => {
@@ -572,6 +686,14 @@ export function ProportionalReasoningWorld({
 
   const proofSurface = state.stage === "COLD_TRANSFER" || state.stage === "EVIDENCE";
   const shellClassName = `${styles["forge-ratio-shell"]} ${proofSurface ? styles["forge-ratio-shell-proof"] : ""}`;
+  const checkpointBoundary = WorldCheckpointBoundary({
+    label: "Proportional Reasoning World",
+    onDiscard: checkpoint.canDiscardCheckpoint
+      ? checkpoint.discardCheckpointAndRestart
+      : undefined,
+    phase: checkpoint.phase,
+  });
+  if (checkpointBoundary) return checkpointBoundary;
 
   return (
     <div className={shellClassName} data-world="proportional-reasoning" data-stage={state.stage} id={`forge-ratio-${instanceId}`}>

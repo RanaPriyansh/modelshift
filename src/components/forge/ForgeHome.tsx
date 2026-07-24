@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { PUBLIC_WORLD_CATALOG } from "@/src/forge/worlds";
-import type { ForgePlanContract } from "@/src/lib/forge-planner";
+import type { ForgePlanContract } from "@/src/lib/forge-planner/schema";
 
 import {
   ForgeKicker,
@@ -507,7 +507,7 @@ function FoundationsAndFrontier() {
           </ul>
         </article>
       </div>
-      <Link className="forge-secondary-action forge-foundations-link" href="/pathways">
+      <Link className="forge-secondary-action forge-foundations-link" href="/coverage">
         See current availability and gaps
         <ForgeArrow />
       </Link>
@@ -522,22 +522,22 @@ function Continuity() {
         id="continuity-title"
         label="Continuity without streaks"
         title="Continue the question. Return for proof."
-        description="No account is required. Browser-local records can retain bounded outcomes and return dates; optional adult cloud continuity stays off unless a reviewed deployment configures it."
+        description="No account is required. Accepted paths and bounded World receipts can stay on this device; optional adult cloud continuity remains structurally off until its authority and privacy gates pass review."
       />
       <div className="forge-continuity-actions">
-        <Link href="/learn/force-and-motion">
-          <span>Continue a working world</span>
-          <strong>Force & motion</strong>
-          <small>A fresh session starts; any local record remains in this browser.</small>
+        <Link href="/app">
+          <span>Continue an accepted path</span>
+          <strong>Open Today</strong>
+          <small>One deterministic next action from this device’s most recent accepted path.</small>
           <ForgeArrow />
         </Link>
-        <Link href="/trail">
+        <Link href="/app/returns">
           <span>Return proof</span>
-          <strong>See the Trail contract</strong>
-          <small>Dates are scheduled; reminders and return challenges remain planned.</small>
+          <strong>Inspect the return boundary</strong>
+          <small>No delayed task is invented when a reviewed return family is missing.</small>
           <ForgeArrow />
         </Link>
-        <Link href="/evidence">
+        <Link href="/app/evidence">
           <span>Local evidence record</span>
           <strong>Open your local evidence</strong>
           <small>Export, select for an educator copy, or delete it.</small>
@@ -589,7 +589,7 @@ function ProjectsAndPeople() {
 
 export function ForgeHome() {
   return (
-    <ForgeShell active="home">
+    <ForgeShell active="home" surface="public">
       <main id="forge-main" tabIndex={-1}>
         <section className="forge-hero" aria-labelledby="forge-question">
           <div className="forge-hero-heading">

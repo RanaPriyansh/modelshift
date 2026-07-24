@@ -9,12 +9,21 @@ export {
 export type { PlannerModelOptions, PlannerResponsesClient } from "./model";
 export { planForgeLearning } from "./planner";
 export { containsAdversarialText, isRestrictedTopic, policyRefusal } from "./safety";
-export { forgePlanRequestSchema, modelPlannerOutputSchema } from "./schema";
+export {
+  MINOR_PLANNER_PRACTICAL_OUTCOME,
+  MINOR_PLANNER_STARTING_POINT,
+  MINOR_PLANNER_SUCCESS_SHAPE,
+  MINOR_PLANNER_TOPIC_TOKENS,
+  forgePlanApiRequestSchema,
+  forgePlanRequestSchema,
+  modelPlannerOutputSchema,
+} from "./schema";
 export type {
   ExploratorySourcePlanContract,
   ForgePlanContract,
   ForgePlanRequest,
   GroundedLearningContract,
+  MinorPlannerTopicToken,
   ModelFallbackReason,
   PlannerModelMetadata,
   RefusalContract,

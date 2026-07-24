@@ -70,7 +70,7 @@ The public product may say that Ratio and Primary Source have bounded shared-run
 | Ratio component | Holds ephemeral form state, dispatches through the runtime, moves focus, announces stages, and emits compatibility callbacks. | Does not persist a runtime receipt, invoke the projector, schedule return proof, or expose support in proof. |
 | Device evidence compatibility writer | Writes one local v1 record using the canonical capability ID and the same relationship criterion. | No return schedule without explicit intervals; no cloud write; no upgrade of existing legacy records. |
 | Retained package manifest | Pins package route/version and exact runtime-binding digest for runtime-enabled packages. | Cannot add unknown packages, omit built-ins, accept stale digests, or attach a runtime digest to a legacy package. |
-| Vercel release | Serves the exact frozen SHA with fallback-only runtime, request-only BYOK, cloud accounts disabled, and retained digests. | No provider credential was enabled, no database was configured, and no learner data was migrated. |
+| Vercel release | Serves the exact frozen SHA with fallback-only runtime, provider requests disabled, cloud accounts disabled, and retained digests. | No provider credential or BYOK request path was enabled, no database was configured, and no learner data was migrated. |
 
 ## State, memory, and context budget
 

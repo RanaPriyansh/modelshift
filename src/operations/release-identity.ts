@@ -33,7 +33,7 @@ export const RELEASE_HEALTH_CLOUD_PROVIDER_FLAG_KEYS = [
 export type ReleaseHealthCloudProviderFlags = {
   cloud_accounts_enabled: boolean;
   cloud_auth_configured: boolean;
-  provider_mode: "request_only_byok" | "managed_openai";
+  provider_mode: "disabled" | "managed_openai";
   managed_openai: boolean;
   managed_anthropic: boolean;
   managed_gemini: boolean;
@@ -223,11 +223,11 @@ function flagsAreExactProjection(value: unknown): value is ReleaseHealthCloudPro
   if (Object.keys(value).some((key) => SECRET_LIKE.test(key))) return false;
   const booleans = RELEASE_HEALTH_CLOUD_PROVIDER_FLAG_KEYS.filter((key) => key !== "provider_mode");
   if (booleans.some((key) => typeof value[key] !== "boolean")) return false;
-  if (value.provider_mode !== "request_only_byok" && value.provider_mode !== "managed_openai") return false;
+  if (value.provider_mode !== "disabled" && value.provider_mode !== "managed_openai") return false;
   const managedOpenAi = value.managed_openai === true;
   const hasManagedSurface = value.managed_lesson_studio === true || value.managed_interpretation === true || value.managed_planner === true;
   return managedOpenAi === hasManagedSurface
-    && value.provider_mode === (managedOpenAi ? "managed_openai" : "request_only_byok")
+    && value.provider_mode === (managedOpenAi ? "managed_openai" : "disabled")
     && value.managed_anthropic === false
     && value.managed_gemini === false
     && value.managed_openrouter === false

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function SourceCorroborationPathPage() {
   return (
-    <ForgeShell active="learn">
+    <ForgeShell active="learn" surface="public">
       <SourceCorroborationPath preview={SOURCE_CORROBORATION_PATH_PREVIEW} />
     </ForgeShell>
   );

@@ -55,13 +55,14 @@ describe("release health", () => {
     expect(JSON.stringify(health)).not.toContain("must-not-appear");
   });
   it.each([
-    ["interpretation", { OPENAI_INTERPRETATION_ENABLED: "true" }, { lesson_studio: false, interpretation: true, planner: false }],
-    ["planner", { OPENAI_FORGE_PLANNER_ENABLED: "true" }, { lesson_studio: false, interpretation: false, planner: true }],
-  ])("reports managed %s independently when a key is present", (_name, flags, expected) => {
+    ["interpretation", { OPENAI_INTERPRETATION_ENABLED: "true" }],
+    ["planner", { OPENAI_FORGE_PLANNER_ENABLED: "true" }],
+  ])("does not report managed %s from an enable flag and key alone", (_name, flags) => {
     const health = buildReleaseHealth({ OPENAI_API_KEY: "key-is-present", ...flags });
-    expect(health.managed_surface_flags).toEqual(expected);
-    expect(health.managed_provider_flags.openai).toBe(true);
-    expect(health.runtime_mode).toBe("managed_openai");
+    expect(health.managed_surface_flags).toEqual({ lesson_studio: false, interpretation: false, planner: false });
+    expect(health.managed_provider_flags.openai).toBe(false);
+    expect(health.runtime_mode).toBe("fallback_only");
+    expect(health.provider_mode).toBe("disabled");
   });
   it.each([
     { OPENAI_INTERPRETATION_ENABLED: "true", OPENAI_INTERPRETATION_DISABLED: "true", OPENAI_API_KEY: "key-is-present" },
@@ -77,17 +78,18 @@ describe("release health", () => {
     expect(health.managed_surface_flags).toEqual({ lesson_studio: false, interpretation: false, planner: false });
     expect(health.managed_provider_flags.openai).toBe(false);
     expect(health.runtime_mode).toBe("fallback_only");
-    expect(health.provider_mode).toBe("request_only_byok");
+    expect(health.provider_mode).toBe("disabled");
     expect(JSON.stringify(health)).not.toContain("opaque-configured-value");
   });
-  it("keeps legacy Studio values separate from active interpretation/planner intent", () => {
+  it("keeps all unproven provider intent out of operational health", () => {
     const health = buildReleaseHealth({
       FORGE_LESSON_STUDIO_OPENAI_ENABLED: "true",
       OPENAI_API_KEY: "opaque-configured-value",
       OPENAI_INTERPRETATION_ENABLED: "true",
     });
-    expect(health.managed_surface_flags).toEqual({ lesson_studio: false, interpretation: true, planner: false });
-    expect(health.runtime_mode).toBe("managed_openai");
+    expect(health.managed_surface_flags).toEqual({ lesson_studio: false, interpretation: false, planner: false });
+    expect(health.runtime_mode).toBe("fallback_only");
+    expect(health.provider_mode).toBe("disabled");
   });
   it("does not seed the retired Studio switch into release runners, workflows, or runbook examples", () => {
     for (const relativePath of [
