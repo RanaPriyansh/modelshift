@@ -39,16 +39,40 @@ jobs:
       - name: Install exactly from lockfile
         run: pnpm install --frozen-lockfile
 
+      - name: Write mutation report
+        if: always()
+        run: |
+          mkdir -p diagnostic
+          {
+            echo "node=$(node --version)"
+            echo "pnpm=$(pnpm --version)"
+            echo "head=$(git rev-parse HEAD)"
+            echo "package_sha=$(sha256sum package.json | awk '{print $1}')"
+            echo "lockfile_sha=$(sha256sum pnpm-lock.yaml | awk '{print $1}')"
+          } > diagnostic/identity.txt
+          git status --short > diagnostic/status.txt
+          git diff --stat > diagnostic/diff-stat.txt
+          git diff -- package.json > diagnostic/package.diff
+          git diff -- pnpm-lock.yaml > diagnostic/pnpm-lock.diff
+
       - name: Explain any mutation
         if: always()
         run: |
+          cat diagnostic/identity.txt
           echo "--- status ---"
-          git status --short
+          cat diagnostic/status.txt
           echo "--- diff stat ---"
-          git diff --stat
+          cat diagnostic/diff-stat.txt
           echo "--- package diff ---"
-          git diff -- package.json
+          cat diagnostic/package.diff
           echo "--- lockfile diff ---"
-          git diff -- pnpm-lock.yaml
-          echo "--- resulting identity ---"
-          sha256sum package.json pnpm-lock.yaml
+          cat diagnostic/pnpm-lock.diff
+
+      - name: Upload lockfile diagnosis
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: forge-pnpm-lockfile-diagnosis-${{ github.run_id }}
+          path: diagnostic
+          if-no-files-found: error
+          retention-days: 2
