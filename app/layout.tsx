@@ -5,11 +5,12 @@ import { WorldRouteFocus } from "@/src/components/forge/WorldRouteFocus";
 import "./globals.css";
 import "./forge.css";
 import "./forge-system.css";
+import "./forge-product-reset.css";
 
 export const metadata: Metadata = {
-  title: "FORGE — Working Worlds. Bounded evidence.",
+  title: "FORGE — Goal to path to proof.",
   description:
-    "A learner-controlled Learning OS with working Worlds, bounded AI support, and browser-local evidence records.",
+    "Forge turns a real learning goal into an editable path, bounded work, and evidence that survives AI assistance.",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
