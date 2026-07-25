@@ -14,6 +14,10 @@ jobs:
     env:
       CI: true
       NEXT_TELEMETRY_DISABLED: 1
+      OPENAI_API_KEY: ""
+      FORGE_CLOUD_ACCOUNTS_ENABLED: false
+      OPENAI_INTERPRETATION_ENABLED: false
+      OPENAI_FORGE_PLANNER_ENABLED: false
     steps:
       - name: Check out pull-request source
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -39,7 +43,7 @@ jobs:
       - name: Install exactly from lockfile
         run: pnpm install --frozen-lockfile
 
-      - name: Write mutation report
+      - name: Write mutation and source report
         if: always()
         run: |
           mkdir -p diagnostic
@@ -54,25 +58,74 @@ jobs:
           git diff --stat > diagnostic/diff-stat.txt
           git diff -- package.json > diagnostic/package.diff
           git diff -- pnpm-lock.yaml > diagnostic/pnpm-lock.diff
+          cp pnpm-lock.yaml diagnostic/pnpm-lock.generated.yaml
+          git archive --format=tar.gz --output=diagnostic/source.tar.gz HEAD
 
-      - name: Explain any mutation
+      - name: Lint reset
+        id: lint
+        continue-on-error: true
+        run: pnpm lint
+
+      - name: Typecheck reset
+        id: typecheck
+        continue-on-error: true
+        run: pnpm typecheck
+
+      - name: Unit and contract tests
+        id: tests
+        continue-on-error: true
+        run: pnpm test
+
+      - name: Offline evaluation
+        id: eval
+        continue-on-error: true
+        run: pnpm eval
+
+      - name: Production build
+        id: build
+        continue-on-error: true
+        run: pnpm build
+
+      - name: Install Chromium
+        id: chromium
+        continue-on-error: true
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Browser contract
+        id: browser
+        continue-on-error: true
+        run: pnpm test:e2e
+
+      - name: Write verification summary
         if: always()
         run: |
+          cat > diagnostic/verification.txt <<'EOF'
+          lint=${{ steps.lint.outcome }}
+          typecheck=${{ steps.typecheck.outcome }}
+          tests=${{ steps.tests.outcome }}
+          eval=${{ steps.eval.outcome }}
+          build=${{ steps.build.outcome }}
+          chromium=${{ steps.chromium.outcome }}
+          browser=${{ steps.browser.outcome }}
+          EOF
+          cat diagnostic/verification.txt
+          echo "--- identity ---"
           cat diagnostic/identity.txt
           echo "--- status ---"
           cat diagnostic/status.txt
           echo "--- diff stat ---"
           cat diagnostic/diff-stat.txt
-          echo "--- package diff ---"
-          cat diagnostic/package.diff
           echo "--- lockfile diff ---"
           cat diagnostic/pnpm-lock.diff
 
-      - name: Upload lockfile diagnosis
+      - name: Upload lockfile diagnosis and source snapshot
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: forge-pnpm-lockfile-diagnosis-${{ github.run_id }}
-          path: diagnostic
-          if-no-files-found: error
+          path: |
+            diagnostic
+            test-results
+            playwright-report
+          if-no-files-found: warn
           retention-days: 2
