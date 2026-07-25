@@ -6,9 +6,7 @@ import { ForgeTrustLine } from "./ForgePrimitives";
 type ForgeSection = "home" | "learn" | "studio" | "trail" | "evidence" | "account";
 
 const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; section: ForgeSection }> = [
-  { href: "/#worlds", label: "Learn", section: "learn" },
-  { href: "/studio", label: "Studio", section: "studio" },
-  { href: "/trail", label: "Trail", section: "trail" },
+  { href: "/#worlds", label: "Paths", section: "learn" },
   { href: "/evidence", label: "Evidence", section: "evidence" },
   { href: "/account", label: "Access", section: "account" },
 ];
@@ -30,7 +28,7 @@ function Brand() {
       <ForgeMark />
       <span>
         <strong>FORGE</strong>
-        <small>Learning OS</small>
+        <small>Goal to proof</small>
       </span>
     </Link>
   );
