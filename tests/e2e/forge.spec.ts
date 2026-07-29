@@ -3,6 +3,12 @@ import { join } from "node:path";
 
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 
+import {
+  MINOR_PLANNER_PRACTICAL_OUTCOME,
+  MINOR_PLANNER_STARTING_POINT,
+  MINOR_PLANNER_SUCCESS_SHAPE,
+} from "../../src/lib/forge-planner/client-contract";
+
 const REVIEW_DIR = join("test-results", "forge-review");
 
 type RouteCase = {
@@ -277,12 +283,12 @@ test.describe("FORGE cross-route release contract", () => {
     expect(failures).toEqual([]);
   });
 
-  test("planner API distinguishes reviewed, unknown, and child-safety boundaries", async ({ page }, testInfo) => {
+  test("planner API distinguishes adult reviewed and unknown routes from minor transport and safety boundaries", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "The planner API contract is viewport-independent.");
     await page.goto("/start");
     const origin = new URL(page.url()).origin;
     const base = {
-      ageMode: "teen",
+      ageMode: "adult",
       depth: "standard",
       startingPoint: "curious",
       successShape: "explain",
@@ -293,6 +299,17 @@ test.describe("FORGE cross-route release contract", () => {
       data,
       headers: { Origin: origin, "Content-Type": "application/json" },
     });
+    const minorBase = {
+      ...base,
+      ageMode: "child",
+      question: "force and motion",
+      startingPoint: MINOR_PLANNER_STARTING_POINT,
+      successShape: MINOR_PLANNER_SUCCESS_SHAPE,
+      currentKnowledge: "",
+      practicalOutcome: MINOR_PLANNER_PRACTICAL_OUTCOME,
+      constraints: "",
+      sourceMode: "authored_only",
+    } as const;
 
     const groundedResponse = await post({ ...base, question: "Help me understand force and motion" });
     expect(groundedResponse.status()).toBe(200);
@@ -314,9 +331,7 @@ test.describe("FORGE cross-route release contract", () => {
     });
 
     const childWithoutGuardian = await post({
-      ...base,
-      question: "Help me understand force and motion",
-      ageMode: "child",
+      ...minorBase,
     });
     expect(childWithoutGuardian.status()).toBe(403);
     await expect(childWithoutGuardian.json()).resolves.toMatchObject({
@@ -325,9 +340,7 @@ test.describe("FORGE cross-route release contract", () => {
     });
 
     const childForceWithGuardian = await post({
-      ...base,
-      question: "Help me understand force and motion",
-      ageMode: "child",
+      ...minorBase,
       guardianManaged: true,
     });
     expect(childForceWithGuardian.status()).toBe(403);
@@ -337,16 +350,17 @@ test.describe("FORGE cross-route release contract", () => {
     });
 
     const childOpenWeb = await post({
-      ...base,
-      question: "Help me understand force and motion",
-      ageMode: "child",
+      ...minorBase,
       guardianManaged: true,
       sourceMode: "open_web",
     });
-    expect(childOpenWeb.status()).toBe(403);
-    await expect(childOpenWeb.json()).resolves.toMatchObject({
-      contractKind: "refusal",
-      reason: "child_source_mode_disallowed",
+    expect(childOpenWeb.status()).toBe(400);
+    await expect(childOpenWeb.json()).resolves.toEqual({
+      schemaVersion: "1.0",
+      error: {
+        code: "invalid_request",
+        message: "The planning request is invalid.",
+      },
     });
   });
 
