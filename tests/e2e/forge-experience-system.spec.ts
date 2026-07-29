@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const ROUTES = [
-  { path: "/", heading: "What do you want to understand?", main: "#forge-main" },
+  { path: "/learn", heading: "What do you want to understand?", main: "#forge-main" },
   { path: "/studio", heading: "Turn a learning question into a testable lesson draft.", main: "#forge-main" },
   { path: "/login", heading: "Pick where your learning trail lives.", main: "#forge-main" },
   { path: "/account", heading: "Continuity is optional. Your work stays yours.", main: "#forge-main" },
@@ -21,12 +21,12 @@ const CHILD_CAPABLE_WORLD_PATHS = new Set([
 ]);
 
 const CONTRAST_SAMPLES = [
-  { route: "/", name: "Home paper heading", selector: ".forge-hero-heading h1" },
-  { route: "/", name: "Home muted body text", selector: ".forge-hero-heading > p:last-child" },
-  { route: "/", name: "Home dark intake label", selector: ".forge-question-field > span" },
-  { route: "/", name: "Home evidence status text", selector: ".forge-world-row--ready .forge-status" },
-  { route: "/", name: "Home selected representation", selector: ".forge-modality-group label.is-selected" },
-  { route: "/", name: "Home primary action", selector: ".forge-primary-action" },
+  { route: "/learn", name: "Home paper heading", selector: ".forge-hero-heading h1" },
+  { route: "/learn", name: "Home muted body text", selector: ".forge-hero-heading > p:last-child" },
+  { route: "/learn", name: "Home dark intake label", selector: ".forge-question-field > span" },
+  { route: "/learn", name: "Home evidence status text", selector: ".forge-world-row--ready .forge-status" },
+  { route: "/learn", name: "Home selected representation", selector: ".forge-modality-group label.is-selected" },
+  { route: "/learn", name: "Home primary action", selector: ".forge-primary-action" },
   { route: "/studio", name: "Studio dark-instrument heading", selector: ".lesson-studio-heading h1" },
   { route: "/studio", name: "Studio muted instrument text", selector: ".lesson-studio-heading > p" },
   { route: "/pathways", name: "Pathways availability heading", selector: ".forge-pathways-hero h1" },

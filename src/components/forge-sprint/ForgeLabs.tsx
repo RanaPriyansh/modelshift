@@ -6,7 +6,7 @@ import { ArrowIcon } from "./SprintIcons";
 export function ForgeLabs() {
   return (
     <ProductShell active="labs">
-      <main className="forge-labs" id="forge-sprint-main">
+      <main className="forge-labs" id="forge-sprint-main" tabIndex={-1}>
         <header className="forge-page-heading">
           <span className="forge-sprint-kicker">Optional practice · Authored learning paths</span>
           <h1>Use a Lab when the project exposes a gap.</h1>

@@ -16,7 +16,7 @@ export function SprintLibrary() {
 
   return (
     <ProductShell active="sprints">
-      <main className="forge-sprint-library" id="forge-sprint-main">
+      <main className="forge-sprint-library" id="forge-sprint-main" tabIndex={-1}>
         <header className="forge-page-heading forge-page-heading--library">
           <span className="forge-sprint-kicker">Stored on this browser</span>
           <h1>My Sprints</h1>

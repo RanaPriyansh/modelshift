@@ -49,7 +49,7 @@ export function StartSprintForm({ compact = false }: { compact?: boolean }) {
 export function BuildEntry() {
   return (
     <ProductShell active="build">
-      <main className="forge-build-entry" id="forge-sprint-main">
+      <main className="forge-build-entry" id="forge-sprint-main" tabIndex={-1}>
         <div className="forge-build-entry__copy">
           <span className="forge-sprint-kicker">One useful outcome · Seven focused days</span>
           <h1>Start smaller.<br />Finish something real.</h1>

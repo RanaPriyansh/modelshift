@@ -128,7 +128,7 @@ export function SprintProof({ sprintId }: { sprintId: string }) {
   if (!sprintStore.ready && sprintId !== "example") {
     return (
       <ProductShell quiet>
-        <main className="forge-route-state" id="forge-sprint-main">
+        <main className="forge-route-state" id="forge-sprint-main" tabIndex={-1}>
           <span>Opening local proof</span>
           <h1>Loading project proof…</h1>
         </main>
@@ -139,7 +139,7 @@ export function SprintProof({ sprintId }: { sprintId: string }) {
   if (!sprint) {
     return (
       <ProductShell quiet>
-        <main className="forge-route-state" id="forge-sprint-main">
+        <main className="forge-route-state" id="forge-sprint-main" tabIndex={-1}>
           <span>Browser-local proof</span>
           <h1>Proof not found</h1>
           <p>This proof link does not match a sprint stored in this browser.</p>
@@ -165,7 +165,7 @@ export function SprintProof({ sprintId }: { sprintId: string }) {
 
   return (
     <ProductShell quiet>
-      <main className="forge-proof-page" id="forge-sprint-main">
+      <main className="forge-proof-page" id="forge-sprint-main" tabIndex={-1}>
         <header className="forge-proof-hero">
           <div className="forge-proof-kicker">
             <span>FORGE / PROJECT PROOF</span>

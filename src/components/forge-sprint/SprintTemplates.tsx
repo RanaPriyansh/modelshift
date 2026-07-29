@@ -6,7 +6,7 @@ import { ArrowIcon } from "./SprintIcons";
 export function SprintTemplates() {
   return (
     <ProductShell active="templates">
-      <main className="forge-templates" id="forge-sprint-main">
+      <main className="forge-templates" id="forge-sprint-main" tabIndex={-1}>
         <header className="forge-page-heading">
           <span className="forge-sprint-kicker">Practical starting patterns</span>
           <h1>Borrow the structure.<br />Keep the judgment.</h1>

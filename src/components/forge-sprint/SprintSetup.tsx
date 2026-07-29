@@ -73,7 +73,7 @@ export function SprintSetup({
 
   return (
     <ProductShell active="build">
-      <main className="forge-setup" id="forge-sprint-main">
+      <main className="forge-setup" id="forge-sprint-main" tabIndex={-1}>
         <header className="forge-page-heading forge-page-heading--setup">
           <span className="forge-sprint-kicker">Shape the finish line</span>
           <h1>Make seven days small enough to finish.</h1>

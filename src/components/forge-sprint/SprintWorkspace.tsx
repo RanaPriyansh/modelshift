@@ -110,7 +110,7 @@ export function SprintWorkspace({ sprintId }: { sprintId: string }) {
   if (!sprintStore.ready) {
     return (
       <ProductShell active="build">
-        <main className="forge-route-state" id="forge-sprint-main">
+        <main className="forge-route-state" id="forge-sprint-main" tabIndex={-1}>
           <span>Opening local workbench</span>
           <h1>Loading your sprint…</h1>
         </main>
@@ -121,7 +121,7 @@ export function SprintWorkspace({ sprintId }: { sprintId: string }) {
   if (!currentDraft) {
     return (
       <ProductShell active="build">
-        <main className="forge-route-state" id="forge-sprint-main">
+        <main className="forge-route-state" id="forge-sprint-main" tabIndex={-1}>
           <span>Local sprint</span>
           <h1>Sprint not found</h1>
           <p>This link does not match a sprint stored in this browser.</p>
@@ -141,7 +141,7 @@ export function SprintWorkspace({ sprintId }: { sprintId: string }) {
 
   return (
     <ProductShell active="build">
-      <main className="forge-workspace" id="forge-sprint-main">
+      <main className="forge-workspace" id="forge-sprint-main" tabIndex={-1}>
         <aside className="forge-workspace-project">
           <header>
             <span>{currentDraft.status === "completed" ? "Sprint complete" : "Active 7-day sprint"}</span>

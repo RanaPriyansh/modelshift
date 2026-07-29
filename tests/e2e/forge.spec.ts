@@ -38,7 +38,7 @@ type RouteCase = {
 
 const ROUTES: readonly RouteCase[] = [
   {
-    path: "/",
+    path: "/learn",
     slug: "home",
     title: /FORGE/i,
     heading: /What do you want to understand\?/i,

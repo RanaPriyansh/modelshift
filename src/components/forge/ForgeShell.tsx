@@ -6,7 +6,7 @@ import { ForgeTrustLine } from "./ForgePrimitives";
 type ForgeSection = "home" | "learn" | "studio" | "trail" | "evidence" | "account";
 
 const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; section: ForgeSection }> = [
-  { href: "/#worlds", label: "Paths", section: "learn" },
+  { href: "/learn#worlds", label: "Paths", section: "learn" },
   { href: "/evidence", label: "Evidence", section: "evidence" },
   { href: "/account", label: "Access", section: "account" },
 ];
@@ -24,7 +24,7 @@ function ForgeMark() {
 
 function Brand() {
   return (
-    <Link className="forge-brand" href="/" aria-label="FORGE Learning OS home">
+    <Link className="forge-brand" href="/learn" aria-label="FORGE Learning OS home">
       <ForgeMark />
       <span>
         <strong>FORGE</strong>
@@ -166,7 +166,7 @@ export function ForgeWorldFrame({
       <header className="forge-worldbar">
         <Brand />
         <span className="forge-worldbar-title">{worldLabel}</span>
-        <Link className="forge-exit-world" href="/#worlds">
+        <Link className="forge-exit-world" href="/learn#worlds">
           Exit world
           <ArrowIcon />
         </Link>

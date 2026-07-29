@@ -22,7 +22,7 @@ const DAYS = [
 export function ForgeLanding() {
   return (
     <ProductShell>
-      <main id="forge-sprint-main">
+      <main id="forge-sprint-main" tabIndex={-1}>
         <section className="forge-landing-hero" aria-labelledby="forge-landing-title">
           <div className="forge-landing-hero__copy">
             <span className="forge-sprint-kicker">A seven-day project sprint for student builders</span>
