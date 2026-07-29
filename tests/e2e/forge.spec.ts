@@ -276,7 +276,7 @@ test.describe("FORGE cross-route release contract", () => {
 
   test("home planner renders grounded and exploratory paths from real typed questions", async ({ page }) => {
     const failures = capturePageFailures(page);
-    await page.goto("/");
+    await page.goto("/learn");
 
     const question = page.getByRole("textbox", { name: "Your question" });
     await question.fill("Help me understand force and motion after a push ends.");
@@ -313,7 +313,7 @@ test.describe("FORGE cross-route release contract", () => {
 
   test("planner API distinguishes reviewed, unknown, and child-safety boundaries", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "The planner API contract is viewport-independent.");
-    await page.goto("/");
+    await page.goto("/learn");
     const origin = new URL(page.url()).origin;
     const base = {
       ageMode: "teen",
@@ -390,7 +390,7 @@ test.describe("FORGE cross-route release contract", () => {
     page.on("request", (request) => {
       if (request.method() === "POST" && new URL(request.url()).pathname === "/api/forge/plan") plannerRequests += 1;
     });
-    await page.goto("/");
+    await page.goto("/learn");
     await page.getByRole("textbox", { name: "Your question" }).fill("Help me understand proportional reasoning and ratios.");
     await page.getByRole("radio", { name: /Child \+ grown-up/ }).press("Space");
 
@@ -616,7 +616,7 @@ test.describe("FORGE cross-route release contract", () => {
   test("completed proof becomes a learner-controlled local evidence record", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "Browser-storage ownership is viewport-independent.");
     const failures = capturePageFailures(page);
-    await page.goto("/");
+    await page.goto("/learn");
     await page.evaluate(() => window.localStorage.removeItem("forge.evidence-ledger"));
 
     await reachRatioProof(page);
@@ -674,7 +674,7 @@ test.describe("FORGE cross-route release contract", () => {
 
   test("keyboard-only navigation reaches a working world and its main question", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "Keyboard traversal runs once against the shared DOM order.");
-    await page.goto("/");
+    await page.goto("/learn");
 
     await page.keyboard.press("Tab");
     const homeSkip = page.getByRole("link", { name: "Skip to main content" });

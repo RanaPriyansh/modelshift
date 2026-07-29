@@ -61,7 +61,7 @@ function readableDate(timestamp: string): string {
 function capability(entry: EvidenceEntry) {
   return CAPABILITIES[entry.capabilityId] ?? {
     title: entry.capabilityId.replaceAll(/[._:-]+/g, " "),
-    href: "/#worlds",
+    href: "/labs",
   };
 }
 

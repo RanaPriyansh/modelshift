@@ -162,7 +162,7 @@ function LearningIntake() {
     setPlannerError("");
   }
 
-  function useExample(example: (typeof EXAMPLE_GOALS)[number]) {
+  function chooseExample(example: (typeof EXAMPLE_GOALS)[number]) {
     updateQuestion(example.question);
     setPracticalOutcome(example.outcome);
     questionRef.current?.focus();
@@ -251,7 +251,7 @@ function LearningIntake() {
             <button
               key={example.label}
               type="button"
-              onClick={() => useExample(example)}
+              onClick={() => chooseExample(example)}
               aria-label={`Use example: ${example.label}`}
             >
               {example.label}

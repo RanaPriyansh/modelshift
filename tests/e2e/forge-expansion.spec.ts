@@ -20,7 +20,7 @@ async function seedCorruptDeviceProfile(page: import("@playwright/test").Page) {
 
 test.describe("FORGE expanded learning system", () => {
   test("publishes four honest working Worlds and an account route", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/learn");
 
     await expect(page.getByRole("heading", { name: "What can a photograph prove?" })).toBeVisible();
     await expect(page.locator('.forge-world-row a[href^="/learn/"]')).toHaveCount(4);

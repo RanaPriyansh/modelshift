@@ -10,10 +10,14 @@ export function resolveLocalPlaywrightServer(
     throw new Error("FORGE_PLAYWRIGHT_PORT must be a valid TCP port.");
   }
 
+  const useProductionServer = environment.FORGE_PLAYWRIGHT_USE_PRODUCTION === "1";
+
   return {
     port: localPort,
     baseURL: `http://127.0.0.1:${localPort}`,
-    command: `pnpm dev --hostname 127.0.0.1 --port ${localPort}`,
+    command: useProductionServer
+      ? `pnpm start --hostname 127.0.0.1 --port ${localPort}`
+      : `pnpm dev --hostname 127.0.0.1 --port ${localPort}`,
     reuseExistingServer: false as const,
   };
 }
@@ -23,6 +27,7 @@ if (process.env.PLAYWRIGHT_BASE_URL === "") {
   throw new Error("PLAYWRIGHT_BASE_URL must be omitted or set to a nonempty URL.");
 }
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? localServer.baseURL;
+const executablePath = process.env.FORGE_PLAYWRIGHT_EXECUTABLE_PATH;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -36,6 +41,7 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    launchOptions: executablePath ? { executablePath } : undefined,
   },
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined

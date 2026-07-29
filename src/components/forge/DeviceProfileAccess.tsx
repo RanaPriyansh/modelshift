@@ -69,7 +69,7 @@ export function DeviceProfileAccess({ compact = false }: { compact?: boolean }) 
           Evidence stays in this browser. This is a device profile, not verified identity and not a cloud backup.
         </p>
         <div className="forge-account-actions">
-          <Link className="forge-account-primary" href="/#worlds">Choose a World</Link>
+          <Link className="forge-account-primary" href="/labs">Choose a Lab</Link>
           <button type="button" onClick={reset}>Remove device profile</button>
         </div>
       </section>

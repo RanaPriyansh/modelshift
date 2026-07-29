@@ -6,16 +6,18 @@ import "./globals.css";
 import "./forge.css";
 import "./forge-system.css";
 import "./forge-product-reset.css";
+import "./forge-sprint.css";
 
 export const metadata: Metadata = {
-  title: "FORGE — Goal to path to proof.",
+  title: {
+    default: "FORGE — Build something real. Prove it’s yours.",
+    template: "%s — FORGE",
+  },
   description:
-    "Forge turns a real learning goal into an editable path, bounded work, and evidence that survives AI assistance.",
+    "A practical seven-day project sprint that helps students turn an idea into a useful artifact and an honest, inspectable proof of their work.",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  // Reading the proxy-provided nonce makes the document request dynamic so
-  // Next can attach the same nonce to its framework and hydration scripts.
   await headers();
   return (
     <html lang="en" data-scroll-behavior="smooth">

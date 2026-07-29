@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test.describe("FORGE focused first-run product contract", () => {
   test("desktop starts with one goal, one action, and optional personalization", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto("/");
+    await page.goto("/learn");
 
     await expect(page.getByRole("heading", { name: "What do you want to understand?" })).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Your question" })).toBeVisible();
@@ -28,7 +28,7 @@ test.describe("FORGE focused first-run product contract", () => {
 
   test("examples populate a real goal and outcome without auto-submitting", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto("/");
+    await page.goto("/learn");
 
     await page.getByRole("button", { name: "Use example: Judge an AI claim" }).click();
 
@@ -47,7 +47,7 @@ test.describe("FORGE focused first-run product contract", () => {
 
   test("mobile keeps personalization discoverable and keyboard-operable", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/");
+    await page.goto("/learn");
 
     const personalization = page.locator("details.forge-intake-details");
     await expect(personalization).not.toHaveAttribute("open", "");

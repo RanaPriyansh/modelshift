@@ -207,7 +207,7 @@ test.describe("FORGE Packet A experience system", () => {
       expect(contract.rovingTabContract, `${route.path} should retain a valid roving-tab contract when tabs are present`).toBe(true);
     }
 
-    await page.goto("/");
+    await page.goto("/learn");
     const question = page.getByRole("textbox", { name: "Your question" });
     await question.fill("Help me understand force and motion after a push ends.");
     await page.getByPlaceholder("Optional: name relevant knowledge, experience, or the point where you get stuck.").fill(
@@ -238,7 +238,7 @@ test.describe("FORGE Packet A experience system", () => {
   });
 
   test("an unknown topic remains an unverified, rejectable map and never activates a lesson", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/learn");
     await page.getByRole("textbox", { name: "Your question" }).fill(
       "How did Roman aqueduct maintenance shape city planning?",
     );
@@ -263,7 +263,7 @@ test.describe("FORGE Packet A experience system", () => {
   test("the home question stays inside its gutters with wide fallback font metrics", async ({ page }) => {
     for (const width of [320, 390]) {
       await page.setViewportSize({ width, height: 800 });
-      await page.goto("/");
+      await page.goto("/learn");
       await page.addStyleTag({ content: ".forge-hero-heading h1 { font-family: monospace !important; }" });
 
       const contract = await mobileContract(page);
@@ -300,7 +300,7 @@ test.describe("FORGE Packet A experience system", () => {
       expect(visibleActionNames, `${route} visible action names`).toHaveLength(new Set(visibleActionNames).size);
     }
 
-    await page.goto("/");
+    await page.goto("/learn");
     const question = page.getByRole("textbox", { name: "Your question" });
     await question.fill("Why does motion continue after a push ends?");
     await expect(question).toHaveValue("Why does motion continue after a push ends?");
@@ -339,7 +339,7 @@ test.describe("FORGE Packet A experience system", () => {
       expect(motion, `${route} should not retain motion above 20ms`).toEqual([]);
     }
 
-    await page.goto("/");
+    await page.goto("/learn");
     await expect(page.locator(".forge-status").filter({ hasText: "Working model World" })).toHaveCount(2);
 
     await page.emulateMedia({ forcedColors: "active" });
@@ -404,7 +404,7 @@ test.describe("FORGE Packet A experience system", () => {
     expect(pathwayForcedColors.actionFocusOutlineStyle).not.toBe("none");
     expect(pathwayForcedColors.actionFocusOutlineWidth).toBeGreaterThanOrEqual(2);
     expect(pathwayForcedColors.actionFocusOutlineRatio).toBeGreaterThanOrEqual(3);
-    await page.goto("/");
+    await page.goto("/learn");
     const skip = page.locator(".forge-skip-link");
     await page.keyboard.press("Tab");
     await expect(skip).toBeFocused();

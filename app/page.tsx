@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-
-import { ForgeHome } from "@/src/components/forge/ForgeHome";
+import { ForgeLanding } from "@/src/components/forge-sprint/ForgeLanding";
 
 export const metadata: Metadata = {
-  title: "FORGE — Learning OS",
-  description: "Start with a question. Act before AI explains. Build knowledge you can prove for yourself.",
+  title: "FORGE — Build something real. Prove it’s yours.",
+  description:
+    "Turn one useful idea into a shipped project and an honest proof of your decisions in seven focused days.",
 };
 
 export default function HomePage() {
-  return <ForgeHome />;
+  return <ForgeLanding />;
 }
