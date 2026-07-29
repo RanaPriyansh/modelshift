@@ -137,6 +137,13 @@ test.describe("FORGE sprint product routes", () => {
   test("reflows the primary sprint surfaces at 390px and 320px", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "The explicit compact-width contract runs once in Chromium.");
     await seedSprint(page);
+    await page.evaluate(({ key, title }) => {
+      const raw = localStorage.getItem(key);
+      if (!raw) throw new Error("Expected a seeded sprint store.");
+      const store = JSON.parse(raw);
+      store.sprints[0].title = title;
+      localStorage.setItem(key, JSON.stringify(store));
+    }, { key: STORAGE_KEY, title: "X".repeat(80) });
 
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 844 });
@@ -144,6 +151,12 @@ test.describe("FORGE sprint product routes", () => {
         await page.goto(path);
         await expect(page.locator("main").first()).toBeVisible();
         await expectNoHorizontalOverflow(page);
+        if (path === "/build/" + SPRINT_ID) {
+          const projectTitle = page.locator(".forge-workspace-project h1");
+          expect(await projectTitle.evaluate(
+            (element) => element.scrollWidth <= element.clientWidth,
+          )).toBe(true);
+        }
       }
     }
   });

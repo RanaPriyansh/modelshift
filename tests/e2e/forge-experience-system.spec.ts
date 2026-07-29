@@ -47,11 +47,27 @@ type RenderedContrast = {
 };
 
 async function tabTo(page: Page, selector: string, maximumTabs = 6) {
+  await page.bringToFront();
+  await page.waitForFunction(() => document.readyState === "complete");
+  await page.evaluate(async () => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+  });
+
   for (let index = 0; index < maximumTabs; index += 1) {
     await page.keyboard.press("Tab");
     if (await page.locator(selector).evaluate((element) => element === document.activeElement)) return;
+    await page.waitForTimeout(25);
   }
-  throw new Error(`Keyboard focus did not reach ${selector}.`);
+  const focusState = await page.evaluate(() => ({
+    active: document.activeElement?.outerHTML.slice(0, 180) ?? "none",
+    path: location.pathname,
+  }));
+  throw new Error(
+    `Keyboard focus did not reach ${selector} on ${focusState.path}; active element: ${focusState.active}`,
+  );
 }
 
 async function visitOwnedRoute(page: Page, route: (typeof ROUTES)[number]) {
