@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - agent/forge-product-reset
 
 permissions:
   contents: read
