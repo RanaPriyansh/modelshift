@@ -150,7 +150,7 @@ export function PublicHome() {
                 </li>
               ))}
             </ol>
-            <Link className={styles.textAction} href="/how-it-works">
+            <Link className={styles.textAction} href="/how-forge-works">
               Follow the complete learning journey
               <span aria-hidden="true">→</span>
             </Link>

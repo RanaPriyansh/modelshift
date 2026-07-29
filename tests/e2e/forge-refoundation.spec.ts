@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const PUBLIC_SURFACES = [
   { path: "/", heading: /A path from ambition to capability/i, truth: /Four reviewed Worlds are available now/i },
-  { path: "/how-it-works", heading: /A goal becomes work you can inspect/i, truth: /Proposal and availability are not the same state/i },
+  { path: "/how-forge-works", heading: /A path is credible when every move earns its place/i, truth: /The system can propose.*The learner accepts/i },
   { path: "/explore", heading: /Choose an outcome, not a shelf of courses/i, truth: /Candidate direction.*not a released path/i },
   { path: "/paths/ai-literacy", heading: /Use AI without outsourcing your judgment/i, truth: /not a released end-to-end path/i },
   { path: "/pricing", heading: /No paid Forge plan is for sale in this build/i, truth: /There is no checkout, subscription, trial clock, or account upgrade/i },

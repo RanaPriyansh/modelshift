@@ -6,6 +6,7 @@ import "./globals.css";
 import "./forge.css";
 import "./forge-system.css";
 import "./forge-product.css";
+import "./forge-sprint.css";
 
 export const metadata: Metadata = {
   title: "FORGE — Working Worlds. Bounded evidence.",

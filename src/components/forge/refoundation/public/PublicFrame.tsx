@@ -6,6 +6,7 @@ import styles from "./PublicExperience.module.css";
 type PublicSection =
   | "home"
   | "paths"
+  | "projects"
   | "how"
   | "trust"
   | "explore"
@@ -14,6 +15,7 @@ type PublicSection =
 
 const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; section: PublicSection }> = [
   { href: "/paths", label: "Paths", section: "paths" },
+  { href: "/build", label: "Project Sprint", section: "projects" },
   { href: "/how-forge-works", label: "How FORGE works", section: "how" },
   { href: "/trust", label: "Evidence and trust", section: "trust" },
 ];
