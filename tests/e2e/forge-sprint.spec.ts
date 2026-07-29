@@ -95,6 +95,32 @@ test.describe("FORGE sprint product routes", () => {
     await expect(notes).toHaveValue("I mapped the event filters and wrote the first useful empty state.");
   });
 
+  test("keeps primary actions legible and the sprint skip link keyboard-first", async ({ page }) => {
+    await page.goto("/");
+
+    const primaryColors = await page.locator(".forge-button--primary").evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const style = getComputedStyle(button);
+        return { background: style.backgroundColor, foreground: style.color };
+      }),
+    );
+    expect(primaryColors).toHaveLength(2);
+    for (const colors of primaryColors) {
+      expect(colors.foreground).toBe("rgb(255, 255, 255)");
+      expect(colors.foreground).not.toBe(colors.background);
+    }
+
+    const skip = page.locator(".forge-sprint-skip");
+    await expect(skip).toHaveCount(1);
+    expect(await skip.evaluate((element) => element.getBoundingClientRect().bottom)).toBeLessThanOrEqual(0);
+    await page.keyboard.press("Tab");
+    await expect(skip).toBeFocused();
+    await expect.poll(() => skip.evaluate((element) => element.getBoundingClientRect().top))
+      .toBeGreaterThanOrEqual(0);
+    await skip.press("Enter");
+    await expect(page.locator("#forge-sprint-main")).toBeFocused();
+  });
+
   test("fails closed for an unknown local proof and renders the example proof", async ({ page }) => {
     await page.goto("/");
     await page.evaluate(() => localStorage.clear());
