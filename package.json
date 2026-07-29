@@ -2,7 +2,7 @@
   "name": "forge-learning-os",
   "version": "0.1.0",
   "private": true,
-  "description": "FORGE — a learner-owned system of reviewed learning Worlds, bounded AI support, and proof after help.",
+  "description": "FORGE — a browser-local seven-day sprint for building useful projects and proving the work honestly.",
   "license": "MIT",
   "packageManager": "pnpm@11.9.0",
   "engines": {

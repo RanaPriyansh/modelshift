@@ -445,7 +445,7 @@ function LearningPlanResult({
           learnerQuestion={learnerQuestion}
           plan={plan}
         />
-        <p className="forge-plan-privacy">Your goal was used for this response and was not added to a learner profile.</p>
+        <p className="forge-plan-privacy">Your question was used for this response and was not added to a learner profile.</p>
       </div>
     );
   }
