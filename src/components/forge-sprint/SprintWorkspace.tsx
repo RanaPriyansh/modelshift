@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import {
   addEvidenceLink,
   completeCurrentSprintDay,
@@ -20,23 +20,16 @@ export function SprintWorkspace({ sprintId }: { sprintId: string }) {
   const sprintStore = useForgeSprintStore();
   const storedSprint = sprintStore.store.sprints.find((candidate) => candidate.id === sprintId) ?? null;
   const [draft, setDraft] = useState<ForgeSprint | null>(null);
-  const [draftSprintId, setDraftSprintId] = useState("");
   const [saveStatus, setSaveStatus] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
   const [evidenceLabel, setEvidenceLabel] = useState("");
   const [evidenceUrl, setEvidenceUrl] = useState("");
 
-  useEffect(() => {
-    if (storedSprint && storedSprint.id !== draftSprintId) {
-      setDraft(storedSprint);
-      setDraftSprintId(storedSprint.id);
-    }
-  }, [storedSprint, draftSprintId]);
-
-  const currentDraft = draft ?? storedSprint;
+  const applicableDraft = draft?.id === sprintId ? draft : null;
+  const currentDraft = applicableDraft ?? storedSprint;
 
   function editDraft(update: (current: ForgeSprint) => ForgeSprint) {
-    const base = draft ?? storedSprint;
+    const base = applicableDraft ?? storedSprint;
     if (!base) return;
     setDraft(update(base));
     setSaveStatus("");

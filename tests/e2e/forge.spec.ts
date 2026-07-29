@@ -392,6 +392,7 @@ test.describe("FORGE cross-route release contract", () => {
     });
     await page.goto("/learn");
     await page.getByRole("textbox", { name: "Your question" }).fill("Help me understand proportional reasoning and ratios.");
+    await page.getByText("Personalize the path", { exact: true }).click();
     await page.getByRole("radio", { name: /Child \+ grown-up/ }).press("Space");
 
     const confirmation = page.getByRole("checkbox", { name: /A grown-up is here and managing this session/i });

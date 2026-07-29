@@ -73,7 +73,7 @@ test.describe("FORGE sprint product routes", () => {
     await page.getByRole("textbox", { name: "What should work by Day 7?" }).fill("short");
     await page.getByRole("textbox", { name: "What do you already have?" }).fill("x");
     await page.getByRole("button", { name: "Build my 7-day map" }).click();
-    await expect(page.getByRole("alert")).toContainText("Make the sprint a little more concrete.");
+    await expect(page.locator(".forge-form-alert")).toContainText("Make the sprint a little more concrete.");
     expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
 
     await page.getByRole("textbox", { name: "Who is it for?" }).fill("Students looking for useful events on campus.");

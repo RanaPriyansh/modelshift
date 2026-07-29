@@ -9,10 +9,7 @@ import "./forge-product-reset.css";
 import "./forge-sprint.css";
 
 export const metadata: Metadata = {
-  title: {
-    default: "FORGE — Build something real. Prove it’s yours.",
-    template: "%s — FORGE",
-  },
+  title: "FORGE — Build something real. Prove it’s yours.",
   description:
     "A practical seven-day project sprint that helps students turn an idea into a useful artifact and an honest, inspectable proof of their work.",
 };

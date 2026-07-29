@@ -46,7 +46,12 @@ export function useForgeSprintStore() {
   }, []);
 
   useEffect(() => {
-    refresh();
+    const timer = window.setTimeout(refresh, 0);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("storage", refresh);
+    };
   }, [refresh]);
 
   const blocked = state.rawPresent && state.issues.length > 0;

@@ -108,7 +108,7 @@ function PrimaryNavigation({ active }: { active: ForgeSection }) {
 
 function MobileNavigation({ active }: { active: ForgeSection }) {
   const items: ReadonlyArray<{ href: string; label: string; section: ForgeSection }> = [
-    { href: "/", label: "Home", section: "home" },
+    { href: "/learn", label: "Home", section: "home" },
     ...NAV_ITEMS,
   ];
 

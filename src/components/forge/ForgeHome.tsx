@@ -158,7 +158,6 @@ function LearningIntake() {
 
   function updateQuestion(nextQuestion: string) {
     setQuestion(nextQuestion);
-    setPlan(null);
     setPlannerError("");
   }
 
@@ -179,7 +178,7 @@ function LearningIntake() {
       activePlannerRequestRef.current = null;
       if (!mountedRef.current) return;
       setPlanning(false);
-      setPlannerError("The path request took too long. Your goal was not saved. Try again or choose a reviewed path below.");
+      setPlannerError("The path request took too long. Your question was not saved. Try again or choose a reviewed path below.");
     }, PLANNER_REQUEST_TIMEOUT_MS);
 
     setPlanning(true);
@@ -213,7 +212,7 @@ function LearningIntake() {
       setPlan(contract);
     } catch {
       if (!mountedRef.current || activePlannerRequestRef.current !== controller || controller.signal.aborted) return;
-      setPlannerError("The path service is unavailable. Your goal was not saved; choose a reviewed path below.");
+      setPlannerError("The path service is unavailable. Your question was not saved; choose a reviewed path below.");
     } finally {
       window.clearTimeout(timeout);
       if (activePlannerRequestRef.current === controller) activePlannerRequestRef.current = null;
@@ -505,7 +504,7 @@ function WorldCatalog() {
               <p>{world.description}</p>
             </div>
             <span className="forge-world-detail">{world.detail}</span>
-            <Link href={world.href} className="forge-world-link" aria-label={`Open ${world.title} path`}>
+            <Link href={world.href} className="forge-world-link" aria-label={`Open ${world.title} World`}>
               {world.action}
               <ForgeArrow />
             </Link>

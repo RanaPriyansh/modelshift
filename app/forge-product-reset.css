@@ -207,7 +207,32 @@
 }
 
 @media (max-width: 720px) {
+  .forge-hero--focused,
+  .forge-hero--focused > *,
+  .forge-intake--focused,
+  .forge-intake--focused > *,
+  .forge-intake-details,
+  .forge-intake-details__body,
+  .forge-intake-details__body > *,
+  .forge-choice-group,
+  .forge-choice-group > div,
+  .forge-modality-group,
+  .forge-modality-group > div {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .forge-intake--focused {
+    overflow-x: clip;
+  }
+
+  .forge-intake--focused :is(button, strong, small, span) {
+    overflow-wrap: anywhere;
+  }
+
   .forge-mobile-nav {
+    width: 100%;
+    max-width: 100vw;
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 

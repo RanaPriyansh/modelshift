@@ -284,7 +284,7 @@ test.describe("FORGE Packet A experience system", () => {
       expect(await page.evaluate(() => document.activeElement?.id), `${route.path} skip target`).toBe(route.main.slice(1));
     }
 
-    for (const route of ["/", "/pathways"]) {
+    for (const route of ["/learn", "/pathways"]) {
       await page.goto(route);
       const visibleActionNames = await page.evaluate(() => {
         const visible = (element: Element) => {
@@ -320,7 +320,7 @@ test.describe("FORGE Packet A experience system", () => {
         .toBeGreaterThanOrEqual(contrast.floor);
     }
 
-    for (const route of ["/", "/pathways"]) {
+    for (const route of ["/learn", "/pathways"]) {
       await page.goto(route);
       const motion = await page.locator(".forge-shell").evaluate((shell) => {
         const toMilliseconds = (raw: string) => raw.split(",").map((part) => {

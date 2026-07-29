@@ -572,7 +572,7 @@ export function parseForgeSprintStore(raw: string | null): ForgeSprintParseResul
       issues: ["The local sprint list is malformed. No stored data was changed."],
     };
   }
-  if (!Number.isInteger(parsed.revision) || parsed.revision < 0) {
+  if (typeof parsed.revision !== "number" || !Number.isInteger(parsed.revision) || parsed.revision < 0) {
     return {
       store: createEmptyForgeSprintStore(),
       issues: ["The local sprint revision is malformed. No stored data was changed."],
@@ -627,7 +627,7 @@ function parseSprint(value: unknown): ForgeSprint | null {
   if (![30, 60, 90, 120].includes(value.dailyMinutes as number)) return null;
   if (!isTemplateId(value.templateId)) return null;
   if (value.status !== "active" && value.status !== "completed") return null;
-  if (!Number.isInteger(value.currentDay) || value.currentDay < 1 || value.currentDay > 7) {
+  if (typeof value.currentDay !== "number" || !Number.isInteger(value.currentDay) || value.currentDay < 1 || value.currentDay > 7) {
     return null;
   }
   if (!isIsoDate(value.createdAt) || !isIsoDate(value.updatedAt)) return null;
@@ -663,7 +663,7 @@ function parseSprint(value: unknown): ForgeSprint | null {
 
 function parseDayEntry(value: unknown): ForgeSprintDayEntry | null {
   if (!isRecord(value)) return null;
-  if (!Number.isInteger(value.day) || value.day < 1 || value.day > 7) return null;
+  if (typeof value.day !== "number" || !Number.isInteger(value.day) || value.day < 1 || value.day > 7) return null;
   if (!isStringWithin(value.workNotes, 2400) || !isStringWithin(value.change, 800)) {
     return null;
   }
