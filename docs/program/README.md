@@ -6,6 +6,10 @@
 
 **Accepted strategic input:** [`WAVE_6_PLAN.md`](./WAVE_6_PLAN.md) — adult practical capability maps, governed multimodal resources, projects, protected proof, and educator review. Bounded contracts, a fixture presentation route, the controller kernel, and a fail-closed server-gated review shell exist; the externally recruited end-to-end pilot remains incomplete.
 
+**FORGE Project Sprint pilot packet:** [`FORGE_PROJECT_SPRINT_PILOT_V1.md`](../pilots/FORGE_PROJECT_SPRINT_PILOT_V1.md) — a consented 8–12 adult-student protocol, closed measurement definitions, observation template, guardrails, and stop rules. It is ready for participant and deployment authorization; it is not cohort evidence.
+
+**Proposed Sprint canonical import mapping:** [`ADR-0010`](../adr/0010-forge-project-sprint-canonical-import.md) — a versioned, learner-confirmed proposal boundary from browser-local Sprint records toward canonical projects. It cannot allocate canonical identities, write either store, create evidence, or synchronize silently.
+
 **Current release record:** [`CURRENT_RELEASE.md`](../operations/CURRENT_RELEASE.md) — the only normative current public tuple, status, release-provenance gaps, and non-mutating rollback procedure. Wave 4 remains historical evidence for `c7d4011` only.
 
 **Accepted predecessor:** [`WAVE_5_PLAN.md`](./WAVE_5_PLAN.md) — trustworthy-continuity and curriculum-authority slices remain bounded local foundations, not deployed durable authority.
