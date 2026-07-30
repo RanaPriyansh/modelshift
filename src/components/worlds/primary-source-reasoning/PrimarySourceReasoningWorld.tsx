@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -37,11 +38,15 @@ import {
   type WorkedStatementId,
 } from "../../../worlds/primary-source-reasoning";
 import {
-  createWorldRuntimeSession,
-  dispatchWorldRuntimeCommand,
   primarySourceWorldRuntimeAdapter,
   type BoundedLocalWorldRuntimeReceipt,
 } from "../../../forge/world-runtime";
+import type { WorldSessionCheckpointIdentity } from "../../../lib/forge-continuity/world-session-checkpoint";
+import {
+  useWorldSessionCheckpoint,
+  WorldCheckpointBoundary,
+  type WorldCheckpointErrorReason,
+} from "../useWorldSessionCheckpoint";
 import styles from "./PrimarySourceReasoningWorld.module.css";
 
 const STAGES: ReadonlyArray<{
@@ -984,17 +989,97 @@ function ResultStage({
   );
 }
 
+type PrimarySourceCheckpointUi = Readonly<{
+  mysteryChoice: MysteryChoiceId | null;
+  initialConfidence: number;
+  initialExplanation: string;
+  interpretationResponse: "accepted" | "corrected" | null;
+  compilerCorrection: string;
+  testPrediction: TestPredictionId | null;
+  reconstructionChoice: ReconstructionChoiceId | null;
+  reconstructionText: string;
+  transferConfidence: number;
+  transferExplanation: string;
+}>;
+
+function isCheckpointConfidence(value: unknown): value is number {
+  return Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 100;
+}
+
+function isCheckpointText(value: unknown, maxLength: number): value is string {
+  return typeof value === "string" && value.length <= maxLength;
+}
+
+function decodePrimarySourceCheckpointUi(
+  value: unknown,
+): PrimarySourceCheckpointUi | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const candidate = value as Record<string, unknown>;
+  const expectedKeys = [
+    "compilerCorrection",
+    "initialConfidence",
+    "initialExplanation",
+    "interpretationResponse",
+    "mysteryChoice",
+    "reconstructionChoice",
+    "reconstructionText",
+    "testPrediction",
+    "transferConfidence",
+    "transferExplanation",
+  ];
+  if (Object.keys(candidate).sort().join(",") !== expectedKeys.join(",")) return null;
+  const mysteryChoice = candidate.mysteryChoice;
+  const interpretationResponse = candidate.interpretationResponse;
+  const testPrediction = candidate.testPrediction;
+  const reconstructionChoice = candidate.reconstructionChoice;
+  if (
+    mysteryChoice !== null
+      && mysteryChoice !== "visible_detail"
+      && mysteryChoice !== "catalog_detail"
+      && mysteryChoice !== "purpose_claim"
+    || interpretationResponse !== null
+      && interpretationResponse !== "accepted"
+      && interpretationResponse !== "corrected"
+    || testPrediction !== null
+      && testPrediction !== "catalog_distinguishes_evidence_layers"
+      && testPrediction !== "photograph_establishes_full_context"
+    || reconstructionChoice !== null
+      && reconstructionChoice !== "image_proves_context"
+      && reconstructionChoice !== "layers_bound_claims"
+      && reconstructionChoice !== "catalog_is_only_inference"
+    || !isCheckpointConfidence(candidate.initialConfidence)
+    || !isCheckpointConfidence(candidate.transferConfidence)
+    || !isCheckpointText(candidate.initialExplanation, 600)
+    || !isCheckpointText(candidate.compilerCorrection, 420)
+    || !isCheckpointText(candidate.reconstructionText, 600)
+    || !isCheckpointText(candidate.transferExplanation, 600)
+  ) return null;
+  return {
+    mysteryChoice,
+    initialConfidence: candidate.initialConfidence,
+    initialExplanation: candidate.initialExplanation,
+    interpretationResponse,
+    compilerCorrection: candidate.compilerCorrection,
+    testPrediction,
+    reconstructionChoice,
+    reconstructionText: candidate.reconstructionText,
+    transferConfidence: candidate.transferConfidence,
+    transferExplanation: candidate.transferExplanation,
+  };
+}
+
 export function PrimarySourceReasoningWorld({
+  checkpointIdentity,
+  onCheckpointError,
   onRuntimeReceipt,
 }: {
+  checkpointIdentity?: WorldSessionCheckpointIdentity;
+  onCheckpointError?: (reason: WorldCheckpointErrorReason) => void;
   onRuntimeReceipt?: (receipt: BoundedLocalWorldRuntimeReceipt) => void;
 }) {
   const instanceId = useId();
   const mainRef = useRef<HTMLElement>(null);
   const emittedReceiptRef = useRef<BoundedLocalWorldRuntimeReceipt | null>(null);
-  const [runtime, setRuntime] = useState(() => createWorldRuntimeSession(primarySourceWorldRuntimeAdapter));
-  const runtimeRef = useRef(runtime);
-  const state = runtime.state;
   const [error, setError] = useState<TransitionRejectReason | null>(null);
 
   const [mysteryChoice, setMysteryChoice] = useState<MysteryChoiceId | null>(null);
@@ -1007,23 +1092,79 @@ export function PrimarySourceReasoningWorld({
   const [reconstructionText, setReconstructionText] = useState("");
   const [transferConfidence, setTransferConfidence] = useState(65);
   const [transferExplanation, setTransferExplanation] = useState("");
+  const checkpointUi = useMemo<PrimarySourceCheckpointUi>(() => ({
+    compilerCorrection,
+    initialConfidence,
+    initialExplanation,
+    interpretationResponse,
+    mysteryChoice,
+    reconstructionChoice,
+    reconstructionText,
+    testPrediction,
+    transferConfidence,
+    transferExplanation,
+  }), [
+    compilerCorrection,
+    initialConfidence,
+    initialExplanation,
+    interpretationResponse,
+    mysteryChoice,
+    reconstructionChoice,
+    reconstructionText,
+    testPrediction,
+    transferConfidence,
+    transferExplanation,
+  ]);
+  const checkpoint = useWorldSessionCheckpoint({
+    adapter: primarySourceWorldRuntimeAdapter,
+    checkpointIdentity,
+    ui: checkpointUi,
+    decodeUi: decodePrimarySourceCheckpointUi,
+    restoreUi: (ui) => {
+      setMysteryChoice(ui.mysteryChoice);
+      setInitialConfidence(ui.initialConfidence);
+      setInitialExplanation(ui.initialExplanation);
+      setInterpretationResponse(ui.interpretationResponse);
+      setCompilerCorrection(ui.compilerCorrection);
+      setTestPrediction(ui.testPrediction);
+      setReconstructionChoice(ui.reconstructionChoice);
+      setReconstructionText(ui.reconstructionText);
+      setTransferConfidence(ui.transferConfidence);
+      setTransferExplanation(ui.transferExplanation);
+    },
+    resetUi: () => {
+      setError(null);
+      setMysteryChoice(null);
+      setInitialConfidence(65);
+      setInitialExplanation("");
+      setInterpretationResponse(null);
+      setCompilerCorrection("");
+      setTestPrediction(null);
+      setReconstructionChoice(null);
+      setReconstructionText("");
+      setTransferConfidence(65);
+      setTransferExplanation("");
+    },
+    onCheckpointError,
+  });
+  const { runtime } = checkpoint;
+  const state = runtime.state;
 
   const send = useCallback(
     (event: PrimarySourceWorldEvent) => {
-      const result = dispatchWorldRuntimeCommand(primarySourceWorldRuntimeAdapter, runtimeRef.current, {
-        kind: "domain",
-        event,
-      });
-      runtimeRef.current = result.session;
-      setRuntime(result.session);
-      if (result.accepted) {
+      const result = checkpoint.send(event);
+      if (result?.accepted) {
         setError(null);
         return true;
       }
-      setError((result.domainReason ?? "invalid_event_for_stage") as TransitionRejectReason);
+      setError((
+        result && !result.accepted
+          ? result.domainReason ?? "invalid_event_for_stage"
+          : "invalid_event_for_stage"
+      ) as TransitionRejectReason);
       return false;
     },
-    [],
+    [checkpoint],
   );
 
   useEffect(() => {
@@ -1194,6 +1335,15 @@ export function PrimarySourceReasoningWorld({
   } else {
     stageContent = null;
   }
+
+  const checkpointBoundary = WorldCheckpointBoundary({
+    label: "Primary Source Reasoning World",
+    onDiscard: checkpoint.canDiscardCheckpoint
+      ? checkpoint.discardCheckpointAndRestart
+      : undefined,
+    phase: checkpoint.phase,
+  });
+  if (checkpointBoundary) return checkpointBoundary;
 
   return (
     <div

@@ -88,7 +88,7 @@ const LEGACY_NODES: CurriculumNodeV1[] = [
     world: {
       worldId: "world.proportional-reasoning",
       contentVersion: "1.0.0",
-      packageIntegrityHash: "sha256:b8430668c5b061415aa5ec24bb8e62ae4a4e4c95a808c7a65b04e3ff78a8a353",
+      packageIntegrityHash: "sha256:f55197c4985ae4a2964f40411a2ded4c8519779ea8dab046ccc211a64e8fb0e4",
       runtimeBindingDigest: "sha256:b2f134f91ee9cd71750e19c8b440751bcf93415aec10a254e1b0ac491e8840c1",
       runtimeProtocolVersion: "1.1.0",
       validatorRef: { id: "validator.proportional-reasoning-transfer.v1", version: "1.0.0" },
@@ -108,8 +108,8 @@ const LEGACY_NODES: CurriculumNodeV1[] = [
     world: {
       worldId: "world.force-and-motion",
       contentVersion: "1.0.0",
-      packageIntegrityHash: "sha256:975d00b8f7b7b25f2323a0ba2fe7712bcf6d5221212c86e67f0520021e76b783",
-      runtimeBindingDigest: "sha256:9ac8b15244c5839abc4e0644564699a8b0b5fff9d7fc8603d6181fd739d85c54",
+      packageIntegrityHash: "sha256:0b4ee9c6329d038e42903e009c74b18005c60a65fe32c2770130fdbd4f72e36e",
+      runtimeBindingDigest: "sha256:318d3d0e0e6b98f7cbfbcce003e13b621346c5b6e0bf60bf72c904dd4ca8e597",
       runtimeProtocolVersion: "1.1.0",
       validatorRef: { id: "validator.force-motion-transfer.v1", version: "1.0.0" },
       capabilityId: "capability.force-motion.zero-net-force",
@@ -128,7 +128,7 @@ const LEGACY_NODES: CurriculumNodeV1[] = [
     world: {
       worldId: "world.primary-source-reasoning",
       contentVersion: "1.0.1",
-      packageIntegrityHash: "sha256:f8c42959595156cf84ff300cfd523bc37824aceec38165bf875bab19e4b17419",
+      packageIntegrityHash: "sha256:71e60e96a1a6cb9fbd117fc6516c2f0355744e546b315482e1d17604f13a3e6f",
       runtimeBindingDigest: "sha256:b3401c71f330d82fdd31958af836683742c9e37f2f3d8cd6cf8f2a887f782029",
       runtimeProtocolVersion: "1.1.0",
       validatorRef: { id: "validator.primary-source-reasoning-transfer.v1", version: "1.0.0" },
@@ -148,7 +148,7 @@ const LEGACY_NODES: CurriculumNodeV1[] = [
     world: {
       worldId: "world.source-corroboration",
       contentVersion: "1.0.0",
-      packageIntegrityHash: "sha256:2f7900a0c3e7cfe5c993ec27b8071cc14d84dc605eef28cca041dc60b870f690",
+      packageIntegrityHash: "sha256:4002e3f6868709f4dca81ce5909140d9bffa96470487ca052f3dd529f6b8a013",
       runtimeBindingDigest: "sha256:a172f067f6135bdcec13c66053ef250ef92692db734b60ddf8e396fb8b0dc4b5",
       runtimeProtocolVersion: "1.1.0",
       validatorRef: { id: "validator.source-corroboration-transfer.v1", version: "1.0.0" },

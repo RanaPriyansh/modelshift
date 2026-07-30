@@ -272,7 +272,7 @@
   text-transform: uppercase;
 }
 
-.forge-evidence-stage-heading h2 {
+.forge-evidence-stage-heading h1 {
   max-width: 800px;
   margin: 0;
   font-family: var(--forge-evidence-serif);
@@ -1269,7 +1269,7 @@
     border-radius: 10px;
   }
 
-  .forge-evidence-stage-heading h2 {
+  .forge-evidence-stage-heading h1 {
     font-size: clamp(29px, 9vw, 40px);
   }
 

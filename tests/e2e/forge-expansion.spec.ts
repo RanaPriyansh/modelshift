@@ -24,15 +24,15 @@ test.describe("FORGE expanded learning system", () => {
 
     await expect(page.getByRole("heading", { name: "What can a photograph prove?" })).toBeVisible();
     await expect(page.locator('.forge-world-row a[href^="/learn/"]')).toHaveCount(4);
-    await expect(page.locator('a[href="/account"]')).toHaveCount(2);
+    await expect(page.locator('a[href="/sign-in"]')).toHaveCount(2);
     expect(await page.locator("html").evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
   });
 
   test("creates and restores a privacy-minimal adult device profile", async ({ page }) => {
-    await page.goto("/login");
+    await page.goto("/sign-in");
 
     await expect(page.getByRole("heading", { name: "Pick where your learning trail lives." })).toBeVisible();
-    await expect(page.getByText("Cloud identity · not configured")).toBeVisible();
+    await expect(page.getByText("Cloud identity · structurally disabled")).toBeVisible();
     await expect(page.locator('input[type="password"]')).toHaveCount(0);
 
     await page.getByRole("button", { name: "Use FORGE on this device" }).click();
@@ -47,7 +47,7 @@ test.describe("FORGE expanded learning system", () => {
   });
 
   test("requires a grown-up confirmation for a child device profile", async ({ page }) => {
-    await page.goto("/login");
+    await page.goto("/sign-in");
     await page.getByRole("radio", { name: /Child \+ grown-up/ }).check();
     const submit = page.getByRole("button", { name: "Use FORGE on this device" });
     await submit.click();
@@ -84,6 +84,91 @@ test.describe("FORGE expanded learning system", () => {
       await expect(page.getByRole("radio", { name: /Adult/ })).toBeChecked();
       await expect(page.getByTestId(/(ratio-stage-mystery|stage-mystery)/)).toHaveCount(0);
     }
+  });
+
+  test("keeps every device-mode label legible and bounded at 320px", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "The focused 320px gate regression runs once in Chromium.");
+    await page.setViewportSize({ width: 320, height: 800 });
+
+    for (const route of ["/learn/proportional-reasoning", "/learn/primary-source-reasoning"]) {
+      await page.goto(route);
+      const gate = page.getByTestId("world-device-profile-gate");
+      const modeLabels = gate.locator("fieldset > label");
+      await expect(modeLabels).toHaveCount(3);
+
+      const layout = await gate.evaluate((element) => {
+        const gateBounds = element.getBoundingClientRect();
+        return Array.from(element.querySelectorAll<HTMLLabelElement>("fieldset > label")).map((label) => {
+          const labelBounds = label.getBoundingClientRect();
+          const controlBounds = label.querySelector("input")!.getBoundingClientRect();
+          const titleBounds = label.querySelector("strong")!.getBoundingClientRect();
+          const noteBounds = label.querySelector("small")!.getBoundingClientRect();
+          return {
+            insideGate:
+              labelBounds.left >= gateBounds.left
+              && labelBounds.right <= gateBounds.right,
+            controlBeforeCopy: controlBounds.right <= Math.min(titleBounds.left, noteBounds.left),
+            copyStacked: titleBounds.bottom <= noteBounds.top + 1,
+            actionableHeight: labelBounds.height >= 44,
+          };
+        });
+      });
+
+      expect(layout).toEqual([
+        { insideGate: true, controlBeforeCopy: true, copyStacked: true, actionableHeight: true },
+        { insideGate: true, controlBeforeCopy: true, copyStacked: true, actionableHeight: true },
+        { insideGate: true, controlBeforeCopy: true, copyStacked: true, actionableHeight: true },
+      ]);
+      expect(await page.locator("html").evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+    }
+  });
+
+  test("renders every canonical public trust and access destination", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "Canonical routing is viewport-independent.");
+
+    const destinations = [
+      { path: "/paths", heading: "Learn toward something you want to do." },
+      { path: "/how-forge-works", heading: "A path is credible when every move earns its place." },
+      { path: "/trust", heading: "FORGE should be inspectable before it is impressive." },
+      { path: "/coverage", heading: "What FORGE can—and cannot—offer today." },
+      { path: "/sign-in", heading: "Pick where your learning trail lives." },
+      { path: "/app/settings", heading: "Continuity is optional. Your work stays yours." },
+      { path: "/app/evidence", heading: "Proof should say exactly what happened." },
+      { path: "/author", heading: "The author workspace is not available." },
+    ] as const;
+
+    for (const destination of destinations) {
+      await page.goto(destination.path);
+      await expect(page.getByRole("heading", { name: destination.heading })).toBeVisible();
+      await expect(page.locator("#forge-main")).toBeVisible();
+    }
+
+    await page.goto("/internal/pilot");
+    await expect(page.getByTestId("pilot-route-unavailable")).toBeVisible();
+    await expect(page.getByTestId("pilot-review-route")).toHaveCount(0);
+  });
+
+  test("redirects every legacy IA route to one exact canonical destination and keeps author denial at 200", async ({ page, request }) => {
+    const redirects = [
+      ["/pathways", "/coverage"],
+      ["/how-it-works", "/how-forge-works"],
+      ["/login", "/sign-in"],
+      ["/studio", "/author"],
+      ["/onboarding", "/start"],
+    ] as const;
+
+    for (const [legacy, canonical] of redirects) {
+      await page.goto(legacy);
+      await page.waitForURL((url) =>
+        `${url.pathname}${url.search}${url.hash}` === canonical);
+      const final = new URL(page.url());
+      expect(`${final.pathname}${final.search}${final.hash}`, legacy).toBe(canonical);
+    }
+
+    const author = await request.get("/author", { maxRedirects: 0 });
+    expect(author.status()).toBe(200);
+    expect(author.headers().location).toBeUndefined();
+    expect(await author.text()).toContain("The author workspace is not available.");
   });
 
   test("does not server-render either World from an audience query", async ({ request }) => {
@@ -138,8 +223,9 @@ test.describe("FORGE expanded learning system", () => {
   test("keeps the public Studio provider connector unavailable without server-owned adult authority", async ({ page }) => {
     await page.goto("/studio");
 
-    await expect(page.getByRole("heading", { name: "Turn a learning question into a testable lesson draft." })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Adult author connector unavailable" })).toBeVisible();
+    await expect(page).toHaveURL(/\/author$/);
+    await expect(page.getByRole("heading", { name: "The author workspace is not available." })).toBeVisible();
+    await expect(page.getByText("Author role required")).toBeVisible();
     await expect(page.getByLabel("Provider")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Generate unverified lesson draft" })).toHaveCount(0);
     await page.setViewportSize({ width: 320, height: 800 });

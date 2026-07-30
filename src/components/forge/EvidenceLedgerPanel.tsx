@@ -11,6 +11,12 @@ import {
   type EvidenceLedger,
   type EvidenceLedgerReadStatus,
 } from "@/src/lib/forge-evidence";
+import {
+  delayedReturnTiming,
+  type DelayedReturnTaskV1,
+} from "@/src/forge/continuity";
+
+import { useDeviceContinuity } from "./continuity-client";
 
 const CAPABILITIES: Readonly<Record<string, { title: string; href: string }>> = {
   "capability.force-motion.zero-net-force": {
@@ -61,11 +67,12 @@ function readableDate(timestamp: string): string {
 function capability(entry: EvidenceEntry) {
   return CAPABILITIES[entry.capabilityId] ?? {
     title: entry.capabilityId.replaceAll(/[._:-]+/g, " "),
-    href: "/#worlds",
+    href: "/paths",
   };
 }
 
 export function EvidenceLedgerPanel({ compact = false }: { compact?: boolean }) {
+  const { state: continuityState } = useDeviceContinuity();
   const [ledger, setLedger] = useState<EvidenceLedger>({ schemaVersion: 1, entries: [] });
   const [readStatus, setReadStatus] = useState<EvidenceLedgerReadStatus>("empty");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -122,6 +129,16 @@ export function EvidenceLedgerPanel({ compact = false }: { compact?: boolean }) 
     () => [...ledger.entries].sort((left, right) => Date.parse(right.recordedAt) - Date.parse(left.recordedAt)),
     [ledger],
   );
+  const delayedReturns = useMemo<readonly DelayedReturnTaskV1[]>(() => {
+    if (continuityState.phase !== "ready") return [];
+    if (
+      continuityState.result.status !== "ok"
+      && continuityState.result.status !== "empty"
+    ) return [];
+    return continuityState.result.ledger.records.flatMap(
+      (record) => record.delayedReturnTasks,
+    );
+  }, [continuityState]);
 
   function deleteEntry(entryId: string) {
     const result = createEvidenceLedgerStore(createLocalStorageEvidenceLedgerAdapter()).delete(entryId);
@@ -192,6 +209,26 @@ export function EvidenceLedgerPanel({ compact = false }: { compact?: boolean }) 
     );
   }
 
+  function downloadUnreadable() {
+    const result = createEvidenceLedgerStore(
+      createLocalStorageEvidenceLedgerAdapter(),
+    ).exportUnreadable();
+    if (!result.ok) {
+      setMessage(`The recovery copy could not be prepared (${result.reason.replaceAll("_", " ")}).`);
+      return;
+    }
+    const blob = new Blob([result.raw], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "forge-unreadable-evidence-recovery.json";
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    setMessage("Downloaded the unchanged unreadable evidence data. Nothing was removed.");
+  }
+
   if (readStatus === "storage_unavailable" || readStatus === "storage_error") {
     return (
       <section className="forge-live-ledger forge-live-ledger--unavailable" aria-labelledby="local-ledger-title">
@@ -201,6 +238,40 @@ export function EvidenceLedgerPanel({ compact = false }: { compact?: boolean }) 
         </header>
         <p>Learning Worlds still work, but this browser cannot retain a private evidence record right now. No record was saved or shared.</p>
         <button type="button" onClick={refresh}>Try local storage again</button>
+      </section>
+    );
+  }
+
+  if (readStatus === "reset_malformed" || readStatus === "reset_unknown_version") {
+    return (
+      <section className="forge-live-ledger forge-live-ledger--unavailable" aria-labelledby="local-ledger-title">
+        <header>
+          <span>Local evidence recovery</span>
+          <h2 id="local-ledger-title" ref={headingRef} tabIndex={-1}>FORGE cannot safely read this evidence version.</h2>
+        </header>
+        <p>
+          The original browser value has not been rewritten. Download the unchanged bytes before
+          removing them if you may need recovery or migration help.
+        </p>
+        <div className="forge-ledger-controls">
+          <button type="button" onClick={downloadUnreadable}>Download unchanged recovery copy</button>
+          {pendingClear ? (
+            <span
+              className="forge-ledger-confirm"
+              ref={clearConfirmRef}
+              role="group"
+              aria-label="Confirm removing unreadable local FORGE evidence"
+              tabIndex={-1}
+            >
+              Permanently remove the unreadable local value?
+              <button type="button" onClick={clearLedger}>Yes, remove it</button>
+              <button type="button" onClick={() => setPendingClear(false)}>Keep it</button>
+            </span>
+          ) : (
+            <button type="button" onClick={() => setPendingClear(true)}>Remove unreadable local data</button>
+          )}
+        </div>
+        <p className="forge-ledger-message" aria-live="polite">{message}</p>
       </section>
     );
   }
@@ -225,20 +296,45 @@ export function EvidenceLedgerPanel({ compact = false }: { compact?: boolean }) 
         <ol className="forge-ledger-list">
           {entries.map((entry) => {
             const item = capability(entry);
-            const state = deriveEvidenceState(ledger, entry.capabilityId, now);
+            const delayedReturn = delayedReturns.find(
+              (task) => task.originEvidenceEntryId === entry.id,
+            ) ?? null;
+            const delayedTiming = delayedReturn
+              ? delayedReturnTiming(delayedReturn, now)
+              : null;
+            const state = delayedTiming === "due"
+              ? "ready_to_revisit"
+              : deriveEvidenceState(ledger, entry.capabilityId, now);
             const educatorSelected = entry.sharing.status === "shared_by_learner" && entry.sharing.scope === "educator";
             return (
               <li key={entry.id}>
                 <div className="forge-ledger-record-heading">
                   <span>{STATE_LABELS[state]}</span>
-                  <h3><Link href={item.href}>{item.title}</Link></h3>
+                  <h3><Link href={`/app/evidence/${encodeURIComponent(entry.id)}`}>{item.title}</Link></h3>
                   <small>{readableDate(entry.recordedAt)}</small>
                 </div>
                 <dl>
                   <div><dt>Condition</dt><dd>{entry.proof.mode.replaceAll("_", " ")}</dd></div>
                   <div><dt>Outcome</dt><dd>{OUTCOME_LABELS[entry.proof.outcome]}</dd></div>
                   <div><dt>Support</dt><dd>{entry.assistance.length === 0 ? "No recorded support" : `${entry.assistance.length} bounded cue${entry.assistance.length === 1 ? "" : "s"}`}</dd></div>
-                  <div><dt>Return</dt><dd>{entry.returnSchedule?.nextDueAt ? readableDate(entry.returnSchedule.nextDueAt) : "Not scheduled"}</dd></div>
+                  <div>
+                    <dt>Return</dt>
+                    <dd>
+                      {delayedReturn
+                        ? delayedTiming === "completed"
+                          ? `Completed ${readableDate(delayedReturn.completedAt!)}`
+                          : delayedTiming === "due"
+                            ? `Due since ${readableDate(delayedReturn.dueAt)}`
+                            : delayedTiming === "expired"
+                              ? "Completion window closed; return untested"
+                              : `Due ${readableDate(delayedReturn.dueAt)}`
+                        : entry.source.kind === "return_challenge"
+                          ? "Completed delayed-return attempt"
+                          : entry.returnSchedule?.nextDueAt
+                            ? readableDate(entry.returnSchedule.nextDueAt)
+                            : "Not scheduled"}
+                    </dd>
+                  </div>
                 </dl>
                 <div className="forge-ledger-record-actions">
                   <button type="button" onClick={() => toggleEducatorExport(entry)} aria-pressed={educatorSelected}>

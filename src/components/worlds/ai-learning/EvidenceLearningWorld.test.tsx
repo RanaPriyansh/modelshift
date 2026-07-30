@@ -14,8 +14,19 @@ import { EvidenceLearningWorld } from "./EvidenceLearningWorld";
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   vi.clearAllMocks();
+  vi.restoreAllMocks();
 });
+
+const CHECKPOINT_IDENTITY = {
+  sessionId: "study-session.evidence-checkpoint",
+  worldId: "world.source-corroboration",
+  worldVersion: "1.0.1",
+} as const;
+
+const CHECKPOINT_KEY =
+  "forge.world-session-checkpoint:v1:study-session.evidence-checkpoint:world.source-corroboration:1.0.1";
 
 function commitEncounter(): void {
   fireEvent.click(screen.getByRole("radio", { name: /It depends/i }));
@@ -160,5 +171,79 @@ describe("EvidenceLearningWorld", () => {
     expect(screen.getByTestId("evidence-learning-world")).toHaveAttribute("data-stage", "encounter");
     expect(screen.getByRole("radio", { name: /It depends/i })).not.toBeChecked();
     expect(screen.queryByTestId("stage-result")).not.toBeInTheDocument();
+  });
+
+  it("restores accepted canonical events and the uncommitted test-prediction draft", async () => {
+    const first = render(
+      <EvidenceLearningWorld checkpointIdentity={CHECKPOINT_IDENTITY} />,
+    );
+    await screen.findByTestId("evidence-learning-world");
+    commitEncounter();
+    fireEvent.click(screen.getByTestId("accept-two-readings"));
+    fireEvent.click(screen.getByRole("radio", { name: /better support Reading 02/i }));
+    await waitFor(() => {
+      const raw = localStorage.getItem(CHECKPOINT_KEY);
+      expect(raw).toContain('"type":"COMMIT_ENCOUNTER"');
+      expect(raw).toContain('"testPrediction":"design-changes-effect"');
+    });
+    const attemptId = JSON.parse(
+      localStorage.getItem(CHECKPOINT_KEY) ?? "{}",
+    ).attemptId;
+    first.unmount();
+
+    render(<EvidenceLearningWorld checkpointIdentity={{ ...CHECKPOINT_IDENTITY }} />);
+    const restored = await screen.findByTestId("evidence-learning-world");
+    expect(restored).toHaveAttribute("data-stage", "compiler");
+    expect(screen.getByRole("radio", {
+      name: /better support Reading 02/i,
+    })).toBeChecked();
+    await waitFor(() => {
+      expect(JSON.parse(
+        localStorage.getItem(CHECKPOINT_KEY) ?? "{}",
+      ).attemptId).toBe(attemptId);
+    });
+  });
+
+  it("keeps malformed bytes untouched until explicit discard, then starts fresh", async () => {
+    const raw = "{malformed-checkpoint";
+    localStorage.setItem(CHECKPOINT_KEY, raw);
+    const onCheckpointError = vi.fn();
+
+    render(
+      <EvidenceLearningWorld
+        checkpointIdentity={CHECKPOINT_IDENTITY}
+        onCheckpointError={onCheckpointError}
+      />,
+    );
+
+    expect(await screen.findByTestId("world-checkpoint-error")).toHaveTextContent(
+      "malformed",
+    );
+    expect(onCheckpointError).toHaveBeenCalledWith("malformed");
+    expect(localStorage.getItem(CHECKPOINT_KEY)).toBe(raw);
+
+    fireEvent.click(screen.getByTestId("discard-world-checkpoint"));
+    expect(await screen.findByTestId("evidence-learning-world")).toHaveAttribute(
+      "data-stage",
+      "encounter",
+    );
+    await waitFor(() => {
+      const restarted = localStorage.getItem(CHECKPOINT_KEY);
+      expect(restarted).not.toBe(raw);
+      expect(JSON.parse(restarted ?? "{}")).toMatchObject({
+        schemaVersion: "world-session-checkpoint.v1",
+        ...CHECKPOINT_IDENTITY,
+        events: [],
+        ui: { testPrediction: null },
+      });
+    });
+  });
+
+  it("does not access checkpoint storage in direct guest mode", () => {
+    const getItem = vi.spyOn(Storage.prototype, "getItem");
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    render(<EvidenceLearningWorld />);
+    expect(getItem).not.toHaveBeenCalled();
+    expect(setItem).not.toHaveBeenCalled();
   });
 });

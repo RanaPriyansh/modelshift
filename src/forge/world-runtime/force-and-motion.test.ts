@@ -63,18 +63,18 @@ function transfer(choiceId: "returns_to_zero" | "stays_constant_after_force" | "
 }
 
 describe("Force & Motion World runtime adapter", () => {
-  it("binds the existing Force pack without inventing source authority or return proof", () => {
+  it("binds the Force pack to its reviewed local delayed-return family without inventing source authority", () => {
     const lint = lintWorldRuntimePack(FORCE_AND_MOTION_WORLD);
     expect(lint.ok).toBe(true);
     if (!lint.ok) return;
     expect(lint.pack).toMatchObject({
-      manifest: { version: "1.0.1" },
+      manifest: { version: "1.0.2" },
       release: { contentVersion: "1.0.0" },
       runtime: {
         protocolVersion: "1.1.0",
         evidence: { receiptSchemaVersion: "1.1.0" },
         support: { policyId: "policy.force-and-motion.interpretation.v1" },
-        returnProof: { enabled: false },
+        returnProof: { enabled: true, policyId: "policy.force-and-motion.delayed-return.v1" },
         sourceBindings: [{
           domainSourceRef: "source.openstax.newtons-first-law",
           sourceItemId: "source.openstax.newtons-first-law",
@@ -88,8 +88,10 @@ describe("Force & Motion World runtime adapter", () => {
       expect.objectContaining({ id: "action.force-and-motion.support.attention", kind: "instructional_support" }),
     ]));
     expect(FORCE_AND_MOTION_WORLD.manifest.returnProof).toMatchObject({
-      enabled: false,
-      reason: "No reviewed delayed task family or scheduler is published.",
+      enabled: true,
+      delayDays: [7],
+      completionWindowDays: 30,
+      taskFamilyId: "task-family.force-motion.delayed-velocity-return.v1",
     });
   });
 
@@ -130,7 +132,7 @@ describe("Force & Motion World runtime adapter", () => {
       authority: { proofAuthority: "honour_based", persistence: "not_persisted", isDurable: false },
       world: {
         id: "world.force-and-motion",
-        version: "1.0.1",
+        version: "1.0.2",
         contentVersion: "1.0.0",
         taskFamilyId: "task-family.force-motion.cargo-pod-cold-transfer.v1",
       },

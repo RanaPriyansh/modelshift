@@ -41,8 +41,8 @@ const BINDING_IMPORT_ORDER_CASES: readonly BindingImportOrderCase[] = [
     worldsModule: "./src/forge/worlds.ts",
     worldExport: "FORCE_AND_MOTION_WORLD",
     taskCode: "cargo_pod_force_graph",
-    runtimeBindingDigest: "sha256:9ac8b15244c5839abc4e0644564699a8b0b5fff9d7fc8603d6181fd739d85c54",
-    packageIntegrityHash: "sha256:975d00b8f7b7b25f2323a0ba2fe7712bcf6d5221212c86e67f0520021e76b783",
+    runtimeBindingDigest: "sha256:318d3d0e0e6b98f7cbfbcce003e13b621346c5b6e0bf60bf72c904dd4ca8e597",
+    packageIntegrityHash: "sha256:0b4ee9c6329d038e42903e009c74b18005c60a65fe32c2770130fdbd4f72e36e",
   },
   {
     name: "Proportional Reasoning",
@@ -52,7 +52,7 @@ const BINDING_IMPORT_ORDER_CASES: readonly BindingImportOrderCase[] = [
     worldExport: "PROPORTIONAL_REASONING_WORLD",
     taskCode: "map_scale_transfer",
     runtimeBindingDigest: "sha256:b2f134f91ee9cd71750e19c8b440751bcf93415aec10a254e1b0ac491e8840c1",
-    packageIntegrityHash: "sha256:b8430668c5b061415aa5ec24bb8e62ae4a4e4c95a808c7a65b04e3ff78a8a353",
+    packageIntegrityHash: "sha256:f55197c4985ae4a2964f40411a2ded4c8519779ea8dab046ccc211a64e8fb0e4",
   },
   {
     name: "Source Corroboration",
@@ -62,7 +62,7 @@ const BINDING_IMPORT_ORDER_CASES: readonly BindingImportOrderCase[] = [
     worldExport: "SOURCE_CORROBORATION_WORLD",
     taskCode: "source_corroboration_transfer",
     runtimeBindingDigest: "sha256:a172f067f6135bdcec13c66053ef250ef92692db734b60ddf8e396fb8b0dc4b5",
-    packageIntegrityHash: "sha256:2f7900a0c3e7cfe5c993ec27b8071cc14d84dc605eef28cca041dc60b870f690",
+    packageIntegrityHash: "sha256:4002e3f6868709f4dca81ce5909140d9bffa96470487ca052f3dd529f6b8a013",
   },
   {
     name: "Primary Source Reasoning",
@@ -72,7 +72,7 @@ const BINDING_IMPORT_ORDER_CASES: readonly BindingImportOrderCase[] = [
     worldExport: "PRIMARY_SOURCE_REASONING_WORLD",
     taskCode: "washington_street_1937_transfer",
     runtimeBindingDigest: "sha256:b3401c71f330d82fdd31958af836683742c9e37f2f3d8cd6cf8f2a887f782029",
-    packageIntegrityHash: "sha256:f8c42959595156cf84ff300cfd523bc37824aceec38165bf875bab19e4b17419",
+    packageIntegrityHash: "sha256:71e60e96a1a6cb9fbd117fc6516c2f0355744e546b315482e1d17604f13a3e6f",
   },
   {
     name: "Argument & Evidence retained internal",
@@ -82,7 +82,7 @@ const BINDING_IMPORT_ORDER_CASES: readonly BindingImportOrderCase[] = [
     worldExport: "ARGUMENT_EVIDENCE_WORLD",
     taskCode: "bus_route_late_arrivals_table",
     runtimeBindingDigest: "sha256:a38c116d6b81e0e30f2f5d711c0f19346eefc76504859b3fc929c317731ab9fc",
-    packageIntegrityHash: "sha256:6529ad6571852c31eadd49a30b7889c7da46ff1268dfa9bc4579bb69ba4d07d1",
+    packageIntegrityHash: "sha256:c60de18c1bd0cf910379c76fde69d3eb5bd9f9952b21f27d2c25a9a5e796b6df",
   },
 ];
 
@@ -177,7 +177,7 @@ describe("runtime binding definition-time immutability", () => {
     expect(result.mutationSucceeded).toBe(true);
     expect(result.identity).toEqual({
       runtimeBindingDigest: "sha256:b2f134f91ee9cd71750e19c8b440751bcf93415aec10a254e1b0ac491e8840c1",
-      packageIntegrityHash: "sha256:b8430668c5b061415aa5ec24bb8e62ae4a4e4c95a808c7a65b04e3ff78a8a353",
+      packageIntegrityHash: "sha256:f55197c4985ae4a2964f40411a2ded4c8519779ea8dab046ccc211a64e8fb0e4",
     });
   });
 });

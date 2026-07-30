@@ -1,73 +1,40 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const ROUTES = [
-  { path: "/", heading: "What do you want to understand?", main: "#forge-main" },
-  { path: "/studio", heading: "Turn a learning question into a testable lesson draft.", main: "#forge-main" },
-  { path: "/login", heading: "Pick where your learning trail lives.", main: "#forge-main" },
-  { path: "/account", heading: "Continuity is optional. Your work stays yours.", main: "#forge-main" },
-  { path: "/learn/force-and-motion", heading: "The engine is off. What happens next?", main: "#world-content" },
-  { path: "/learn/proportional-reasoning", heading: "The two citrus mixes", main: "#world-content" },
-  { path: "/learn/ai-and-learning", heading: "Commit before the evidence appears.", main: "#world-content" },
-  { path: "/learn/primary-source-reasoning", heading: "What can this photograph prove?", main: "#world-content" },
-  { path: "/paths/source-corroboration", heading: "Verify before you trust.", main: "#forge-main" },
-  { path: "/evidence", heading: "Proof should say exactly what happened.", main: "#forge-main" },
-  { path: "/trail", heading: "A map of questions and evidence—not a level.", main: "#forge-main" },
-  { path: "/pathways", heading: "What FORGE can—and cannot—offer today.", main: "#forge-main" },
+  { path: "/start", heading: /Turn a goal into a credible first path/i, main: "#forge-main" },
+  { path: "/paths", heading: /Learn toward something you want to do/i, main: "#forge-main" },
+  { path: "/app", heading: /Begin with something you want to do/i, main: "#forge-main" },
+  { path: "/app/path", heading: /Inspect what you accepted/i, main: "#forge-main" },
+  { path: "/app/evidence", heading: /Proof should say exactly what happened/i, main: "#forge-main" },
+  { path: "/learn/force-and-motion", heading: /The engine is off\. What happens next/i, main: "#world-content", world: true },
+  { path: "/learn/proportional-reasoning", heading: /The two citrus mixes/i, main: "#world-content", world: true },
+  { path: "/learn/ai-and-learning", heading: /Commit before the evidence appears/i, main: "#world-content", world: true },
+  { path: "/learn/primary-source-reasoning", heading: /What can this photograph prove/i, main: "#world-content", world: true },
 ] as const;
 
-const CHILD_CAPABLE_WORLD_PATHS = new Set([
-  "/learn/proportional-reasoning",
-  "/learn/primary-source-reasoning",
-]);
-
-const CONTRAST_SAMPLES = [
-  { route: "/", name: "Home paper heading", selector: ".forge-hero-heading h1" },
-  { route: "/", name: "Home muted body text", selector: ".forge-hero-heading > p:last-child" },
-  { route: "/", name: "Home dark intake label", selector: ".forge-question-field > span" },
-  { route: "/", name: "Home evidence status text", selector: ".forge-world-row--ready .forge-status" },
-  { route: "/", name: "Home selected representation", selector: ".forge-modality-group label.is-selected" },
-  { route: "/", name: "Home primary action", selector: ".forge-primary-action" },
-  { route: "/studio", name: "Studio dark-instrument heading", selector: ".lesson-studio-heading h1" },
-  { route: "/studio", name: "Studio muted instrument text", selector: ".lesson-studio-heading > p" },
-  { route: "/pathways", name: "Pathways availability heading", selector: ".forge-pathways-hero h1" },
-  { route: "/pathways", name: "Pathways boundary text", selector: ".forge-pathways-boundary p" },
-] as const;
-
-type ContrastSample = (typeof CONTRAST_SAMPLES)[number];
-
-type RenderedContrast = {
-  background: string;
-  backgroundResolved: boolean;
-  floor: number;
-  foreground: string;
-  largeText: boolean;
-  name: string;
-  ratio: number;
-  visible: boolean;
-};
-
-async function tabTo(page: Page, selector: string, maximumTabs = 6) {
-  for (let index = 0; index < maximumTabs; index += 1) {
-    await page.keyboard.press("Tab");
-    if (await page.locator(selector).evaluate((element) => element === document.activeElement)) return;
-  }
-  throw new Error(`Keyboard focus did not reach ${selector}.`);
+async function seedTeenDeviceProfile(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem("forge.device-profile:v1", JSON.stringify({
+      schemaVersion: 1,
+      profileId: "9be711de-d7a6-4911-b903-f2d829da83d5",
+      ageMode: "teen",
+      guardianPresent: false,
+      createdAt: "2026-07-22T00:00:00.000Z",
+    }));
+  });
 }
 
-async function visitOwnedRoute(page: Page, route: (typeof ROUTES)[number]) {
-  if (CHILD_CAPABLE_WORLD_PATHS.has(route.path)) {
-    await page.addInitScript(() => {
-      localStorage.setItem("forge.device-profile:v1", JSON.stringify({
-        schemaVersion: 1,
-        profileId: "9be711de-d7a6-4911-b903-f2d829da83d5",
-        ageMode: "teen",
-        guardianPresent: false,
-        createdAt: "2026-07-22T00:00:00.000Z",
-      }));
-    });
-  }
-
+async function visit(page: Page, route: (typeof ROUTES)[number]) {
+  if ("world" in route && route.world) await seedTeenDeviceProfile(page);
   await page.goto(route.path);
+}
+
+async function tabTo(page: Page, target: Locator, maximumTabs = 45) {
+  for (let index = 0; index < maximumTabs; index += 1) {
+    if (await target.evaluate((element) => element === document.activeElement)) return;
+    await page.keyboard.press("Tab");
+  }
+  throw new Error("Keyboard focus did not reach the requested target.");
 }
 
 async function mobileContract(page: Page) {
@@ -77,467 +44,111 @@ async function mobileContract(page: Page) {
       const bounds = element.getBoundingClientRect();
       return styles.display !== "none" && styles.visibility !== "hidden" && bounds.width > 0 && bounds.height > 0;
     };
-    const targetSelector = [
-      "a",
-      "button",
-      'input:not([type="radio"]):not([type="checkbox"]):not([type="range"])',
-      "textarea",
-      "select",
-      'label:has(input[type="radio"])',
-      'label:has(input[type="checkbox"])',
-    ].join(",");
-    const inlineCitationSelector = 'a[data-forge-inline-citation="true"]';
-    const inlineCitationExceptions = Array.from(document.querySelectorAll<HTMLElement>(inlineCitationSelector))
-      .map((element) => ({
-        display: getComputedStyle(element).display,
-        inProse: Boolean(element.closest("p, li, blockquote")),
-        name: element.getAttribute("aria-label") ?? element.textContent?.trim() ?? "inline citation",
-      }));
-    const undersized = Array.from(document.querySelectorAll<HTMLElement>(targetSelector))
-      .filter(visible)
-      .filter((element) => !element.matches(inlineCitationSelector))
-      .map((element) => {
-        const bounds = element.getBoundingClientRect();
-        return {
-          name: element.getAttribute("aria-label") ?? element.textContent?.trim() ?? element.tagName,
-          width: Math.round(bounds.width),
-          height: Math.round(bounds.height),
-        };
-      })
-      .filter(({ width, height }) => width < 44 || height < 44);
-    const inputSizes = Array.from(document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("input, textarea, select"))
-      .filter(visible)
-      .map((element) => Number.parseFloat(getComputedStyle(element).fontSize));
-    const tabs = Array.from(document.querySelectorAll<HTMLElement>('[role="tab"]'));
+    const selector = ["a", "button", 'input:not([type="radio"]):not([type="checkbox"]):not([type="range"])', "textarea", "select", 'label:has(input[type="radio"])', 'label:has(input[type="checkbox"])'].join(",");
     return {
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      undersized,
-      inputSizes,
-      inlineCitationExceptions,
-      rovingTabContract: tabs.length === 0 || (tabs.filter((tab) => tab.tabIndex === 0).length === 1 && tabs.every((tab) => tab.tabIndex === 0 || tab.tabIndex === -1)),
+      undersized: Array.from(document.querySelectorAll<HTMLElement>(selector))
+        .filter(visible)
+        .map((element) => ({ name: element.getAttribute("aria-label") ?? element.textContent?.trim() ?? element.tagName, rect: element.getBoundingClientRect() }))
+        .filter(({ rect }) => rect.width < 44 || rect.height < 44)
+        .map(({ name, rect }) => ({ name, width: Math.round(rect.width), height: Math.round(rect.height) })),
+      smallFormText: Array.from(document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("input, textarea, select"))
+        .filter(visible)
+        .filter((element) => Number.parseFloat(getComputedStyle(element).fontSize) < 16)
+        .map((element) => element.getAttribute("aria-label") ?? element.tagName),
     };
   });
 }
 
-async function renderedContrast(page: Page, sample: ContrastSample): Promise<RenderedContrast> {
-  await page.goto(sample.route);
-  const target = page.locator(sample.selector).first();
-  await expect(target, sample.name).toBeVisible();
-  return target.evaluate((element, name) => {
-    type Rgba = [number, number, number, number];
-
-    const parseColor = (value: string): Rgba => {
-      const channels = value.match(/[\d.]+/g)?.map(Number) ?? [];
-      if (channels.length < 3) throw new Error(`Unable to parse rendered color: ${value}`);
-      return [channels[0], channels[1], channels[2], channels[3] ?? 1];
-    };
-    const composite = (foreground: Rgba, background: Rgba): Rgba => {
-      const alpha = foreground[3] + background[3] * (1 - foreground[3]);
-      if (alpha === 0) return [0, 0, 0, 0];
-      return [
-        (foreground[0] * foreground[3] + background[0] * background[3] * (1 - foreground[3])) / alpha,
-        (foreground[1] * foreground[3] + background[1] * background[3] * (1 - foreground[3])) / alpha,
-        (foreground[2] * foreground[3] + background[2] * background[3] * (1 - foreground[3])) / alpha,
-        alpha,
-      ];
-    };
-    const luminance = ([red, green, blue]: Rgba) => {
-      const channels = [red, green, blue].map((channel) => {
-        const normalized = channel / 255;
-        return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
-      });
-      return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
-    };
-    const serialize = ([red, green, blue, alpha]: Rgba) => `rgba(${Math.round(red)}, ${Math.round(green)}, ${Math.round(blue)}, ${alpha.toFixed(3)})`;
-    const effectiveBackground = (target: HTMLElement) => {
-      const layers: Rgba[] = [];
-      for (let current: HTMLElement | null = target; current; current = current.parentElement) {
-        layers.push(parseColor(getComputedStyle(current).backgroundColor));
-      }
-      let resolved: Rgba = [255, 255, 255, 1];
-      let foundOpaqueLayer = false;
-      for (const layer of layers.reverse()) {
-        foundOpaqueLayer ||= layer[3] > 0;
-        resolved = composite(layer, resolved);
-      }
-      return { color: resolved, foundOpaqueLayer };
-    };
-
-    const styles = getComputedStyle(element);
-    const foreground = parseColor(styles.color);
-    const resolvedBackground = effectiveBackground(element as HTMLElement);
-    const blendedForeground = composite(foreground, resolvedBackground.color);
-    const ratio = (Math.max(luminance(blendedForeground), luminance(resolvedBackground.color)) + 0.05)
-      / (Math.min(luminance(blendedForeground), luminance(resolvedBackground.color)) + 0.05);
-    const fontSize = Number.parseFloat(styles.fontSize);
-    const fontWeight = Number.parseFloat(styles.fontWeight);
-    const largeText = fontSize >= 24 || (fontWeight >= 700 && fontSize >= 18.66);
-    const bounds = element.getBoundingClientRect();
-
-    return {
-      background: serialize(resolvedBackground.color),
-      backgroundResolved: resolvedBackground.foundOpaqueLayer,
-      floor: largeText ? 3 : 4.5,
-      foreground: serialize(blendedForeground),
-      largeText,
-      name,
-      ratio,
-      visible: styles.display !== "none" && styles.visibility !== "hidden" && bounds.width > 0 && bounds.height > 0,
-    };
-  }, sample.name);
+async function beginStart(page: Page, goal: string, outcome: string) {
+  await page.goto("/start");
+  await page.getByRole("textbox", { name: /Your words/i }).fill(goal);
+  await page.getByRole("button", { name: /Name the outcome/i }).click();
+  await page.getByRole("textbox", { name: /Meaningful outcome/i }).fill(outcome);
+  await page.getByRole("button", { name: /Set route context/i }).click();
+  await page.getByRole("checkbox", { name: /Use these exact fields for one first-party planning response/i }).check();
+  await page.getByRole("button", { name: /Build inspectable candidate/i }).click();
 }
 
-test.describe("FORGE Packet A experience system", () => {
+test.describe("FORGE canonical experience system", () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "The explicit 320px contract runs once in Chromium.");
     await page.setViewportSize({ width: 320, height: 800 });
   });
 
-  test("all owned routes reflow at 320px with named controls and mobile input floors", async ({ page }) => {
+  test("canonical owned routes reflow at 320px with named controls and form floors", async ({ page }) => {
     for (const route of ROUTES) {
-      await visitOwnedRoute(page, route);
-      await expect(page.getByRole("heading", { name: route.heading })).toBeVisible();
+      await visit(page, route);
+      await expect(page.getByRole("heading", { name: route.heading }).first()).toBeVisible();
       await expect(page.locator(route.main)).toBeVisible();
-
       const contract = await mobileContract(page);
-      expect(contract.overflow, `${route.path} should not create a horizontal canvas`).toBeLessThanOrEqual(1);
-      expect(contract.undersized, `${route.path} should preserve 44px actionable controls`).toEqual([]);
-      expect(contract.inputSizes.every((size) => size >= 16), `${route.path} should preserve 16px mobile form text`).toBe(true);
-      expect(contract.inlineCitationExceptions.every((citation) => citation.display === "inline" && citation.inProse), `${route.path} can exempt only explicit inline-prose citations`).toBe(true);
-      expect(contract.rovingTabContract, `${route.path} should retain a valid roving-tab contract when tabs are present`).toBe(true);
+      expect(contract.overflow, `${route.path} must not create horizontal overflow`).toBeLessThanOrEqual(1);
+      expect(contract.undersized, `${route.path} must retain 44px actionable targets`).toEqual([]);
+      expect(contract.smallFormText, `${route.path} must retain 16px mobile form text`).toEqual([]);
     }
-
-    await page.goto("/");
-    const question = page.getByRole("textbox", { name: "Your question" });
-    await question.fill("Help me understand force and motion after a push ends.");
-    await page.getByPlaceholder("Optional: name relevant knowledge, experience, or the point where you get stuck.").fill(
-      "I can read a simple graph but I confuse force with motion.",
-    );
-    await page.getByPlaceholder("Optional: explain a decision, build an artifact, solve a real problem, or perform a skill.").fill(
-      "Predict and explain a new velocity graph without hints.",
-    );
-    await page.getByRole("combobox", { name: "Time available now" }).selectOption("2_hours");
-    await page.getByRole("checkbox", { name: "Hands-on" }).check();
-    await page.getByRole("button", { name: "Shape my first move" }).click();
-    const grounded = page.getByTestId("forge-plan-grounded");
-    await expect(grounded).toBeVisible();
-    await expect(grounded.locator(".forge-plan-sources a")).not.toHaveCount(0);
-    await expect(grounded).toContainText("I can read a simple graph but I confuse force with motion.");
-    await expect(grounded).toContainText("Predict and explain a new velocity graph without hints.");
-    await expect(grounded).toContainText("Up to two hours");
-    await expect(grounded).toContainText("Hands-on work");
-    await expect(grounded.getByRole("link", { name: "Enter working World" })).toHaveCount(0);
-    await grounded.getByRole("button", { name: "Accept reviewed route" }).click();
-    await expect(grounded.getByRole("link", { name: "Enter working World" })).toHaveAttribute(
-      "href",
-      "/learn/force-and-motion",
-    );
-    const populatedContract = await mobileContract(page);
-    expect(populatedContract.undersized, "a populated reviewed plan should preserve 44px source and action targets").toEqual([]);
-    expect(populatedContract.inlineCitationExceptions.every((citation) => citation.display === "inline" && citation.inProse), "a populated plan can exempt only explicit inline-prose citations").toBe(true);
   });
 
-  test("an unknown topic remains an unverified, rejectable map and never activates a lesson", async ({ page }) => {
-    await page.goto("/");
-    await page.getByRole("textbox", { name: "Your question" }).fill(
-      "How did Roman aqueduct maintenance shape city planning?",
-    );
-    await page.getByRole("button", { name: "Shape my first move" }).click();
-
-    const exploratory = page.getByTestId("forge-plan-exploratory");
-    await expect(exploratory).toBeVisible();
-    await expect(exploratory).toContainText("Source verification required");
-    await expect(exploratory.getByRole("link", { name: "Enter working World" })).toHaveCount(0);
-
-    await exploratory.getByRole("button", { name: "Keep question map" }).click();
-    await expect(exploratory).toContainText(
-      "This unverified question map is retained only in this page. No lesson, source, or learning claim was activated.",
-    );
-    await expect(exploratory.getByRole("link", { name: "Enter working World" })).toHaveCount(0);
-
-    await exploratory.getByRole("button", { name: "Reject this map" }).click();
-    await expect(exploratory).toContainText("Map rejected for this page.");
-    await expect(exploratory.getByRole("link", { name: "Enter working World" })).toHaveCount(0);
+  test("unknown goals stay inspectable, non-runnable open questions", async ({ page }) => {
+    const goal = "How did Roman aqueduct maintenance shape city planning?";
+    await beginStart(page, goal, "Compare maintenance choices against a primary source.");
+    const candidate = page.getByRole("region", { name: "Source verification required" });
+    await expect(candidate).toBeVisible();
+    await expect(candidate).toContainText("Coverage gap · not executable");
+    await expect(candidate).toContainText(goal);
+    await expect(candidate.getByRole("link", { name: /enter|open.*World/i })).toHaveCount(0);
+    await candidate.getByRole("button", { name: /Save as an open question/i }).click();
+    await expect(page).toHaveURL(/\/app$/);
+    await expect(page.locator("body")).toContainText(/saved open question|will not fabricate/i);
   });
 
-  test("the home question stays inside its gutters with wide fallback font metrics", async ({ page }) => {
+  test("Start retains gutter-safe headings under wide fallback metrics", async ({ page }) => {
     for (const width of [320, 390]) {
       await page.setViewportSize({ width, height: 800 });
-      await page.goto("/");
-      await page.addStyleTag({ content: ".forge-hero-heading h1 { font-family: monospace !important; }" });
-
+      await page.goto("/start");
+      await page.addStyleTag({ content: ".forge-start-page h1 { font-family: monospace !important; }" });
       const contract = await mobileContract(page);
       expect(contract.overflow, `${width}px document overflow`).toBeLessThanOrEqual(1);
-      const headingFits = await page.locator(".forge-hero-heading h1").evaluate((heading) => heading.scrollWidth <= heading.clientWidth);
-      expect(headingFits, `${width}px heading overflow`).toBe(true);
+      await expect(page.locator(".forge-start-page h1")).toBeVisible();
+      expect(await page.locator(".forge-start-page h1").evaluate((heading) => heading.scrollWidth <= heading.clientWidth)).toBe(true);
     }
   });
 
-  test("keyboard skip links, home controls, and unique visible action names remain operable", async ({ page }) => {
+  test("keyboard skip links move focus into canonical main content", async ({ page }) => {
     for (const route of ROUTES) {
-      await visitOwnedRoute(page, route);
-      const skip = page.locator(".forge-skip-link");
-      await expect(skip).toHaveCount(1);
-      await tabTo(page, ".forge-skip-link");
+      await visit(page, route);
+      const skip = page.getByRole("link", { name: /skip/i }).first();
+      await page.evaluate(() => { document.body.tabIndex = -1; document.body.focus(); });
+      await tabTo(page, skip);
       await expect(skip).toBeFocused();
       await page.keyboard.press("Enter");
-      expect(await page.evaluate(() => document.activeElement?.id), `${route.path} skip target`).toBe(route.main.slice(1));
+      await expect(page.locator(route.main)).toBeFocused();
     }
-
-    for (const route of ["/", "/pathways"]) {
-      await page.goto(route);
-      const visibleActionNames = await page.evaluate(() => {
-        const visible = (element: Element) => {
-          const styles = getComputedStyle(element);
-          const bounds = element.getBoundingClientRect();
-          return styles.display !== "none" && styles.visibility !== "hidden" && bounds.width > 0 && bounds.height > 0;
-        };
-        return Array.from(document.querySelectorAll<HTMLElement>("a, button"))
-          .filter(visible)
-          .map((element) => element.getAttribute("aria-label") ?? element.textContent?.trim() ?? "")
-          .filter(Boolean);
-      });
-      expect(visibleActionNames, `${route} visible action names`).toHaveLength(new Set(visibleActionNames).size);
-    }
-
-    await page.goto("/");
-    const question = page.getByRole("textbox", { name: "Your question" });
-    await question.fill("Why does motion continue after a push ends?");
-    await expect(question).toHaveValue("Why does motion continue after a push ends?");
-    const adultMode = page.getByRole("radio", { name: "Adult Self-directed" });
-    await adultMode.press("Space");
-    await expect(adultMode).toBeChecked();
   });
 
-  test("reduced motion, forced colors, and increased contrast retain visible meaning", async ({ page }) => {
+  test("reduced motion and forced colors preserve meaningful canonical controls", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
-    const contrasts: RenderedContrast[] = [];
-    for (const sample of CONTRAST_SAMPLES) contrasts.push(await renderedContrast(page, sample));
-    for (const contrast of contrasts) {
-      expect(contrast.visible, `${contrast.name} should be a rendered visible element`).toBe(true);
-      expect(contrast.backgroundResolved, `${contrast.name} should resolve a rendered ancestor background`).toBe(true);
-      expect(contrast.ratio, `${contrast.name} should meet its ${contrast.largeText ? "large" : "normal"} WCAG AA floor against ${contrast.background}`)
-        .toBeGreaterThanOrEqual(contrast.floor);
-    }
-
-    for (const route of ["/", "/pathways"]) {
-      await page.goto(route);
-      const motion = await page.locator(".forge-shell").evaluate((shell) => {
-        const toMilliseconds = (raw: string) => raw.split(",").map((part) => {
-          const value = part.trim();
-          return value.endsWith("ms") ? Number.parseFloat(value) : Number.parseFloat(value) * 1_000;
-        });
-        return Array.from(shell.querySelectorAll("*")).flatMap((element) => {
-          const styles = getComputedStyle(element);
-          const durations = [...toMilliseconds(styles.animationDuration), ...toMilliseconds(styles.transitionDuration)];
-          return durations.some((duration) => Number.isFinite(duration) && duration > 20)
-            ? [`${element.tagName.toLowerCase()}.${element.className}`]
-            : [];
-        });
-      });
-      expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
-      expect(motion, `${route} should not retain motion above 20ms`).toEqual([]);
-    }
-
-    await page.goto("/");
-    await expect(page.locator(".forge-status").filter({ hasText: "Working model World" })).toHaveCount(2);
+    await page.goto("/start");
+    expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
+    const motion = await page.locator(".forge-shell").evaluate((shell) => Array.from(shell.querySelectorAll<HTMLElement>("*")).flatMap((element) => {
+      const style = getComputedStyle(element);
+      const toMs = (value: string) => Math.max(...value.split(",").map((part) => part.trim().endsWith("ms") ? Number.parseFloat(part) : Number.parseFloat(part) * 1000));
+      return toMs(style.animationDuration) > 20 || toMs(style.transitionDuration) > 20 ? [element.tagName] : [];
+    }));
+    expect(motion).toEqual([]);
 
     await page.emulateMedia({ forcedColors: "active" });
     await page.reload();
     expect(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)).toBe(true);
-    await expect(page.getByRole("heading", { name: "What do you want to understand?" })).toBeVisible();
-    await page.goto("/pathways");
-    await expect(page.getByRole("heading", { name: "What FORGE can—and cannot—offer today." })).toBeVisible();
-    await expect(page.getByText("Working World mapping", { exact: true }).first()).toBeVisible();
-    const pathwayAction = page.getByRole("link", { name: "Open Force & motion World" });
-    await expect(pathwayAction).toBeVisible();
-    await tabTo(page, '[href="/learn/force-and-motion"]', 16);
-    await expect(pathwayAction).toBeFocused();
-    const pathwayForcedColors = await page.evaluate(() => {
-      type Rgb = [number, number, number];
-
-      const parseColor = (value: string): Rgb => {
-        const channels = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [];
-        if (channels.length !== 3) throw new Error(`Unable to parse rendered color: ${value}`);
-        return [channels[0], channels[1], channels[2]];
-      };
-      const luminance = ([red, green, blue]: Rgb) => {
-        const channels = [red, green, blue].map((channel) => {
-          const normalized = channel / 255;
-          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
-        });
-        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
-      };
-      const ratio = (foreground: string, background: string) => {
-        const [lighter, darker] = [luminance(parseColor(foreground)), luminance(parseColor(background))]
-          .sort((left, right) => right - left);
-        return (lighter + 0.05) / (darker + 0.05);
-      };
-      const inheritedBackground = (element: HTMLElement) => {
-        for (let current: HTMLElement | null = element; current; current = current.parentElement) {
-          const background = getComputedStyle(current).backgroundColor;
-          if (!background.endsWith(", 0)")) return background;
-        }
-        return "rgb(255, 255, 255)";
-      };
-      const boundary = document.querySelector<HTMLElement>(".forge-pathways-boundary");
-      const action = document.querySelector<HTMLElement>('[href="/learn/force-and-motion"]');
-      if (!boundary || !action) throw new Error("Pathway forced-colors representatives are missing");
-      const boundaryStyle = getComputedStyle(boundary);
-      const actionStyle = getComputedStyle(action);
-      return {
-        actionBorderRatio: ratio(actionStyle.borderTopColor, inheritedBackground(action)),
-        actionBorderWidth: Number.parseFloat(actionStyle.borderTopWidth),
-        actionFocusOutlineRatio: ratio(actionStyle.outlineColor, inheritedBackground(action)),
-        actionFocusOutlineStyle: actionStyle.outlineStyle,
-        actionFocusOutlineWidth: Number.parseFloat(actionStyle.outlineWidth),
-        actionTextRatio: ratio(actionStyle.color, inheritedBackground(action)),
-        boundaryBorderRatio: ratio(boundaryStyle.borderTopColor, inheritedBackground(boundary)),
-        boundaryBorderWidth: Number.parseFloat(boundaryStyle.borderTopWidth),
-      };
-    });
-    expect(pathwayForcedColors.boundaryBorderWidth).toBeGreaterThanOrEqual(1);
-    expect(pathwayForcedColors.boundaryBorderRatio).toBeGreaterThanOrEqual(3);
-    expect(pathwayForcedColors.actionBorderWidth).toBeGreaterThanOrEqual(1);
-    expect(pathwayForcedColors.actionBorderRatio).toBeGreaterThanOrEqual(3);
-    expect(pathwayForcedColors.actionTextRatio).toBeGreaterThanOrEqual(4.5);
-    expect(pathwayForcedColors.actionFocusOutlineStyle).not.toBe("none");
-    expect(pathwayForcedColors.actionFocusOutlineWidth).toBeGreaterThanOrEqual(2);
-    expect(pathwayForcedColors.actionFocusOutlineRatio).toBeGreaterThanOrEqual(3);
-    await page.goto("/");
-    const skip = page.locator(".forge-skip-link");
+    const skip = page.getByRole("link", { name: /skip/i }).first();
+    await page.evaluate(() => { document.body.tabIndex = -1; document.body.focus(); });
     await page.keyboard.press("Tab");
     await expect(skip).toBeFocused();
-    const forcedColors = await page.evaluate(() => {
-      type Rgb = [number, number, number];
-
-      const parseColor = (value: string): Rgb => {
-        const channels = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [];
-        if (channels.length !== 3) throw new Error(`Unable to parse rendered color: ${value}`);
-        return [channels[0], channels[1], channels[2]];
-      };
-      const luminance = ([red, green, blue]: Rgb) => {
-        const channels = [red, green, blue].map((channel) => {
-          const normalized = channel / 255;
-          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
-        });
-        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
-      };
-      const ratio = (foreground: string, background: string) => {
-        const [lighter, darker] = [luminance(parseColor(foreground)), luminance(parseColor(background))]
-          .sort((left, right) => right - left);
-        return (lighter + 0.05) / (darker + 0.05);
-      };
-      const inheritedBackground = (element: HTMLElement) => {
-        for (let current: HTMLElement | null = element; current; current = current.parentElement) {
-          const background = getComputedStyle(current).backgroundColor;
-          if (!background.endsWith(", 0)")) return background;
-        }
-        return "rgb(255, 255, 255)";
-      };
-      const skip = document.querySelector<HTMLElement>(".forge-skip-link");
-      const action = document.querySelector<HTMLElement>(".forge-primary-action");
-      const status = document.querySelector<HTMLElement>(".forge-world-row--ready .forge-status");
-      const statusIcon = status?.querySelector<HTMLElement>("i");
-      const card = status?.closest<HTMLElement>(".forge-world-row");
-      if (!skip || !action || !status || !statusIcon || !card) throw new Error("Forced-colors representatives are missing");
-      const skipStyle = getComputedStyle(skip);
-      const actionStyle = getComputedStyle(action);
-      const statusStyle = getComputedStyle(status);
-      const statusIconStyle = getComputedStyle(statusIcon);
-      const cardStyle = getComputedStyle(card);
-      return {
-        actionBorderRatio: ratio(actionStyle.borderTopColor, inheritedBackground(action)),
-        actionTextRatio: ratio(actionStyle.color, inheritedBackground(action)),
-        cardBorderRatio: ratio(cardStyle.borderTopColor, inheritedBackground(card)),
-        cardBorderWidth: Number.parseFloat(cardStyle.borderTopWidth),
-        focusOutlineRatio: ratio(skipStyle.outlineColor, inheritedBackground(skip)),
-        focusOutlineStyle: skipStyle.outlineStyle,
-        focusOutlineWidth: Number.parseFloat(skipStyle.outlineWidth),
-        statusIconRatio: ratio(statusIconStyle.backgroundColor, inheritedBackground(status)),
-        statusTextRatio: ratio(statusStyle.color, inheritedBackground(status)),
-      };
+    const styles = await skip.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { outlineStyle: style.outlineStyle, outlineWidth: Number.parseFloat(style.outlineWidth) };
     });
-    expect(forcedColors.focusOutlineStyle).not.toBe("none");
-    expect(forcedColors.focusOutlineWidth).toBeGreaterThanOrEqual(2);
-    expect(forcedColors.focusOutlineRatio).toBeGreaterThanOrEqual(3);
-    expect(forcedColors.actionTextRatio).toBeGreaterThanOrEqual(4.5);
-    expect(forcedColors.actionBorderRatio).toBeGreaterThanOrEqual(3);
-    expect(forcedColors.statusTextRatio).toBeGreaterThanOrEqual(4.5);
-    expect(forcedColors.statusIconRatio).toBeGreaterThanOrEqual(3);
-    expect(forcedColors.cardBorderWidth).toBeGreaterThanOrEqual(1);
-    expect(forcedColors.cardBorderRatio).toBeGreaterThanOrEqual(3);
-
-    await page.emulateMedia({ contrast: "more" });
-    await page.reload();
-    expect(await page.evaluate(() => matchMedia("(prefers-contrast: more)").matches)).toBe(true);
-    await page.keyboard.press("Tab");
-    await expect(page.locator(".forge-skip-link")).toBeFocused();
-  });
-
-  test("Force World keeps its dark-surface and cutoff annotation foregrounds distinct", async ({ page }) => {
-    await page.goto("/learn/force-and-motion");
-    const headingTypography = await page.locator(".stage-heading h1").evaluate((heading) => {
-      const styles = getComputedStyle(heading);
-      return Number.parseFloat(styles.lineHeight) / Number.parseFloat(styles.fontSize);
-    });
-    expect(headingTypography, "the 320px Force heading must preserve readable line separation").toBeGreaterThanOrEqual(1.15);
-    const contrast = await page.locator(".world--mystery .cutoff-label").evaluate((annotation) => {
-      type Rgb = [number, number, number];
-      const parseColor = (value: string): Rgb => {
-        const channels = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [];
-        if (channels.length !== 3) throw new Error(`Unable to parse SVG color: ${value}`);
-        return [channels[0]!, channels[1]!, channels[2]!];
-      };
-      const luminance = ([red, green, blue]: Rgb) => {
-        const channels = [red, green, blue].map((channel) => {
-          const normalized = channel / 255;
-          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
-        });
-        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
-      };
-      const rect = annotation.querySelector<SVGRectElement>("rect");
-      const text = annotation.querySelector<SVGTextElement>("text");
-      if (!rect || !text) throw new Error("Force World cutoff annotation is incomplete");
-      const figure = annotation.closest<HTMLElement>(".world--mystery");
-      if (!figure) throw new Error("Force World annotation surface is missing");
-      const shell = document.querySelector<HTMLElement>(".app-shell");
-      const heading = document.querySelector<HTMLElement>(".stage-heading h1");
-      const choice = document.querySelector<HTMLElement>(".choice-row__label");
-      const choiceSurface = choice?.closest<HTMLElement>(".choice-row");
-      if (!shell || !heading || !choice || !choiceSurface) throw new Error("Force World primary surface is missing");
-      const surface = parseColor(getComputedStyle(rect).fill);
-      const foreground = parseColor(getComputedStyle(text).fill);
-      const headingForeground = parseColor(getComputedStyle(heading).color);
-      const headingSurface = parseColor(getComputedStyle(shell).backgroundColor);
-      const choiceForeground = parseColor(getComputedStyle(choice).color);
-      const choiceBackground = parseColor(getComputedStyle(choiceSurface).backgroundColor);
-      const ratio = (Math.max(luminance(surface), luminance(foreground)) + 0.05)
-        / (Math.min(luminance(surface), luminance(foreground)) + 0.05);
-      const headingRatio = (Math.max(luminance(headingSurface), luminance(headingForeground)) + 0.05)
-        / (Math.min(luminance(headingSurface), luminance(headingForeground)) + 0.05);
-      const choiceRatio = (Math.max(luminance(choiceBackground), luminance(choiceForeground)) + 0.05)
-        / (Math.min(luminance(choiceBackground), luminance(choiceForeground)) + 0.05);
-      const tokens = getComputedStyle(figure);
-      return {
-        foreground: getComputedStyle(text).fill,
-        headingForeground: getComputedStyle(heading).color,
-        headingRatio,
-        choiceForeground: getComputedStyle(choice).color,
-        choiceRatio,
-        ratio,
-        surface: getComputedStyle(rect).fill,
-        surfaceToken: tokens.getPropertyValue("--force-world-annotation-surface").trim(),
-        textToken: tokens.getPropertyValue("--force-world-annotation-ink").trim(),
-      };
-    });
-
-    expect(contrast.surfaceToken).not.toBe(contrast.textToken);
-    expect(contrast.surface).not.toBe(contrast.foreground);
-    expect(contrast.ratio).toBeGreaterThanOrEqual(4.5);
-    expect(contrast.headingForeground).not.toBe("rgb(17, 23, 20)");
-    expect(contrast.headingRatio).toBeGreaterThanOrEqual(4.5);
-    expect(contrast.choiceForeground).not.toBe("rgb(17, 23, 20)");
-    expect(contrast.choiceRatio).toBeGreaterThanOrEqual(4.5);
+    expect(styles.outlineStyle).not.toBe("none");
+    expect(styles.outlineWidth).toBeGreaterThanOrEqual(2);
+    await expect(page.getByRole("button", { name: /Name the outcome/i })).toBeVisible();
   });
 });

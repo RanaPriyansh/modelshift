@@ -21,17 +21,24 @@ import {
   type ForceAndMotionRuntimeProof,
   type WorldRuntimeSession,
 } from "@/src/forge/world-runtime";
-import { interpretationApiResponseSchema } from "@/src/lib/ai/schema";
-import { validateInterpretation } from "@/src/lib/ai/validation";
 import { recordWorldRuntimeReceipt } from "@/src/lib/forge-evidence/record-world-runtime-receipt";
+import {
+  clearWorldSessionCheckpoint,
+  readWorldSessionCheckpoint,
+  writeWorldSessionCheckpoint,
+  type WorldSessionCheckpointIdentity,
+  type WorldSessionCheckpointV1,
+} from "@/src/lib/forge-continuity";
 import type {
-  FallbackReason,
   LearningStage,
   PredictionId,
   ProbeId,
   SupportLevel,
   TransferChoiceId,
-  ValidatedInterpretation,
+} from "@/src/types/modelshift";
+import {
+  PREDICTION_IDS,
+  TRANSFER_CHOICE_IDS,
 } from "@/src/types/modelshift";
 
 type ActiveStage = Exclude<LearningStage, "HOOK">;
@@ -51,55 +58,127 @@ const STAGE_STEPS: Array<{ id: ActiveStage; label: string }> = [
 const VISIBLE_STEPS = ["PREDICT", "EXPLAIN", "INTERPRET", "EXPERIMENT", "RECONSTRUCT", "COLD_TRANSFER", "PROOF_RESULT"] as const;
 
 const FALLBACK_COPY = "There are a few ways to read that explanation, so we'll run the baseline test.";
-const INTERPRETATION_CLIENT_TIMEOUT_MS = 7_000;
-
-type ClientInterpretationValidation =
-  | { readonly ok: true; readonly value: ValidatedInterpretation }
-  | { readonly ok: false; readonly reason: FallbackReason };
-
-function validateApiInterpretation(candidate: unknown, explanation: string): ClientInterpretationValidation {
-  const parsed = interpretationApiResponseSchema.safeParse(candidate);
-  if (!parsed.success) {
-    const enumProblem = parsed.error.issues.some((issue) => issue.code === "invalid_value");
-    return { ok: false, reason: enumProblem ? "invalid_enum" : "malformed_output" };
-  }
-  if (parsed.data.source === "fallback") {
-    return { ok: false, reason: parsed.data.fallback_reason };
-  }
-
-  const value = parsed.data;
-  const validated = validateInterpretation({
-    schema_version: value.schema_version,
-    hypotheses: value.hypotheses,
-    missing_distinctions: value.missing_distinctions,
-    recommended_probe_id: value.recommended_probe_id,
-    recommended_level_1_question_id: value.recommended_level_1_question_id,
-    abstain: value.abstain,
-    abstain_reason: value.abstain_reason,
-  }, explanation);
-  if (!validated.ok) return validated;
-  return {
-    ok: true,
-    value: {
-      ...validated.value,
-      providerId: value.providerId,
-      modelId: value.modelId,
-      policyId: value.policyId,
-    },
-  };
-}
-
 function compilerHypotheses(interpretation: LearningInterpretation) {
   return interpretation.hypothesisIds.map((id) => HYPOTHESES[id]);
 }
 
-function createStartedRuntimeSession(): WorldRuntimeSession<LearningState, ForceAndMotionRuntimeProof> {
-  const initial = createWorldRuntimeSession(forceAndMotionWorldRuntimeAdapter);
+function createStartedRuntimeSession(
+  attemptId?: string,
+): WorldRuntimeSession<LearningState, ForceAndMotionRuntimeProof> {
+  const initial = createWorldRuntimeSession(
+    forceAndMotionWorldRuntimeAdapter,
+    attemptId,
+  );
   const started = dispatchWorldRuntimeCommand(forceAndMotionWorldRuntimeAdapter, initial, {
     kind: "domain",
     event: { type: "START" },
   });
   return started.session;
+}
+
+type ModelShiftUiCheckpoint = Readonly<{
+  confidence: number;
+  explanation: string;
+  experimentRevealed: boolean;
+  frictionStrength: number;
+  prediction: PredictionId | null;
+  probePrediction: string | null;
+  reconstruction: string;
+  reflection: string;
+  transferChoice: TransferChoiceId | null;
+  transferExplanation: string;
+}>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function modelShiftUiCheckpoint(value: unknown): ModelShiftUiCheckpoint | null {
+  if (!isRecord(value)) return null;
+  const expectedKeys = [
+    "confidence",
+    "explanation",
+    "experimentRevealed",
+    "frictionStrength",
+    "prediction",
+    "probePrediction",
+    "reconstruction",
+    "reflection",
+    "transferChoice",
+    "transferExplanation",
+  ];
+  if (
+    Object.keys(value).sort().join(",")
+    !== [...expectedKeys].sort().join(",")
+  ) return null;
+  if (
+    typeof value.confidence !== "number"
+    || !Number.isInteger(value.confidence)
+    || value.confidence < 0
+    || value.confidence > 100
+    || typeof value.frictionStrength !== "number"
+    || !Number.isInteger(value.frictionStrength)
+    || value.frictionStrength < 0
+    || value.frictionStrength > 100
+    || typeof value.experimentRevealed !== "boolean"
+    || typeof value.explanation !== "string"
+    || value.explanation.length > 600
+    || typeof value.reconstruction !== "string"
+    || value.reconstruction.length > 600
+    || typeof value.reflection !== "string"
+    || value.reflection.length > 600
+    || typeof value.transferExplanation !== "string"
+    || value.transferExplanation.length > 600
+    || (
+      value.prediction !== null
+      && !PREDICTION_IDS.includes(value.prediction as PredictionId)
+    )
+    || (
+      value.transferChoice !== null
+      && !TRANSFER_CHOICE_IDS.includes(value.transferChoice as TransferChoiceId)
+    )
+    || (
+      value.probePrediction !== null
+      && (
+        typeof value.probePrediction !== "string"
+        || value.probePrediction.length > 120
+        || !/^[a-z0-9][a-z0-9._-]*$/.test(value.probePrediction)
+      )
+    )
+  ) {
+    return null;
+  }
+  return value as ModelShiftUiCheckpoint;
+}
+
+function replayModelShiftCheckpoint(
+  checkpoint: WorldSessionCheckpointV1,
+): {
+  readonly runtime: WorldRuntimeSession<LearningState, ForceAndMotionRuntimeProof>;
+  readonly events: readonly LearningEvent[];
+  readonly ui: ModelShiftUiCheckpoint;
+} | null {
+  const ui = modelShiftUiCheckpoint(checkpoint.ui);
+  if (!ui) return null;
+  let runtime = createStartedRuntimeSession(checkpoint.attemptId);
+  const events: LearningEvent[] = [];
+  try {
+    for (const value of checkpoint.events) {
+      if (!isRecord(value) || typeof value.type !== "string") return null;
+      const event = value as LearningEvent;
+      const result = dispatchWorldRuntimeCommand(
+        forceAndMotionWorldRuntimeAdapter,
+        runtime,
+        { kind: "domain", event },
+      );
+      if (!result.accepted) return null;
+      runtime = result.session;
+      events.push(event);
+    }
+  } catch {
+    return null;
+  }
+  return { runtime, events, ui };
 }
 
 function stageIndex(stage: ActiveStage) {
@@ -204,8 +283,8 @@ function ExplanationStage({ prediction, explanation, onExplanation, onSubmit, on
           <small>{explanation.length} / 600</small>
         </label>
         <p className="privacy-note">
-          Your explanation goes to the FORGE server. External AI is off by default; if an operator explicitly enables it,
-          this text may be sent to OpenAI with storage disabled. Raw explanations are never added to your evidence ledger.
+          Your explanation stays in this browser session. This public World does not send it to FORGE or an external AI
+          provider, and raw explanations are never added to your evidence ledger.
         </p>
         <div className="stage-actions">
           <SecondaryButton onClick={onDontKnow}>I genuinely don&apos;t know</SecondaryButton>
@@ -423,18 +502,28 @@ function ResultStage({ evidence, interpretation, receipt, onRestart }: {
 export interface ModelShiftExperienceProps {
   /** Test/compatibility observation only; the receipt remains local and non-durable. */
   readonly onRuntimeReceipt?: (receipt: BoundedLocalWorldRuntimeReceipt) => void;
+  /** Present only for an exact path-backed local study session. */
+  readonly checkpointIdentity?: WorldSessionCheckpointIdentity;
+  readonly onCheckpointError?: (reason: string) => void;
 }
 
-export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceProps) {
+export function ModelShiftExperience({
+  checkpointIdentity,
+  onCheckpointError,
+  onRuntimeReceipt,
+}: ModelShiftExperienceProps) {
   const rawInstanceId = useId();
   const instanceId = rawInstanceId.replaceAll(":", "");
   const mainId = `force-motion-main-${instanceId}`;
   const mainRef = useRef<HTMLElement>(null);
   const hasOpenedInitialStage = useRef(false);
-  const interpretationRequestEpochRef = useRef(0);
-  const interpretationControllerRef = useRef<AbortController | null>(null);
   const [runtime, setRuntime] = useState(createStartedRuntimeSession);
   const runtimeRef = useRef(runtime);
+  const checkpointEventsRef = useRef<LearningEvent[]>([]);
+  const [checkpointState, setCheckpointState] = useState<
+    "ready" | "restoring" | "restore_failed"
+  >(checkpointIdentity ? "restoring" : "ready");
+  const [checkpointWriteFailed, setCheckpointWriteFailed] = useState(false);
   const learningState = runtime.state;
   const [prediction, setPrediction] = useState<PredictionId | null>(null);
   const [confidence, setConfidence] = useState(70);
@@ -448,6 +537,9 @@ export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceP
   const [transferChoice, setTransferChoice] = useState<TransferChoiceId | null>(null);
   const [transferExplanation, setTransferExplanation] = useState("");
   const emittedReceiptRef = useRef<BoundedLocalWorldRuntimeReceipt | null>(null);
+  const checkpointIdentityKey = checkpointIdentity
+    ? `${checkpointIdentity.sessionId}:${checkpointIdentity.worldId}:${checkpointIdentity.worldVersion}`
+    : null;
 
   const stage = learningState.stage === "HOOK" ? "PREDICT" : learningState.stage;
   const interpretation = learningState.context.interpretation;
@@ -455,6 +547,135 @@ export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceP
   const questionId = interpretation?.recommendedLevel1QuestionId ?? "neutral_observation_prompt";
   const supportLevel = learningState.context.consumedSupport.reduce<SupportLevel>((highest, item) => Math.max(highest, item.level) as SupportLevel, 0);
   const stageLabel = useMemo(() => STAGE_STEPS.find((item) => item.id === stage)?.label ?? stage, [stage]);
+
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      if (!checkpointIdentity) {
+        setCheckpointState("ready");
+        return;
+      }
+      const read = readWorldSessionCheckpoint(
+        window.localStorage,
+        checkpointIdentity,
+      );
+      if (!read.ok) {
+        setCheckpointState("restore_failed");
+        onCheckpointError?.(read.reason);
+        return;
+      }
+      if (!read.checkpoint) {
+        setCheckpointState("ready");
+        return;
+      }
+      const restored = replayModelShiftCheckpoint(read.checkpoint);
+      if (!restored) {
+        setCheckpointState("restore_failed");
+        onCheckpointError?.("checkpoint_replay_failed");
+        return;
+      }
+      checkpointEventsRef.current = [...restored.events];
+      runtimeRef.current = restored.runtime;
+      setRuntime(restored.runtime);
+      setPrediction(
+        restored.ui.prediction
+        ?? restored.runtime.state.context.initialPrediction
+        ?? null,
+      );
+      setConfidence(
+        restored.runtime.state.context.initialConfidence
+        ?? restored.ui.confidence,
+      );
+      setExplanation(
+        restored.ui.explanation
+        || restored.runtime.state.context.initialExplanation
+        || "",
+      );
+      setProbePrediction(
+        restored.ui.probePrediction
+        ?? restored.runtime.state.context.probePredictionId
+        ?? null,
+      );
+      setExperimentRevealed(
+        restored.ui.experimentRevealed
+        || restored.runtime.state.context.experimentObserved,
+      );
+      setFrictionStrength(restored.ui.frictionStrength);
+      setReflection(
+        restored.ui.reflection
+        || restored.runtime.state.context.reflection
+        || "",
+      );
+      setReconstruction(
+        restored.ui.reconstruction
+        || restored.runtime.state.context.reconstruction
+        || "",
+      );
+      setTransferChoice(
+        restored.ui.transferChoice
+        ?? restored.runtime.state.context.transferChoiceId
+        ?? null,
+      );
+      setTransferExplanation(
+        restored.ui.transferExplanation
+        || restored.runtime.state.context.transferExplanation
+        || "",
+      );
+      setCheckpointState("ready");
+    });
+    return () => {
+      cancelled = true;
+    };
+  // The identity is an immutable path/session binding. Its primitive key keeps
+  // a parent re-render from replaying the same checkpoint over live work.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkpointIdentityKey]);
+
+  useEffect(() => {
+    if (!checkpointIdentity || checkpointState !== "ready") return;
+    const written = writeWorldSessionCheckpoint(
+      window.localStorage,
+      checkpointIdentity,
+      {
+        attemptId: runtime.attemptId,
+        events: checkpointEventsRef.current,
+        ui: {
+          confidence,
+          explanation,
+          experimentRevealed,
+          frictionStrength,
+          prediction,
+          probePrediction,
+          reconstruction,
+          reflection,
+          transferChoice,
+          transferExplanation,
+        } satisfies ModelShiftUiCheckpoint,
+      },
+    );
+    if (!written.ok) {
+      setCheckpointWriteFailed(true);
+      onCheckpointError?.(written.reason);
+    } else {
+      setCheckpointWriteFailed(false);
+    }
+  }, [
+    checkpointIdentity,
+    checkpointState,
+    confidence,
+    explanation,
+    experimentRevealed,
+    frictionStrength,
+    onCheckpointError,
+    prediction,
+    probePrediction,
+    reconstruction,
+    reflection,
+    runtime,
+    transferChoice,
+    transferExplanation,
+  ]);
 
   useEffect(() => {
     if (!hasOpenedInitialStage.current) {
@@ -465,12 +686,6 @@ export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceP
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
     mainRef.current?.focus({ preventScroll: true });
   }, [stage]);
-
-  useEffect(() => () => {
-    interpretationRequestEpochRef.current += 1;
-    interpretationControllerRef.current?.abort();
-    interpretationControllerRef.current = null;
-  }, []);
 
   useEffect(() => {
     const receipt = runtime.receipt;
@@ -485,12 +700,15 @@ export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceP
       kind: "domain",
       event,
     });
+    if (result.accepted) {
+      checkpointEventsRef.current = [...checkpointEventsRef.current, event];
+    }
     runtimeRef.current = result.session;
     setRuntime(result.session);
     return result;
   }
 
-  async function submitExplanation(nextExplanation = explanation) {
+  function submitExplanation(nextExplanation = explanation) {
     if (!prediction) return;
     const explicitUncertainty = nextExplanation === EXPLICIT_UNCERTAINTY;
     const committed = send({
@@ -504,63 +722,66 @@ export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceP
       return;
     }
     if (runtimeRef.current.phase !== "learning" || runtimeRef.current.state.stage !== "INTERPRET") return;
-    const requestEpoch = interpretationRequestEpochRef.current + 1;
-    interpretationRequestEpochRef.current = requestEpoch;
-    interpretationControllerRef.current?.abort();
-    const controller = new AbortController();
-    interpretationControllerRef.current = controller;
-    setInterpreting(true);
-    let timedOut = false;
-    const timeout = window.setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, INTERPRETATION_CLIENT_TIMEOUT_MS);
-    let validation: ClientInterpretationValidation = { ok: false, reason: "api_error" };
-    try {
-      const response = await fetch("/api/interpret", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({ scenario_id: MYSTERY.id, prediction_id: prediction, confidence, explanation: nextExplanation, stage: "INTERPRET" }),
-      });
-      if (!response.ok) {
-        validation = { ok: false, reason: "api_error" };
-      } else {
-        try {
-          validation = validateApiInterpretation(await response.json(), nextExplanation);
-        } catch {
-          validation = { ok: false, reason: "malformed_output" };
-        }
-      }
-    } catch (error) {
-      if (interpretationRequestEpochRef.current !== requestEpoch) return;
-      const aborted = typeof error === "object" && error !== null && "name" in error && error.name === "AbortError";
-      validation = { ok: false, reason: timedOut || aborted ? "timeout" : "api_error" };
-    } finally {
-      window.clearTimeout(timeout);
-      if (interpretationControllerRef.current === controller) interpretationControllerRef.current = null;
-      if (interpretationRequestEpochRef.current === requestEpoch) setInterpreting(false);
-    }
-    if (interpretationRequestEpochRef.current !== requestEpoch) return;
-    if (runtimeRef.current.phase !== "learning" || runtimeRef.current.state.stage !== "INTERPRET") return;
-    if (!validation.ok) {
-      send({ type: "INTERPRETATION_FAILED", reason: validation.reason });
-      return;
-    }
-    const resolved = send({ type: "RESOLVE_INTERPRETATION", interpretation: validation.value });
-    if (!resolved.accepted) send({ type: "INTERPRETATION_FAILED", reason: "malformed_output" });
+    // The current public product has no authorized provider transport and raw
+    // learner wording stays on-device. The runtime therefore selects its
+    // reviewed neutral pair locally and records that bounded fallback.
+    setInterpreting(false);
+    send({ type: "INTERPRETATION_FAILED", reason: "disabled" });
   }
 
   function resetSession() {
-    interpretationRequestEpochRef.current += 1;
-    interpretationControllerRef.current?.abort();
-    interpretationControllerRef.current = null;
-    const reset = send({ type: "RESET" });
-    if (reset.accepted) send({ type: "START" });
+    const freshRuntime = createStartedRuntimeSession();
+    checkpointEventsRef.current = [];
+    runtimeRef.current = freshRuntime;
+    setRuntime(freshRuntime);
+    if (checkpointIdentity) {
+      const cleared = clearWorldSessionCheckpoint(
+        window.localStorage,
+        checkpointIdentity,
+      );
+      if (!cleared.ok) {
+        setCheckpointWriteFailed(true);
+        onCheckpointError?.(cleared.reason);
+      }
+    }
     setPrediction(null); setConfidence(70); setExplanation(""); setInterpreting(false);
     setProbePrediction(null); setExperimentRevealed(false); setFrictionStrength(62); setReflection(""); setReconstruction("");
     setTransferChoice(null); setTransferExplanation("");
     emittedReceiptRef.current = null;
+  }
+
+  function discardUnreadableCheckpoint() {
+    if (!checkpointIdentity) {
+      setCheckpointState("ready");
+      return;
+    }
+    const cleared = clearWorldSessionCheckpoint(
+      window.localStorage,
+      checkpointIdentity,
+    );
+    if (!cleared.ok) {
+      setCheckpointWriteFailed(true);
+      onCheckpointError?.(cleared.reason);
+      return;
+    }
+    const freshRuntime = createStartedRuntimeSession();
+    checkpointEventsRef.current = [];
+    runtimeRef.current = freshRuntime;
+    setRuntime(freshRuntime);
+    setPrediction(null);
+    setConfidence(70);
+    setExplanation("");
+    setInterpreting(false);
+    setProbePrediction(null);
+    setExperimentRevealed(false);
+    setFrictionStrength(62);
+    setReflection("");
+    setReconstruction("");
+    setTransferChoice(null);
+    setTransferExplanation("");
+    emittedReceiptRef.current = null;
+    setCheckpointWriteFailed(false);
+    setCheckpointState("ready");
   }
 
   function requestSupport() {
@@ -612,16 +833,56 @@ export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceP
     });
   }
 
+  if (checkpointState !== "ready") {
+    const failed = checkpointState === "restore_failed";
+    return (
+      <div className="app-shell">
+        <a className="skip-link" href={`#${mainId}`}>Skip to session recovery</a>
+        <header className="app-header">
+          <a className="wordmark" href={`#${mainId}`} aria-label="Force and motion learning world"><span>M</span><strong>Model World</strong><small>ModelShift protocol</small></a>
+          <div className="trust-strip"><span>13+ World</span><span>Device-local recovery</span><span>Tested code owns physics</span></div>
+        </header>
+        <main id={mainId} ref={mainRef} tabIndex={-1}>
+          <section className="stage stage--centered">
+            <StageHeading
+              number="00"
+              eyebrow="Session recovery"
+              title={failed ? "This saved session cannot be opened safely" : "Opening your saved session"}
+              body={failed
+                ? "FORGE left the unreadable checkpoint untouched. You can discard only this session checkpoint and begin a fresh attempt."
+                : "FORGE is replaying the saved actions through the same reviewed World before showing any work."}
+            />
+            {failed ? (
+              <div className="stage-actions">
+                <PrimaryButton onClick={discardUnreadableCheckpoint}>
+                  Discard this checkpoint and start fresh
+                </PrimaryButton>
+              </div>
+            ) : (
+              <p role="status">Checking the session identity and replaying accepted actions…</p>
+            )}
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className={["app-shell", stage === "COLD_TRANSFER" ? "app-shell--proof" : ""].join(" ")}>
       <a className="skip-link" href={`#${mainId}`}>Skip to the experiment</a>
       <header className="app-header">
         <a className="wordmark" href={`#${mainId}`} aria-label="Force and motion learning world"><span>M</span><strong>Model World</strong><small>ModelShift protocol</small></a>
-        <div className="trust-strip"><span>13+ World</span><span>AI interprets language</span><span>Tested code owns physics</span></div>
+        <div className="trust-strip"><span>13+ World</span><span>Raw wording stays on this device</span><span>Tested code owns physics</span></div>
       </header>
       <StageRail stage={stage} />
       <div className="sr-only" aria-live="polite">Current stage: {stageLabel}</div>
       <main id={mainId} ref={mainRef} tabIndex={-1}>
+        {checkpointWriteFailed ? (
+          <aside className="fallback-notice" role="status">
+            This session is still open in memory, but FORGE could not update its
+            device-local checkpoint. Keep this page open or retry the last action.
+          </aside>
+        ) : null}
         {stage === "PREDICT" ? <PredictionStage prediction={prediction} confidence={confidence} onPrediction={setPrediction} onConfidence={setConfidence} onCommit={commitPrediction} predictionName={`force-motion-prediction-${instanceId}`} confidenceId={`force-motion-confidence-${instanceId}`} /> : null}
         {stage === "EXPLAIN" && prediction ? <ExplanationStage prediction={prediction} explanation={explanation} onExplanation={setExplanation} onSubmit={() => void submitExplanation()} onDontKnow={() => { setExplanation(EXPLICIT_UNCERTAINTY); void submitExplanation(EXPLICIT_UNCERTAINTY); }} explanationId={`force-motion-explanation-${instanceId}`} /> : null}
         {stage === "INTERPRET" || stage === "PROBE_PREDICT" ? <InterpretationStage interpretation={interpretation} explanation={explanation} loading={interpreting} probePrediction={probePrediction} onProbePrediction={setProbePrediction} onContinue={commitProbePrediction} probePredictionName={`force-motion-probe-prediction-${instanceId}`} /> : null}
@@ -630,7 +891,7 @@ export function ModelShiftExperience({ onRuntimeReceipt }: ModelShiftExperienceP
         {stage === "COLD_TRANSFER" ? <ProofStage choice={transferChoice} explanation={transferExplanation} submitted={false} onChoice={setTransferChoice} onExplanation={setTransferExplanation} onDontKnow={() => submitTransfer(true)} onSubmit={() => submitTransfer(false)} transferName={`force-motion-transfer-${instanceId}`} transferExplanationId={`force-motion-transfer-explanation-${instanceId}`} /> : null}
         {stage === "PROOF_RESULT" && interpretation && runtime.receipt ? <ResultStage evidence={deriveEvidenceCard(learningState)} interpretation={interpretation} receipt={runtime.receipt} onRestart={resetSession} /> : null}
       </main>
-      <footer className="app-footer"><span>This World is currently reviewed for learners aged 13+.</span><span>AI interpretation can be wrong. The physics and primary answer checks are deterministic.</span></footer>
+      <footer className="app-footer"><span>This World is currently reviewed for learners aged 13+.</span><span>The current public route uses reviewed local readings; physics and primary answer checks are deterministic.</span></footer>
     </div>
   );
 }

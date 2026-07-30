@@ -252,7 +252,9 @@ describe("W5-D immutable curriculum graph", () => {
       expect(node.supportedAgeModes).toEqual(pack.manifest.ageModes);
       expect(node.supportedDepthModes).not.toContain("return-proof");
       expect(node.positions).not.toContain("return-proof");
-      expect(pack.runtime?.returnProof.enabled).toBe(false);
+      expect(pack.runtime?.returnProof.enabled).toBe(
+        pack.manifest.id === "world.force-and-motion",
+      );
     }
     const validated = await validateFixture(fixture);
     expect(validated.nodes.filter((node) => node.availability === "caller-asserted-release")).toHaveLength(4);

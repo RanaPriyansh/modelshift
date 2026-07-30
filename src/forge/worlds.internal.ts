@@ -54,6 +54,7 @@ export const ARGUMENT_EVIDENCE_WORLD = deepFreeze({
     title: "Argument & evidence",
     summary: "A retained authored-fixture package that separates topical detail from outcome-linked evidence in one bounded transfer task.",
     kind: "evidence",
+    activityProtocol: "activity",
     evidenceTier: "exploratory",
     ageModes: ["13-17", "18-plus"],
     depthModes: ["introductory", "core"],

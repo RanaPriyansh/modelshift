@@ -14,7 +14,7 @@ This is a bounded current public record for `04eab426`. Public health binds the 
 
 **Latest local Wave 6 code cut reviewed by this amendment:** deployed product source `04eab4263658725d7a228c67682c40fc469757b1` contains the accepted provider-authenticated post-build receipt and fail-closed adult-pilot review shell. Its integrated local gates passed 819 application tests, 13 evaluator-contract tests, 54 fixture checks, lint, typecheck, an optimized 42-asset build with mandatory pilot marker scanning, production dependency audit, 76 browser passes with 28 intentional project skips, four production default-denial/storage checks, and three enabled review-fixture checks. Local main later adds accepted live Vercel event-envelope hardening through `3d1c58c`; the final current-main suite passed 830 application tests, 13 evaluator contracts, and 147/147 focused release tests across provider receipt, deployment verifier, release health, and release identity. Typecheck, lint, diff checks, and independent red-team review also passed. The pilot is review infrastructure, not assignment, entitlement, provider, persistence, cohort, or evidence authority. The prior accepted Wave 5 baseline at `7ba70ef60c038883bd4ae9ca89c974d9bec61cea` retains its recorded evidence and limits. None of these additions creates trusted curriculum, persistent review, live provider, authenticated identity, durable proof, minor operation, efficacy, or homeschool authority.
 
-**Audit date:** 23 July 2026
+**Audit date:** 24 July 2026
 
 **Verdict:** the full objective is not complete
 
@@ -35,6 +35,47 @@ This file prevents a strong prototype, a broad plan, or a green test count from 
 Documentation is never sufficient proof of behavior. Mocked provider/auth tests are not live provider/auth proof. A local browser ledger is not tamper-resistant independent evidence. A public URL is not a verified current release unless its source SHA and runtime state are known.
 
 ## 2. Engineering evidence and code-cut boundary
+
+### 24 July 2026 product re-foundation P0 local-candidate amendment
+
+Implementation commit `e882b386d5145da267607bcea4c794d061545488` on
+`feat/forge-refoundation-v1`, based on
+`e8e896f702ecfa3863f190d908136f52b79c83d8`, establishes the first bounded
+product spine for the re-founded FORGE thesis in
+`docs/program/PRODUCT_REFOUNDATION.md`.
+
+The current status is **PROVEN locally / NOT production promoted**. This code
+cut is not a claim that the full objective is complete, that FORGE is ready to
+homeschool learners, or that one local pass is educational-validity evidence.
+It was not deployed.
+
+| Local P0 slice | What the exact code cut now does | Boundary retained |
+| --- | --- | --- |
+| Canonical public and learner IA | Publishes one coherent public entrance, broad reviewed-path catalog, method/trust/coverage pages, local orientation, learner workspace, path/session/project/return/evidence surfaces, explicit recovery pages, and exact compatibility redirects. | The released catalog contains four bounded reviewed Worlds, not arbitrary learn-anything coverage or a complete curriculum. Compatibility routes add no parallel product authority. |
+| Goal-to-path compiler | Preserves a learner's goal and desired outcome, separates reviewed executable paths from unknown open questions, and compiles only canonical registry-owned World/version/route/activity/protocol/source tuples. Caller relabeling and forged tuples fail closed. | Planning is deterministic and fixture/catalog bounded. Unknown goals do not become runnable tasks, and no model may publish, assign, or strengthen evidence. |
+| Four reviewed Worlds | Routes Force and Motion through `modelshift` / `modelshift_world`, and Ratio, AI & Learning, and Primary Source Reasoning through `activity` / `reviewed_world_activity`. Each World retains its domain-owned deterministic truth and bounded evidence protocol. | Four authored Worlds are not universal subject coverage. Local receipts are not authenticated independent proof. |
+| Device-local continuity | Creates accepted path records, exact study sessions, resumable World checkpoints for all four Worlds, evidence records, and explicit learner-controlled export/deletion. Canonical replay restores the same attempt identity; invalid or cross-identity checkpoints fail visibly without mutation. | Persistence is device-local. No cloud sync, multi-device recovery, authenticated learner identity, backup/restore, or production durability is claimed. |
+| Atomic completion and return | Persists a completion/evidence/eligible-return envelope atomically, recovers exact retries, and exposes one bounded delayed-return loop for the Force path. | The delayed return is implemented only for the Force path. The other Worlds have no scheduled-return claim, and delayed retention remains untested. |
+| Minor and author/provider controls | Under-18 planning sends only fixed reviewed-topic tokens while raw learner wording remains local; child entry requires a fresh confirmation bound to the exact device session/profile. World entry is registry-driven. `/author` and provider requests remain structurally fail closed without distinct server-owned authority. | No under-18 cloud identity, free-text provider transmission, live provider, BYOK request, public author entitlement, guardian relationship service, or jurisdictional safeguarding operation is enabled. |
+
+| Gate on exact implementation source | Recorded result | Boundary retained |
+| --- | --- | --- |
+| Application and evaluator contracts | 101 files / 936 application tests PASS; 2 files / 13 evaluator-contract tests PASS | Test volume is not educational validity, representative-learner evidence, broad-domain coverage, or production operation. |
+| Static and dependency gates | Lint PASS with zero warnings; typecheck PASS; production dependency audit reports no known vulnerabilities; staged and unstaged diff checks PASS | These checks do not prove operational monitoring, infrastructure security, third-party provider posture, or live-data safety. |
+| Optimized build/public boundary | Production build PASS; 53 public static assets scanned without private-pilot markers, secret-pattern leaks, or stale internal package markers; final evidence-build digest `6f692bb4615bf23b2ab18b5b245eb4c64264980f2ad09d0af7599191c62733ae` | A local optimized build and asset scan are not deployment, provenance binding, CSP/runtime monitoring, or rollback proof. |
+| Browser product evidence | 14/14 desktop/320px continuity journeys PASS; 7/7 registry-driven World-entry/age checks PASS; 2/2 canonical-route and fail-closed-author checks PASS | Chromium automation is not Safari, Firefox, manual assistive-technology, representative-user acceptance, or learning research. |
+| Full-page capture contract | 53/53 optimized-production captures PASS exact final URL, HTTP 200, one `main`, one `h1`, no horizontal overflow, and zero console/page errors; package SHA-256 `282f716c70295e00a2ff84f8529f557bb3d61eb0ab29902ca86e7801a669b985` | Screenshots are local presentation evidence. They do not prove a public release or every interactive state. |
+| Deployment verifier | 49/49 local checks PASS against the disabled cloud/provider posture | The verifier does not create a current deployment tuple or prove a hosted environment. |
+| PostgreSQL migration contract | Fresh disposable migration/contract run PASS; temporary database and roles removed | No hosted Supabase project, configured application connection, production RLS/auth behavior, migration rollout, recovery, or backup is proven. |
+
+Remaining release blockers include hosted migration and identity-scoped
+persistence proof, live-provider privacy/quality/cost evidence under separately
+approved authority, full deployment provenance and rollback, CSP and runtime
+operations evidence, Safari/Firefox and manual assistive-technology sessions,
+representative learner/educator acceptance, broad reviewed curriculum, and
+valid learning/transfer/retention research. Static hosting was not used because
+this candidate has server routes and its unproven cloud/provider/migration
+boundaries must not be represented as operational.
 
 ### 23 July 2026 source-corroboration presentation amendment
 
@@ -99,7 +140,7 @@ Wave 4 migrates Force and Motion and AI & Learning into the shared runtime along
 | Local/public browser | 70 pass / 22 intentional skips / 0 fail; terminal routed conformance 8/8 | Automated browser coverage is not manual AT, Safari, Firefox, or representative-learner proof. |
 | Public verifier | final local/public bound verifier 187/187 PASS | The bound verifier proves the exact engineering deployment tuple only. |
 | Runtime/HTTP scan | public error-level and 5xx scans empty | Empty scans do not establish alerting, rollback operability, provider quality, or outcomes. |
-| Runtime and cloud/provider state | `fallback_only`; request-only BYOK; cloud accounts, evidence sync, and all managed providers disabled | No live provider, cloud account, or durable cloud-evidence operation is claimed. |
+| Runtime and cloud/provider state | `fallback_only`; provider requests disabled; cloud accounts, evidence sync, and all managed providers disabled | No live provider, BYOK request, cloud account, or durable cloud-evidence operation is claimed. |
 
 The deployment `dpl_4eY4F3vMV1hado7TG1BZN11Mgzvt` (immutable URL prefix `https://forge-learning-9i0915bo1...`) was rejected and replaced because its `build_time` and digests were unknown. Read-only unbound workflow `29945127093` is `DEPLOYMENT_BLOCKED`, not a product/public verifier failure: it failed 184/187 because committed/public lock digest `12f19d...` differed from runner post-install digest `f43d90...` and retained metadata was empty. Lock-digest reproducibility remains an operations follow-up. Rollback target `dpl_pLpQmuCP43Mc3tNt1nErf8MRH2v2` at `98687ea` is retained; rehearsal is `NOT_EVALUATED`.
 

@@ -1,0 +1,19 @@
+import type { Metadata } from "next";
+
+import { PathwayAvailabilityMap } from "@/src/components/forge/PathwayAvailabilityMap";
+import { ForgeShell } from "@/src/components/forge/ForgeShell";
+import { getCurrentPathwayAvailability } from "@/src/forge/pathways/public-availability";
+
+export const metadata: Metadata = {
+  title: "Current availability — FORGE",
+  description:
+    "A read-only map of current working World mappings and explicit entitlement gaps, not a coverage claim.",
+};
+
+export default function CoveragePage() {
+  return (
+    <ForgeShell active="learn" surface="public">
+      <PathwayAvailabilityMap availability={getCurrentPathwayAvailability()} />
+    </ForgeShell>
+  );
+}

@@ -1,11 +1,26 @@
 // @vitest-environment jsdom
 
+import "@testing-library/jest-dom/vitest";
+
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ProportionalReasoningWorld } from "./ProportionalReasoningWorld";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+  vi.restoreAllMocks();
+});
+
+const CHECKPOINT_IDENTITY = {
+  sessionId: "study-session.ratio-checkpoint",
+  worldId: "world.proportional-reasoning",
+  worldVersion: "1.0.2",
+} as const;
+
+const CHECKPOINT_KEY =
+  "forge.world-session-checkpoint:v1:study-session.ratio-checkpoint:world.proportional-reasoning:1.0.2";
 
 function reachIndependentTransfer({ useSupport = false }: { readonly useSupport?: boolean } = {}): void {
   fireEvent.click(screen.getByLabelText("They taste equally strong"));
@@ -125,5 +140,60 @@ describe("ProportionalReasoningWorld", () => {
     });
     fireEvent.click(screen.getByTestId("ratio-submit-proof"));
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(2));
+  });
+
+  it("restores the canonical stage and a bounded explanation draft", async () => {
+    const first = render(
+      <ProportionalReasoningWorld checkpointIdentity={CHECKPOINT_IDENTITY} />,
+    );
+    await screen.findByTestId("ratio-stage-mystery");
+    fireEvent.click(screen.getByLabelText("They taste equally strong"));
+    fireEvent.click(screen.getByTestId("ratio-commit-initial"));
+    fireEvent.change(screen.getByLabelText(/^Your exact words/), {
+      target: { value: "Both quantities should scale together." },
+    });
+    await waitFor(() => {
+      const raw = localStorage.getItem(CHECKPOINT_KEY);
+      expect(raw).toContain('"type":"COMMIT_INITIAL"');
+      expect(raw).toContain("Both quantities should scale together.");
+    });
+    first.unmount();
+
+    render(
+      <ProportionalReasoningWorld checkpointIdentity={{ ...CHECKPOINT_IDENTITY }} />,
+    );
+    const restored = await screen.findByTestId("ratio-stage-explain");
+    expect(restored).toBeTruthy();
+    expect(screen.getByLabelText(/^Your exact words/)).toHaveValue(
+      "Both quantities should scale together.",
+    );
+  });
+
+  it("rejects a component/world identity mismatch before touching storage", async () => {
+    const getItem = vi.spyOn(Storage.prototype, "getItem");
+    const onCheckpointError = vi.fn();
+    render(
+      <ProportionalReasoningWorld
+        checkpointIdentity={{
+          ...CHECKPOINT_IDENTITY,
+          worldVersion: "9.9.9",
+        }}
+        onCheckpointError={onCheckpointError}
+      />,
+    );
+    expect(await screen.findByTestId("world-checkpoint-error")).toHaveTextContent(
+      "identity_mismatch",
+    );
+    expect(onCheckpointError).toHaveBeenCalledWith("identity_mismatch");
+    expect(getItem).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("discard-world-checkpoint")).not.toBeInTheDocument();
+  });
+
+  it("does not access checkpoint storage in direct demo mode", () => {
+    const getItem = vi.spyOn(Storage.prototype, "getItem");
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    render(<ProportionalReasoningWorld />);
+    expect(getItem).not.toHaveBeenCalled();
+    expect(setItem).not.toHaveBeenCalled();
   });
 });

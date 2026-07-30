@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY,
+  MAX_EVIDENCE_LEDGER_RAW_BYTES,
   createEmptyEvidenceLedger,
   createEvidenceLedgerStore,
   createLocalStorageEvidenceLedgerAdapter,
@@ -133,34 +134,66 @@ describe("forge evidence schema and reducer", () => {
 });
 
 describe("versioned decoding and browser persistence", () => {
-  it("repairs corrupted storage to an empty current-version ledger", () => {
+  it("preserves corrupted storage for learner-controlled recovery", () => {
     const storage = new FakeStorage();
-    storage.values.set(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY, "{ definitely not json");
+    const raw = "{ definitely not json";
+    storage.values.set(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY, raw);
 
-    const read = storeFor(storage).read();
+    const store = storeFor(storage);
+    const read = store.read();
 
     expect(read).toEqual({ status: "reset_malformed", ledger: { schemaVersion: 1, entries: [] } });
-    expect(JSON.parse(storage.values.get(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY) ?? "null")).toEqual({
-      schemaVersion: 1,
-      entries: [],
+    expect(storage.values.get(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY)).toBe(raw);
+    expect(store.exportUnreadable()).toEqual({
+      ok: true,
+      raw,
+      status: "reset_malformed",
     });
+    expect(store.append(entry())).toMatchObject({ ok: false, reason: "recovery_required" });
+    expect(storage.values.get(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY)).toBe(raw);
   });
 
-  it("resets unknown versions without carrying forward untrusted fields", () => {
+  it("preserves unknown versions until an explicit learner reset", () => {
     const storage = new FakeStorage();
+    const raw = JSON.stringify({
+      schemaVersion: 99,
+      entries: [entry()],
+      rawChat: "do not keep",
+      email: "private@example.test",
+    });
     storage.values.set(
       DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY,
-      JSON.stringify({ schemaVersion: 99, entries: [entry()], rawChat: "do not keep", email: "private@example.test" }),
+      raw,
     );
 
-    const read = storeFor(storage).read();
-    const repaired = storage.values.get(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY) ?? "";
+    const store = storeFor(storage);
+    const read = store.read();
 
     expect(read.status).toBe("reset_unknown_version");
     expect(read.ledger.entries).toEqual([]);
-    expect(repaired).toBe('{"schemaVersion":1,"entries":[]}');
-    expect(repaired).not.toContain("rawChat");
-    expect(repaired).not.toContain("private@example.test");
+    expect(storage.values.get(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY)).toBe(raw);
+    expect(store.export("learner_copy", "2026-07-03T12:00:00.000Z")).toMatchObject({
+      ok: false,
+      reason: "recovery_required",
+    });
+    expect(store.deleteAll()).toMatchObject({ ok: true, ledger: { entries: [] } });
+    expect(storage.values.has(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY)).toBe(false);
+  });
+
+  it("rejects oversized raw storage before JSON parsing and preserves it for recovery", () => {
+    const storage = new FakeStorage();
+    const raw = "x".repeat(MAX_EVIDENCE_LEDGER_RAW_BYTES + 1);
+    storage.values.set(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY, raw);
+    const store = storeFor(storage);
+
+    expect(store.read()).toEqual({
+      status: "reset_malformed",
+      ledger: { schemaVersion: 1, entries: [] },
+    });
+    expect(storage.values.get(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY)).toBe(raw);
+    expect(store.exportUnreadable()).toEqual({ ok: true, raw, status: "reset_malformed" });
+    expect(store.append(entry())).toMatchObject({ ok: false, reason: "recovery_required" });
+    expect(storage.values.get(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY)).toBe(raw);
   });
 
   it("treats empty and unknown-shaped data as clean empty migrations", () => {

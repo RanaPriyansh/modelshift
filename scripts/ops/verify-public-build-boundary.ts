@@ -25,9 +25,9 @@ const RETAINED_ARGUMENT_EVIDENCE_MARKERS = [
   "other_changes_not_ruled_out",
   "8ce3d6a8138f49a499202cacf4d38b58e03d7978bf151b3138020bdf24ce9ed9",
   "a38c116d6b81e0e30f2f5d711c0f19346eefc76504859b3fc929c317731ab9fc",
-  "6529ad6571852c31eadd49a30b7889c7da46ff1268dfa9bc4579bb69ba4d07d1",
+  "c60de18c1bd0cf910379c76fde69d3eb5bd9f9952b21f27d2c25a9a5e796b6df",
   "sha256:a38c116d6b81e0e30f2f5d711c0f19346eefc76504859b3fc929c317731ab9fc",
-  "sha256:6529ad6571852c31eadd49a30b7889c7da46ff1268dfa9bc4579bb69ba4d07d1",
+  "sha256:c60de18c1bd0cf910379c76fde69d3eb5bd9f9952b21f27d2c25a9a5e796b6df",
 ] as const;
 
 function filesUnder(directory: string): string[] {

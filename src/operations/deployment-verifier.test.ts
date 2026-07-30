@@ -54,21 +54,30 @@ const PROVIDER_RECEIPT = {
 } as const;
 const pages: Record<string, string> = {
   "/": "FORGE",
+  "/start": "Turn a goal into a credible first path",
+  "/paths": "Learn toward something you want to do. No complete broad path is published yet.",
+  "/how-forge-works": "A path is credible when every move earns its place.",
+  "/app": "Reading learner-owned device continuity",
+  "/app/path": "Reading path history",
+  "/app/study": "Preparing action brief",
+  "/app/evidence": "Proof should say exactly what happened",
+  "/trust": "FORGE should be inspectable before it is impressive",
   "/learn/force-and-motion": "Force & motion",
   "/learn/ai-and-learning": "AI & learning",
   "/learn/proportional-reasoning": "Proportional reasoning",
   "/learn/primary-source-reasoning": "Primary source reasoning",
   "/paths/source-corroboration": "Verify before you trust",
-  "/pathways": "What FORGE can—and cannot—offer today. Availability map only",
-  "/studio": "Lesson Studio provider-neutral",
-  "/login": "device profile Cloud identity · not configured",
+  "/coverage": "What FORGE can—and cannot—offer today. Availability map only",
+  "/author": "The author workspace is not available. Author role required",
+  "/sign-in": "device profile Cloud identity · structurally disabled",
   "/account": "device evidence No cloud account active",
+  "/internal/pilot": "This route is not available in this deployment",
 };
 function scriptTag(url: string): string { return `<script nonce=\"testnonce\" src=\"${url}\"></script>`; }
 function mockFetch(asset = "self.__next_f=[]", defaultAssets: readonly string[] = ["/_next/static/app.js"], routeAssets: Readonly<Record<string, readonly string[]>> = {}, releaseManifest: unknown = RELEASE_MANIFEST, healthBuildTime = "2026-07-22T00:00:00.000Z") {
   return async (input: string | URL | Request): Promise<Response> => {
     const url = new URL(input instanceof Request ? input.url : input.toString());
-    if (url.pathname === "/api/health") return Response.json({ schema_version: "1.0", status: "ok", service: "forge-learning-os", app_name: "FORGE", release_sha: SHA, build_time: healthBuildTime, runtime_mode: "fallback_only", cloud_accounts_enabled: false, cloud_auth_configured: false, device_profiles: "device_only", learner_evidence_sync: "disabled", dependency_lock_digest: DIGEST, content_package_manifest_digest: DIGEST, evaluator_baseline_digest: DIGEST, database_migration_identity: "not_configured", managed_surface_flags: { lesson_studio: false, interpretation: false, planner: false }, managed_provider_flags: { openai: false, anthropic: false, gemini: false, openrouter: false }, provider_mode: "request_only_byok", release_manifest: releaseManifest }, { headers: { "cache-control": "no-store", "x-forge-release-sha": SHA } });
+    if (url.pathname === "/api/health") return Response.json({ schema_version: "1.0", status: "ok", service: "forge-learning-os", app_name: "FORGE", release_sha: SHA, build_time: healthBuildTime, runtime_mode: "fallback_only", cloud_accounts_enabled: false, cloud_auth_configured: false, device_profiles: "device_only", learner_evidence_sync: "disabled", dependency_lock_digest: DIGEST, content_package_manifest_digest: DIGEST, evaluator_baseline_digest: DIGEST, database_migration_identity: "not_configured", managed_surface_flags: { lesson_studio: false, interpretation: false, planner: false }, managed_provider_flags: { openai: false, anthropic: false, gemini: false, openrouter: false }, provider_mode: "disabled", release_manifest: releaseManifest }, { headers: { "cache-control": "no-store", "x-forge-release-sha": SHA } });
     if (url.pathname.startsWith("/_next/static/")) return new Response(asset, { headers: { "content-type": "application/javascript" } });
     const scripts = routeAssets[url.pathname] ?? defaultAssets;
     return new Response(`<html><body>${pages[url.pathname] ?? ""}${scripts.map(scriptTag).join("")}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "content-security-policy": CSP, "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "strict-origin-when-cross-origin", "permissions-policy": "camera=(), microphone=(), geolocation=()" } });
@@ -104,19 +113,28 @@ describe("deployment verifier", () => {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     }
   });
-  it("checks all four Worlds, the source-corroboration path, shell routes, CSP nonce, and disabled state without promoting a plain receipt", async () => { const report = await run(); expect(report.status).toBe("fail"); expect(report.observed_release_sha).toBe(SHA); expect(report.request_policy.methods).toEqual(["GET"]); expect(report.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED"); expect(report.release_identity.source_sha).toBe(SHA); expect(report.release_identity.tested_sha).toBe(SHA); expect(report.release_identity.database).toEqual({ status: "not_configured" }); expect(report.alias_verified_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/); expect(report.checks.some((item) => item.id === "world_primary_source_reasoning.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "source_corroboration_path.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "pathway_availability.marker" && item.status === "pass")).toBe(true); expect(report.checks.find((item) => item.id === "provider_receipt.authority")?.status).toBe("fail"); });
-  it("keeps the source-corroboration route in the exact canonical verifier route set", () => {
+  it("checks canonical public/app routes, all four Worlds, the internal pilot denial, CSP nonce, and disabled state without promoting a plain receipt", async () => { const report = await run(); expect(report.status).toBe("fail"); expect(report.observed_release_sha).toBe(SHA); expect(report.request_policy.methods).toEqual(["GET"]); expect(report.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED"); expect(report.release_identity.source_sha).toBe(SHA); expect(report.release_identity.tested_sha).toBe(SHA); expect(report.release_identity.database).toEqual({ status: "not_configured" }); expect(report.alias_verified_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/); expect(report.checks.some((item) => item.id === "path_start.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "public_paths.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "how_forge_works.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "learner_today.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "world_primary_source_reasoning.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "source_corroboration_path.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "pathway_availability.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "author_gate.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "device_profile_sign_in.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "internal_pilot_denial.marker" && item.status === "pass")).toBe(true); expect(report.checks.find((item) => item.id === "provider_receipt.authority")?.status).toBe("fail"); });
+  it("keeps the refoundation journey and source-corroboration route in the exact canonical verifier route set", () => {
     expect(CANONICAL_DEPLOYMENT_ROUTES.map((route) => route.path)).toEqual([
       "/",
+      "/start",
+      "/paths",
+      "/how-forge-works",
+      "/app",
+      "/app/path",
+      "/app/study",
+      "/app/evidence",
+      "/trust",
       "/learn/force-and-motion",
       "/learn/ai-and-learning",
       "/learn/proportional-reasoning",
       "/learn/primary-source-reasoning",
       "/paths/source-corroboration",
-      "/pathways",
-      "/studio",
-      "/login",
+      "/coverage",
+      "/author",
+      "/sign-in",
       "/account",
+      "/internal/pilot",
     ]);
   });
   it("fails closed for zero and over-budget initial asset unions, but scans every asset at the exact budget", async () => {
