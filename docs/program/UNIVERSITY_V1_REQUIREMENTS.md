@@ -79,7 +79,7 @@ These remain P0 for a private alpha but are deliberately not implemented by this
 - owner-scoped durable storage, forced RLS, two-account isolation, backup/restore, export, correction, and deletion;
 - a reviewed event-authority decision before any replay, undo, or append-only claim for university objects;
 - bounded transient document parsing with byte/render cleanup and reattachment semantics;
-- capacity-aware planning, recovery, active study, protected checks, delayed return, and human routing;
+- durable capacity-aware planning, learner-editable recovery, active study, protected checks, delayed return, and accountable human routing;
 - complete-process accessibility evidence, including 320 CSS px, keyboard, screen reader, reduced motion, forced colors, browser, and low-bandwidth tests;
 - provider authority, budgets, groundedness evaluation, fallback, incident controls, and positive delayed-learning evidence before live tutoring;
 - pilot operations, support, adjudication, unit economics, and claim review.
@@ -99,6 +99,27 @@ This reversible slice supports direct workflow research without promoting the un
 | `UV1-TODAY-007` | Test the one-action hierarchy and uncertain/failure states before any public route decision. | The preregistered `UNIVERSITY_TODAY_UX_EXPERIMENT_LOOP.md` keeps four fixture states and regression gates fixed; component and rendered desktop/320, keyboard, reduced-motion, forced-colors, and console evidence covers ready, source-review, tight, and insufficient states. |
 | `UV1-TODAY-008` | Preserve the claim ceiling. | UI and handoff say fixture-authored/learner-fixture, not live student, institutional truth, validated recommendation, accessibility conformance, learning efficacy, or production readiness. |
 
+### Internal falling-behind recovery research slice
+
+This reversible slice tests recovery as a distinct student job. It does not create a durable semester plan or promote the university wedge.
+
+| ID | Requirement | Acceptance evidence |
+| --- | --- | --- |
+| `UV1-RECOVERY-001` | Begin from an explicit learner-fixture change and current capacity window rather than inferring distress, health, disability, motivation, or ability. | Request accepts only bounded change codes, exact time, learner-declared available minutes, and learner-declared buffer; no notes, diagnosis, profile, or behavior inference exists. |
+| `UV1-RECOVERY-002` | Reconcile shallow current-course context across at most eight courses without weakening course scope. | Every course projection must match the same exact owner, tenant, term, and `asOf`, plus its declared course ID; cross-scope and cross-time input fails closed. |
+| `UV1-RECOVERY-003` | Bind every recovery item to one exact reviewed deadline copy. | Missing, wrong-kind, candidate, rejected, duplicate-group, or conflict-group deadline references produce no usable recovery draft. |
+| `UV1-RECOVERY-004` | Preserve learner control over required, negotiable, deferrable, and no-longer-useful classifications. | Lanes derive only from explicit learner-fixture dispositions and learning-essential declarations; FORGE cannot automatically defer, drop, or relabel an item. |
+| `UV1-RECOVERY-005` | Protect a learner-declared buffer and preserve authored effort ranges. | Capacity compares protected required-work low/high totals against available minutes minus buffer; it never shortens an item or changes a deadline. |
+| `UV1-RECOVERY-006` | Use a transparent lexicographic boundary rather than an incomparable hidden score. | Source uncertainty blocks first; feasibility and overdue consequential conflicts follow; lane display order is reviewed deadline then item ID and is labeled as non-priority. |
+| `UV1-RECOVERY-007` | Keep negotiable or learning-essential trade-offs visible for learner choice. | Tight capacity or any decide/ask lane produces `learner_choice_required`; learning-essential work cannot be marked no longer useful and is not silently moved outside the window. |
+| `UV1-RECOVERY-008` | Surface overdue consequential work and insufficient protected capacity as human-help conditions. | The projection returns `human_help_required`, names the exact related item, and prepares one bounded question using copied deadline and capacity facts. |
+| `UV1-RECOVERY-009` | Prepare, but never send, a responsible-human question. | Draft state is `prepared_not_sent`; route is learner-declared or `not_declared`; no clipboard, message, email, calendar, link resolution, or external action exists. |
+| `UV1-RECOVERY-010` | Do not create a backlog debt counter, student ranking, risk score, ability score, streak, or guilt loop. | Contract exposes explicit `backlogDebtAllowed: false`, contains no numeric priority/ability/debt field, and UI tests preserve plain recovery language. |
+| `UV1-RECOVERY-011` | Make the recovery projector bounded, accessor-safe, deterministic, immutable, and side-effect free. | Plain-JSON depth/node, course/item/dependency bounds; hostile getter/proxy, cycle, determinism, immutability, fetch, and storage tests pass. |
+| `UV1-RECOVERY-012` | Keep the research surface internal and removable. | Production is unavailable; development requires the exact server token; fixture identities/content are scanned out of public assets; no public navigation, persistence, provider, or schema migration changes. |
+| `UV1-RECOVERY-013` | Test comprehension under fixed uncertainty states before changing the learner home. | `UNIVERSITY_RECOVERY_UX_EXPERIMENT_LOOP.md` fixes reset-fits, choice-needed, human-help, and source-review states plus desktop, 320 CSS px, keyboard, reduced-motion, forced-colors, console, and production-boundary checks. |
+| `UV1-RECOVERY-014` | Preserve the claim ceiling. | UI and handoff say synthetic, learner fixture, copied deadline, and not established; no demand, live student, institutional truth, recovery efficacy, accessibility conformance, or production claim. |
+
 ## First slice acceptance
 
 The slice is ready for review only when:
@@ -114,7 +135,7 @@ The slice is ready for review only when:
 After direct workflow evidence, choose one:
 
 - evaluate the implemented transient manual/ICS subset in the internal review workflow, then choose whether to add a local file-selection surface;
-- narrow to recovery and one-next-action;
+- evaluate recovery and one-next-action as separate jobs and as one loop;
 - narrow to guarded learning and protected checking;
 - repair the combined loop;
 - stop the university wedge.
