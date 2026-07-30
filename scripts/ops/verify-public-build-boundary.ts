@@ -18,6 +18,10 @@ import {
   scanUniversityProtectedStudyProductionPublicAssets,
 } from "../../src/components/forge/university/university-protected-study-public-artifact-boundary";
 import {
+  assertNoUniversitySemesterLoopPublicArtifactLeaks,
+  scanUniversitySemesterLoopProductionPublicAssets,
+} from "../../src/components/forge/university/university-semester-loop-public-artifact-boundary";
+import {
   assertNoUniversityTodayPublicArtifactLeaks,
   scanUniversityTodayProductionPublicAssets,
 } from "../../src/components/forge/university/university-today-public-artifact-boundary";
@@ -67,6 +71,7 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
   const universitySourceReviewLeaks = scanUniversitySourceReviewProductionPublicAssets(root);
   const universityRecoveryLeaks = scanUniversityRecoveryProductionPublicAssets(root);
   const universityProtectedStudyLeaks = scanUniversityProtectedStudyProductionPublicAssets(root);
+  const universitySemesterLoopLeaks = scanUniversitySemesterLoopProductionPublicAssets(root);
   const universityTodayLeaks = scanUniversityTodayProductionPublicAssets(root);
   if (leaks.length > 0) {
     throw new Error(`Retained unavailable Argument & Evidence data reached public build assets:\n${leaks.join("\n")}`);
@@ -75,6 +80,7 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
   assertNoUniversitySourceReviewPublicArtifactLeaks(universitySourceReviewLeaks);
   assertNoUniversityRecoveryPublicArtifactLeaks(universityRecoveryLeaks);
   assertNoUniversityProtectedStudyPublicArtifactLeaks(universityProtectedStudyLeaks);
+  assertNoUniversitySemesterLoopPublicArtifactLeaks(universitySemesterLoopLeaks);
   assertNoUniversityTodayPublicArtifactLeaks(universityTodayLeaks);
   process.stdout.write(publicBuildBoundaryReceiptLine(files.length, readPublicAssetDigest(root)));
 }

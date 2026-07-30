@@ -142,6 +142,30 @@ durable learning evidence.
 | `UV1-STUDY-010` | Test comprehension without turning people into one optimization metric. | `UNIVERSITY_PROTECTED_STUDY_UX_EXPERIMENT_LOOP.md` fixes the harness, separate comprehension/trust/harm observations, four states, and keep/stop rules. |
 | `UV1-STUDY-011` | Preserve the claim ceiling. | UI and handoff say synthetic, preview-only, honour-based, not persisted, and untested; no live student, institutional, learning, accessibility-conformance, production, or efficacy claim. |
 
+### Internal semester-loop composition research slice
+
+**Decision note:** compose the existing bounded student jobs only through one
+transient, same-envelope fixture projector. Do not treat adjacent projections,
+similar fixture identities, or navigation links as continuity. Do not add a
+durable semester coordinator, generic dashboard, model recommendation, or
+public route until the open observation, demand, and data-authority gates are
+met.
+
+| ID | Requirement | Acceptance evidence |
+| --- | --- | --- |
+| `UV1-LOOP-001` | Compose a raw Today request, raw Recovery request, and complete World package by recomputing each current child projector. | Caller-supplied projections or status flags are not accepted; Protected Study is reconstructed from the raw Today request and World package; child validation and safety rules remain authoritative. |
+| `UV1-LOOP-002` | Require one exact synthetic adult owner, tenant, term, course, `asOf`, and time zone across the complete request. | Cross-owner, tenant, term, course, time, or zone mismatch fails closed without a usable child projection or route. |
+| `UV1-LOOP-003` | Reuse Today's exact reconciliation request and reviewed deadline in Recovery. | Source revision, candidate, decision, claim, scope, deadline, and digest identity are exact; a duplicated or merely equivalent recovery fixture is rejected. |
+| `UV1-LOOP-004` | Bind Protected Study to the exact raw Today request and exact accepted-path World package. | Today or World ID, version, route, protocol, ordered source, release, availability, or runtime drift produces `world_review_required` or invalid rather than substitution. |
+| `UV1-LOOP-005` | Preserve a transparent fail-closed state boundary instead of scoring or ranking child conditions. | Fixed scenarios deterministically yield `source_review_required`, `recovery_required`, `learner_choice_required`, `world_review_required`, `path_complete`, `path_blocked`, or `protected_study_ready`; no scalar priority, risk, mastery, ability, or engagement field exists. |
+| `UV1-LOOP-006` | Preserve learner ownership and child authority. | The loop cannot accept/reject a source, alter capacity, choose a recovery trade-off, review a World, change a path, recommend an action, or infer learner intent. |
+| `UV1-LOOP-007` | Keep terminal path states narrow. | Complete means one accepted action is complete, not that a course, capability, term, or learner is complete; blocked does not infer cause, ability, or repair. |
+| `UV1-LOOP-008` | Keep composition transient, immutable, bounded, accessor-safe, deterministic, and side-effect free. | Hostile accessor/proxy, depth/node, malformed, semantic mismatch, determinism, deep-freeze, fetch, storage, event, session, evidence, and external-effect tests pass. |
+| `UV1-LOOP-009` | Expose only bounded next-job navigation with no transfer claim. | Ready may open the separate protected-study fixture, source uncertainty may open source review, and insufficient capacity may open Recovery; controls state that no source, capacity, decision, session, evidence, or progress transfers or saves. |
+| `UV1-LOOP-010` | Keep the research surface internal, removable, and production-unavailable. | Development requires exact token `FORGE_UNIVERSITY_SEMESTER_LOOP_FIXTURE=forge-university-semester-loop.v1`; production renders only the unavailable shell even with the token; fixture markers are absent from public static assets. |
+| `UV1-LOOP-011` | Test integrated-loop comprehension under one fixed same-envelope harness. | `UNIVERSITY_SEMESTER_LOOP_UX_EXPERIMENT.md` fixes seven states, separate comprehension/trust/autonomy/harm evidence, native-keyboard tasks, desktop, 320 CSS px, reduced-motion, forced-colors, console, and production-boundary gates. |
+| `UV1-LOOP-012` | Preserve the claim ceiling and all live gates. | UI, ADR, experiment, and handoff say synthetic, learner-fixture, copied source, transient, no persistence/session/evidence, and not production; `UV1-GATE-001..003` remain open. |
+
 ## First slice acceptance
 
 The slice is ready for review only when:
