@@ -1,0 +1,578 @@
+.surface {
+  width: min(1240px, calc(100% - 64px));
+  min-height: calc(100svh - 168px);
+  margin: 0 auto;
+  padding: clamp(44px, 7vw, 92px) 0 112px;
+  color: var(--forge-ink);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 780px) auto;
+  gap: 48px;
+  align-items: end;
+  border-bottom: 1px solid var(--forge-line-strong);
+  padding-bottom: 32px;
+}
+
+.kicker,
+.sectionIndex {
+  margin: 0 0 12px;
+  color: var(--forge-cyan);
+  font-family: var(--forge-mono);
+  font-size: 11px;
+  font-weight: 760;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.hero h1,
+.unavailable h1 {
+  max-width: 780px;
+  margin: 0;
+  font-size: clamp(42px, 6.2vw, 78px);
+  font-weight: 760;
+  letter-spacing: -0.055em;
+  line-height: 0.95;
+  text-wrap: balance;
+}
+
+.intro,
+.unavailable > p:last-child {
+  max-width: 720px;
+  margin: 22px 0 0;
+  color: var(--forge-muted);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+.progress {
+  display: grid;
+  min-width: 116px;
+  gap: 4px;
+  border-left: 1px solid var(--forge-line-strong);
+  padding-left: 20px;
+}
+
+.progress strong {
+  color: var(--forge-amber);
+  font-family: var(--forge-serif);
+  font-size: 48px;
+  font-weight: 500;
+  line-height: 0.9;
+}
+
+.progress span {
+  color: var(--forge-muted);
+  font-size: 12px;
+}
+
+.boundary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  border-bottom: 1px solid var(--forge-line);
+  padding: 13px 0;
+  color: var(--forge-dim);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.boundary strong {
+  color: var(--forge-amber);
+}
+
+.boundary span::before {
+  content: "/";
+  margin-right: 24px;
+  color: var(--forge-line-strong);
+}
+
+.loading {
+  display: flex;
+  min-height: 360px;
+  align-items: center;
+  gap: 14px;
+  color: var(--forge-muted);
+}
+
+.loading span {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--forge-line-strong);
+  border-top-color: var(--forge-cyan);
+  border-radius: 50%;
+  animation: source-review-spin 900ms linear infinite;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: clamp(36px, 6vw, 84px);
+  align-items: start;
+  padding-top: 42px;
+}
+
+.ledger {
+  min-width: 0;
+}
+
+.conflictSection,
+.policySection {
+  padding: 0 0 52px;
+}
+
+.policySection {
+  border-top: 1px solid var(--forge-line-strong);
+  padding-top: 44px;
+}
+
+.sectionHeading {
+  display: flex;
+  gap: 24px;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.sectionHeading h2,
+.context h2 {
+  max-width: 720px;
+  margin: 0;
+  font-family: var(--forge-serif);
+  font-size: clamp(30px, 4vw, 48px);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+
+.state {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+  color: var(--forge-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.state > span {
+  width: 10px;
+  height: 10px;
+  border: 1px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.state[data-tone="warning"] {
+  color: var(--forge-amber);
+}
+
+.sectionBody {
+  max-width: 720px;
+  margin: 17px 0 24px;
+  color: var(--forge-muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.candidateList {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--forge-line-strong);
+  list-style: none;
+}
+
+.candidate {
+  display: grid;
+  gap: 13px;
+  border-bottom: 1px solid var(--forge-line);
+  border-left: 3px solid transparent;
+  padding: 22px 18px 24px;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.candidate[data-decision="accept"],
+.candidate[data-decision="correct"] {
+  border-left-color: var(--forge-cyan);
+  background: color-mix(in srgb, var(--forge-cyan) 5%, transparent);
+}
+
+.candidate[data-decision="reject"] {
+  border-left-color: var(--forge-dim);
+  background: color-mix(in srgb, var(--forge-paper) 3%, transparent);
+}
+
+.candidateMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 18px;
+  color: var(--forge-muted);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.candidateMeta span:first-child {
+  color: var(--forge-cyan);
+  font-weight: 760;
+}
+
+.fact {
+  max-width: 720px;
+  margin: 0;
+  color: var(--forge-ink);
+  font-family: var(--forge-serif);
+  font-size: clamp(21px, 2.5vw, 30px);
+  line-height: 1.2;
+}
+
+.correctionSummary,
+.policyBoundary {
+  max-width: 700px;
+  margin: 0;
+  border-left: 2px solid var(--forge-violet);
+  padding-left: 12px;
+  color: var(--forge-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.policyBoundary {
+  border-left-color: var(--forge-amber);
+  color: var(--forge-amber);
+}
+
+.decisionState {
+  margin: 0;
+  color: var(--forge-dim);
+  font-size: 12px;
+}
+
+.candidateActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.candidateActions button,
+.correctionForm button,
+.resetButton {
+  min-height: 44px;
+  border: 1px solid var(--forge-line-strong);
+  border-radius: 6px;
+  padding: 9px 13px;
+  background: transparent;
+  color: var(--forge-ink);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 720;
+  line-height: 1.2;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.candidateActions button:hover:not(:disabled),
+.correctionForm button:hover:not(:disabled),
+.resetButton:hover:not(:disabled) {
+  border-color: var(--forge-cyan);
+  color: var(--forge-cyan);
+}
+
+.candidateActions button[aria-pressed="true"] {
+  border-color: var(--forge-cyan);
+  background: var(--forge-cyan-deep);
+  color: var(--forge-ink);
+}
+
+.correctionForm {
+  display: grid;
+  max-width: 520px;
+  gap: 9px;
+  border: 1px solid var(--forge-violet);
+  padding: 16px;
+  background: color-mix(in srgb, var(--forge-violet) 6%, var(--forge-surface));
+}
+
+.correctionForm label {
+  color: var(--forge-ink);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.correctionForm input {
+  min-height: 46px;
+  width: 100%;
+  border: 1px solid var(--forge-line-strong);
+  border-radius: 6px;
+  padding: 9px 11px;
+  background: var(--forge-bg);
+  color: var(--forge-ink);
+  color-scheme: dark;
+}
+
+.correctionForm p {
+  margin: 0;
+  color: var(--forge-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.correctionForm > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.humanQuestion {
+  margin-top: 26px;
+  border: 1px solid var(--forge-amber-deep);
+  border-top-width: 2px;
+  padding: 18px;
+  background: color-mix(in srgb, var(--forge-amber) 7%, var(--forge-surface));
+}
+
+.humanQuestion > p {
+  margin: 0 0 9px;
+  color: var(--forge-amber);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.humanQuestion blockquote {
+  margin: 0;
+  color: var(--forge-ink);
+  font-family: var(--forge-serif);
+  font-size: 19px;
+  line-height: 1.45;
+}
+
+.humanQuestion small {
+  display: block;
+  margin-top: 11px;
+  color: var(--forge-muted);
+}
+
+.ledgerFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-top: 1px solid var(--forge-line-strong);
+  padding-top: 18px;
+}
+
+.ledgerFooter p {
+  margin: 0;
+  color: var(--forge-muted);
+  font-size: 13px;
+}
+
+.context {
+  position: sticky;
+  top: 28px;
+  border-top: 3px solid var(--forge-cyan);
+  padding-top: 19px;
+}
+
+.context h2 {
+  font-size: 30px;
+}
+
+.context dl {
+  display: grid;
+  gap: 0;
+  margin: 24px 0 0;
+}
+
+.context dl > div {
+  display: grid;
+  gap: 4px;
+  border-top: 1px solid var(--forge-line);
+  padding: 12px 0;
+}
+
+.context dt {
+  color: var(--forge-dim);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.context dd {
+  margin: 0;
+  color: var(--forge-ink);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.sourceRegister {
+  margin-top: 26px;
+}
+
+.sourceRegister h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+
+.sourceRegister ul {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--forge-line-strong);
+  list-style: none;
+}
+
+.sourceRegister li {
+  display: grid;
+  gap: 4px;
+  border-bottom: 1px solid var(--forge-line);
+  padding: 11px 0;
+}
+
+.sourceRegister strong {
+  font-size: 12px;
+}
+
+.sourceRegister span,
+.sourceRegister small {
+  color: var(--forge-muted);
+  font-size: 11px;
+}
+
+.privacyNote {
+  margin: 24px 0 0;
+  border-left: 2px solid var(--forge-line-strong);
+  padding-left: 12px;
+  color: var(--forge-dim);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.unavailable {
+  display: grid;
+  align-content: start;
+  gap: 0;
+  max-width: 920px;
+}
+
+@keyframes source-review-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .context {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 24px;
+  }
+
+  .context > :first-child,
+  .context > h2,
+  .privacyNote {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 680px) {
+  .surface {
+    width: min(100% - 32px, 1240px);
+    padding-top: 32px;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .progress {
+    grid-template-columns: auto 1fr;
+    align-items: end;
+    min-width: 0;
+  }
+
+  .progress strong {
+    font-size: 38px;
+  }
+
+  .boundary {
+    display: grid;
+    gap: 5px;
+  }
+
+  .boundary span::before {
+    content: none;
+  }
+
+  .sectionHeading,
+  .ledgerFooter {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .state {
+    margin-top: 0;
+  }
+
+  .candidate {
+    padding-inline: 12px;
+  }
+
+  .candidateActions {
+    display: grid;
+  }
+
+  .candidateActions button {
+    width: 100%;
+    text-align: left;
+  }
+
+  .context {
+    grid-template-columns: 1fr;
+  }
+
+  .context > :first-child,
+  .context > h2,
+  .privacyNote {
+    grid-column: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .candidate,
+  .candidateActions button,
+  .correctionForm button,
+  .resetButton {
+    transition: none;
+  }
+
+  .loading span {
+    animation: none;
+    border-color: var(--forge-cyan);
+  }
+}
+
+@media (forced-colors: active) {
+  .candidate[data-decision],
+  .correctionForm,
+  .humanQuestion,
+  .context {
+    forced-color-adjust: auto;
+  }
+
+  .state > span,
+  .loading span {
+    border-color: CanvasText;
+  }
+}

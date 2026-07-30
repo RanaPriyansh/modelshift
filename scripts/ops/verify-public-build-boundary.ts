@@ -5,6 +5,10 @@ import {
   assertNoAdultPilotPublicArtifactLeaks,
   scanAdultPilotProductionPublicAssets,
 } from "../../src/components/forge/pilot/adult-pilot-public-artifact-boundary";
+import {
+  assertNoUniversitySourceReviewPublicArtifactLeaks,
+  scanUniversitySourceReviewProductionPublicAssets,
+} from "../../src/components/forge/university/university-source-review-public-artifact-boundary";
 
 import { readPublicAssetDigest } from "./release-digests";
 import { publicBuildBoundaryReceiptLine } from "./public-build-boundary-receipt";
@@ -48,10 +52,12 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
     }
   }
   const adultPilotLeaks = scanAdultPilotProductionPublicAssets(root);
+  const universitySourceReviewLeaks = scanUniversitySourceReviewProductionPublicAssets(root);
   if (leaks.length > 0) {
     throw new Error(`Retained unavailable Argument & Evidence data reached public build assets:\n${leaks.join("\n")}`);
   }
   assertNoAdultPilotPublicArtifactLeaks(adultPilotLeaks);
+  assertNoUniversitySourceReviewPublicArtifactLeaks(universitySourceReviewLeaks);
   process.stdout.write(publicBuildBoundaryReceiptLine(files.length, readPublicAssetDigest(root)));
 }
 
