@@ -65,6 +65,21 @@ These remain P0 for a private alpha but are deliberately not implemented by this
 - provider authority, budgets, groundedness evaluation, fallback, incident controls, and positive delayed-learning evidence before live tutoring;
 - pilot operations, support, adjudication, unit economics, and claim review.
 
+### Internal Today composition research slice
+
+This reversible slice supports direct workflow research without promoting the university wedge or replacing the learner home.
+
+| ID | Requirement | Acceptance evidence |
+| --- | --- | --- |
+| `UV1-TODAY-001` | Select an action only through the existing immutable learner-accepted reviewed path projector. | Course-source facts cannot select, rank, activate, or start an action; negative tests cover candidate, unreviewed, cross-goal, and bad-digest paths. |
+| `UV1-TODAY-002` | Bind the term context and fixture-authored effort range to the exact owner/tenant/term/course, goal, path, revision, and projected node. | Cross-scope, cross-goal, path/revision, and node mismatches fail closed with no usable action. |
+| `UV1-TODAY-003` | Keep source uncertainty visible and non-authorizing. | Candidate, conflict, duplicate, stale/unknown freshness, or incomplete connected-source coverage produces `source_review_required`; the composition exposes no learning action in that state. |
+| `UV1-TODAY-004` | Compare learner-fixture available time with an explicit fixture-authored effort range without inferring capacity. | Fits, tight, and insufficient states are deterministic; tight requires learner choice and insufficient requires replanning. |
+| `UV1-TODAY-005` | Make the composition side-effect free and removable. | No model, network, browser storage, database, event, session start, path activation, connector, provider, or external write exists in the projector or research UI. |
+| `UV1-TODAY-006` | Keep the research surface internal and fail closed. | Production is unavailable; development requires an exact server fixture token; sample markers are absent from production public assets. |
+| `UV1-TODAY-007` | Test the one-action hierarchy and uncertain/failure states before any public route decision. | The preregistered `UNIVERSITY_TODAY_UX_EXPERIMENT_LOOP.md` keeps four fixture states and regression gates fixed; component and rendered desktop/320, keyboard, reduced-motion, forced-colors, and console evidence covers ready, source-review, tight, and insufficient states. |
+| `UV1-TODAY-008` | Preserve the claim ceiling. | UI and handoff say fixture-authored/learner-fixture, not live student, institutional truth, validated recommendation, accessibility conformance, learning efficacy, or production readiness. |
+
 ## First slice acceptance
 
 The slice is ready for review only when:
