@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: "A fail-closed sample workspace for reviewing connected course-source facts.",
 };
 
-export default function InternalUniversitySourceReviewPage() {
+export default async function InternalUniversitySourceReviewPage() {
   const gate = process.env.NODE_ENV === "development"
     ? readUniversitySourceReviewGate()
     : { enabled: false as const, status: "review-fixture-unavailable" as const };
@@ -21,7 +21,7 @@ export default function InternalUniversitySourceReviewPage() {
     <ForgeShell active="learn" surface="author">
       <main id="forge-main" tabIndex={-1}>
         {gate.enabled
-          ? <UniversitySourceReview initialRequest={reviewedUniversitySourceRequest()} />
+          ? <UniversitySourceReview initialRequest={await reviewedUniversitySourceRequest()} />
           : <UniversitySourceReviewUnavailable />}
       </main>
     </ForgeShell>

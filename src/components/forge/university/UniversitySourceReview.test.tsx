@@ -13,7 +13,7 @@ afterEach(cleanup);
 describe("UniversitySourceReview", () => {
   it("keeps conflicting copied facts blocked after both extractions are confirmed", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
-    render(<UniversitySourceReview initialRequest={reviewedUniversitySourceRequest()} />);
+    render(<UniversitySourceReview initialRequest={await reviewedUniversitySourceRequest()} />);
 
     expect(await screen.findByRole("heading", { name: "Two copies give different deadlines." })).toBeInTheDocument();
     const conflictSection = screen.getByRole("heading", { name: "Two copies give different deadlines." }).closest("section")!;
@@ -32,7 +32,7 @@ describe("UniversitySourceReview", () => {
   });
 
   it("preserves the copied value while applying a student correction", async () => {
-    render(<UniversitySourceReview initialRequest={reviewedUniversitySourceRequest()} />);
+    render(<UniversitySourceReview initialRequest={await reviewedUniversitySourceRequest()} />);
     expect((await screen.findAllByText(/Assignment one, due/)).length).toBeGreaterThan(1);
 
     const correctButtons = screen.getAllByRole("button", { name: "Correct transcription" });
@@ -47,7 +47,7 @@ describe("UniversitySourceReview", () => {
   });
 
   it("keeps copied assessment permission in restricted mode after a transcription match", async () => {
-    render(<UniversitySourceReview initialRequest={reviewedUniversitySourceRequest()} />);
+    render(<UniversitySourceReview initialRequest={await reviewedUniversitySourceRequest()} />);
     const policyHeading = await screen.findByRole("heading", { name: "A copied permission is not authorization." });
     const policySection = policyHeading.closest("section")!;
     fireEvent.click(within(policySection).getByRole("button", { name: "Matches this copy" }));
@@ -61,7 +61,7 @@ describe("UniversitySourceReview", () => {
 
   it("does not write browser storage while reviewing the local sample", async () => {
     const storageSetItem = vi.spyOn(Storage.prototype, "setItem");
-    render(<UniversitySourceReview initialRequest={reviewedUniversitySourceRequest()} />);
+    render(<UniversitySourceReview initialRequest={await reviewedUniversitySourceRequest()} />);
     await screen.findByRole("heading", { name: "Two copies give different deadlines." });
     fireEvent.click(screen.getAllByRole("button", { name: "Reject extraction" })[0]!);
     await waitFor(() => expect(screen.getByText("Extraction rejected")).toBeInTheDocument());

@@ -52,6 +52,25 @@ The two other atomic jobs—recovery after falling behind and protected concept 
 | `UV1-SRC-012` | Produce deterministic, immutable output with bounded arrays and stable ordering. | Same semantic input produces the same digest and projection; outputs are deeply frozen. |
 | `UV1-SRC-013` | Fail closed when structural or semantic validation fails. | Malformed, missing-reference, duplicate-ID, mixed-scope, future-time, and decision-conflict tests return no usable context. |
 
+### Transient manual and calendar ingestion slice
+
+This parser packet closes the synthetic derivation gap without authorizing real coursework or durable source storage.
+
+| ID | Requirement | Acceptance evidence |
+| --- | --- | --- |
+| `UV1-INGEST-001` | Accept only bounded, transient, caller-supplied structured manual data or calendar text; accept no URL, connector, credential, provider, database, file path, or storage handle. | Strict runtime schemas reject undeclared fields; implementation contains no network, filesystem, provider, database, browser-storage, or event call. |
+| `UV1-INGEST-002` | Copy untrusted request data through an accessor-free plain-JSON boundary before schema traversal. | Accessor, non-plain prototype, sparse/extended array, excessive-depth, and malformed inputs fail closed; hostile getter tests prove no getter execution. |
+| `UV1-INGEST-003` | Name the calendar implementation as a bounded RFC 5545 subset rather than claiming general ICS support. | Parser authority is exactly `rfc5545-one-shot-review-subset.v1`; ADR-012 names supported and unsupported grammar. |
+| `UV1-INGEST-004` | Derive calendar facts only from caller-declared UID-to-fact mappings. | No title/category/description heuristic chooses commitment, deadline, consequence, or claim identity; exact mapping tests cover VEVENT/VTODO and property-kind mismatch. |
+| `UV1-INGEST-005` | Support one-shot VEVENT commitments and VEVENT/VTODO deadlines only when date-time semantics are explicit. | UTC or explicit supported TZID succeeds; floating, all-day, invalid zone, clock-gap, malformed, cancelled, and recurring/exception inputs fail closed. Repeated local clock time chooses the RFC-defined first occurrence. |
+| `UV1-INGEST-006` | Bind every result to exact source and locator provenance without retaining the source body. | Revision retains SHA-256 of the exact input and candidate retains manual field or UID/property locator; serialized result contains no calendar text, description, product identifier, or original bytes. |
+| `UV1-INGEST-007` | Keep manual entry structured and shallow. | Manual facts use the existing bounded fact schema and field locator; free-form notes, source documents, and undeclared raw fields are rejected. |
+| `UV1-INGEST-008` | Never derive a fact outside caller-declared connected-source coverage. | Commitment, deadline, and policy fact kinds must be present in `inspectedScopes`; mismatch invalidates the entire ingestion result. |
+| `UV1-INGEST-009` | Make every successful ingestion review-only and non-authorizing. | Result status is `review_required`; authenticity, completeness, tenant/RLS, durable storage, event, execution, and recommendation authority remain unavailable or false. |
+| `UV1-INGEST-010` | Bound resource use and discard partial derivations on any error. | Exact byte, physical-line, unfolded-line, component, property, candidate, object-depth, and object-node limits are tested; an error returns no revision, candidates, or digest. |
+| `UV1-INGEST-011` | Produce stable, immutable output from stable input. | Same input yields the same source and ingestion digests, candidate order, issues, and deeply frozen result. |
+| `UV1-INGEST-012` | Exercise the parser in the removable university source-review fixture before any live input surface. | The internal fixture derives both manual and calendar revisions through ingestion; its production-unavailable gate and public-asset leak scan remain unchanged. |
+
 ### Cross-cutting requirements retained for later phases
 
 These remain P0 for a private alpha but are deliberately not implemented by this slice:
@@ -94,7 +113,7 @@ The slice is ready for review only when:
 
 After direct workflow evidence, choose one:
 
-- continue the source foundation with a manual/ICS parser and reviewed goal adapter;
+- evaluate the implemented transient manual/ICS subset in the internal review workflow, then choose whether to add a local file-selection surface;
 - narrow to recovery and one-next-action;
 - narrow to guarded learning and protected checking;
 - repair the combined loop;

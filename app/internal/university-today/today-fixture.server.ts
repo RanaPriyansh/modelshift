@@ -195,7 +195,7 @@ export type UniversityTodayFixtureScenario = Readonly<{
 export async function universityTodayFixtureScenarios(): Promise<readonly UniversityTodayFixtureScenario[]> {
   const scenarios = await Promise.all([
     projectUniversityToday(await request(60)),
-    projectUniversityToday(await request(60, reviewedUniversitySourceRequest())),
+    projectUniversityToday(await request(60, await reviewedUniversitySourceRequest())),
     projectUniversityToday(await request(35)),
     projectUniversityToday(await request(20)),
   ]);

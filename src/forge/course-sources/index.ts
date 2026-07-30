@@ -53,3 +53,17 @@ export type {
   CourseSourceIssueCode,
   CourseSourceReconciliationResult,
 } from "./reconcile";
+
+export {
+  COURSE_SOURCE_ICS_SUBSET,
+  COURSE_SOURCE_INGESTION_LIMITS,
+  COURSE_SOURCE_INGESTION_RESULT_SCHEMA_VERSION,
+  COURSE_SOURCE_INGESTION_SCHEMA_VERSION,
+  ingestCourseSource,
+} from "./ingest";
+
+export type {
+  CourseSourceIngestionIssue,
+  CourseSourceIngestionIssueCode,
+  CourseSourceIngestionResultV1,
+} from "./ingest";
