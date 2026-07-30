@@ -141,7 +141,7 @@ describe("canonical World pack immutability", () => {
     const receipt = completedProportionalReceipt();
     expect(receipt).toMatchObject({
       runtimeBindingDigest: "sha256:b2f134f91ee9cd71750e19c8b440751bcf93415aec10a254e1b0ac491e8840c1",
-      packageIntegrityHash: "sha256:b8430668c5b061415aa5ec24bb8e62ae4a4e4c95a808c7a65b04e3ff78a8a353",
+      packageIntegrityHash: "sha256:f55197c4985ae4a2964f40411a2ded4c8519779ea8dab046ccc211a64e8fb0e4",
       world: {
         id: "world.proportional-reasoning",
         version: "1.0.2",

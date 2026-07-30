@@ -51,7 +51,10 @@ describe("public FORGE pathway availability", () => {
         { label: "Teen", policyLabel: "Authored only" },
         { label: "Adult", policyLabel: "Authored only" },
       ],
-      returnProof: { status: "unavailable" },
+      returnProof: {
+        status: "available",
+        text: "Reviewed return proof is available for this World.",
+      },
     });
     const serialized = JSON.stringify(getCurrentPathwayAvailability());
     expect(serialized).not.toMatch(/"(?:learnerId|profileId|eventRef|eventType|sourceIds|sourceUrl|url|receipt|schedule)"/i);

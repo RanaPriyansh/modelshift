@@ -1,17 +1,63 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { ForgePathCommand } from "./ForgePathCommand";
 import { ForgeTrustLine } from "./ForgePrimitives";
 
-type ForgeSection = "home" | "learn" | "studio" | "trail" | "evidence" | "account";
+export type ForgeSection =
+  | "home"
+  | "learn"
+  | "studio"
+  | "trail"
+  | "evidence"
+  | "account"
+  | "today"
+  | "paths"
+  | "projects"
+  | "explore"
+  | "trust"
+  | "start"
+  | "settings";
 
-const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; section: ForgeSection }> = [
-  { href: "/#worlds", label: "Learn", section: "learn" },
+export type ForgeSurface = "legacy" | "public" | "app" | "author";
+
+const LEGACY_NAV_ITEMS: ReadonlyArray<{ href: string; label: string; section: ForgeSection }> = [
+  { href: "/paths", label: "Learn", section: "learn" },
   { href: "/studio", label: "Studio", section: "studio" },
   { href: "/trail", label: "Trail", section: "trail" },
   { href: "/evidence", label: "Evidence", section: "evidence" },
   { href: "/account", label: "Access", section: "account" },
 ];
+
+const PUBLIC_NAV_ITEMS: ReadonlyArray<{ href: string; label: string; section: ForgeSection }> = [
+  { href: "/paths", label: "Paths", section: "paths" },
+  { href: "/how-forge-works", label: "How it works", section: "learn" },
+  { href: "/trust", label: "Evidence & trust", section: "trust" },
+  { href: "/start", label: "Start learning", section: "start" },
+];
+
+const APP_NAV_ITEMS: ReadonlyArray<{ href: string; label: string; section: ForgeSection }> = [
+  { href: "/app", label: "Home", section: "today" },
+  { href: "/app/paths", label: "Paths", section: "paths" },
+  { href: "/paths", label: "Explore", section: "explore" },
+  { href: "/app/projects", label: "Projects", section: "projects" },
+  { href: "/app/evidence", label: "Evidence", section: "evidence" },
+  { href: "/app/settings", label: "Profile", section: "settings" },
+];
+
+const AUTHOR_NAV_ITEMS: ReadonlyArray<{ href: string; label: string; section: ForgeSection }> = [
+  { href: "/author", label: "Draft studio", section: "studio" },
+  { href: "/coverage", label: "Coverage", section: "learn" },
+  { href: "/app", label: "Learner app", section: "today" },
+  { href: "/app/settings", label: "Settings", section: "settings" },
+];
+
+function navItemsFor(surface: ForgeSurface) {
+  if (surface === "public") return PUBLIC_NAV_ITEMS;
+  if (surface === "app") return APP_NAV_ITEMS;
+  if (surface === "author") return AUTHOR_NAV_ITEMS;
+  return LEGACY_NAV_ITEMS;
+}
 
 function ForgeMark() {
   return (
@@ -24,9 +70,9 @@ function ForgeMark() {
   );
 }
 
-function Brand() {
+function Brand({ href = "/" }: { href?: string }) {
   return (
-    <Link className="forge-brand" href="/" aria-label="FORGE Learning OS home">
+    <Link className="forge-brand" href={href} aria-label="FORGE Learning OS home">
       <ForgeMark />
       <span>
         <strong>FORGE</strong>
@@ -45,7 +91,7 @@ function ArrowIcon() {
 }
 
 function NavIcon({ section }: { section: ForgeSection }) {
-  if (section === "home") {
+  if (section === "home" || section === "today") {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="m4 11 8-7 8 7v9h-6v-6h-4v6H4v-9Z" />
@@ -53,7 +99,7 @@ function NavIcon({ section }: { section: ForgeSection }) {
     );
   }
 
-  if (section === "learn") {
+  if (section === "learn" || section === "paths" || section === "explore") {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M4 5.5h6.3c1 0 1.7.5 1.7 1.4v12.6c0-1.1-.8-1.8-2-1.8H4V5.5Zm16 0h-6.3c-1 0-1.7.5-1.7 1.4v12.6c0-1.1.8-1.8 2-1.8h6V5.5Z" />
@@ -77,10 +123,26 @@ function NavIcon({ section }: { section: ForgeSection }) {
     );
   }
 
-  if (section === "account") {
+  if (section === "account" || section === "settings") {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8c.8-4 3.2-6 7-6s6.2 2 7 6" />
+      </svg>
+    );
+  }
+
+  if (section === "projects") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Zm0 9 8-4.5M12 12 4 7.5M12 12v9" />
+      </svg>
+    );
+  }
+
+  if (section === "start") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 12h15m-6-6 6 6-6 6" />
       </svg>
     );
   }
@@ -92,10 +154,16 @@ function NavIcon({ section }: { section: ForgeSection }) {
   );
 }
 
-function PrimaryNavigation({ active }: { active: ForgeSection }) {
+function PrimaryNavigation({
+  active,
+  items,
+}: {
+  active: ForgeSection;
+  items: ReadonlyArray<{ href: string; label: string; section: ForgeSection }>;
+}) {
   return (
     <nav className="forge-primary-nav" aria-label="Primary navigation">
-      {NAV_ITEMS.map((item) => (
+      {items.map((item) => (
         <Link
           key={item.label}
           href={item.href}
@@ -108,12 +176,13 @@ function PrimaryNavigation({ active }: { active: ForgeSection }) {
   );
 }
 
-function MobileNavigation({ active }: { active: ForgeSection }) {
-  const items: ReadonlyArray<{ href: string; label: string; section: ForgeSection }> = [
-    { href: "/", label: "Home", section: "home" },
-    ...NAV_ITEMS,
-  ];
-
+function MobileNavigation({
+  active,
+  items,
+}: {
+  active: ForgeSection;
+  items: ReadonlyArray<{ href: string; label: string; section: ForgeSection }>;
+}) {
   return (
     <nav className="forge-mobile-nav" aria-label="Mobile navigation">
       {items.map((item) => (
@@ -133,22 +202,32 @@ function MobileNavigation({ active }: { active: ForgeSection }) {
 export function ForgeShell({
   active,
   children,
+  surface = "legacy",
 }: {
   active: ForgeSection;
   children: ReactNode;
+  surface?: ForgeSurface;
 }) {
+  const items = navItemsFor(surface);
+  const mobileItems = surface === "legacy"
+    ? [{ href: "/", label: "Home", section: "home" as const }, ...items]
+    : items;
+  const homeHref = surface === "app" ? "/app" : "/";
   return (
-    <div className="forge-shell">
+    <div className="forge-shell" data-forge-surface={surface}>
       <a className="forge-skip-link" href="#forge-main">
         Skip to main content
       </a>
       <header className="forge-topbar">
-        <Brand />
-        <PrimaryNavigation active={active} />
-        <ForgeTrustLine className="forge-topbar-disclosure" />
+        <Brand href={homeHref} />
+        <PrimaryNavigation active={active} items={items} />
+        <div className="forge-topbar-actions">
+          {surface === "app" ? <ForgePathCommand /> : null}
+          <ForgeTrustLine className="forge-topbar-disclosure" />
+        </div>
       </header>
       {children}
-      <MobileNavigation active={active} />
+      <MobileNavigation active={active} items={mobileItems} />
     </div>
   );
 }
@@ -156,9 +235,11 @@ export function ForgeShell({
 export function ForgeWorldFrame({
   children,
   worldLabel,
+  exitHref = "/paths",
 }: {
   children: ReactNode;
   worldLabel: string;
+  exitHref?: string;
 }) {
   return (
     <div className="forge-world-frame">
@@ -168,7 +249,7 @@ export function ForgeWorldFrame({
       <header className="forge-worldbar">
         <Brand />
         <span className="forge-worldbar-title">{worldLabel}</span>
-        <Link className="forge-exit-world" href="/#worlds">
+        <Link className="forge-exit-world" href={exitHref}>
           Exit world
           <ArrowIcon />
         </Link>

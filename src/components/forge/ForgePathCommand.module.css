@@ -1,0 +1,246 @@
+.trigger {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--forge-line-strong);
+  border-radius: 0;
+  padding: 0 13px;
+  color: var(--forge-ink);
+  background: var(--forge-bg);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.trigger span {
+  color: var(--forge-amber-deep);
+}
+
+.backdrop {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 24px;
+  background: rgb(12 14 12 / 70%);
+}
+
+.dialog {
+  width: min(720px, 100%);
+  max-height: calc(100svh - 48px);
+  overflow-y: auto;
+  border: 1px solid var(--forge-line-strong);
+  padding: clamp(26px, 5vw, 54px);
+  color: var(--forge-ink);
+  background: var(--forge-bg);
+  box-shadow: 0 30px 90px rgb(0 0 0 / 28%);
+}
+
+.dialog > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.dialog > header p,
+.preview > p {
+  margin: 0;
+  color: var(--forge-cyan-deep);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dialog > header button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--forge-line);
+  color: inherit;
+  background: transparent;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.dialog h2 {
+  max-width: 570px;
+  margin: 20px 0 0;
+  font-size: clamp(38px, 6vw, 62px);
+  font-weight: 570;
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+
+.dialog > p {
+  max-width: 620px;
+  margin: 22px 0 0;
+  color: var(--forge-muted);
+  line-height: 1.65;
+}
+
+.dialog form {
+  margin-top: 32px;
+}
+
+.dialog label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--forge-muted);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.inputRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.inputRow input {
+  min-width: 0;
+  min-height: 52px;
+  border: 1px solid var(--forge-line-strong);
+  border-radius: 0;
+  padding: 0 14px;
+  color: inherit;
+  background: var(--forge-paper);
+  font: inherit;
+  font-size: 16px;
+}
+
+.inputRow button,
+.preview footer button,
+.preview footer a {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--forge-ink);
+  border-radius: 0;
+  padding: 0 18px;
+  color: var(--forge-bg);
+  background: var(--forge-ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 780;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.inputRow button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.voiceBoundary {
+  margin: 10px 0 0;
+  color: var(--forge-dim);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.preview {
+  margin-top: 30px;
+  padding-top: 28px;
+  border-top: 2px solid var(--forge-ink);
+}
+
+.preview dl {
+  margin: 18px 0 0;
+}
+
+.preview dl div {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.28fr) minmax(0, 1fr);
+  gap: 22px;
+  padding: 13px 0;
+  border-top: 1px solid var(--forge-line);
+}
+
+.preview dt {
+  color: var(--forge-muted);
+  font-family: var(--forge-mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.preview dd {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.preview footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.preview footer button {
+  color: var(--forge-ink);
+  background: transparent;
+}
+
+@media (max-width: 720px) {
+  .trigger {
+    padding: 0 10px;
+  }
+
+  .trigger span {
+    display: none;
+  }
+
+  .backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .dialog {
+    width: 100%;
+    max-height: 92svh;
+    padding: 28px 18px calc(28px + env(safe-area-inset-bottom));
+  }
+
+  .inputRow {
+    grid-template-columns: 1fr;
+  }
+
+  .inputRow button {
+    width: 100%;
+  }
+
+  .preview dl div {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .preview footer > * {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .dialog,
+  .trigger {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .backdrop {
+    background: Canvas;
+  }
+}

@@ -80,6 +80,7 @@ function groundedContract(
       worldId: topic.worldId,
       worldVersion: topic.worldVersion,
       worldRoute: topic.route,
+      activityProtocol: topic.activityProtocol,
       confidence: "authored_match",
     },
     grounding: {

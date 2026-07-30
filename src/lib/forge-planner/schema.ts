@@ -1,6 +1,21 @@
 import { z } from "zod";
 
+import type { WorldActivityProtocol } from "../../forge/contracts";
 import { SOURCE_IDS, TOPIC_IDS, WORLD_IDS, WORLD_ROUTES } from "./catalog";
+import {
+  MINOR_PLANNER_PRACTICAL_OUTCOME,
+  MINOR_PLANNER_STARTING_POINT,
+  MINOR_PLANNER_SUCCESS_SHAPE,
+  MINOR_PLANNER_TOPIC_TOKENS,
+} from "./client-contract";
+
+export {
+  MINOR_PLANNER_PRACTICAL_OUTCOME,
+  MINOR_PLANNER_STARTING_POINT,
+  MINOR_PLANNER_SUCCESS_SHAPE,
+  MINOR_PLANNER_TOPIC_TOKENS,
+} from "./client-contract";
+export type { MinorPlannerTopicToken } from "./client-contract";
 
 export const ageModeSchema = z.enum(["child", "teen", "adult"]);
 export const depthSchema = z.enum(["quick", "standard", "deep"]);
@@ -40,6 +55,51 @@ export const forgePlanRequestSchema = z.strictObject({
 });
 
 export type ForgePlanRequest = z.infer<typeof forgePlanRequestSchema>;
+
+/**
+ * Browser/API transport is deliberately narrower than the internal planner
+ * input. A minor request may carry only an allowlisted topic token, enums, and
+ * fixed authored strings. Learner wording remains on device even if a caller
+ * bypasses the product UI and posts directly to the route.
+ */
+export const forgePlanApiRequestSchema = forgePlanRequestSchema.superRefine(
+  (request, context) => {
+    if (request.ageMode === "adult") return;
+
+    const fixedFields: ReadonlyArray<readonly [
+      keyof ForgePlanRequest,
+      unknown,
+      string,
+    ]> = [
+      ["startingPoint", MINOR_PLANNER_STARTING_POINT, "Minor startingPoint must be the authored token."],
+      ["successShape", MINOR_PLANNER_SUCCESS_SHAPE, "Minor successShape must be the authored token."],
+      ["currentKnowledge", "", "Minor currentKnowledge must remain on device."],
+      ["practicalOutcome", MINOR_PLANNER_PRACTICAL_OUTCOME, "Minor practicalOutcome must be the authored token."],
+      ["constraints", "", "Minor constraints must remain on device."],
+      ["sourceMode", "authored_only", "Minor sourceMode must be authored_only."],
+    ];
+
+    if (!(MINOR_PLANNER_TOPIC_TOKENS as readonly string[]).includes(request.question)) {
+      context.addIssue({
+        code: "custom",
+        path: ["question"],
+        message: "Minor question must be an allowlisted topic token.",
+      });
+    }
+    for (const [field, expected, message] of fixedFields) {
+      if (request[field] !== expected) {
+        context.addIssue({ code: "custom", path: [field], message });
+      }
+    }
+    if (request.ageMode === "teen" && request.guardianManaged) {
+      context.addIssue({
+        code: "custom",
+        path: ["guardianManaged"],
+        message: "Teen planning must not carry a child guardian-management claim.",
+      });
+    }
+  },
+);
 
 export const modelRouteIds = [...TOPIC_IDS, "exploratory"] as const;
 
@@ -107,6 +167,7 @@ export type GroundedLearningContract = {
     worldId: (typeof WORLD_IDS)[number];
     worldVersion: string;
     worldRoute: (typeof WORLD_ROUTES)[number];
+    activityProtocol: WorldActivityProtocol;
     confidence: "authored_match";
   };
   grounding: {

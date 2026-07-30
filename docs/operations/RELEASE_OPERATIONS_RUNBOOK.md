@@ -33,7 +33,7 @@ The production binding path is a Vercel Git remote build/runtime with System Env
 
 The current cost-controlled baseline must report:
 
-- `runtime_mode: fallback_only` and `provider_mode: request_only_byok`;
+- `runtime_mode: fallback_only` and `provider_mode: disabled`;
 - `cloud_accounts_enabled: false`, `cloud_auth_configured: false`;
 - `device_profiles: device_only`, `learner_evidence_sync: disabled`; and
 - all managed provider and managed-surface flags false.
@@ -63,15 +63,20 @@ CI injects lockfile, content-manifest, evaluator-baseline, and database-state me
 
 The offline gate reports `PRE_RELEASE_QUALITY_PASS` or `PRE_RELEASE_QUALITY_FAIL`. `release_closure_status` remains `NOT_EVALUATED` until an approved credentialed live evaluation supplies a passing, retained artifact; missing or failed live evidence cannot become `PRODUCTION_VERIFIED`. The live gate is intentionally documented but not executed by this lane and must not spend credits implicitly.
 
-Request-only BYOK remains a per-request boundary. A managed provider or cloud-auth change requires a separately reviewed contract and an updated verifier allowlist.
+A future request-scoped BYOK connector remains architecture only; every current
+managed and BYOK provider request surface is disabled. Enabling either provider
+mode or cloud auth requires a separately reviewed contract, server-owned adult
+authority, quota/abuse/privacy controls, and an updated verifier allowlist.
 
 ## Read-only deployment verification
 
-The verifier accepts a checked-in `--target-id` for remote inspection (or explicit `--allow-localhost` for a local artifact only), a full 40-character expected SHA, and—only for a remote candidate—an exact production Vercel deployment ID plus the name of an environment variable holding an API token. It collects bounded deployment metadata and build events from `api.vercel.com`, issues an opaque process-local receipt capability, and then performs bounded same-origin `GET` requests with redirects disabled to `/api/health`, all four Worlds, `/paths/source-corroboration`, `/pathways`, `/studio`, `/login`, `/account`, and same-origin versioned Next.js scripts. It checks exact SHA, the checked-in alias, immutable/project identity, the authenticated provider tuple, source/repository policy, provider event ordering, security headers, route markers, and client secret-pattern absence. It never submits forms or calls model/API write paths, and it does not claim byte-for-byte proof of every remote edge asset.
+The verifier accepts a checked-in `--target-id` for remote inspection (or explicit `--allow-localhost` for a local artifact only), a full 40-character expected SHA, and—only for a remote candidate—an exact production Vercel deployment ID plus the name of an environment variable holding an API token. It collects bounded deployment metadata and build events from `api.vercel.com`, issues an opaque process-local receipt capability, and then performs bounded same-origin `GET` requests with redirects disabled to `/api/health`, the public home, `/start`, `/paths`, `/how-forge-works`, `/trust`, `/coverage`, `/sign-in`, the fail-closed `/author` gate, the learner `/app` home/path/study/evidence surfaces, all four Worlds, `/paths/source-corroboration`, `/account`, the production-denied `/internal/pilot` surface, and same-origin versioned Next.js scripts. Legacy `/pathways`, `/how-it-works`, `/login`, `/studio`, and `/onboarding` are redirect contracts, not canonical verifier targets. It checks exact SHA, the checked-in alias, immutable/project identity, the authenticated provider tuple, source/repository policy, provider event ordering, security headers, route markers, and client secret-pattern absence. It never submits forms or calls model/API write paths, and it does not claim byte-for-byte proof of every remote edge asset.
 
 The observed Vercel events response is an array of envelopes whose log identity is nested at `event.payload.{deploymentId,id,date,text,info}`, with `event.created` on the envelope. A nested canonical marker must use its own `payload.date` and bind `payload.deploymentId` to the normalized deployment ID. The parser rejects duplicate markers within one text or across events, cross-deployment IDs, missing nested timestamps, and any event that mixes nested marker fields with top-level `text`, `id`, `deploymentId`, or `date`. A separately retained top-level legacy shape is accepted only with its own explicit deployment ID and creation timestamp. This parsing never turns saved JSON into the process-local receipt capability.
 
-The script scan is a hard initial-HTML contract: it unions the distinct allowed `/_next/static/` script URLs referenced by those ten pages, requires a nonempty set of at most 32, then fetches and scans every admitted asset. The public-asset digest is over the complete emitted `.next/static` tree; the read-only network scan is deliberately limited to initial HTML assets. Hydration-only chunks are outside the network scan. Increasing the budget requires a new observed-count measurement, boundary-test update, and release-operations review.
+The script scan is a hard initial-HTML contract: it unions the distinct allowed `/_next/static/` script URLs referenced by the canonical route set, requires a nonempty set of at most 32, then fetches and scans every admitted asset. The public-asset digest is over the complete emitted `.next/static` tree; the read-only network scan is deliberately limited to initial HTML assets. Hydration-only chunks are outside the network scan. Increasing the budget requires a new observed-count measurement, boundary-test update, and release-operations review.
+
+The full-page capture inventory is exactly 53 pages: 50 fixed public, app, World, compatibility, and recovery routes plus three operational session captures created through the real local path flow. The operational set contains one valid ModelShift focus route, its exact `/app/study/<session-id>` route, and one valid standard activity focus route. It does not invent study-session identities. Every capture records and checks the final pathname/query after redirects, requires a 200 final response, one `main`, one `h1`, no horizontal overflow, and no console/page errors. The manifest records `expectedCaptureCount: 53`; any count drift fails the capture run.
 
 Example (read-only; do not run against an unapproved origin):
 

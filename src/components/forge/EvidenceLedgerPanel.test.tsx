@@ -33,11 +33,15 @@ describe("EvidenceLedgerPanel", () => {
   });
 
   it("does not imply a saved record when browser storage fails and offers an honest retry", async () => {
+    let denyEvidenceRead = true;
     const read = vi.spyOn(Storage.prototype, "getItem")
-      .mockImplementationOnce(() => {
-        throw new Error("storage denied");
-      })
-      .mockReturnValue(null);
+      .mockImplementation((key) => {
+        if (key === DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY && denyEvidenceRead) {
+          denyEvidenceRead = false;
+          throw new Error("storage denied");
+        }
+        return null;
+      });
 
     render(<EvidenceLedgerPanel />);
 
@@ -50,26 +54,33 @@ describe("EvidenceLedgerPanel", () => {
 
   it("renders canonical Ratio capability IDs and retained version-1 aliases without rewriting local records", async () => {
     const recordedAt = "2026-07-22T00:00:00.000Z";
+    const expectedHrefs: string[] = [];
     for (const capabilityId of [
       "capability.proportional-reasoning.compare-and-scale",
       "proportional-reasoning.compare-and-scale",
     ]) {
-      expect(recordWorldProof({
+      const recorded = recordWorldProof({
         capabilityId,
         conditionId: "proof.test.new-context",
         sourceRefId: `world.${capabilityId}`,
         outcome: "not_proved",
         recordedAt,
-      }).ok).toBe(true);
+      });
+      expect(recorded.ok).toBe(true);
+      if (recorded.ok) {
+        const entry = recorded.ledger.entries.find((candidate) => candidate.capabilityId === capabilityId);
+        expect(entry).toBeDefined();
+        expectedHrefs.push(`/app/evidence/${encodeURIComponent(entry!.id)}`);
+      }
     }
     const beforeRender = window.localStorage.getItem(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY);
 
     render(<EvidenceLedgerPanel />);
 
     await waitFor(() => expect(screen.getAllByRole("link", { name: "Proportional relationships" })).toHaveLength(2));
-    for (const link of screen.getAllByRole("link", { name: "Proportional relationships" })) {
-      expect(link).toHaveAttribute("href", "/learn/proportional-reasoning");
-    }
+    expect(screen.getAllByRole("link", { name: "Proportional relationships" })
+      .map((link) => link.getAttribute("href"))
+      .sort()).toEqual(expectedHrefs.sort());
     expect(window.localStorage.getItem(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY)).toBe(beforeRender);
   });
 });

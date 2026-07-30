@@ -1,4 +1,9 @@
-import type { LearnerAgeMode, LearnerDepthMode, SourceProvenance } from "../../forge/contracts";
+import type {
+  LearnerAgeMode,
+  LearnerDepthMode,
+  SourceProvenance,
+  WorldActivityProtocol,
+} from "../../forge/contracts";
 import { trustedWorldRegistry } from "../../forge/registry.server";
 import {
   PUBLIC_SOURCE_IDS,
@@ -43,6 +48,7 @@ export type AuthoredTopic = {
   worldId: WorldId;
   worldVersion: string;
   route: WorldRoute;
+  activityProtocol: WorldActivityProtocol;
   ageModes: readonly ("child" | "teen" | "adult")[];
   depthModes: readonly ("quick" | "standard" | "deep")[];
   title: string;
@@ -279,6 +285,7 @@ function compileTopic(blueprint: TopicBlueprint): AuthoredTopic {
     worldId: blueprint.worldId,
     worldVersion: pack.manifest.version,
     route: pack.manifest.route as WorldRoute,
+    activityProtocol: pack.manifest.activityProtocol,
     ageModes: Object.freeze(pack.manifest.ageModes.map(plannerAgeMode)),
     depthModes: Object.freeze(pack.manifest.depthModes.map(plannerDepthMode)),
     title: pack.manifest.title,

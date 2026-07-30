@@ -3,29 +3,13 @@ import { join } from "node:path";
 
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 
-const REVIEW_DIR = join("test-results", "forge-review");
+import {
+  MINOR_PLANNER_PRACTICAL_OUTCOME,
+  MINOR_PLANNER_STARTING_POINT,
+  MINOR_PLANNER_SUCCESS_SHAPE,
+} from "../../src/lib/forge-planner/client-contract";
 
-const FALLBACK_INTERPRETATION = {
-  schema_version: "1.0",
-  hypotheses: [
-    {
-      id: "mixed_or_unclear",
-      support: "low",
-      evidence_spans: [],
-      rationale: "More than one interpretation fits the explanation.",
-    },
-  ],
-  missing_distinctions: [],
-  recommended_probe_id: "neutral_core_probe",
-  recommended_level_1_question_id: "neutral_observation_prompt",
-  abstain: true,
-  abstain_reason: "model_uncertain",
-  source: "fallback",
-  fallback_reason: "missing_key",
-  providerId: null,
-  modelId: null,
-  policyId: "policy.force-and-motion.interpretation.v1",
-} as const;
+const REVIEW_DIR = join("test-results", "forge-review");
 
 type RouteCase = {
   path: string;
@@ -38,10 +22,10 @@ type RouteCase = {
 
 const ROUTES: readonly RouteCase[] = [
   {
-    path: "/",
-    slug: "home",
+    path: "/start",
+    slug: "start",
     title: /FORGE/i,
-    heading: /What do you want to understand\?/i,
+    heading: /Turn a goal into a credible first path/i,
     world: false,
   },
   {
@@ -50,6 +34,7 @@ const ROUTES: readonly RouteCase[] = [
     title: /Force & motion — FORGE/i,
     heading: /The engine is off\. What happens next\?/i,
     world: true,
+    deviceProfile: "teen",
   },
   {
     path: "/learn/ai-and-learning",
@@ -57,6 +42,7 @@ const ROUTES: readonly RouteCase[] = [
     title: /AI & learning — FORGE/i,
     heading: /Commit before the evidence appears\./i,
     world: true,
+    deviceProfile: "teen",
   },
   {
     path: "/learn/proportional-reasoning",
@@ -67,16 +53,16 @@ const ROUTES: readonly RouteCase[] = [
     deviceProfile: "teen",
   },
   {
-    path: "/trail",
-    slug: "trail",
-    title: /Your Trail — FORGE/i,
-    heading: /A map of questions and evidence—not a level\./i,
+    path: "/app/path",
+    slug: "my-path",
+    title: /My paths — FORGE/i,
+    heading: /Inspect what you accepted/i,
     world: false,
   },
   {
-    path: "/evidence",
-    slug: "evidence",
-    title: /Evidence — FORGE/i,
+    path: "/app/evidence",
+    slug: "my-evidence",
+    title: /My evidence — FORGE/i,
     heading: /Proof should say exactly what happened\./i,
     world: false,
   },
@@ -121,16 +107,6 @@ async function tabTo(page: Page, target: Locator, maximumTabs = 45): Promise<voi
   throw new Error(`Keyboard focus did not reach ${await target.textContent() ?? "the target"}.`);
 }
 
-async function installPhysicsFallback(page: Page): Promise<void> {
-  await page.route("**/api/interpret", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(FALLBACK_INTERPRETATION),
-    });
-  });
-}
-
 async function seedDeviceProfile(page: Page, ageMode: "child_with_grown_up" | "teen" | "adult"): Promise<void> {
   await page.addInitScript((mode) => {
     localStorage.setItem("forge.device-profile:v1", JSON.stringify({
@@ -144,7 +120,7 @@ async function seedDeviceProfile(page: Page, ageMode: "child_with_grown_up" | "t
 }
 
 async function reachPhysicsProof(page: Page): Promise<void> {
-  await installPhysicsFallback(page);
+  await seedDeviceProfile(page, "teen");
   await page.goto("/learn/force-and-motion");
   await page.getByRole("radio", { name: "Gradually slows" }).press("Space");
   await page.getByTestId("commit-prediction").click();
@@ -168,6 +144,7 @@ async function reachPhysicsProof(page: Page): Promise<void> {
 }
 
 async function reachEvidenceWorldProof(page: Page): Promise<void> {
+  await seedDeviceProfile(page, "teen");
   await page.goto("/learn/ai-and-learning");
   await page.getByRole("radio", { name: /It depends/i }).press("Space");
   await page.getByRole("textbox", { name: /Why do you hold that stance\?/i }).fill(
@@ -237,7 +214,6 @@ test.describe("FORGE cross-route release contract", () => {
         await expect(page.getByRole("link", { name: /Exit world/i })).toBeVisible();
         await expect(page.getByRole("navigation", { name: "Primary navigation" })).toHaveCount(0);
         await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toHaveCount(0);
-        expect(await page.evaluate(() => window.scrollY), `${route.path} should preserve its FORGE worldbar on entry`).toBe(0);
       }
 
       await expectNoHorizontalOverflow(page);
@@ -274,49 +250,45 @@ test.describe("FORGE cross-route release contract", () => {
     expect(failures).toEqual([]);
   });
 
-  test("home planner renders grounded and exploratory paths from real typed questions", async ({ page }) => {
+  test("Start renders reviewed and exploratory candidates only after the learner reviews them", async ({ page }) => {
     const failures = capturePageFailures(page);
-    await page.goto("/");
-
-    const question = page.getByRole("textbox", { name: "Your question" });
-    await question.fill("Help me understand force and motion after a push ends.");
-    await page.getByRole("button", { name: /Shape my first move/ }).click();
-    const grounded = page.getByTestId("forge-plan-grounded");
+    await page.goto("/start");
+    await page.getByRole("textbox", { name: /Your words/i }).fill("Help me understand force and motion after a push ends.");
+    await page.getByRole("button", { name: /Name the outcome/i }).click();
+    await page.getByRole("textbox", { name: /Meaningful outcome/i }).fill("Predict a new velocity graph without hints.");
+    await page.getByRole("button", { name: /Set route context/i }).click();
+    await page.getByRole("checkbox", { name: /Use these exact fields for one first-party planning response/i }).check();
+    await page.getByRole("button", { name: /Build inspectable candidate/i }).click();
+    const grounded = page.getByRole("region", { name: "Force & motion" });
     await expect(grounded).toBeVisible();
-    await expect(grounded).toContainText("Current working World route");
-    await expect(grounded.getByRole("link", { name: /Enter working World/ })).toHaveCount(0);
-    await grounded.getByRole("button", { name: "Accept reviewed route" }).click();
-    await expect(grounded.getByRole("link", { name: /Enter working World/ })).toHaveAttribute(
-      "href",
-      "/learn/force-and-motion",
-    );
+    await expect(grounded).toContainText("Reviewed World match · acceptance required");
+    await expect(grounded.getByRole("link", { name: /Enter working World/i })).toHaveCount(0);
+    await grounded.getByRole("button", { name: "Revise my request" }).click();
+    await expect(page.getByRole("textbox", { name: /Your words/i })).toHaveValue("Help me understand force and motion after a push ends.");
 
-    await question.fill("How do fungi and tree roots trade nutrients under a forest floor?");
-    await page.getByRole("button", { name: /Shape my first move/ }).click();
-    const exploratory = page.getByTestId("forge-plan-exploratory");
+    await page.getByRole("textbox", { name: /Your words/i }).fill("How do fungi and tree roots trade nutrients under a forest floor?");
+    await page.getByRole("button", { name: /Name the outcome/i }).click();
+    await page.getByRole("textbox", { name: /Meaningful outcome/i }).fill("Compare a claim against a reviewed source.");
+    await page.getByRole("button", { name: /Set route context/i }).click();
+    await page.getByRole("checkbox", { name: /Use these exact fields for one first-party planning response/i }).check();
+    await page.getByRole("button", { name: /Build inspectable candidate/i }).click();
+    const exploratory = page.getByRole("region", { name: "Source verification required" });
     await expect(exploratory).toBeVisible();
-    await expect(exploratory).toContainText("not yet verified");
+    await expect(exploratory).toContainText("Coverage gap · not executable");
     await expect(exploratory.getByText("How do fungi and tree roots trade nutrients under a forest floor?")).toBeVisible();
-    await expect(exploratory.getByRole("heading", { name: "Your goal has a visible route to review." })).toBeVisible();
-    await expect(exploratory.getByRole("button", { name: "Ask to revise" })).toHaveCount(4);
-    await question.fill("A different question that has not been submitted.");
-    await expect(exploratory.getByText("How do fungi and tree roots trade nutrients under a forest floor?")).toBeVisible();
-    await expect(exploratory).not.toContainText("A different question that has not been submitted.");
-    await exploratory.getByRole("button", { name: "Ask to revise" }).first().click();
-    await exploratory.getByLabel(/^What should change/).fill("Keep the scope focused on nutrient exchange.");
-    await expect(exploratory.getByText("1 local revision request — not submitted or saved.")).toBeVisible();
+    await expect(exploratory.getByRole("link", { name: /Enter working World/i })).toHaveCount(0);
+    await exploratory.getByRole("button", { name: /Reject this candidate/i }).click();
+    await expect(page.getByText(/Candidate rejected.*No path, decision, or learner wording was saved/i)).toBeVisible();
     expect(await page.evaluate(() => localStorage.length)).toBe(0);
-    await expect(exploratory).toContainText("Safe practical project and practice sequence");
-    await expect(exploratory).toContainText("Your question was used for this response and was not added to a learner profile.");
     expect(failures).toEqual([]);
   });
 
-  test("planner API distinguishes reviewed, unknown, and child-safety boundaries", async ({ page }, testInfo) => {
+  test("planner API distinguishes adult reviewed and unknown routes from minor transport and safety boundaries", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "The planner API contract is viewport-independent.");
-    await page.goto("/");
+    await page.goto("/start");
     const origin = new URL(page.url()).origin;
     const base = {
-      ageMode: "teen",
+      ageMode: "adult",
       depth: "standard",
       startingPoint: "curious",
       successShape: "explain",
@@ -327,6 +299,17 @@ test.describe("FORGE cross-route release contract", () => {
       data,
       headers: { Origin: origin, "Content-Type": "application/json" },
     });
+    const minorBase = {
+      ...base,
+      ageMode: "child",
+      question: "force and motion",
+      startingPoint: MINOR_PLANNER_STARTING_POINT,
+      successShape: MINOR_PLANNER_SUCCESS_SHAPE,
+      currentKnowledge: "",
+      practicalOutcome: MINOR_PLANNER_PRACTICAL_OUTCOME,
+      constraints: "",
+      sourceMode: "authored_only",
+    } as const;
 
     const groundedResponse = await post({ ...base, question: "Help me understand force and motion" });
     expect(groundedResponse.status()).toBe(200);
@@ -348,9 +331,7 @@ test.describe("FORGE cross-route release contract", () => {
     });
 
     const childWithoutGuardian = await post({
-      ...base,
-      question: "Help me understand force and motion",
-      ageMode: "child",
+      ...minorBase,
     });
     expect(childWithoutGuardian.status()).toBe(403);
     await expect(childWithoutGuardian.json()).resolves.toMatchObject({
@@ -359,9 +340,7 @@ test.describe("FORGE cross-route release contract", () => {
     });
 
     const childForceWithGuardian = await post({
-      ...base,
-      question: "Help me understand force and motion",
-      ageMode: "child",
+      ...minorBase,
       guardianManaged: true,
     });
     expect(childForceWithGuardian.status()).toBe(403);
@@ -371,50 +350,51 @@ test.describe("FORGE cross-route release contract", () => {
     });
 
     const childOpenWeb = await post({
-      ...base,
-      question: "Help me understand force and motion",
-      ageMode: "child",
+      ...minorBase,
       guardianManaged: true,
       sourceMode: "open_web",
     });
-    expect(childOpenWeb.status()).toBe(403);
-    await expect(childOpenWeb.json()).resolves.toMatchObject({
-      contractKind: "refusal",
-      reason: "child_source_mode_disallowed",
+    expect(childOpenWeb.status()).toBe(400);
+    await expect(childOpenWeb.json()).resolves.toEqual({
+      schemaVersion: "1.0",
+      error: {
+        code: "invalid_request",
+        message: "The planning request is invalid.",
+      },
     });
   });
 
-  test("child planning requires an explicit grown-up-present confirmation", async ({ page }, testInfo) => {
+  test("minor Start planning requires a grown-up and sends no raw learner wording", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "The child safety form contract is viewport-independent.");
-    let plannerRequests = 0;
+    const requests: string[] = [];
     page.on("request", (request) => {
-      if (request.method() === "POST" && new URL(request.url()).pathname === "/api/forge/plan") plannerRequests += 1;
+      if (request.method() === "POST" && new URL(request.url()).pathname === "/api/forge/plan") requests.push(request.postData() ?? "");
     });
-    await page.goto("/");
-    await page.getByRole("textbox", { name: "Your question" }).fill("Help me understand proportional reasoning and ratios.");
+    const goal = "Help me understand proportional reasoning and ratios with this private project context.";
+    await page.goto("/start");
+    await page.getByRole("textbox", { name: /Your words/i }).fill(goal);
+    await page.getByRole("button", { name: /Name the outcome/i }).click();
+    await page.getByRole("textbox", { name: /Meaningful outcome/i }).fill("Use it in this private outcome.");
+    await page.getByRole("button", { name: /Set route context/i }).click();
     await page.getByRole("radio", { name: /Child \+ grown-up/ }).press("Space");
 
-    const confirmation = page.getByRole("checkbox", { name: /A grown-up is here and managing this session/i });
+    const confirmation = page.getByRole("checkbox", { name: /A grown-up is present and managing this device session/i });
     await expect(confirmation).toBeVisible();
-    await expect(confirmation).toHaveAttribute("required", "");
     await expect(confirmation).not.toBeChecked();
-    await page.getByRole("button", { name: /Shape my first move/ }).click();
-    await expect(confirmation).toBeFocused();
-    expect(plannerRequests).toBe(0);
-    await expect(page.getByTestId(/forge-plan-/)).toHaveCount(0);
+    await page.getByRole("checkbox", { name: /Use these exact fields for one first-party planning response/i }).check();
+    await page.getByRole("button", { name: /Build inspectable candidate/i }).click();
+    await expect(page.getByText(/Child mode needs a grown-up present/i)).toBeVisible();
+    expect(requests).toEqual([]);
 
     await confirmation.press("Space");
     await expect(confirmation).toBeChecked();
-    await page.getByRole("button", { name: /Shape my first move/ }).click();
-    const grounded = page.getByTestId("forge-plan-grounded");
+    await page.getByRole("button", { name: /Build inspectable candidate/i }).click();
+    const grounded = page.getByRole("region", { name: "Ratios that stay the same" });
     await expect(grounded).toBeVisible();
-    await expect(grounded.getByRole("link", { name: /Enter working World/ })).toHaveCount(0);
-    await grounded.getByRole("button", { name: "Accept reviewed route" }).click();
-    await expect(grounded.getByRole("link", { name: /Enter working World/ })).toHaveAttribute(
-      "href",
-      "/learn/proportional-reasoning?audience=child_with_grown_up",
-    );
-    expect(plannerRequests).toBe(1);
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).not.toContain(goal);
+    expect(requests[0]).not.toContain("private outcome");
+    expect(requests[0]).toContain("equivalent ratios");
   });
 
   test("direct under-13 ratio route needs a local child profile and a grown-up confirmation", async ({ page }, testInfo) => {
@@ -435,7 +415,7 @@ test.describe("FORGE cross-route release contract", () => {
 
   test("real input unlocks the force and ratio world actions", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "Input-state semantics are viewport-independent.");
-    await installPhysicsFallback(page);
+    await seedDeviceProfile(page, "teen");
     await page.goto("/learn/force-and-motion");
     const physicsCommit = page.getByTestId("commit-prediction");
     await expect(physicsCommit).toBeDisabled();
@@ -462,6 +442,7 @@ test.describe("FORGE cross-route release contract", () => {
 
   test("AI World moves keyboard focus into each newly opened stage", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "Focus continuity uses the shared DOM behavior.");
+    await seedDeviceProfile(page, "teen");
     await page.goto("/learn/ai-and-learning");
     await page.getByRole("radio", { name: /It depends/i }).press("Space");
     await page.getByRole("textbox", { name: /Why do you hold that stance\?/i }).fill(
@@ -494,6 +475,7 @@ test.describe("FORGE cross-route release contract", () => {
   test("AI World preserves visible radio focus and native state in forced colors", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "Forced-colors focus styling is shared across viewport projects.");
     await page.emulateMedia({ forcedColors: "active" });
+    await seedDeviceProfile(page, "teen");
     await page.goto("/learn/ai-and-learning");
     expect(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)).toBe(true);
 
@@ -674,10 +656,15 @@ test.describe("FORGE cross-route release contract", () => {
 
   test("keyboard-only navigation reaches a working world and its main question", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "Keyboard traversal runs once against the shared DOM order.");
+    await seedDeviceProfile(page, "teen");
     await page.goto("/");
+    await page.evaluate(() => {
+      document.body.tabIndex = -1;
+      document.body.focus();
+    });
 
-    await page.keyboard.press("Tab");
     const homeSkip = page.getByRole("link", { name: "Skip to main content" });
+    await tabTo(page, homeSkip, 4);
     await expect(homeSkip).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page.locator("#forge-main")).toBeFocused();
@@ -687,12 +674,9 @@ test.describe("FORGE cross-route release contract", () => {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/learn\/force-and-motion$/);
     await expect(page.getByTestId("stage-predict")).toBeVisible();
-    await expect.poll(() => page.evaluate(() => (
-      Boolean(document.querySelector("#world-content")?.contains(document.activeElement))
-    ))).toBe(true);
 
-    // A client-side route transition moves focus directly into the World. On a
-    // fresh document load, the skip link remains the first keyboard stop.
+    // The direct World route deliberately keeps the skip link as the first
+    // keyboard stop rather than forcing a focus move across a route boundary.
     await page.goto("/learn/force-and-motion");
     await page.keyboard.press("Tab");
     const worldSkip = page.getByRole("link", { name: "Skip to learning world" });

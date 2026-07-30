@@ -210,7 +210,7 @@ This is the accepted public engineering tuple for source `c7d401101791faa80ac0ba
 | Exact CI | pre-main `workflow_dispatch` run `29944088585` PASS; exact-main CI run `29944461461` PASS |
 | Local gates | 529 application tests, 13 evaluator-contract tests, 54 offline fixtures, lint, typecheck, and optimized build PASS |
 | Browser and conformance | local/public full browser 70 pass, 22 intentional skips, 0 fail; all-World conformance 18/18; terminal routed conformance 8/8; final local/public bound verifier 187/187 PASS |
-| Observability and feature state | public error-level and 5xx scans empty; runtime `fallback_only`; request-only BYOK; cloud accounts, evidence sync, and managed providers disabled |
+| Observability and feature state | public error-level and 5xx scans empty; runtime `fallback_only`; provider requests disabled; cloud accounts, evidence sync, and managed providers disabled |
 
 The rejected deployment `dpl_4eY4F3vMV1hado7TG1BZN11Mgzvt` at immutable URL prefix `https://forge-learning-9i0915bo1...` was replaced and is not an accepted release: its health data had unknown `build_time` and digests. The read-only unbound workflow `29945127093` failed `184/187` because the committed/public lock digest `12f19d...` differed from the runner post-install digest `f43d90...`, retained metadata was empty, and the result was `DEPLOYMENT_BLOCKED`. That is a lock-digest reproducibility follow-up, not a product or public bound-verifier failure.
 

@@ -38,7 +38,7 @@ export type ReleaseHealth = {
     gemini: false;
     openrouter: false;
   };
-  provider_mode: "request_only_byok" | "managed_openai";
+  provider_mode: "disabled" | "managed_openai";
   /** Public-release provenance is never inferred from local build metadata. */
   release_manifest: ReleaseManifest;
 };
@@ -72,19 +72,13 @@ export function buildReleaseHealth(environment: ReleaseEnvironment = process.env
   const cloudAuthority = readForgeCloudAuthority(environment);
   const cloudAccountsEnabled = cloudAuthority.cloudAccountsEnabled;
   const cloudAuthConfigured = cloudAuthority.cloudAuthConfigured;
-  // Presence is intentionally the only credential-side signal exposed here.
-  // Health must not parse, normalize, or disclose a provider secret.
-  const hasManagedKey = Boolean(environment.OPENAI_API_KEY);
-  // Lesson Studio has no managed credential path. This remains false even if a
-  // retired environment variable or an unrelated OpenAI key is present.
+  // Environment intent and secret presence are not runtime authority. Every
+  // public provider transport remains structurally fail-closed, so health must
+  // not promote a configured switch into an operational managed capability.
   const managedLessonStudio = false;
-  const managedInterpretation = environment.OPENAI_INTERPRETATION_ENABLED === "true"
-    && environment.OPENAI_INTERPRETATION_DISABLED !== "true"
-    && hasManagedKey;
-  const managedPlanner = environment.OPENAI_FORGE_PLANNER_ENABLED === "true"
-    && environment.OPENAI_FORGE_PLANNER_DISABLED !== "true"
-    && hasManagedKey;
-  const managedOpenAI = managedLessonStudio || managedInterpretation || managedPlanner;
+  const managedInterpretation = false;
+  const managedPlanner = false;
+  const managedOpenAI = false;
 
   return {
     schema_version: "1.0",
@@ -113,7 +107,7 @@ export function buildReleaseHealth(environment: ReleaseEnvironment = process.env
       gemini: false,
       openrouter: false,
     },
-    provider_mode: managedOpenAI ? "managed_openai" : "request_only_byok",
+    provider_mode: managedOpenAI ? "managed_openai" : "disabled",
     release_manifest: buildReleaseManifest(environment),
   };
 }
