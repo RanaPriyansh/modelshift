@@ -99,6 +99,7 @@ This reversible slice supports direct workflow research without promoting the un
 | `UV1-TODAY-007` | Test the one-action hierarchy and uncertain/failure states before any public route decision. | The preregistered `UNIVERSITY_TODAY_UX_EXPERIMENT_LOOP.md` keeps four fixture states and regression gates fixed; component and rendered desktop/320, keyboard, reduced-motion, forced-colors, and console evidence covers ready, source-review, tight, and insufficient states. |
 | `UV1-TODAY-008` | Preserve the claim ceiling. | UI and handoff say fixture-authored/learner-fixture, not live student, institutional truth, validated recommendation, accessibility conformance, learning efficacy, or production readiness. |
 | `UV1-TODAY-009` | Route tight and insufficient capacity to the separate recovery research loop instead of inviting activity preview. | `learner_choice_required` and `capacity_conflict` replace the preview control with `/internal/university-recovery`; visible copy states that no capacity, work, deadline, or decision is transferred or saved. |
+| `UV1-TODAY-010` | Route a ready action through the protected-study integrity brief before previewing its World. | Ready replaces the direct World link with `/internal/university-protected-study`; visible copy states that no action, course state, or session is transferred or saved. |
 
 ### Internal falling-behind recovery research slice
 
@@ -120,6 +121,26 @@ This reversible slice tests recovery as a distinct student job. It does not crea
 | `UV1-RECOVERY-012` | Keep the research surface internal and removable. | Production is unavailable; development requires the exact server token; fixture identities/content are scanned out of public assets; no public navigation, persistence, provider, or schema migration changes. |
 | `UV1-RECOVERY-013` | Test comprehension under fixed uncertainty states before changing the learner home. | `UNIVERSITY_RECOVERY_UX_EXPERIMENT_LOOP.md` fixes reset-fits, choice-needed, human-help, and source-review states plus desktop, 320 CSS px, keyboard, reduced-motion, forced-colors, console, and production-boundary checks. |
 | `UV1-RECOVERY-014` | Preserve the claim ceiling. | UI and handoff say synthetic, learner fixture, copied deadline, and not established; no demand, live student, institutional truth, recovery efficacy, accessibility conformance, or production claim. |
+
+### Internal protected-study research slice
+
+This reversible slice tests whether the enforced learning contract is legible
+before a reviewed World opens. It does not create course-specific tutoring or
+durable learning evidence.
+
+| ID | Requirement | Acceptance evidence |
+| --- | --- | --- |
+| `UV1-STUDY-001` | Recompute Today and admit only a ready, source-reviewed action that fits learner-fixture capacity. | Invalid, source-review, tight, insufficient, blocked, or complete Today states expose no World or learning contract. |
+| `UV1-STUDY-002` | Validate the complete supplied World package and exact accepted-path binding. | Full schema and invariant validation passes; ID, version, route, activity protocol, and ordered source IDs must all match or entry fails closed. |
+| `UV1-STUDY-003` | Require an exact released, available World with a shared-runtime binding. | Draft, suspended, unavailable, runtime-less, or strengthened proof packages expose no preview. |
+| `UV1-STUDY-004` | Derive learning-integrity claims only from runtime-owned facts. | The exact canonical semantic-stage order, support policy/catalog, proof claim, blocked actions, deterministic validator, access accommodations, source provenance, receipt authority, delayed return, and limitations come from the validated pack; non-canonical order fails closed. |
+| `UV1-STUDY-005` | Keep proof independent of instructional AI and model judgment. | UI and contract show AI off in proof, instructional support/model/replay blocked, and deterministic validator ownership; malformed stronger boundaries fail. |
+| `UV1-STUDY-006` | Keep the internal brief preview-only and side-effect free. | Session start, recommendation, assignment answer, policy interpretation, persistence, evidence claim, event, and external effects are false; component performs no fetch or storage write. |
+| `UV1-STUDY-007` | Preserve exact receipt and provenance limitations. | Source-corroboration shows incomplete runtime source provenance plus honour-based, not-persisted, non-durable receipt authority and explicit untested retention/capability. |
+| `UV1-STUDY-008` | Reject accessor, malformed, over-broad, and binding-drift inputs before exposure. | Bounded accessor-free plain JSON, hostile getter, malformed schema, version, route, protocol, source order, availability, runtime, determinism, and deep-freeze tests pass. |
+| `UV1-STUDY-009` | Keep the research surface internal, removable, and production-unavailable. | Development requires the exact server token; production renders only the unavailable shell; fixture markers are absent from public static assets. |
+| `UV1-STUDY-010` | Test comprehension without turning people into one optimization metric. | `UNIVERSITY_PROTECTED_STUDY_UX_EXPERIMENT_LOOP.md` fixes the harness, separate comprehension/trust/harm observations, four states, and keep/stop rules. |
+| `UV1-STUDY-011` | Preserve the claim ceiling. | UI and handoff say synthetic, preview-only, honour-based, not persisted, and untested; no live student, institutional, learning, accessibility-conformance, production, or efficacy claim. |
 
 ## First slice acceptance
 

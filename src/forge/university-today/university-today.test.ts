@@ -30,7 +30,10 @@ const WORLD_REF = Object.freeze({
   worldVersion: "1.0.1",
   worldRoute: "/learn/ai-and-learning",
   activityProtocol: "activity" as const,
-  sourceIds: ["source.argument-evidence.authored-fixture"],
+  sourceIds: [
+    "source.bastani-pnas.genai-learning-2025",
+    "source.tutor-copilot.arxiv-2024",
+  ],
 });
 
 function readySources(): Readonly<CourseSourceReconciliationRequestV1> {

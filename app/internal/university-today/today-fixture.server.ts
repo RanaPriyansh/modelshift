@@ -32,7 +32,10 @@ const WORLD_REF = Object.freeze({
   worldVersion: "1.0.1",
   worldRoute: "/learn/ai-and-learning",
   activityProtocol: "activity" as const,
-  sourceIds: ["source.argument-evidence.authored-fixture"],
+  sourceIds: [
+    "source.bastani-pnas.genai-learning-2025",
+    "source.tutor-copilot.arxiv-2024",
+  ],
 });
 
 function reviewedSources(): Readonly<CourseSourceReconciliationRequestV1> {
@@ -192,12 +195,27 @@ export type UniversityTodayFixtureScenario = Readonly<{
   projection: Readonly<UniversityTodayProjectionV1>;
 }>;
 
+export async function universityTodayFixtureRequest(
+  scenario: UniversityTodayFixtureScenario["id"],
+): Promise<UniversityTodayRequestV1> {
+  switch (scenario) {
+    case "ready":
+      return request(60);
+    case "source-review":
+      return request(60, await reviewedUniversitySourceRequest());
+    case "tight":
+      return request(35);
+    case "no-room":
+      return request(20);
+  }
+}
+
 export async function universityTodayFixtureScenarios(): Promise<readonly UniversityTodayFixtureScenario[]> {
   const scenarios = await Promise.all([
-    projectUniversityToday(await request(60)),
-    projectUniversityToday(await request(60, await reviewedUniversitySourceRequest())),
-    projectUniversityToday(await request(35)),
-    projectUniversityToday(await request(20)),
+    projectUniversityToday(await universityTodayFixtureRequest("ready")),
+    projectUniversityToday(await universityTodayFixtureRequest("source-review")),
+    projectUniversityToday(await universityTodayFixtureRequest("tight")),
+    projectUniversityToday(await universityTodayFixtureRequest("no-room")),
   ]);
   return Object.freeze([
     Object.freeze({ id: "ready", label: "Ready", projection: scenarios[0]! }),

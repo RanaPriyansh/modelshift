@@ -149,8 +149,8 @@ export function UniversityTodayWorkspace({
             </div>
           ) : projection.action ? (
             <div className={styles.actionControl}>
-              <Link href={projection.action.activity.worldRef.worldRoute}>Preview activity</Link>
-              <p>This opens the reviewed activity route. This sample does not start or save a session.</p>
+              <Link href="/internal/university-protected-study">Inspect protected study brief</Link>
+              <p>This opens a separate synthetic integrity brief. No action, course state, or session is transferred or saved.</p>
             </div>
           ) : projection.status === "source_review_required" ? (
             <div className={styles.actionControl}>

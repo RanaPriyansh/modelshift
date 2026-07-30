@@ -18,11 +18,14 @@ describe("UniversityTodayWorkspace", () => {
     render(<UniversityTodayWorkspace scenarios={await universityTodayFixtureScenarios()} />);
 
     expect(screen.getByRole("heading", { level: 1, name: "Test one claim against two sources" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Preview activity" })).toHaveAttribute("href", "/learn/ai-and-learning");
+    expect(screen.getByRole("link", { name: "Inspect protected study brief" })).toHaveAttribute(
+      "href",
+      "/internal/university-protected-study",
+    );
     expect(screen.getByText(/It is next in an existing learner-accepted path/)).toBeInTheDocument();
     expect(screen.getByText(/Course-source facts explain context only/)).toBeInTheDocument();
     expect(screen.getByText(/60 minutes available, 30-45 minutes fixture-authored effort/)).toBeInTheDocument();
-    expect(screen.getByText(/This sample does not start or save a session/)).toBeInTheDocument();
+    expect(screen.getByText(/No action, course state, or session is transferred or saved/)).toBeInTheDocument();
   });
 
   it("replaces the action with source recovery when copied facts conflict", async () => {
@@ -31,7 +34,7 @@ describe("UniversityTodayWorkspace", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Source conflict" }));
 
     expect(screen.getByRole("heading", { level: 1, name: "Resolve the course-source conflict first." })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Preview activity" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Inspect protected study brief" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Review source copies" })).toHaveAttribute("href", "/internal/university-source-review");
     expect(screen.getByText(/has not chosen between copied facts/)).toBeInTheDocument();
     expect(screen.getByText("review required")).toBeInTheDocument();
@@ -48,7 +51,7 @@ describe("UniversityTodayWorkspace", () => {
       "href",
       "/internal/university-recovery",
     );
-    expect(screen.queryByRole("link", { name: "Preview activity" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Inspect protected study brief" })).not.toBeInTheDocument();
     expect(screen.getByText(/No capacity, work item, deadline, or decision is transferred or saved/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("radio", { name: "No room" }));
@@ -58,7 +61,7 @@ describe("UniversityTodayWorkspace", () => {
       "href",
       "/internal/university-recovery",
     );
-    expect(screen.queryByRole("link", { name: "Preview activity" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Inspect protected study brief" })).not.toBeInTheDocument();
   });
 
   it("uses native keyboard-focusable controls and performs no fetch or browser-storage write", async () => {
