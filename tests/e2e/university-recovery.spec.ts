@@ -41,6 +41,28 @@ test("moves across every recovery state with native keyboard controls", async ({
   expect(consoleFailures).toEqual([]);
 });
 
+test("enters recovery from a tight Today state without implying state transfer", async ({ page }) => {
+  await page.goto("/internal/university-today");
+  await page.getByRole("radio", { name: "Tight window" }).press("Space");
+  await expect(page.getByRole("heading", {
+    level: 1,
+    name: "The activity fits only at the low estimate.",
+  })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Preview activity" })).toHaveCount(0);
+  const recoveryLink = page.getByRole("link", { name: "Open recovery draft" });
+  await expect(recoveryLink).toBeVisible();
+  await expect(page.getByText(
+    "This opens a separate synthetic fixture. No capacity, work item, deadline, or decision is transferred or saved.",
+    { exact: true },
+  )).toBeVisible();
+  await recoveryLink.click();
+  await expect(page).toHaveURL(/\/internal\/university-recovery$/);
+  await expect(page.getByRole("heading", {
+    level: 1,
+    name: "Rebuild from what fits now.",
+  })).toBeVisible();
+});
+
 test("has no horizontal overflow at exactly 320 CSS pixels", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
   await page.goto("/internal/university-recovery");

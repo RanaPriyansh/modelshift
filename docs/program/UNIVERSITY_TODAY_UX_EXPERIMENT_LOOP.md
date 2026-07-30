@@ -116,6 +116,7 @@ No change is kept merely because it looks more polished, produces more clicks, o
 | `UX-TODAY-H03` | Replacing the learning preview with source review in the conflict state prevents unsafe continuation. | Candidate baseline implemented | Observe control prediction and recovery choice. |
 | `UX-TODAY-H04` | A persistent authority footer improves calibration without overwhelming the first decision. | Open | Compare footer visible versus collapsed after the primary state is understood. |
 | `UX-TODAY-H05` | “Preview activity” is clearer than “Start” because the internal fixture cannot begin or save a session. | Candidate baseline implemented | Observe prediction before activation. |
+| `UX-TODAY-H06` | Replacing preview with “Open recovery draft” in tight/no-room states prevents unsafe continuation and makes recovery discoverable without implying state transfer. | Candidate baseline implemented after ADR-013 | Observe control prediction in both states; reject if participants expect an applied or saved replan. |
 
 ## Promotion gate
 

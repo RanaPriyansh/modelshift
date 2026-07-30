@@ -98,6 +98,7 @@ This reversible slice supports direct workflow research without promoting the un
 | `UV1-TODAY-006` | Keep the research surface internal and fail closed. | Production is unavailable; development requires an exact server fixture token; sample markers are absent from production public assets. |
 | `UV1-TODAY-007` | Test the one-action hierarchy and uncertain/failure states before any public route decision. | The preregistered `UNIVERSITY_TODAY_UX_EXPERIMENT_LOOP.md` keeps four fixture states and regression gates fixed; component and rendered desktop/320, keyboard, reduced-motion, forced-colors, and console evidence covers ready, source-review, tight, and insufficient states. |
 | `UV1-TODAY-008` | Preserve the claim ceiling. | UI and handoff say fixture-authored/learner-fixture, not live student, institutional truth, validated recommendation, accessibility conformance, learning efficacy, or production readiness. |
+| `UV1-TODAY-009` | Route tight and insufficient capacity to the separate recovery research loop instead of inviting activity preview. | `learner_choice_required` and `capacity_conflict` replace the preview control with `/internal/university-recovery`; visible copy states that no capacity, work, deadline, or decision is transferred or saved. |
 
 ### Internal falling-behind recovery research slice
 

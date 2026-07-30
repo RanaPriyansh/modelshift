@@ -44,10 +44,21 @@ describe("UniversityTodayWorkspace", () => {
     expect(screen.getByRole("heading", { level: 1, name: "The activity fits only at the low estimate." })).toBeInTheDocument();
     expect(screen.getByText(/will not shorten a reviewed activity silently/)).toBeInTheDocument();
     expect(screen.getByText(/35 minutes available, 30-45 minutes fixture-authored effort/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open recovery draft" })).toHaveAttribute(
+      "href",
+      "/internal/university-recovery",
+    );
+    expect(screen.queryByRole("link", { name: "Preview activity" })).not.toBeInTheDocument();
+    expect(screen.getByText(/No capacity, work item, deadline, or decision is transferred or saved/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("radio", { name: "No room" }));
     expect(screen.getByRole("heading", { level: 1, name: "This activity does not fit this window." })).toBeInTheDocument();
     expect(screen.getByText(/20 minutes available, 30-45 minutes fixture-authored effort/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open recovery draft" })).toHaveAttribute(
+      "href",
+      "/internal/university-recovery",
+    );
+    expect(screen.queryByRole("link", { name: "Preview activity" })).not.toBeInTheDocument();
   });
 
   it("uses native keyboard-focusable controls and performs no fetch or browser-storage write", async () => {

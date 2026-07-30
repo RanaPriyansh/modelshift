@@ -142,7 +142,12 @@ export function UniversityTodayWorkspace({
           <h1 id="university-today-title">{copy.title}</h1>
           <p className={styles.objective}>{copy.body}</p>
 
-          {projection.action ? (
+          {projection.status === "learner_choice_required" || projection.status === "capacity_conflict" ? (
+            <div className={styles.actionControl}>
+              <Link href="/internal/university-recovery">Open recovery draft</Link>
+              <p>This opens a separate synthetic fixture. No capacity, work item, deadline, or decision is transferred or saved.</p>
+            </div>
+          ) : projection.action ? (
             <div className={styles.actionControl}>
               <Link href={projection.action.activity.worldRef.worldRoute}>Preview activity</Link>
               <p>This opens the reviewed activity route. This sample does not start or save a session.</p>

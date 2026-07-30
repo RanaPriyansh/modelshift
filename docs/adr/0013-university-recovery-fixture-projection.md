@@ -55,6 +55,10 @@ Recovery workbench
 - review source copies -> internal source-review fixture
 [ what changed, fit summary, three lanes, source boundary, authority ceiling ]
 
+University Today capacity conflict
+- open recovery draft -> recovery workbench with a separate synthetic fixture
+[ explicit notice that capacity, work, deadline, and decisions are not transferred or saved ]
+
 Prepared human question
 - inspect question -> remains on same page
 [ related item, copied deadline, capacity mismatch, learner-declared route, not-sent state ]
