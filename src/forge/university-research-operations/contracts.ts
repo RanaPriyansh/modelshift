@@ -8,7 +8,9 @@ export const UNIVERSITY_RESEARCH_READINESS_PROJECTION_SCHEMA_VERSION =
   "university-research-readiness-projection.v1" as const;
 
 export const UNIVERSITY_RESEARCH_ACCEPTED_SOURCE_COMMIT =
-  "9e857542b3c348aeead55157d0f47443eb9e7e86" as const;
+  "9fb4d22142deec7c29f1c15a59d0dcc4b7d118c1" as const;
+export const UNIVERSITY_RESEARCH_CANDIDATE_A_LOCAL_BUILD_DIGEST =
+  "sha256:630f87b86f507e7bafec2e8417fb909a833da81db696e8fe031a4ee01885ea0c" as const;
 export const UNIVERSITY_RESEARCH_CANDIDATE_ROUTE =
   "/internal/university-semester-loop" as const;
 export const UNIVERSITY_RESEARCH_PROTOCOL_ID =

@@ -2,6 +2,7 @@ import { deepFreeze } from "../deep-freeze";
 import { canonicalJson, sha256Digest } from "../events";
 import {
   UNIVERSITY_RESEARCH_ACCEPTED_SOURCE_COMMIT,
+  UNIVERSITY_RESEARCH_CANDIDATE_A_LOCAL_BUILD_DIGEST,
   UNIVERSITY_RESEARCH_CANDIDATE_ROUTE,
   UNIVERSITY_RESEARCH_EXPOSURE_TASKS,
   UNIVERSITY_RESEARCH_EXPOSURE_TASK_SET_DIGEST,
@@ -28,6 +29,8 @@ import {
   type UniversityResearchNeutralSubstituteV1,
   type UniversityResearchScenarioPackV1,
 } from "./contracts";
+import { UNIVERSITY_RESEARCH_COMMIT_A_EVIDENCE } from "./commit-a-evidence";
+import { UNIVERSITY_RESEARCH_CANDIDATE_COMPILER_ID } from "./candidate-contracts";
 
 const PROTOCOL_BINDING = deepFreeze({
   protocolId: UNIVERSITY_RESEARCH_PROTOCOL_ID,
@@ -518,10 +521,22 @@ export const UNIVERSITY_RESEARCH_CANDIDATE_ADAPTER_DESCRIPTOR = deepFreeze({
   bindingStatus: "manifest_only_not_rendered",
   candidateRoute: UNIVERSITY_RESEARCH_CANDIDATE_ROUTE,
   sourceCommit: UNIVERSITY_RESEARCH_ACCEPTED_SOURCE_COMMIT,
+  compilerId: UNIVERSITY_RESEARCH_CANDIDATE_COMPILER_ID,
+  compilerDescriptorDigest:
+    UNIVERSITY_RESEARCH_COMMIT_A_EVIDENCE.compiler.descriptorDigest,
+  packetSchemaVersion:
+    UNIVERSITY_RESEARCH_COMMIT_A_EVIDENCE.sharedSurface.packetSchemaVersion,
+  packetDigests: {
+    packP: UNIVERSITY_RESEARCH_COMMIT_A_EVIDENCE.sharedSurface.packP.packetDigest,
+    packQ: UNIVERSITY_RESEARCH_COMMIT_A_EVIDENCE.sharedSurface.packQ.packetDigest,
+  },
   requestSchemaVersion: "university-semester-loop-request.v1",
   projectionSchemaVersion: "university-semester-loop-projection.v1",
-  sourceOfFacts: "canonical_scenario_pack",
-  runtimeBindingImplemented: false,
+  sourceOfFacts:
+    "canonical_scenario_pack_compiled_through_raw_semester_loop_inputs",
+  runtimeBindingImplemented: true,
+  runtimeBoundary: "development_only_production_unavailable",
+  renderedParityEstablished: false,
 } as const);
 
 export const UNIVERSITY_RESEARCH_RENDERER_BINDING_DESCRIPTOR = deepFreeze({
@@ -712,8 +727,7 @@ Promise<Readonly<UniversityResearchArtifactPreflightRequestV1>> {
     candidateBaseline: {
       sourceCommit: UNIVERSITY_RESEARCH_ACCEPTED_SOURCE_COMMIT,
       route: UNIVERSITY_RESEARCH_CANDIDATE_ROUTE,
-      buildDigest:
-        "sha256:65dbe36be81ad208c52b22e627feef33601e3a1bc46df09c746a72db2da3e58d",
+      buildDigest: UNIVERSITY_RESEARCH_CANDIDATE_A_LOCAL_BUILD_DIGEST,
       requestSchemaVersion: "university-semester-loop-request.v1",
       projectionSchemaVersion: "university-semester-loop-projection.v1",
       adapterId: UNIVERSITY_RESEARCH_ARTIFACT_ADAPTER_ID,

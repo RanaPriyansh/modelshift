@@ -9,6 +9,7 @@ import {
 } from "@/src/forge/university-research-artifacts";
 import {
   UNIVERSITY_RESEARCH_ACCEPTED_SOURCE_COMMIT,
+  UNIVERSITY_RESEARCH_CANDIDATE_A_LOCAL_BUILD_DIGEST,
   UNIVERSITY_RESEARCH_CANDIDATE_ROUTE,
   UNIVERSITY_RESEARCH_DECISION_OUTCOMES,
   UNIVERSITY_RESEARCH_EVIDENCE_DIMENSIONS,
@@ -97,8 +98,7 @@ function baseRequest(digests: ArtifactDigests): UniversityResearchReadinessReque
         "university-semester-loop-projection.v1",
       scenarioIds: [...UNIVERSITY_RESEARCH_SCENARIO_IDS],
       fixtureDigest: digests.candidate,
-      candidateBuildDigest:
-        "sha256:65dbe36be81ad208c52b22e627feef33601e3a1bc46df09c746a72db2da3e58d",
+      candidateBuildDigest: UNIVERSITY_RESEARCH_CANDIDATE_A_LOCAL_BUILD_DIGEST,
       lockedAt: "2026-07-31T09:00:00.000Z",
       amendmentVersion: 0,
       comparability: "baseline",
