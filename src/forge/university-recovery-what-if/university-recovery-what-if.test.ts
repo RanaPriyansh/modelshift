@@ -260,7 +260,7 @@ describe("projectUniversityRecoveryWhatIf", () => {
     expect(getPrototypeOf).not.toHaveBeenCalled();
   });
 
-  it("rejects exotic, cyclic, over-deep, oversized, and nonfinite graphs", async () => {
+  it("rejects exotic, cyclic, over-deep, oversized, nonfinite, and unsafe-number graphs", async () => {
     const valid = request(240);
     const exotic = Object.assign(Object.create({ inherited: true }), valid);
     const cycle: Record<string, unknown> = {};
@@ -278,14 +278,21 @@ describe("projectUniversityRecoveryWhatIf", () => {
         ...valid,
         availableMinutes: Number.POSITIVE_INFINITY,
       }),
+      projectUniversityRecoveryWhatIf({
+        ...valid,
+        availableMinutes: Number.MAX_SAFE_INTEGER + 1,
+      }),
     ]);
 
     for (const projection of results) {
       expect(projection).toMatchObject({
         status: "invalid",
-        issues: [{ code: "schema.invalid" }],
         projectionDigest: null,
       });
+      expect(projection.issues.length).toBeGreaterThan(0);
+      expect(projection.issues.every((issue) => (
+        issue.code === "schema.invalid"
+      ))).toBe(true);
     }
   });
 

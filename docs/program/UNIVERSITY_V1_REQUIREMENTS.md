@@ -183,6 +183,12 @@ replanner or durable edit.
 | `UV1-RECOVERY-WHATIF-010` | Keep raw requests and projection logic server-internal; expose only closed synthetic presentation outcomes to the browser. | Server precomputes three neutral value-labelled options; client receives no raw request, source identity, internal status/digest, arbitrary input, projector, or command; no option is selected initially. |
 | `UV1-RECOVERY-WHATIF-011` | Keep the new baseline internal, production-unavailable, and separately evaluated. | Exact what-if token is development-only; legacy token remains unchanged; production is unavailable; marker scan, desktop, 320 CSS px, keyboard/focus, reduced-motion, forced-colors, overflow, console, and separate adult-observation gates are recorded without upgraded claims. |
 
+Exact requirement-to-test mapping, target-tree build receipts, connected-Chrome
+measurements, and deliberately open gates are recorded in
+[`UNIVERSITY_RECOVERY_WHAT_IF_FIDELITY_LEDGER.md`](../design/UNIVERSITY_RECOVERY_WHAT_IF_FIDELITY_LEDGER.md).
+That unsigned local ledger does not close participant, accessibility, live
+data, deployment, or efficacy gates.
+
 ### Internal protected-study research slice
 
 This reversible slice tests whether the enforced learning contract is legible
