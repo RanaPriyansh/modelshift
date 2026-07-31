@@ -446,10 +446,12 @@ export function ForgeStart({ initialGoal = "" }: { initialGoal?: string }) {
             <h2>What do you want to understand, make, or become able to do?</h2>
             <p>A topic, project, profession, decision, or honest “I do not know where to begin” all work.</p>
           </div>
-          <label className="forge-start-primary-field">
-            <span>Your words</span>
+          <div className="forge-start-primary-field">
+            <label htmlFor="forge-start-goal">Your words</label>
             <textarea
+              aria-describedby="forge-start-goal-description"
               autoFocus
+              id="forge-start-goal"
               maxLength={600}
               onChange={(event) => setGoal(event.target.value)}
               placeholder="I want to…"
@@ -457,8 +459,10 @@ export function ForgeStart({ initialGoal = "" }: { initialGoal?: string }) {
               rows={4}
               value={goal}
             />
-            <small>{goal.length} / 600 · remains unsaved until you choose to save a reviewed result</small>
-          </label>
+            <small id="forge-start-goal-description">
+              {goal.length} / 600 · remains unsaved until you choose to save a reviewed result
+            </small>
+          </div>
           <div className="forge-start-form__actions">
             <button className="forge-primary-action" type="submit">Name the outcome <ForgeArrow /></button>
             <Link href="/paths">Explore goal directions</Link>
@@ -473,10 +477,12 @@ export function ForgeStart({ initialGoal = "" }: { initialGoal?: string }) {
             <h2>What should you be able to do when this becomes useful?</h2>
             <p>This keeps the path aimed at capability instead of passive completion.</p>
           </div>
-          <label className="forge-start-primary-field">
-            <span>Meaningful outcome</span>
+          <div className="forge-start-primary-field">
+            <label htmlFor="forge-start-outcome">Meaningful outcome</label>
             <textarea
+              aria-describedby="forge-start-outcome-description"
               autoFocus
+              id="forge-start-outcome"
               maxLength={280}
               onChange={(event) => setDesiredOutcome(event.target.value)}
               placeholder="For example: build, explain, decide, repair, investigate, or perform…"
@@ -484,8 +490,8 @@ export function ForgeStart({ initialGoal = "" }: { initialGoal?: string }) {
               rows={3}
               value={desiredOutcome}
             />
-            <small>{desiredOutcome.length} / 280</small>
-          </label>
+            <small id="forge-start-outcome-description">{desiredOutcome.length} / 280</small>
+          </div>
           <label className="forge-start-secondary-field">
             <span>What can you already do or recognize? · optional</span>
             <textarea

@@ -189,9 +189,23 @@ describe("StudySessionRuntime", () => {
       />,
     );
 
-    expect(screen.getByTestId("study-session-runtime").textContent).toContain(
-      "world.proportional-reasoning · v1.0.2 · activity.world-proportional_reasoning",
-    );
+    const disclosure = screen.getByRole("banner", {
+      name: "Exact local path session",
+    });
+    expect(disclosure.classList.contains("forge-world-entry-disclosure--session")).toBe(true);
+    expect(
+      Array.from(disclosure.querySelectorAll("dt"), (term) => term.textContent),
+    ).toEqual(["World", "Version", "Activity"]);
+    expect(
+      Array.from(disclosure.querySelectorAll("dd"), (definition) => definition.textContent),
+    ).toEqual([
+      "world.proportional-reasoning",
+      "v1.0.2",
+      "activity.world-proportional_reasoning",
+    ]);
+    expect(screen.getByRole("link", {
+      name: "Return without claiming completion",
+    }).closest("header")).toBe(disclosure);
     expect(screen.getAllByRole("main")).toHaveLength(1);
     expect(mocked.ratioProps.at(-1)?.audience).toBe("adult");
     expect(mocked.ratioProps.at(-1)?.checkpointIdentity).toEqual({
