@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   cleanup,
   render,
@@ -193,5 +195,32 @@ describe("UniversityResearchCandidateWorkspace", () => {
     expect(article).toHaveTextContent(
       "This local synthetic compilation does not establish live data",
     );
+  });
+
+  it("keeps each native radio bound to one separately compiled scenario selector", () => {
+    const css = readFileSync(
+      resolve(
+        process.cwd(),
+        "src/components/forge/university/UniversityResearchCandidateWorkspace.module.css",
+      ),
+      "utf8",
+    );
+    const scenarioIds = [
+      "ready",
+      "source-review",
+      "capacity-break",
+      "tight-window",
+      "world-changed",
+      "path-complete",
+      "path-blocked",
+    ] as const;
+
+    expect(css).toContain(".scenarios > .scenario {\n  display: none;\n}");
+    for (const scenarioId of scenarioIds) {
+      expect(css).toContain(
+        `.stateSurface:has(input[value="${scenarioId}"]:checked) > .scenarios > .scenario[data-scenario="${scenarioId}"] {\n  display: block;\n}`,
+      );
+    }
+    expect(css.match(/:has\(input\[value=/g)).toHaveLength(scenarioIds.length);
   });
 });

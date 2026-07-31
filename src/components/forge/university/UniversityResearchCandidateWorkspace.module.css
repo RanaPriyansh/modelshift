@@ -160,24 +160,35 @@
   color: var(--forge-paper);
 }
 
-.scenario {
+.scenarios > .scenario {
   display: none;
 }
 
-.stateSurface:has(input[value="ready"]:checked)
-  .scenario[data-scenario="ready"],
-.stateSurface:has(input[value="source-review"]:checked)
-  .scenario[data-scenario="source-review"],
-.stateSurface:has(input[value="capacity-break"]:checked)
-  .scenario[data-scenario="capacity-break"],
-.stateSurface:has(input[value="tight-window"]:checked)
-  .scenario[data-scenario="tight-window"],
-.stateSurface:has(input[value="world-changed"]:checked)
-  .scenario[data-scenario="world-changed"],
-.stateSurface:has(input[value="path-complete"]:checked)
-  .scenario[data-scenario="path-complete"],
-.stateSurface:has(input[value="path-blocked"]:checked)
-  .scenario[data-scenario="path-blocked"] {
+.stateSurface:has(input[value="ready"]:checked) > .scenarios > .scenario[data-scenario="ready"] {
+  display: block;
+}
+
+.stateSurface:has(input[value="source-review"]:checked) > .scenarios > .scenario[data-scenario="source-review"] {
+  display: block;
+}
+
+.stateSurface:has(input[value="capacity-break"]:checked) > .scenarios > .scenario[data-scenario="capacity-break"] {
+  display: block;
+}
+
+.stateSurface:has(input[value="tight-window"]:checked) > .scenarios > .scenario[data-scenario="tight-window"] {
+  display: block;
+}
+
+.stateSurface:has(input[value="world-changed"]:checked) > .scenarios > .scenario[data-scenario="world-changed"] {
+  display: block;
+}
+
+.stateSurface:has(input[value="path-complete"]:checked) > .scenarios > .scenario[data-scenario="path-complete"] {
+  display: block;
+}
+
+.stateSurface:has(input[value="path-blocked"]:checked) > .scenarios > .scenario[data-scenario="path-blocked"] {
   display: block;
 }
 
