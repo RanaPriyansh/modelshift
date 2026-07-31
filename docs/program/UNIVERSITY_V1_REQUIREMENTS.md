@@ -278,6 +278,30 @@ may select only closed server-authored outcomes in browser memory.
 | `UV1-SANDBOX-009` | Preserve the internal production boundary. | Exact sandbox token is development-only; legacy and research-candidate tokens are unchanged; production is unavailable; sandbox markers are absent from public assets. |
 | `UV1-SANDBOX-010` | Verify legibility without upgrading the claim. | Component and Chrome checks cover keyboard, focus, 320 CSS px, desktop, reduced motion, overflow, and console; forced colors, manual assistive technology, participant evidence, data authority, and production remain open until actually completed. |
 
+### Internal all-current-courses semester overview
+
+**Decision note:** complete the declared “one-course-deep,
+all-current-courses-shallow” research shape without creating a priority
+dashboard, course selector, capacity sum, durable semester coordinator, or
+false cross-route continuity. The overview preserves one canonical term
+Recovery axis and one direct canonical semester-loop result per course.
+
+| ID | Requirement | Acceptance evidence |
+| --- | --- | --- |
+| `UV1-OVERVIEW-001` | Accept only one raw term-wide Recovery request and one to eight strict raw Today/World entries. | No caller-supplied projection, status, selected course, readiness, score, digest, recommendation, effect, or command is accepted. |
+| `UV1-OVERVIEW-002` | Copy the complete aggregate graph through one bounded server boundary before child parsing. | Node-intrinsic proxy refusal precedes reflection; accessors, symbols, exotic prototypes, sparse/extended arrays, cycles, repeated aliases, pollution keys, unsafe numbers, depth, node, key, and array-limit violations fail closed without invoking child projectors. |
+| `UV1-OVERVIEW-003` | Require one exact synthetic term envelope. | Owner, tenant, term, `asOf`, term label, and time zone are exact across Recovery and every Today request or the complete overview is invalid. |
+| `UV1-OVERVIEW-004` | Require exact course-set, label, and source binding. | Unique course IDs are derived from validated Today scopes; sorted set equality with Recovery is exact; every matching Recovery course has the exact label and canonical source-reconciliation request. Missing, extra, duplicate, swapped, or merely similar inputs fail closed. |
+| `UV1-OVERVIEW-005` | Expose one separately projected term Recovery axis and delegate every course to the canonical semester-loop projector. | The overview projects Recovery once for the separately exposed term axis; every direct `projectUniversitySemesterLoop` child canonically recomputes the same exact full Recovery request; each course status and digest equals that direct call; any invalid child invalidates the overview. |
+| `UV1-OVERVIEW-006` | Preserve the term Recovery and course semester-loop axes separately. | The top status is only `invalid` or `ready_for_inspection`; term Recovery keeps its canonical status; course summaries keep canonical Today and semester-loop statuses; no flattened whole-semester job is emitted. |
+| `UV1-OVERVIEW-007` | Make structural inspectability weaker than readiness. | UI, contract, and tests state that `ready_for_inspection` does not mean the term, Recovery plan, course, activity, learner, or capability is ready, feasible, complete, or on track. |
+| `UV1-OVERVIEW-008` | Forbid cross-course capacity composition and hidden priority. | No course-local capacity sum, workload total, feasibility claim, urgency/risk/readiness score, progress percentage, selected course, global next action, or global CTA exists. Term capacity remains owned only by Recovery. |
+| `UV1-OVERVIEW-009` | Order deterministically without ranking. | Course summaries sort only by course ID under literal authority `course_id_not_priority`; input permutation produces the same deeply frozen digest and presentation order. |
+| `UV1-OVERVIEW-010` | Keep the client projection presentation-only and refresh-clear. | The browser receives four closed server-authored views containing bounded labels, statuses, and explanations only; no raw request, World, source revision/candidate/decision, path identity, child projection/digest, projector, or command is serialized; scenario selection creates no effect. |
+| `UV1-OVERVIEW-011` | Keep every consequential authority false. | Identity and tenancy are unverified; recommendation, course selection, global action, scheduling, session, persistence, evidence, message, event, provider, and external effects are false. |
+| `UV1-OVERVIEW-012` | Keep the route internal, removable, production-unavailable, and absent from public assets. | Development requires exact token `FORGE_UNIVERSITY_SEMESTER_OVERVIEW_FIXTURE=forge-university-semester-overview.v1`; production imports/renders only the unavailable shell; schema, token, fixture, scenario, and complete-surface markers are absent from `.next/static`. |
+| `UV1-OVERVIEW-013` | Evaluate scan accuracy, term/course separation, order calibration, learner control, access, and harm without upgrading the claim. | `UNIVERSITY_SEMESTER_OVERVIEW_UX_EXPERIMENT.md` fixes four states, separate evidence dimensions, desktop, exact 320 CSS px, keyboard, focus, reduced motion, forced colors, overflow, console, production-boundary, and participant stop gates; `UV1-GATE-001..003` remain open. |
+
 ## First slice acceptance
 
 The slice is ready for review only when:
