@@ -4,6 +4,7 @@ import { createLessonDraftPost, MAX_LESSON_STUDIO_REQUEST_BYTES, POST } from "..
 import {
   generateLessonDraft,
   LessonStudioError,
+  MAX_LESSON_STUDIO_PROVIDER_RESPONSE_BYTES,
   type LessonStudioOpenAIClient,
 } from "./providers.server";
 import {
@@ -180,6 +181,38 @@ describe("lesson provider adapters", () => {
       authority: approvedProviderAuthorityForTest("lesson-draft"),
     })).rejects.toEqual(
       expect.objectContaining<Partial<LessonStudioError>>({ code: "malformed_provider_output" }),
+    );
+  });
+
+  it("rejects declared and streamed provider responses above the byte limit", async () => {
+    const declaredOversize = vi.fn(async () => new Response("{}", {
+      status: 200,
+      headers: {
+        "content-length": String(
+          MAX_LESSON_STUDIO_PROVIDER_RESPONSE_BYTES + 1,
+        ),
+      },
+    })) as unknown as typeof fetch;
+    await expect(generateLessonDraft(requestFor("anthropic"), {
+      fetchImpl: declaredOversize,
+      authority: approvedProviderAuthorityForTest("lesson-draft"),
+    })).rejects.toEqual(
+      expect.objectContaining<Partial<LessonStudioError>>({
+        code: "malformed_provider_output",
+      }),
+    );
+
+    const streamedOversize = vi.fn(async () => new Response(
+      "x".repeat(MAX_LESSON_STUDIO_PROVIDER_RESPONSE_BYTES + 1),
+      { status: 200 },
+    )) as unknown as typeof fetch;
+    await expect(generateLessonDraft(requestFor("openrouter"), {
+      fetchImpl: streamedOversize,
+      authority: approvedProviderAuthorityForTest("lesson-draft"),
+    })).rejects.toEqual(
+      expect.objectContaining<Partial<LessonStudioError>>({
+        code: "malformed_provider_output",
+      }),
     );
   });
 

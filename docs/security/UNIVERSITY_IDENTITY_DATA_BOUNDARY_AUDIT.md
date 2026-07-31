@@ -115,13 +115,48 @@ base. `.env.example` contains empty or non-secret example values.
 **False-positive notes:** An environment-specific file might contain only
 public data. FORGE still treats the complete file as sensitive by default.
 
+### SEC-UV1-003: Provider response bodies had no byte limit
+
+**Severity:** Low while provider authority is disabled
+
+**Status:** Fixed in this candidate
+
+**Location before the fix:** `src/lib/lesson-studio/providers.server.ts:99-106`
+at commit `edd49c6`.
+
+**Evidence before the fix:**
+
+```ts
+async function readProviderJson(response: Response): Promise<unknown> {
+  if (!response.ok) throw errorForHttpStatus(response.status);
+  try {
+    return await response.json();
+  } catch {
+    throw new LessonStudioError("malformed_provider_output");
+  }
+}
+```
+
+**Impact:** A compromised or incorrect provider could return an unbounded body.
+An enabled server could use excessive memory before strict schema validation.
+
+**Fix:** Provider fetch adapters now reject declared or streamed responses over
+256 KiB. They also reject missing bodies and invalid UTF-8 before JSON parsing.
+
+**Mitigation:** Provider authority remains structurally disabled. Transport
+also has a fixed timeout and fixed output-token budget.
+
+**False-positive notes:** The OpenAI SDK adapter does not use this fetch-body
+reader. It retains its SDK output-token limit and strict structured-output
+validation.
+
 ## Verification
 
 The candidate checks passed:
 
-- 173 application test files with 1,516 tests;
+- 173 application test files with 1,517 tests;
 - two evaluator test files with 13 tests;
-- 1,529 tests in total;
+- 1,530 tests in total;
 - ESLint with zero warnings;
 - TypeScript typecheck; and
 - whitespace and patch validation.
