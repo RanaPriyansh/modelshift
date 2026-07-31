@@ -137,6 +137,10 @@ fixture token is configured. The surfaces accept no request body, real
 coursework, credential, account, participant record, upload, connector, or
 provider input.
 
+The production build scans public and server artifacts for fixture identities
+and complete server-owned label sets. Route and gate names remain forbidden
+only in public client assets.
+
 Local fragment navigation is the maximum primary-control effect in this
 packet. No control may navigate to a live World, source system, message,
 calendar, account, public route, or external URL, and no state transfers

@@ -60,7 +60,9 @@ authority. The internal route requires the exact server-owned development
 token
 `FORGE_UNIVERSITY_RESEARCH_READINESS_FIXTURE=forge-university-research-readiness.v1`.
 Production always renders the unavailable shell, including when that token is
-present, and server fixture markers are forbidden from public static assets.
+present. Production scans public and server build artifacts for server fixture
+markers and the complete server-owned scenario-label set. Route and gate names
+remain forbidden only in public client assets.
 
 The protocol fixes:
 

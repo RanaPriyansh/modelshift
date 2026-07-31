@@ -173,6 +173,8 @@ evaluated; a comparator-drift fixture shows a mismatch rather than a false
 failure count.
 
 Production continues to render only the unavailable research-readiness shell.
+The build scans public and server artifacts for fixture markers and the
+complete server-owned scenario-label set.
 The exact protocol document remains byte-identical; this ADR resolves artifact
 format and digest ambiguities without amending the preregistered question,
 tasks, timing, decision grammar, or authorization boundary.

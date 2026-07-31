@@ -11,6 +11,8 @@ import { describe, expect, it } from "vitest";
 
 import { scanUniversityPostAttemptRepairProductionArtifacts } from "./university-post-attempt-repair-public-artifact-boundary";
 import { scanUniversityRecoveryProductionArtifacts } from "./university-recovery-public-artifact-boundary";
+import { scanUniversityResearchReadinessProductionArtifacts } from "./university-research-readiness-public-artifact-boundary";
+import { scanUniversityResearchSubstituteProductionArtifacts } from "./university-research-substitute-public-artifact-boundary";
 import { scanUniversitySemesterDeskProductionArtifacts } from "./university-semester-desk-public-artifact-boundary";
 import { scanUniversitySemesterLoopProductionArtifacts } from "./university-semester-loop-public-artifact-boundary";
 import { scanUniversitySemesterOverviewProductionArtifacts } from "./university-semester-overview-public-artifact-boundary";
@@ -40,6 +42,16 @@ const SCANNERS = [
     name: "semester desk",
     marker: "forge-university-semester-desk.v1",
     scan: scanUniversitySemesterDeskProductionArtifacts,
+  },
+  {
+    name: "research readiness",
+    marker: "forge-university-research-readiness.v1",
+    scan: scanUniversityResearchReadinessProductionArtifacts,
+  },
+  {
+    name: "research substitute",
+    marker: "forge-university-research-substitute.pack-p.v1",
+    scan: scanUniversityResearchSubstituteProductionArtifacts,
   },
 ] as const;
 

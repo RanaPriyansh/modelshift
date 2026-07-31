@@ -14,12 +14,12 @@ import {
   scanUniversityRecoveryProductionArtifacts,
 } from "../../src/components/forge/university/university-recovery-public-artifact-boundary";
 import {
-  assertNoUniversityResearchReadinessPublicArtifactLeaks,
-  scanUniversityResearchReadinessProductionPublicAssets,
+  assertNoUniversityResearchReadinessProductionArtifactLeaks,
+  scanUniversityResearchReadinessProductionArtifacts,
 } from "../../src/components/forge/university/university-research-readiness-public-artifact-boundary";
 import {
-  assertNoUniversityResearchSubstitutePublicArtifactLeaks,
-  scanUniversityResearchSubstituteProductionPublicAssets,
+  assertNoUniversityResearchSubstituteProductionArtifactLeaks,
+  scanUniversityResearchSubstituteProductionArtifacts,
 } from "../../src/components/forge/university/university-research-substitute-public-artifact-boundary";
 import {
   assertNoUniversityProtectedStudyProductionArtifactLeaks,
@@ -100,9 +100,9 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
     scanUniversitySourceReviewProductionArtifacts(root);
   const universityRecoveryLeaks = scanUniversityRecoveryProductionArtifacts(root);
   const universityResearchReadinessLeaks =
-    scanUniversityResearchReadinessProductionPublicAssets(root);
+    scanUniversityResearchReadinessProductionArtifacts(root);
   const universityResearchSubstituteLeaks =
-    scanUniversityResearchSubstituteProductionPublicAssets(root);
+    scanUniversityResearchSubstituteProductionArtifacts(root);
   const universityProtectedStudyLeaks =
     scanUniversityProtectedStudyProductionArtifacts(root);
   const universityPostAttemptRepairLeaks =
@@ -124,10 +124,10 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
     universitySourceReviewLeaks,
   );
   assertNoUniversityRecoveryProductionArtifactLeaks(universityRecoveryLeaks);
-  assertNoUniversityResearchReadinessPublicArtifactLeaks(
+  assertNoUniversityResearchReadinessProductionArtifactLeaks(
     universityResearchReadinessLeaks,
   );
-  assertNoUniversityResearchSubstitutePublicArtifactLeaks(
+  assertNoUniversityResearchSubstituteProductionArtifactLeaks(
     universityResearchSubstituteLeaks,
   );
   assertNoUniversityProtectedStudyProductionArtifactLeaks(

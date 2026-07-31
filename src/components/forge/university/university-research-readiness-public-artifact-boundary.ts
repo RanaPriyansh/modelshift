@@ -1,11 +1,16 @@
 import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
-/** Server-only research-rehearsal identities forbidden in public assets. */
-export const UNIVERSITY_RESEARCH_READINESS_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS =
+/** Route and gate names forbidden only in public client assets. */
+export const UNIVERSITY_RESEARCH_READINESS_PUBLIC_ONLY_FORBIDDEN_MARKERS =
   Object.freeze([
     "/internal/university-research-readiness",
     "FORGE_UNIVERSITY_RESEARCH_READINESS_FIXTURE",
+  ] as const);
+
+/** Server-only research-rehearsal identities and fixture content. */
+export const UNIVERSITY_RESEARCH_READINESS_PRODUCTION_ARTIFACT_FORBIDDEN_MARKERS =
+  Object.freeze([
     "forge-university-research-readiness.v1",
     "university-research-readiness-projection.v1",
     "university-research-artifact-preflight-projection.v1",
@@ -38,73 +43,94 @@ export const UNIVERSITY_RESEARCH_READINESS_FIXTURE_LABELS = Object.freeze([
 const UNIVERSITY_RESEARCH_READINESS_FIXTURE_LABEL_SET_MARKER =
   "university research-readiness server-only scenario label set";
 
-export type UniversityResearchReadinessPublicAsset =
+export type UniversityResearchReadinessProductionArtifact =
   Readonly<{ path: string; contents: string }>;
-export type UniversityResearchReadinessPublicArtifactLeak =
+export type UniversityResearchReadinessProductionArtifactLeak =
   Readonly<{ path: string; marker: string }>;
 
-export function findUniversityResearchReadinessPublicArtifactLeaks(
-  assets: readonly UniversityResearchReadinessPublicAsset[],
-): readonly UniversityResearchReadinessPublicArtifactLeak[] {
-  return Object.freeze(assets.flatMap((asset) => {
+function isPublicStaticArtifact(path: string): boolean {
+  return path.startsWith("static/") || path.includes("/static/");
+}
+
+export function findUniversityResearchReadinessProductionArtifactLeaks(
+  artifacts: readonly UniversityResearchReadinessProductionArtifact[],
+): readonly UniversityResearchReadinessProductionArtifactLeak[] {
+  return Object.freeze(artifacts.flatMap((artifact) => {
     const markerLeaks =
-      UNIVERSITY_RESEARCH_READINESS_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS.flatMap(
+      UNIVERSITY_RESEARCH_READINESS_PRODUCTION_ARTIFACT_FORBIDDEN_MARKERS.flatMap(
         (marker) => (
-          asset.contents.includes(marker)
-            ? [Object.freeze({ path: asset.path, marker })]
+          artifact.contents.includes(marker)
+            ? [Object.freeze({ path: artifact.path, marker })]
             : []
         ),
       );
+    const publicOnlyMarkerLeaks = isPublicStaticArtifact(artifact.path)
+      ? UNIVERSITY_RESEARCH_READINESS_PUBLIC_ONLY_FORBIDDEN_MARKERS.flatMap(
+          (marker) => (
+            artifact.contents.includes(marker)
+              ? [Object.freeze({ path: artifact.path, marker })]
+              : []
+          ),
+        )
+      : [];
     const labelSetLeak = UNIVERSITY_RESEARCH_READINESS_FIXTURE_LABELS.every(
-      (label) => asset.contents.includes(label),
+      (label) => artifact.contents.includes(label),
     )
       ? [Object.freeze({
-          path: asset.path,
+          path: artifact.path,
           marker: UNIVERSITY_RESEARCH_READINESS_FIXTURE_LABEL_SET_MARKER,
         })]
       : [];
-    return [...markerLeaks, ...labelSetLeak];
+    return [...markerLeaks, ...publicOnlyMarkerLeaks, ...labelSetLeak];
   }));
 }
 
-export function assertNoUniversityResearchReadinessPublicArtifactLeaks(
-  leaks: readonly UniversityResearchReadinessPublicArtifactLeak[],
+export function assertNoUniversityResearchReadinessProductionArtifactLeaks(
+  leaks: readonly UniversityResearchReadinessProductionArtifactLeak[],
 ): void {
   if (leaks.length > 0) {
     throw new Error(
-      `University research-readiness sample data reached public build assets:\n${leaks.map(
+      `University research-readiness sample data reached production build artifacts:\n${leaks.map(
         (leak) => `${leak.path}: ${leak.marker}`,
       ).join("\n")}`,
     );
   }
 }
 
-function publicStaticFiles(directory: string): readonly string[] {
+function productionArtifactFiles(directory: string): readonly string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const absolutePath = resolve(directory, entry.name);
     const stat = lstatSync(absolutePath);
     if (stat.isSymbolicLink()) {
       throw new Error(
-        `University research-readiness public-asset scan rejected symlink: ${absolutePath}`,
+        `University research-readiness artifact scan rejected symlink: ${absolutePath}`,
       );
     }
-    if (stat.isDirectory()) return publicStaticFiles(absolutePath);
+    if (stat.isDirectory()) return productionArtifactFiles(absolutePath);
     return stat.isFile() ? [absolutePath] : [];
   });
 }
 
-export function scanUniversityResearchReadinessProductionPublicAssets(
+export function scanUniversityResearchReadinessProductionArtifacts(
   projectRoot: string = process.cwd(),
-): readonly UniversityResearchReadinessPublicArtifactLeak[] {
-  const staticDirectory = resolve(projectRoot, ".next/static");
-  if (!existsSync(staticDirectory) || !lstatSync(staticDirectory).isDirectory()) {
-    throw new Error(
-      "University research-readiness public-asset scan requires a completed production .next/static build.",
-    );
+): readonly UniversityResearchReadinessProductionArtifactLeak[] {
+  const directories = [
+    resolve(projectRoot, ".next/static"),
+    resolve(projectRoot, ".next/server"),
+  ];
+  for (const directory of directories) {
+    if (!existsSync(directory) || !lstatSync(directory).isDirectory()) {
+      throw new Error(
+        "University research-readiness artifact scan requires a completed production .next build.",
+      );
+    }
   }
-  const assets = publicStaticFiles(staticDirectory).map((absolutePath) => Object.freeze({
-    path: relative(projectRoot, absolutePath),
-    contents: readFileSync(absolutePath, "utf8"),
-  }));
-  return findUniversityResearchReadinessPublicArtifactLeaks(assets);
+  return findUniversityResearchReadinessProductionArtifactLeaks(
+    directories.flatMap((directory) => (
+      productionArtifactFiles(directory).map((absolutePath) => Object.freeze({
+        path: relative(projectRoot, absolutePath),
+        contents: readFileSync(absolutePath, "utf8"),
+      }))
+    )),
+  );
 }
