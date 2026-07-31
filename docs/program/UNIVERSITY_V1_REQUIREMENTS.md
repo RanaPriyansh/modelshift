@@ -338,7 +338,7 @@ research.
 | `UV1-DESK-013` | Evaluate scan-to-inspection comprehension without upgrading the claim. | `UNIVERSITY_SEMESTER_DESK_UX_EXPERIMENT.md` fixes initial no-selection, four scenarios, separate scan/selection/order/trust/control/access/harm evidence, desktop, exact 320 CSS px, keyboard, focus, one live region, reduced motion, forced colors, overflow, console, storage, production-denial, and participant stop gates; `UV1-GATE-001..003` remain open. |
 | `UV1-DESK-014` | End speculative synthetic product-shape construction after this slice. | The next program action is the separately approved Phase -1 direct observation/matched-substitution protocol, one preregistered repair or narrowing grounded in that evidence, or stopping/rejecting the wedge. Absent participant/data authority means blocked research or a program decision, not another internal feature; any exception requires a principal amendment naming an unanswered research question and why existing artifacts cannot answer it. |
 
-### Student-owned degree and learning foundations
+### Learner-declared degree and learning foundations
 
 **Principal amendment:** continue bounded internal foundation engineering while
 participant research remains deferred. This amendment does not change
@@ -352,7 +352,7 @@ promote an internal route.
 | `UV1-SYS-003` | Represent course learning continuity without converting attempts into mastery. | The strict learning-map request covers learner-declared outcomes, concepts, prerequisites, bounded evidence references without captured content, attempts, help-used provenance with unknown effect, real calendar dates, delayed returns, and explicit unknowns. |
 | `UV1-SYS-004` | Keep learning gaps inspectable without diagnosis, answer generation, or a selected next concept. | The canonical learning projector exposes only separate mapping, cycle, evidence, date-order, and unknown review issues; mastery, ability, diagnosis, recommendation, answer generation, persistence, network, event, and personal-data authority remain false. |
 | `UV1-SYS-005` | Compose degree and learning only from strict raw child requests. | The student-context boundary copies the complete graph once, recomputes both canonical projectors, rejects invalid children and a learning course absent from the degree map, and never accepts caller-supplied projections, scores, status, ranking, or action. |
-| `UV1-SYS-006` | Preserve degree and learning as separate axes under one opaque learner-owned binding. | Student context returns `review_required` when either valid child requires review and `ready_for_inspection` only when both declarations are coherent; it emits no combined readiness, progress, mastery, risk, graduation, priority, or global next-action value. |
+| `UV1-SYS-006` | Preserve degree and learning as separate axes under one opaque self-attested learner declaration. | Student context labels declaration ownership and adult status as self-attested and unverified, returns `review_required` when either valid child requires review, and emits no combined readiness, progress, mastery, risk, graduation, priority, or global next-action value. |
 | `UV1-SYS-007` | Keep the internal inspection routes development-only and effect-free. | Exact environment tokens gate the command center, degree map, and learning map; production imports only unavailable shells; browser presentations contain bounded server-authored synthetic values and perform no fetch, storage, provider, model, message, event, or external action. |
 | `UV1-SYS-008` | Use one clear directory without hidden priority. | The university command center lists bounded internal workspaces in alphabetical order, starts with no selection, uses explicit native links, preserves keyboard focus and 320 CSS pixel reflow, and states that order is not priority or recommendation. |
 | `UV1-SYS-009` | Bind learner-declared maps to copied course-source candidates without upgrading source authority. | A pure source-map context enforces a 512 KiB request limit, recomputes raw student-context and course-source requests, verifies exact course, revision, digest, candidate, claim, and concept bindings, deduplicates exact degree-source records, and exposes no copied source label or complete fact. |
@@ -378,7 +378,7 @@ does not authorize a public route, persistence, live coursework, provider
 operation, or a research claim.
 
 The 1 August 2026 principal amendments permit bounded internal engineering for
-the learner-owned degree map, learning map, student context, inspection
+the learner-declared degree map, learning map, student context, inspection
 directory, copied-source binding, and server-disabled adult account binding.
 That work must remain effect-free, reversible, and separate from research
 evidence. It cannot enable cloud identity, persistence, tutoring, select the

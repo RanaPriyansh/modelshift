@@ -9,7 +9,7 @@ import {
   UNIVERSITY_STUDENT_CONTEXT_PROJECTION_SCHEMA_VERSION,
   type UniversityStudentContextAuthority,
   type UniversityStudentContextIssue,
-  type UniversityStudentContextProjectionV1,
+  type UniversityStudentContextProjectionV2,
   universityStudentContextRequestSchema,
 } from "./contracts";
 
@@ -26,7 +26,7 @@ const ARRAY_INDEX = /^(0|[1-9]\d*)$/;
 const POLLUTION_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
 const AUTHORITY = deepFreeze({
-  projectionClass: "adult_learner_owned_student_context_inspection",
+  projectionClass: "learner_declared_student_context_inspection",
   bindingAuthority: "caller_supplied_opaque_not_verified",
   adultStatusAuthority: "self_attested_not_verified",
   degreeAndLearningAxesMerged: false,
@@ -188,7 +188,7 @@ function orderedIssues(
 
 function invalidProjection(
   issues: readonly UniversityStudentContextIssue[],
-): Readonly<UniversityStudentContextProjectionV1> {
+): Readonly<UniversityStudentContextProjectionV2> {
   return deepFreeze({
     schemaVersion: UNIVERSITY_STUDENT_CONTEXT_PROJECTION_SCHEMA_VERSION,
     status: "invalid",
@@ -216,11 +216,11 @@ function structuralIssues(
 
 /**
  * Recomputes both canonical inspection projections under one opaque,
- * adult-learner-owned binding. Degree and learning remain separate axes.
+ * learner-declared binding. Degree and learning remain separate axes.
  */
 export function projectUniversityStudentContext(
   value: unknown,
-): Readonly<UniversityStudentContextProjectionV1> {
+): Readonly<UniversityStudentContextProjectionV2> {
   try {
     let copied: unknown;
     try {

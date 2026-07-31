@@ -2,21 +2,20 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   projectUniversityDegreeMap,
-  type UniversityDegreeMapRequestV1,
+  type UniversityDegreeMapRequestV2,
 } from ".";
 
-function request(): UniversityDegreeMapRequestV1 {
+function request(): UniversityDegreeMapRequestV2 {
   const source = {
     sourceRef: "source.catalog.v1",
     declaredSourceDigest: `sha256:${"a".repeat(64)}`,
     authority: "learner_supplied_not_verified" as const,
   };
   return {
-    schemaVersion: "university-degree-map-request.v1",
-    ownership: {
-      ownerClass: "adult_learner",
-      control: "learner_managed",
-      adultAttestation: true,
+    schemaVersion: "university-degree-map-request.v2",
+    ownershipDeclaration: {
+      subject: "adult_learner_self_attested",
+      control: "learner_managed_self_attested",
     },
     program: {
       programRef: "program.computing.v1",
@@ -87,7 +86,7 @@ describe("projectUniversityDegreeMap", () => {
         "requirement.credits.core",
       ],
       authority: {
-        projectionClass: "adult_learner_owned_degree_map_inspection",
+        projectionClass: "learner_declared_degree_map_inspection",
         adultStatusAuthority: "self_attested_not_verified",
         sourceAuthority: "learner_supplied_not_verified",
         rankingAllowed: false,
@@ -103,6 +102,20 @@ describe("projectUniversityDegreeMap", () => {
     )?.unmetPrerequisiteCourseIds).toEqual(["course.cs100"]);
     expect(JSON.stringify(projection)).not.toContain("recommendedCourse");
     expect(JSON.stringify(projection)).not.toContain("rankedCourse");
+  });
+
+  it("rejects the retired v1 request schema", () => {
+    const retiredRequest = {
+      ...request(),
+      schemaVersion: "university-degree-map-request.v1",
+    };
+
+    const projection = projectUniversityDegreeMap(retiredRequest);
+
+    expect(projection.status).toBe("invalid");
+    expect(projection.issues.map((entry) => entry.code)).toContain(
+      "schema.invalid",
+    );
   });
 
   it("requires review for conflicts, missing sources, and unknown courses", () => {
@@ -164,7 +177,10 @@ describe("projectUniversityDegreeMap", () => {
       { ...request(), learnerEmail: "learner@example.test" },
       {
         ...request(),
-        ownership: { ...request().ownership, adultAttestation: false },
+        ownershipDeclaration: {
+          ...request().ownershipDeclaration,
+          subject: "adult_learner",
+        },
       },
       { ...request(), recommendationRequested: true },
       { ...request(), persistenceAllowed: true },

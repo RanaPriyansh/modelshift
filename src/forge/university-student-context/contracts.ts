@@ -1,22 +1,22 @@
 import { z } from "zod";
 
 import {
-  type UniversityDegreeMapProjectionV1,
-  type UniversityDegreeMapRequestV1,
+  type UniversityDegreeMapProjectionV2,
+  type UniversityDegreeMapRequestV2,
   universityDegreeMapRequestSchema,
 } from "../university-degree-map";
 import {
-  type UniversityLearningMapProjectionV1,
-  type UniversityLearningMapRequestV1,
+  type UniversityLearningMapProjectionV2,
+  type UniversityLearningMapRequestV2,
   universityLearningMapRequestSchema,
 } from "../university-learning-map";
 
 z.config({ jitless: true });
 
 export const UNIVERSITY_STUDENT_CONTEXT_REQUEST_SCHEMA_VERSION =
-  "university-student-context-request.v1" as const;
+  "university-student-context-request.v2" as const;
 export const UNIVERSITY_STUDENT_CONTEXT_PROJECTION_SCHEMA_VERSION =
-  "university-student-context-projection.v1" as const;
+  "university-student-context-projection.v2" as const;
 
 export const UNIVERSITY_STUDENT_CONTEXT_STATUSES = Object.freeze([
   "invalid",
@@ -31,15 +31,15 @@ const opaqueBindingIdSchema = z.string().min(3).max(120).regex(
 );
 
 /**
- * The binding is an opaque caller-owned correlation value. The projector
- * preserves it exactly and does not parse it into identity or institutional
- * authority.
+ * The binding is an opaque caller-supplied correlation value. The projector
+ * preserves it exactly. The value establishes no ownership, identity, or
+ * institutional authority.
  */
 export const universityStudentContextBindingSchema = z.strictObject({
   bindingId: opaqueBindingIdSchema,
-  ownership: z.literal("adult_learner_owned"),
+  ownershipDeclaration: z.literal("adult_learner_self_attested"),
 });
-export type UniversityStudentContextBindingV1 = z.infer<
+export type UniversityStudentContextBindingV2 = z.infer<
   typeof universityStudentContextBindingSchema
 >;
 
@@ -54,12 +54,12 @@ export const universityStudentContextRequestSchema = z.strictObject({
   learningMapRequest: universityLearningMapRequestSchema,
 });
 
-export interface UniversityStudentContextRequestV1 {
+export interface UniversityStudentContextRequestV2 {
   readonly schemaVersion:
     typeof UNIVERSITY_STUDENT_CONTEXT_REQUEST_SCHEMA_VERSION;
-  readonly contextBinding: UniversityStudentContextBindingV1;
-  readonly degreeMapRequest: UniversityDegreeMapRequestV1;
-  readonly learningMapRequest: UniversityLearningMapRequestV1;
+  readonly contextBinding: UniversityStudentContextBindingV2;
+  readonly degreeMapRequest: UniversityDegreeMapRequestV2;
+  readonly learningMapRequest: UniversityLearningMapRequestV2;
 }
 
 export const UNIVERSITY_STUDENT_CONTEXT_ISSUE_CODES = Object.freeze([
@@ -79,7 +79,7 @@ export interface UniversityStudentContextIssue {
 
 export interface UniversityStudentContextAuthority {
   readonly projectionClass:
-    "adult_learner_owned_student_context_inspection";
+    "learner_declared_student_context_inspection";
   readonly bindingAuthority: "caller_supplied_opaque_not_verified";
   readonly adultStatusAuthority: "self_attested_not_verified";
   readonly degreeAndLearningAxesMerged: false;
@@ -93,13 +93,13 @@ export interface UniversityStudentContextAuthority {
   readonly eventEmissionAllowed: false;
 }
 
-export interface UniversityStudentContextProjectionV1 {
+export interface UniversityStudentContextProjectionV2 {
   readonly schemaVersion:
     typeof UNIVERSITY_STUDENT_CONTEXT_PROJECTION_SCHEMA_VERSION;
   readonly status: UniversityStudentContextStatus;
-  readonly contextBinding: UniversityStudentContextBindingV1 | null;
-  readonly degreeAxis: Readonly<UniversityDegreeMapProjectionV1> | null;
-  readonly learningAxis: Readonly<UniversityLearningMapProjectionV1> | null;
+  readonly contextBinding: UniversityStudentContextBindingV2 | null;
+  readonly degreeAxis: Readonly<UniversityDegreeMapProjectionV2> | null;
+  readonly learningAxis: Readonly<UniversityLearningMapProjectionV2> | null;
   readonly authority: UniversityStudentContextAuthority;
   readonly issues: readonly UniversityStudentContextIssue[];
 }

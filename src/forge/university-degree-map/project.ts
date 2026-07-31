@@ -6,8 +6,8 @@ import {
   UNIVERSITY_DEGREE_MAP_PROJECTION_SCHEMA_VERSION,
   type UniversityDegreeMapCourseProjection,
   type UniversityDegreeMapIssue,
-  type UniversityDegreeMapProjectionV1,
-  type UniversityDegreeMapRequestV1,
+  type UniversityDegreeMapProjectionV2,
+  type UniversityDegreeMapRequestV2,
   type UniversityDegreeMapRequirementProjection,
   universityDegreeMapRequestSchema,
 } from "./contracts";
@@ -20,7 +20,7 @@ const MAX_STRING_BYTES = 512;
 const MAX_TOTAL_STRING_BYTES = 192_000;
 
 const AUTHORITY = deepFreeze({
-  projectionClass: "adult_learner_owned_degree_map_inspection",
+  projectionClass: "learner_declared_degree_map_inspection",
   adultStatusAuthority: "self_attested_not_verified",
   sourceAuthority: "learner_supplied_not_verified",
   rankingAllowed: false,
@@ -28,7 +28,7 @@ const AUTHORITY = deepFreeze({
   persistenceAllowed: false,
   networkAllowed: false,
   eventEmissionAllowed: false,
-} satisfies UniversityDegreeMapProjectionV1["authority"]);
+} satisfies UniversityDegreeMapProjectionV2["authority"]);
 
 class UnsafeJsonInput extends Error {}
 
@@ -184,7 +184,7 @@ function structuralIssues(error: ZodError): readonly UniversityDegreeMapIssue[] 
   )));
 }
 
-function emptyFlags(): UniversityDegreeMapProjectionV1["flags"] {
+function emptyFlags(): UniversityDegreeMapProjectionV2["flags"] {
   return {
     duplicateSourceRefs: [],
     duplicateCourseIds: [],
@@ -205,7 +205,7 @@ function emptyFlags(): UniversityDegreeMapProjectionV1["flags"] {
 
 function invalidProjection(
   issues: readonly UniversityDegreeMapIssue[],
-): Readonly<UniversityDegreeMapProjectionV1> {
+): Readonly<UniversityDegreeMapProjectionV2> {
   return deepFreeze({
     schemaVersion: UNIVERSITY_DEGREE_MAP_PROJECTION_SCHEMA_VERSION,
     status: "invalid",
@@ -221,7 +221,7 @@ function invalidProjection(
 }
 
 function prerequisiteCycles(
-  courses: ReadonlyMap<string, UniversityDegreeMapRequestV1["courses"][number]>,
+  courses: ReadonlyMap<string, UniversityDegreeMapRequestV2["courses"][number]>,
 ): readonly string[] {
   const visiting = new Set<string>();
   const visited = new Set<string>();
@@ -251,8 +251,8 @@ function prerequisiteCycles(
 }
 
 function projectValid(
-  request: UniversityDegreeMapRequestV1,
-): Readonly<UniversityDegreeMapProjectionV1> {
+  request: UniversityDegreeMapRequestV2,
+): Readonly<UniversityDegreeMapProjectionV2> {
   const issues: UniversityDegreeMapIssue[] = [];
   const sourceRefs = request.sourceRegistry.map((entry) => entry.sourceRef);
   const knownSources = new Set(sourceRefs);
@@ -262,7 +262,7 @@ function projectValid(
   const duplicateCourseIds = duplicateValues(courseIds);
   const coursesById = new Map<
     string,
-    UniversityDegreeMapRequestV1["courses"][number]
+    UniversityDegreeMapRequestV2["courses"][number]
   >();
   const stateSets = new Map<string, Set<string>>();
   for (const course of request.courses) {
@@ -289,7 +289,7 @@ function projectValid(
   const duplicateRequirementIds = duplicateValues(requirementIds);
   const requirementsById = new Map<
     string,
-    UniversityDegreeMapRequestV1["requirements"][number]
+    UniversityDegreeMapRequestV2["requirements"][number]
   >();
   for (const requirement of request.requirements) {
     if (!requirementsById.has(requirement.requirementId)) {
@@ -519,13 +519,13 @@ function projectValid(
 }
 
 /**
- * Projects an adult learner-owned degree map for inspection only.
+ * Projects a learner-declared degree map for inspection only.
  * It ranks or recommends nothing and performs no persistence, network, storage,
  * or event operation.
  */
 export function projectUniversityDegreeMap(
   value: unknown,
-): Readonly<UniversityDegreeMapProjectionV1> {
+): Readonly<UniversityDegreeMapProjectionV2> {
   try {
     let copied: unknown;
     try {

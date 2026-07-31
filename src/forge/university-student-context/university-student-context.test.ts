@@ -1,21 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { UniversityDegreeMapRequestV1 } from "../university-degree-map";
-import type { UniversityLearningMapRequestV1 } from "../university-learning-map";
+import type { UniversityDegreeMapRequestV2 } from "../university-degree-map";
+import type { UniversityLearningMapRequestV2 } from "../university-learning-map";
 import {
   projectUniversityStudentContext,
-  type UniversityStudentContextRequestV1,
+  type UniversityStudentContextRequestV2,
   UNIVERSITY_STUDENT_CONTEXT_STATUSES,
 } from ".";
 
-function degreeRequest(): UniversityDegreeMapRequestV1 {
+function degreeRequest(): UniversityDegreeMapRequestV2 {
   const sourceRef = "source.catalog.v1";
   return {
-    schemaVersion: "university-degree-map-request.v1",
-    ownership: {
-      ownerClass: "adult_learner",
-      control: "learner_managed",
-      adultAttestation: true,
+    schemaVersion: "university-degree-map-request.v2",
+    ownershipDeclaration: {
+      subject: "adult_learner_self_attested",
+      control: "learner_managed_self_attested",
     },
     program: {
       programRef: "program.computing.v1",
@@ -53,12 +52,12 @@ function degreeRequest(): UniversityDegreeMapRequestV1 {
   };
 }
 
-function learningRequest(): UniversityLearningMapRequestV1 {
+function learningRequest(): UniversityLearningMapRequestV2 {
   return {
-    schemaVersion: "university-learning-map-request.v1",
+    schemaVersion: "university-learning-map-request.v2",
     course: {
       courseRef: "course.cs100",
-      ownership: "student_owned",
+      ownershipDeclaration: "learner_self_attested",
       sourceAuthority: "learner_declared_unverified",
     },
     outcomes: [{
@@ -96,12 +95,12 @@ function learningRequest(): UniversityLearningMapRequestV1 {
   };
 }
 
-function request(): UniversityStudentContextRequestV1 {
+function request(): UniversityStudentContextRequestV2 {
   return {
-    schemaVersion: "university-student-context-request.v1",
+    schemaVersion: "university-student-context-request.v2",
     contextBinding: {
       bindingId: "context.local-001",
-      ownership: "adult_learner_owned",
+      ownershipDeclaration: "adult_learner_self_attested",
     },
     degreeMapRequest: degreeRequest(),
     learningMapRequest: learningRequest(),
@@ -125,11 +124,11 @@ describe("projectUniversityStudentContext", () => {
     const projection = projectUniversityStudentContext(request());
 
     expect(projection).toMatchObject({
-      schemaVersion: "university-student-context-projection.v1",
+      schemaVersion: "university-student-context-projection.v2",
       status: "ready_for_inspection",
       contextBinding: {
         bindingId: "context.local-001",
-        ownership: "adult_learner_owned",
+        ownershipDeclaration: "adult_learner_self_attested",
       },
       degreeAxis: {
         status: "ready_for_inspection",
@@ -146,7 +145,7 @@ describe("projectUniversityStudentContext", () => {
       issues: [],
     });
     expect(projection.authority).toEqual({
-      projectionClass: "adult_learner_owned_student_context_inspection",
+      projectionClass: "learner_declared_student_context_inspection",
       bindingAuthority: "caller_supplied_opaque_not_verified",
       adultStatusAuthority: "self_attested_not_verified",
       degreeAndLearningAxesMerged: false,
@@ -159,6 +158,34 @@ describe("projectUniversityStudentContext", () => {
       networkAllowed: false,
       eventEmissionAllowed: false,
     });
+  });
+
+  it("rejects retired outer and child v1 request schemas", () => {
+    const retiredOuter = {
+      ...request(),
+      schemaVersion: "university-student-context-request.v1",
+    };
+    const retiredChild = {
+      ...request(),
+      degreeMapRequest: {
+        ...degreeRequest(),
+        schemaVersion: "university-degree-map-request.v1",
+      },
+    };
+
+    const outerProjection = projectUniversityStudentContext(retiredOuter);
+    const childProjection = projectUniversityStudentContext(retiredChild);
+
+    expect(outerProjection.status).toBe("invalid");
+    expect(outerProjection.issues.map((entry) => entry.code)).toContain(
+      "schema.invalid",
+    );
+    expect(childProjection.status).toBe("invalid");
+    expect(childProjection.issues.map((entry) => entry.code)).toContain(
+      "child.invalid",
+    );
+    expect(childProjection.degreeAxis).toBeNull();
+    expect(childProjection.learningAxis).toBeNull();
   });
 
   it("keeps degree and learning review states on separate axes", () => {
@@ -187,9 +214,9 @@ describe("projectUniversityStudentContext", () => {
     const invalidDegree = request() as unknown as Record<string, unknown>;
     invalidDegree.degreeMapRequest = {
       ...degreeRequest(),
-      ownership: {
-        ...degreeRequest().ownership,
-        adultAttestation: false,
+      ownershipDeclaration: {
+        ...degreeRequest().ownershipDeclaration,
+        subject: "adult_learner",
       },
     };
     const invalidLearning = request() as unknown as Record<string, unknown>;
@@ -199,7 +226,7 @@ describe("projectUniversityStudentContext", () => {
     };
     const forged = request() as unknown as Record<string, unknown>;
     forged.degreeMapRequest = {
-      schemaVersion: "university-degree-map-projection.v1",
+      schemaVersion: "university-degree-map-projection.v2",
       status: "ready_for_inspection",
     };
 
@@ -233,7 +260,7 @@ describe("projectUniversityStudentContext", () => {
     expectDeeplyFrozen(projection);
   });
 
-  it("requires one strict opaque adult-learner-owned binding", () => {
+  it("requires one strict opaque learner-ownership declaration", () => {
     const missing = request() as unknown as Record<string, unknown>;
     delete missing.contextBinding;
     const extra = request() as unknown as {
@@ -243,7 +270,7 @@ describe("projectUniversityStudentContext", () => {
     const wrongOwner = request() as unknown as {
       contextBinding: Record<string, unknown>;
     };
-    wrongOwner.contextBinding.ownership = "institution_owned";
+    wrongOwner.contextBinding.ownershipDeclaration = "institution_owned";
     const nonOpaque = request() as unknown as {
       contextBinding: Record<string, unknown>;
     };
@@ -304,7 +331,7 @@ describe("projectUniversityStudentContext", () => {
     cycle.self = cycle;
     const sparse = request();
     sparse.learningMapRequest.outcomes =
-      new Array(1) as UniversityLearningMapRequestV1["outcomes"];
+      new Array(1) as UniversityLearningMapRequestV2["outcomes"];
     const symbol = request() as unknown as Record<PropertyKey, unknown>;
     symbol[Symbol("hidden")] = true;
     const exotic = Object.create({ inherited: true }) as Record<string, unknown>;

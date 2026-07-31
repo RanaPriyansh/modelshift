@@ -264,7 +264,7 @@ export async function bindUniversityAccountContext(
       schemaVersion: UNIVERSITY_STUDENT_CONTEXT_REQUEST_SCHEMA_VERSION,
       contextBinding: {
         bindingId: opaqueBindingId(parsedIdentity.data.id, bindingKey),
-        ownership: "adult_learner_owned",
+        ownershipDeclaration: "adult_learner_self_attested",
       },
       degreeMapRequest: parsedInput.data.degreeMapRequest,
       learningMapRequest: parsedInput.data.learningMapRequest,

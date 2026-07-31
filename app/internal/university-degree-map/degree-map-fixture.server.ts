@@ -3,7 +3,7 @@ import "server-only";
 import { deepFreeze } from "@/src/forge/deep-freeze";
 import {
   projectUniversityDegreeMap,
-  type UniversityDegreeMapRequestV1,
+  type UniversityDegreeMapRequestV2,
 } from "@/src/forge/university-degree-map";
 import type {
   UniversityDegreeMapPresentation,
@@ -16,11 +16,10 @@ const SOURCE = {
 } as const;
 
 const SYNTHETIC_REQUEST = deepFreeze({
-  schemaVersion: "university-degree-map-request.v1",
-  ownership: {
-    ownerClass: "adult_learner",
-    control: "learner_managed",
-    adultAttestation: true,
+  schemaVersion: "university-degree-map-request.v2",
+  ownershipDeclaration: {
+    subject: "adult_learner_self_attested",
+    control: "learner_managed_self_attested",
   },
   program: {
     programRef: "program.computing.science",
@@ -84,7 +83,7 @@ const SYNTHETIC_REQUEST = deepFreeze({
       sourceRef: SOURCE.sourceRef,
     },
   ],
-} satisfies UniversityDegreeMapRequestV1);
+} satisfies UniversityDegreeMapRequestV2);
 
 const STATE_LABELS = {
   completed: "Completed",

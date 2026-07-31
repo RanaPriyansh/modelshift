@@ -126,6 +126,17 @@ remain provider responsibilities.
 Cloud authentication is structurally disabled in the current product.
 Therefore, the default production behavior remains `unavailable`.
 
+### Embedded contract version reset
+
+The source-map context request and projection schemas now use `v2`. The
+account-context request and result schemas also use `v2`.
+
+The source-map projector and account-context adapter require the degree,
+learning, and student-context `v2` contracts. They reject retired `v1` child
+contracts after bounded copying. The projector uses canonical recomputation.
+The adapter validates child requests before any server reader. No compatibility
+alias or silent conversion exists.
+
 ## Separate authority dimensions
 
 The two boundaries must not merge these dimensions:
@@ -225,7 +236,8 @@ production database authority.
 ## Consequences
 
 FORGE gains exact seams for copied-source inspection and future authenticated
-adult ownership without enabling either as production authority.
+active-adult account association without enabling either as production
+authority.
 
 The next safe work can inspect these seams, define the future aggregate and
 rights contract, or activate separately approved identity infrastructure. It

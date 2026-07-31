@@ -3,26 +3,26 @@ import "server-only";
 import { z } from "zod";
 
 import {
-  type UniversityDegreeMapProjectionV1,
-  type UniversityDegreeMapRequestV1,
+  type UniversityDegreeMapProjectionV2,
+  type UniversityDegreeMapRequestV2,
   universityDegreeMapRequestSchema,
 } from "@/src/forge/university-degree-map";
 import {
-  type UniversityLearningMapProjectionV1,
-  type UniversityLearningMapRequestV1,
+  type UniversityLearningMapProjectionV2,
+  type UniversityLearningMapRequestV2,
   universityLearningMapRequestSchema,
 } from "@/src/forge/university-learning-map";
 import type {
-  UniversityStudentContextBindingV1,
+  UniversityStudentContextBindingV2,
   UniversityStudentContextStatus,
 } from "@/src/forge/university-student-context";
 
 z.config({ jitless: true });
 
 export const UNIVERSITY_ACCOUNT_CONTEXT_REQUEST_VERSION =
-  "university-account-context-request.v1" as const;
+  "university-account-context-request.v2" as const;
 export const UNIVERSITY_ACCOUNT_CONTEXT_RESULT_VERSION =
-  "university-account-context-result.v1" as const;
+  "university-account-context-result.v2" as const;
 
 export const UNIVERSITY_ACCOUNT_CONTEXT_STATUSES = Object.freeze([
   "unavailable",
@@ -42,10 +42,10 @@ export const universityAccountContextRequestSchema = z.strictObject({
   learningMapRequest: universityLearningMapRequestSchema,
 });
 
-export interface UniversityAccountContextRequestV1 {
+export interface UniversityAccountContextRequestV2 {
   readonly schemaVersion: typeof UNIVERSITY_ACCOUNT_CONTEXT_REQUEST_VERSION;
-  readonly degreeMapRequest: UniversityDegreeMapRequestV1;
-  readonly learningMapRequest: UniversityLearningMapRequestV1;
+  readonly degreeMapRequest: UniversityDegreeMapRequestV2;
+  readonly learningMapRequest: UniversityLearningMapRequestV2;
 }
 
 export const UNIVERSITY_ACCOUNT_CONTEXT_ISSUE_CODES = Object.freeze([
@@ -100,9 +100,9 @@ export interface UniversityAccountBoundInspectionContext {
     UniversityStudentContextStatus,
     "invalid"
   >;
-  readonly contextBinding: UniversityStudentContextBindingV1;
-  readonly degreeAxis: Readonly<UniversityDegreeMapProjectionV1>;
-  readonly learningAxis: Readonly<UniversityLearningMapProjectionV1>;
+  readonly contextBinding: UniversityStudentContextBindingV2;
+  readonly degreeAxis: Readonly<UniversityDegreeMapProjectionV2>;
+  readonly learningAxis: Readonly<UniversityLearningMapProjectionV2>;
 }
 
 export interface UniversityAccountContextUnavailableResult {

@@ -2,8 +2,8 @@ import { createHmac } from "node:crypto";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { UniversityDegreeMapRequestV1 } from "@/src/forge/university-degree-map";
-import type { UniversityLearningMapRequestV1 } from "@/src/forge/university-learning-map";
+import type { UniversityDegreeMapRequestV2 } from "@/src/forge/university-degree-map";
+import type { UniversityLearningMapRequestV2 } from "@/src/forge/university-learning-map";
 
 const moduleReaders = vi.hoisted(() => ({
   identity: vi.fn<() => Promise<unknown>>(),
@@ -26,7 +26,7 @@ vi.mock("./binding-key-provider.server", () => ({
 
 import {
   bindUniversityAccountContext,
-  type UniversityAccountContextRequestV1,
+  type UniversityAccountContextRequestV2,
 } from "./index.server";
 import * as accountContextModule from "./index.server";
 
@@ -35,13 +35,12 @@ const OTHER_ACCOUNT_ID = "22222222-2222-4222-8222-222222222222";
 const EXPECTED_BINDING_ID =
   "learner.hmac-sha256.v1.35d071ae2c402ec6691e308bce35445f71e41cb5660153c59634e14ab0f94c5a";
 
-function degreeRequest(): UniversityDegreeMapRequestV1 {
+function degreeRequest(): UniversityDegreeMapRequestV2 {
   return {
-    schemaVersion: "university-degree-map-request.v1",
-    ownership: {
-      ownerClass: "adult_learner",
-      control: "learner_managed",
-      adultAttestation: true,
+    schemaVersion: "university-degree-map-request.v2",
+    ownershipDeclaration: {
+      subject: "adult_learner_self_attested",
+      control: "learner_managed_self_attested",
     },
     program: {
       programRef: "program.computing.v1",
@@ -79,12 +78,12 @@ function degreeRequest(): UniversityDegreeMapRequestV1 {
   };
 }
 
-function learningRequest(): UniversityLearningMapRequestV1 {
+function learningRequest(): UniversityLearningMapRequestV2 {
   return {
-    schemaVersion: "university-learning-map-request.v1",
+    schemaVersion: "university-learning-map-request.v2",
     course: {
       courseRef: "course.cs100",
-      ownership: "student_owned",
+      ownershipDeclaration: "learner_self_attested",
       sourceAuthority: "learner_declared_unverified",
     },
     outcomes: [{
@@ -122,9 +121,9 @@ function learningRequest(): UniversityLearningMapRequestV1 {
   };
 }
 
-function request(): UniversityAccountContextRequestV1 {
+function request(): UniversityAccountContextRequestV2 {
   return {
-    schemaVersion: "university-account-context-request.v1",
+    schemaVersion: "university-account-context-request.v2",
     degreeMapRequest: degreeRequest(),
     learningMapRequest: learningRequest(),
   };
@@ -193,7 +192,7 @@ describe("bindUniversityAccountContext", () => {
     const result = await bindUniversityAccountContext(request());
 
     expect(result).toMatchObject({
-      schemaVersion: "university-account-context-result.v1",
+      schemaVersion: "university-account-context-result.v2",
       status: "unavailable",
       reason: "binding_key_unavailable",
       context: null,
@@ -205,14 +204,14 @@ describe("bindUniversityAccountContext", () => {
     const result = await bindUniversityAccountContext(request());
 
     expect(result).toMatchObject({
-      schemaVersion: "university-account-context-result.v1",
+      schemaVersion: "university-account-context-result.v2",
       status: "bound_for_inspection",
       reason: null,
       context: {
         canonicalStatus: "ready_for_inspection",
         contextBinding: {
           bindingId: EXPECTED_BINDING_ID,
-          ownership: "adult_learner_owned",
+          ownershipDeclaration: "adult_learner_self_attested",
         },
         degreeAxis: {
           status: "ready_for_inspection",
@@ -250,6 +249,39 @@ describe("bindUniversityAccountContext", () => {
     });
   });
 
+  it("rejects retired outer and child v1 schemas before server reads", async () => {
+    const retiredRequests: unknown[] = [
+      {
+        ...request(),
+        schemaVersion: "university-account-context-request.v1",
+      },
+      {
+        ...request(),
+        degreeMapRequest: {
+          ...degreeRequest(),
+          schemaVersion: "university-degree-map-request.v1",
+        },
+      },
+      {
+        ...request(),
+        learningMapRequest: {
+          ...learningRequest(),
+          schemaVersion: "university-learning-map-request.v1",
+        },
+      },
+    ];
+
+    for (const retiredRequest of retiredRequests) {
+      const result = await bindUniversityAccountContext(retiredRequest);
+      expect(result.status).toBe("invalid");
+      expect(result.reason).toBe("input_invalid");
+      expect(result.context).toBeNull();
+    }
+
+    expect(moduleReaders.identity).not.toHaveBeenCalled();
+    expect(moduleReaders.bindingKey.calls).toBe(0);
+  });
+
   it("derives stable domain-separated bindings and separates accounts and keys", async () => {
     const first = await bindUniversityAccountContext(request());
     const second = await bindUniversityAccountContext(request());
@@ -285,7 +317,13 @@ describe("bindUniversityAccountContext", () => {
 
   it("rejects caller authority fields and ignores forged reader options", async () => {
     const fields = [
-      ["contextBinding", { bindingId: "caller.binding", ownership: "adult_learner_owned" }],
+      [
+        "contextBinding",
+        {
+          bindingId: "caller.binding",
+          ownershipDeclaration: "adult_learner_self_attested",
+        },
+      ],
       ["accountId", ACCOUNT_ID],
       ["adultClaim", true],
       ["tenantId", "tenant.university"],

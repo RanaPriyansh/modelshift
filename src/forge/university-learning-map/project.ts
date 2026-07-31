@@ -7,13 +7,13 @@ import {
   UNIVERSITY_LEARNING_MAP_PROJECTION_VERSION,
   type UniversityLearningMapIssue,
   type UniversityLearningMapIssueCode,
-  type UniversityLearningMapProjectionV1,
-  type UniversityLearningMapRequestV1,
+  type UniversityLearningMapProjectionV2,
+  type UniversityLearningMapRequestV2,
   universityLearningMapRequestSchema,
 } from "./contracts";
 
 const AUTHORITY = deepFreeze({
-  projectionClass: "student_owned_inspection_only",
+  projectionClass: "learner_declared_learning_map_inspection",
   masteryEstablished: false,
   abilityScored: false,
   diagnosisAllowed: false,
@@ -39,7 +39,7 @@ function structural(error: ZodError): readonly UniversityLearningMapIssue[] {
   return ordered(error.issues.map((entry) => issue("schema.invalid", entry.path.join("."))));
 }
 
-function invalid(issues: readonly UniversityLearningMapIssue[]): Readonly<UniversityLearningMapProjectionV1> {
+function invalid(issues: readonly UniversityLearningMapIssue[]): Readonly<UniversityLearningMapProjectionV2> {
   return deepFreeze({
     schemaVersion: UNIVERSITY_LEARNING_MAP_PROJECTION_VERSION,
     status: "invalid",
@@ -55,7 +55,7 @@ function duplicates(values: readonly string[]): boolean {
 }
 
 function cycleMembers(
-  concepts: UniversityLearningMapRequestV1["concepts"],
+  concepts: UniversityLearningMapRequestV2["concepts"],
 ): readonly string[] {
   const graph = new Map(concepts.map((entry) => [
     entry.conceptRef,
@@ -88,7 +88,7 @@ function sortBy<T>(values: readonly T[], key: (value: T) => string): readonly T[
 
 export function projectUniversityLearningMap(
   value: unknown,
-): Readonly<UniversityLearningMapProjectionV1> {
+): Readonly<UniversityLearningMapProjectionV2> {
   try {
     let detached: unknown;
     try {

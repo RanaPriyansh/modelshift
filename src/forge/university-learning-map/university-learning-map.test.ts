@@ -2,15 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   projectUniversityLearningMap,
-  type UniversityLearningMapRequestV1,
+  type UniversityLearningMapRequestV2,
 } from ".";
 
-function request(): UniversityLearningMapRequestV1 {
+function request(): UniversityLearningMapRequestV2 {
   return {
-    schemaVersion: "university-learning-map-request.v1",
+    schemaVersion: "university-learning-map-request.v2",
     course: {
       courseRef: "course.local-01",
-      ownership: "student_owned",
+      ownershipDeclaration: "learner_self_attested",
       sourceAuthority: "learner_declared_unverified",
     },
     outcomes: [{
@@ -62,7 +62,7 @@ function request(): UniversityLearningMapRequestV1 {
 }
 
 describe("university learning map", () => {
-  it("projects student-owned continuity without upgrading learner authority", () => {
+  it("projects learner-declared continuity without upgrading authority", () => {
     const projection = projectUniversityLearningMap(request());
     expect(projection.status).toBe("ready_for_inspection");
     expect(projection.map?.attempts[0]?.helpUsed[0]).toMatchObject({
@@ -71,7 +71,7 @@ describe("university learning map", () => {
     });
     expect(projection.map?.delayedReturns[0]?.dueOn).toBe("2026-08-08");
     expect(projection.authority).toEqual({
-      projectionClass: "student_owned_inspection_only",
+      projectionClass: "learner_declared_learning_map_inspection",
       masteryEstablished: false,
       abilityScored: false,
       diagnosisAllowed: false,
@@ -84,6 +84,20 @@ describe("university learning map", () => {
     });
     expect(Object.isFrozen(projection)).toBe(true);
     expect(Object.isFrozen(projection.map?.attempts)).toBe(true);
+  });
+
+  it("rejects the retired v1 request schema", () => {
+    const retiredRequest = {
+      ...request(),
+      schemaVersion: "university-learning-map-request.v1",
+    };
+
+    const projection = projectUniversityLearningMap(retiredRequest);
+
+    expect(projection.status).toBe("invalid");
+    expect(projection.issues.map((entry) => entry.code)).toContain(
+      "schema.invalid",
+    );
   });
 
   it("keeps explicit unknowns and structural gaps visible for review", () => {
@@ -243,7 +257,7 @@ describe("university learning map", () => {
     const symbol = request() as unknown as Record<PropertyKey, unknown>;
     symbol[Symbol("hidden")] = true;
     const sparse = request();
-    sparse.outcomes = new Array(2) as UniversityLearningMapRequestV1["outcomes"];
+    sparse.outcomes = new Array(2) as UniversityLearningMapRequestV2["outcomes"];
     const cyclic = request() as unknown as Record<string, unknown>;
     cyclic.self = cyclic;
     const proxied = new Proxy(request(), {});

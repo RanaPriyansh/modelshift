@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { CourseSourceReconciliationRequestV1 } from "../course-sources";
-import type { UniversityDegreeMapRequestV1 } from "../university-degree-map";
-import type { UniversityLearningMapRequestV1 } from "../university-learning-map";
-import type { UniversityStudentContextRequestV1 } from "../university-student-context";
+import type { UniversityDegreeMapRequestV2 } from "../university-degree-map";
+import type { UniversityLearningMapRequestV2 } from "../university-learning-map";
+import type { UniversityStudentContextRequestV2 } from "../university-student-context";
 import {
   projectUniversitySourceMapContext,
   UNIVERSITY_SOURCE_MAP_CONTEXT_STATUSES,
@@ -25,13 +25,12 @@ function courseScope() {
   } as const;
 }
 
-function degreeRequest(): UniversityDegreeMapRequestV1 {
+function degreeRequest(): UniversityDegreeMapRequestV2 {
   return {
-    schemaVersion: "university-degree-map-request.v1",
-    ownership: {
-      ownerClass: "adult_learner",
-      control: "learner_managed",
-      adultAttestation: true,
+    schemaVersion: "university-degree-map-request.v2",
+    ownershipDeclaration: {
+      subject: "adult_learner_self_attested",
+      control: "learner_managed_self_attested",
     },
     program: {
       programRef: "program.computing.v1",
@@ -59,12 +58,12 @@ function degreeRequest(): UniversityDegreeMapRequestV1 {
   };
 }
 
-function learningRequest(): UniversityLearningMapRequestV1 {
+function learningRequest(): UniversityLearningMapRequestV2 {
   return {
-    schemaVersion: "university-learning-map-request.v1",
+    schemaVersion: "university-learning-map-request.v2",
     course: {
       courseRef: "course.cs102",
-      ownership: "student_owned",
+      ownershipDeclaration: "learner_self_attested",
       sourceAuthority: "learner_declared_unverified",
     },
     outcomes: [{
@@ -84,12 +83,12 @@ function learningRequest(): UniversityLearningMapRequestV1 {
   };
 }
 
-function studentContextRequest(): UniversityStudentContextRequestV1 {
+function studentContextRequest(): UniversityStudentContextRequestV2 {
   return {
-    schemaVersion: "university-student-context-request.v1",
+    schemaVersion: "university-student-context-request.v2",
     contextBinding: {
       bindingId: "context.cs102-local",
-      ownership: "adult_learner_owned",
+      ownershipDeclaration: "adult_learner_self_attested",
     },
     degreeMapRequest: degreeRequest(),
     learningMapRequest: learningRequest(),
@@ -204,7 +203,7 @@ function sourceBinding(
 
 function request() {
   return {
-    schemaVersion: "university-source-map-context-request.v1" as const,
+    schemaVersion: "university-source-map-context-request.v2" as const,
     studentContextRequest: studentContextRequest(),
     courseSourceReconciliationRequest: sourceRequest(),
     bindings: [sourceBinding()],
@@ -231,7 +230,7 @@ describe("projectUniversitySourceMapContext", () => {
     const projection = await projectUniversitySourceMapContext(request());
 
     expect(projection).toMatchObject({
-      schemaVersion: "university-source-map-context-projection.v1",
+      schemaVersion: "university-source-map-context-projection.v2",
       status: "bound_review_candidate",
       courseId: "course.cs102",
       asOf: AS_OF,
@@ -289,6 +288,31 @@ describe("projectUniversitySourceMapContext", () => {
       externalSideEffectsAllowed: false,
     });
     expect(projection.projectionDigest).toMatch(/^sha256:[0-9a-f]{64}$/);
+  });
+
+  it("rejects retired outer and nested v1 request schemas", async () => {
+    const retiredOuter = {
+      ...request(),
+      schemaVersion: "university-source-map-context-request.v1",
+    };
+    const retiredStudent = {
+      ...request(),
+      studentContextRequest: {
+        ...studentContextRequest(),
+        schemaVersion: "university-student-context-request.v1",
+      },
+    };
+
+    for (const [candidate, issueCode] of [
+      [retiredOuter, "schema.invalid"],
+      [retiredStudent, "student_context.invalid"],
+    ] as const) {
+      const projection = await projectUniversitySourceMapContext(candidate);
+      expect(projection.status).toBe("invalid");
+      expect(projection.issues.map((entry) => entry.code)).toContain(issueCode);
+      expect(projection.degreeSources).toEqual([]);
+      expect(projection.learningSources).toEqual([]);
+    }
   });
 
   it("keeps unresolved, stale, incomplete, and rejected bindings in review", async () => {
@@ -755,7 +779,7 @@ describe("projectUniversitySourceMapContext", () => {
       studentContextRequest: unknown;
     };
     invalidStudent.studentContextRequest = {
-      schemaVersion: "university-student-context-projection.v1",
+      schemaVersion: "university-student-context-projection.v2",
       status: "ready_for_inspection",
     };
     const invalidSource = request() as unknown as {

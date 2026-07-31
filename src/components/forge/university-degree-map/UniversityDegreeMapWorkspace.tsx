@@ -53,7 +53,7 @@ export function UniversityDegreeMapWorkspace({
       <header className={styles.masthead}>
         <div>
           <p className={styles.kicker}>Internal university degree map</p>
-          <p className={styles.productName}>FORGE / learner-owned inspection</p>
+          <p className={styles.productName}>FORGE / learner-declared inspection</p>
         </div>
         <p className={styles.status}>{presentation.statusLabel}</p>
       </header>

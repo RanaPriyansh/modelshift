@@ -5,14 +5,14 @@ import type {
   CourseSourceReconciliationRequestV1,
 } from "../course-sources";
 import { forgeEventDigestSchema } from "../events";
-import type { UniversityStudentContextRequestV1 } from "../university-student-context";
+import type { UniversityStudentContextRequestV2 } from "../university-student-context";
 
 z.config({ jitless: true });
 
 export const UNIVERSITY_SOURCE_MAP_CONTEXT_REQUEST_SCHEMA_VERSION =
-  "university-source-map-context-request.v1" as const;
+  "university-source-map-context-request.v2" as const;
 export const UNIVERSITY_SOURCE_MAP_CONTEXT_PROJECTION_SCHEMA_VERSION =
-  "university-source-map-context-projection.v1" as const;
+  "university-source-map-context-projection.v2" as const;
 
 export const UNIVERSITY_SOURCE_MAP_CONTEXT_STATUSES = Object.freeze([
   "invalid",
@@ -75,10 +75,10 @@ export const universitySourceMapContextRequestSchema = z.strictObject({
   bindings: z.array(universitySourceMapBindingSchema).min(1).max(256),
 });
 
-export interface UniversitySourceMapContextRequestV1 {
+export interface UniversitySourceMapContextRequestV2 {
   readonly schemaVersion:
     typeof UNIVERSITY_SOURCE_MAP_CONTEXT_REQUEST_SCHEMA_VERSION;
-  readonly studentContextRequest: UniversityStudentContextRequestV1;
+  readonly studentContextRequest: UniversityStudentContextRequestV2;
   readonly courseSourceReconciliationRequest:
     CourseSourceReconciliationRequestV1;
   readonly bindings: readonly UniversitySourceMapBindingV1[];
@@ -190,7 +190,7 @@ export interface UniversitySourceMapContextAuthority {
   readonly externalSideEffectsAllowed: false;
 }
 
-export interface UniversitySourceMapContextProjectionV1 {
+export interface UniversitySourceMapContextProjectionV2 {
   readonly schemaVersion:
     typeof UNIVERSITY_SOURCE_MAP_CONTEXT_PROJECTION_SCHEMA_VERSION;
   readonly status: UniversitySourceMapContextStatus;

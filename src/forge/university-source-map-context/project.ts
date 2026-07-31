@@ -12,7 +12,7 @@ import { deepFreeze } from "../deep-freeze";
 import { canonicalJson, sha256Digest } from "../events";
 import {
   projectUniversityStudentContext,
-  type UniversityStudentContextProjectionV1,
+  type UniversityStudentContextProjectionV2,
 } from "../university-student-context";
 import {
   UNIVERSITY_SOURCE_MAP_CONTEXT_PROJECTION_SCHEMA_VERSION,
@@ -21,7 +21,7 @@ import {
   type UniversitySourceMapBindingV1,
   type UniversitySourceMapContextAuthority,
   type UniversitySourceMapContextIssue,
-  type UniversitySourceMapContextProjectionV1,
+  type UniversitySourceMapContextProjectionV2,
   universitySourceMapContextRequestSchema,
 } from "./contracts";
 
@@ -71,7 +71,7 @@ function orderedIssues(
 
 function invalidProjection(
   issues: readonly UniversitySourceMapContextIssue[],
-): Readonly<UniversitySourceMapContextProjectionV1> {
+): Readonly<UniversitySourceMapContextProjectionV2> {
   return deepFreeze({
     schemaVersion: UNIVERSITY_SOURCE_MAP_CONTEXT_PROJECTION_SCHEMA_VERSION,
     status: "invalid",
@@ -272,7 +272,7 @@ function candidateIsBlocked(
 
 function bindingCanBecomeCandidate(input: {
   readonly studentContext:
-    Readonly<UniversityStudentContextProjectionV1>;
+    Readonly<UniversityStudentContextProjectionV2>;
   readonly reconciliation:
     Readonly<CourseSourceReconciliationResult>;
   readonly candidate: CourseSourceCandidateProjection;
@@ -298,8 +298,8 @@ function bindingCanBecomeCandidate(input: {
 }
 
 async function signedProjection(
-  projection: Omit<UniversitySourceMapContextProjectionV1, "projectionDigest">,
-): Promise<Readonly<UniversitySourceMapContextProjectionV1>> {
+  projection: Omit<UniversitySourceMapContextProjectionV2, "projectionDigest">,
+): Promise<Readonly<UniversitySourceMapContextProjectionV2>> {
   return deepFreeze({
     ...projection,
     projectionDigest: await sha256Digest(canonicalJson(projection)),
@@ -312,7 +312,7 @@ async function signedProjection(
  */
 export async function projectUniversitySourceMapContext(
   value: unknown,
-): Promise<Readonly<UniversitySourceMapContextProjectionV1>> {
+): Promise<Readonly<UniversitySourceMapContextProjectionV2>> {
   try {
     let copied: unknown;
     try {

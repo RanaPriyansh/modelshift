@@ -3,9 +3,9 @@ import { z } from "zod";
 z.config({ jitless: true });
 
 export const UNIVERSITY_LEARNING_MAP_REQUEST_VERSION =
-  "university-learning-map-request.v1" as const;
+  "university-learning-map-request.v2" as const;
 export const UNIVERSITY_LEARNING_MAP_PROJECTION_VERSION =
-  "university-learning-map-projection.v1" as const;
+  "university-learning-map-projection.v2" as const;
 export const UNIVERSITY_LEARNING_MAP_STATUSES = Object.freeze([
   "invalid",
   "review_required",
@@ -120,7 +120,7 @@ export const universityLearningMapRequestSchema = z.strictObject({
   schemaVersion: z.literal(UNIVERSITY_LEARNING_MAP_REQUEST_VERSION),
   course: z.strictObject({
     courseRef: ref("course"),
-    ownership: z.literal("student_owned"),
+    ownershipDeclaration: z.literal("learner_self_attested"),
     sourceAuthority: z.literal("learner_declared_unverified"),
   }),
   outcomes: z.array(outcomeSchema).min(1).max(32),
@@ -131,7 +131,7 @@ export const universityLearningMapRequestSchema = z.strictObject({
   unknowns: z.array(unknownSchema).max(128),
 });
 
-export type UniversityLearningMapRequestV1 = z.infer<
+export type UniversityLearningMapRequestV2 = z.infer<
   typeof universityLearningMapRequestSchema
 >;
 export type UniversityLearningMapStatus =
@@ -144,17 +144,17 @@ export interface UniversityLearningMapIssue {
   readonly path: string;
 }
 
-export interface UniversityLearningMapProjectionV1 {
+export interface UniversityLearningMapProjectionV2 {
   readonly schemaVersion: typeof UNIVERSITY_LEARNING_MAP_PROJECTION_VERSION;
   readonly status: UniversityLearningMapStatus;
   readonly map: {
-    readonly course: UniversityLearningMapRequestV1["course"];
-    readonly outcomes: readonly UniversityLearningMapRequestV1["outcomes"][number][];
-    readonly concepts: readonly UniversityLearningMapRequestV1["concepts"][number][];
-    readonly evidence: readonly UniversityLearningMapRequestV1["evidence"][number][];
-    readonly attempts: readonly UniversityLearningMapRequestV1["attempts"][number][];
-    readonly delayedReturns: readonly UniversityLearningMapRequestV1["delayedReturns"][number][];
-    readonly unknowns: readonly UniversityLearningMapRequestV1["unknowns"][number][];
+    readonly course: UniversityLearningMapRequestV2["course"];
+    readonly outcomes: readonly UniversityLearningMapRequestV2["outcomes"][number][];
+    readonly concepts: readonly UniversityLearningMapRequestV2["concepts"][number][];
+    readonly evidence: readonly UniversityLearningMapRequestV2["evidence"][number][];
+    readonly attempts: readonly UniversityLearningMapRequestV2["attempts"][number][];
+    readonly delayedReturns: readonly UniversityLearningMapRequestV2["delayedReturns"][number][];
+    readonly unknowns: readonly UniversityLearningMapRequestV2["unknowns"][number][];
   } | null;
   readonly review: {
     readonly unmappedOutcomeRefs: readonly string[];
@@ -162,7 +162,7 @@ export interface UniversityLearningMapProjectionV1 {
     readonly explicitUnknownCount: number;
   } | null;
   readonly authority: {
-    readonly projectionClass: "student_owned_inspection_only";
+    readonly projectionClass: "learner_declared_learning_map_inspection";
     readonly masteryEstablished: false;
     readonly abilityScored: false;
     readonly diagnosisAllowed: false;

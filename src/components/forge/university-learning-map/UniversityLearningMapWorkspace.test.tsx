@@ -53,7 +53,10 @@ describe("UniversityLearningMapWorkspace", () => {
       /schemaVersion|projectionDigest|studentName|email|mastery|score|recommend|generated|answer|%/i,
     );
     expect(presentation.authority).toEqual([
-      { label: "Ownership", value: "Student-owned inspection only" },
+      {
+        label: "Ownership",
+        value: "Learner-declared and self-attested",
+      },
       { label: "Input", value: "Synthetic and learner-declared" },
       { label: "Source state", value: "Unverified" },
       { label: "Learning assessment", value: "Not made" },

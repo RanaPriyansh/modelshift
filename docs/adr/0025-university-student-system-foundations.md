@@ -1,4 +1,4 @@
-# ADR-025: Student-owned degree and learning foundations
+# ADR-025: Learner-declared degree and learning foundations
 
 **Status:** accepted for local synthetic implementation
 
@@ -87,6 +87,21 @@ The context:
 
 The context does not create a combined readiness, risk, priority, progress,
 mastery, graduation, or next-action score.
+
+The degree, learning, and student-context projection classes are
+learner-declared inspection classes. Adult status and declaration ownership
+remain self-attested and unverified. A server binding can establish only
+authenticated account association and active-adult admission. It cannot
+establish declaration ownership, source truth, or institutional authority.
+
+### Authority vocabulary reset
+
+The degree, learning, and student-context request and projection schemas now
+use `v2`. The student-context binding type also uses `V2`.
+
+The `v1` contracts are retired. No compatibility alias or silent conversion
+exists. This reset prevents affirmative ownership labels from surviving as
+trusted input or projection vocabulary.
 
 ## Status grammar
 

@@ -3,17 +3,17 @@ import "server-only";
 import { deepFreeze } from "@/src/forge/deep-freeze";
 import {
   projectUniversityLearningMap,
-  type UniversityLearningMapRequestV1,
+  type UniversityLearningMapRequestV2,
 } from "@/src/forge/university-learning-map";
 import type {
   UniversityLearningMapPresentation,
 } from "@/src/components/forge/university-learning-map/presentation";
 
 const SYNTHETIC_REQUEST = deepFreeze({
-  schemaVersion: "university-learning-map-request.v1",
+  schemaVersion: "university-learning-map-request.v2",
   course: {
     courseRef: "course.synthetic-systems-01",
-    ownership: "student_owned",
+    ownershipDeclaration: "learner_self_attested",
     sourceAuthority: "learner_declared_unverified",
   },
   outcomes: [
@@ -110,7 +110,7 @@ const SYNTHETIC_REQUEST = deepFreeze({
       state: "explicit",
     },
   ],
-} satisfies UniversityLearningMapRequestV1);
+} satisfies UniversityLearningMapRequestV2);
 
 const OUTCOME_LABELS = Object.freeze({
   "outcome.01-source-boundary":
@@ -137,7 +137,7 @@ function dateLabel(value: string): string | null {
   return labels[value] ?? null;
 }
 
-export function universityLearningMapFixtureRequest(): UniversityLearningMapRequestV1 {
+export function universityLearningMapFixtureRequest(): UniversityLearningMapRequestV2 {
   return structuredClone(SYNTHETIC_REQUEST);
 }
 
@@ -237,7 +237,7 @@ export function universityLearningMapFixture(): UniversityLearningMapPresentatio
     statusLabel: "Review required",
     course: {
       label: "Synthetic systems course",
-      ownershipLabel: "Student-owned inspection",
+      ownershipLabel: "Learner-declared inspection",
       sourceLabel: "Learner-declared and unverified",
     },
     outcomes: boundedOutcomes,
@@ -247,7 +247,10 @@ export function universityLearningMapFixture(): UniversityLearningMapPresentatio
       "The authority of one evidence reference remains unknown.",
     ],
     authority: [
-      { label: "Ownership", value: "Student-owned inspection only" },
+      {
+        label: "Ownership",
+        value: "Learner-declared and self-attested",
+      },
       { label: "Input", value: "Synthetic and learner-declared" },
       { label: "Source state", value: "Unverified" },
       { label: "Learning assessment", value: "Not made" },

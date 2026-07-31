@@ -3,9 +3,9 @@ import { z } from "zod";
 z.config({ jitless: true });
 
 export const UNIVERSITY_DEGREE_MAP_REQUEST_SCHEMA_VERSION =
-  "university-degree-map-request.v1" as const;
+  "university-degree-map-request.v2" as const;
 export const UNIVERSITY_DEGREE_MAP_PROJECTION_SCHEMA_VERSION =
-  "university-degree-map-projection.v1" as const;
+  "university-degree-map-projection.v2" as const;
 
 export const UNIVERSITY_DEGREE_MAP_STATUSES = Object.freeze([
   "invalid",
@@ -77,10 +77,9 @@ const creditRequirementSchema = z.strictObject({
 
 export const universityDegreeMapRequestSchema = z.strictObject({
   schemaVersion: z.literal(UNIVERSITY_DEGREE_MAP_REQUEST_SCHEMA_VERSION),
-  ownership: z.strictObject({
-    ownerClass: z.literal("adult_learner"),
-    control: z.literal("learner_managed"),
-    adultAttestation: z.literal(true),
+  ownershipDeclaration: z.strictObject({
+    subject: z.literal("adult_learner_self_attested"),
+    control: z.literal("learner_managed_self_attested"),
   }),
   program: z.strictObject({
     programRef: opaqueIdSchema,
@@ -97,7 +96,7 @@ export const universityDegreeMapRequestSchema = z.strictObject({
   ).max(128),
 });
 
-export type UniversityDegreeMapRequestV1 = z.infer<
+export type UniversityDegreeMapRequestV2 = z.infer<
   typeof universityDegreeMapRequestSchema
 >;
 
@@ -118,7 +117,7 @@ export interface UniversityDegreeMapRequirementProjection {
   readonly referencedCourseIds: readonly string[];
 }
 
-export interface UniversityDegreeMapProjectionV1 {
+export interface UniversityDegreeMapProjectionV2 {
   readonly schemaVersion:
     typeof UNIVERSITY_DEGREE_MAP_PROJECTION_SCHEMA_VERSION;
   readonly status: UniversityDegreeMapStatus;
@@ -149,7 +148,7 @@ export interface UniversityDegreeMapProjectionV1 {
     };
   };
   readonly authority: {
-    readonly projectionClass: "adult_learner_owned_degree_map_inspection";
+    readonly projectionClass: "learner_declared_degree_map_inspection";
     readonly adultStatusAuthority: "self_attested_not_verified";
     readonly sourceAuthority: "learner_supplied_not_verified";
     readonly rankingAllowed: false;
