@@ -1,3 +1,4 @@
+import { boundedJsonSnapshot } from "../bounded-json-snapshot";
 import { deepFreeze } from "../deep-freeze";
 import { canonicalJson, sha256Digest } from "../events";
 import {
@@ -31,6 +32,10 @@ export const COURSE_SOURCE_ISSUE_CODES = [
   "decision.decided_in_future",
   "decision.corrected_fact_kind_mismatch",
 ] as const;
+
+const COURSE_SOURCE_SNAPSHOT_OPTIONS = {
+  allowNullPrototypeObjects: true,
+} as const;
 
 export type CourseSourceIssueCode = (typeof COURSE_SOURCE_ISSUE_CODES)[number];
 
@@ -188,14 +193,20 @@ function orderedIssues(issues: readonly CourseSourceIssue[]): CourseSourceIssue[
   });
 }
 
-function structuralIssues(value: unknown): CourseSourceIssue[] {
+function structuralRequest(value: unknown): {
+  readonly request: CourseSourceReconciliationRequestV1 | null;
+  readonly issues: readonly CourseSourceIssue[];
+} {
   const parsed = courseSourceReconciliationRequestSchema.safeParse(value);
-  if (parsed.success) return [];
-  return parsed.error.issues.map((entry) => ({
-    code: "schema.invalid",
-    path: entry.path.join("."),
-    message: entry.message,
-  }));
+  if (parsed.success) return { request: parsed.data, issues: [] };
+  return {
+    request: null,
+    issues: parsed.error.issues.map((entry) => ({
+      code: "schema.invalid",
+      path: entry.path.join("."),
+      message: entry.message,
+    })),
+  };
 }
 
 function validateSemantics(request: CourseSourceReconciliationRequestV1): CourseSourceIssue[] {
@@ -446,13 +457,13 @@ function invalidResult(issues: readonly CourseSourceIssue[]): Readonly<CourseSou
   });
 }
 
-export async function reconcileCourseSources(
-  value: unknown,
+async function reconcileCourseSourceSnapshot(
+  snapshot: unknown,
 ): Promise<Readonly<CourseSourceReconciliationResult>> {
-  const malformed = structuralIssues(value);
-  if (malformed.length > 0) return invalidResult(malformed);
+  const structural = structuralRequest(snapshot);
+  if (structural.request === null) return invalidResult(structural.issues);
 
-  const request = courseSourceReconciliationRequestSchema.parse(value);
+  const request = structural.request;
   const semanticIssues = validateSemantics(request);
   if (semanticIssues.length > 0) return invalidResult(semanticIssues);
 
@@ -505,12 +516,68 @@ export async function reconcileCourseSources(
   });
 }
 
+export async function reconcileCourseSources(
+  value: unknown,
+): Promise<Readonly<CourseSourceReconciliationResult>> {
+  let snapshot: unknown;
+  try {
+    snapshot = boundedJsonSnapshot(value, COURSE_SOURCE_SNAPSHOT_OPTIONS);
+  } catch {
+    return invalidResult([{
+      code: "schema.invalid",
+      path: "",
+      message: "The reconciliation request must contain only bounded, accessor-free JSON data.",
+    }]);
+  }
+  return reconcileCourseSourceSnapshot(snapshot);
+}
+
 export async function buildCourseSourceGoalContext(input: {
   readonly goalRef: unknown;
   readonly reconciliationRequest: unknown;
 }): Promise<Readonly<CourseSourceGoalContextResult>> {
-  const reconciliation = await reconcileCourseSources(input.reconciliationRequest);
-  const parsedGoal = courseSourceGoalRefSchema.safeParse(input.goalRef);
+  let snapshot: unknown;
+  try {
+    snapshot = boundedJsonSnapshot(input, COURSE_SOURCE_SNAPSHOT_OPTIONS);
+  } catch {
+    const issues: CourseSourceIssue[] = [{
+      code: "schema.invalid",
+      path: "",
+      message: "The goal-context request must contain only bounded, accessor-free JSON data.",
+    }];
+    return deepFreeze({
+      status: "unavailable",
+      reconciliation: invalidResult(issues),
+      context: null,
+      issues,
+    });
+  }
+
+  const snapshotRecord = (
+    snapshot !== null
+    && typeof snapshot === "object"
+    && !Array.isArray(snapshot)
+  ) ? snapshot as Record<string, unknown> : {};
+  const wrapperKeys = Reflect.ownKeys(snapshotRecord);
+  if (
+    wrapperKeys.length !== 2
+    || !Object.hasOwn(snapshotRecord, "goalRef")
+    || !Object.hasOwn(snapshotRecord, "reconciliationRequest")
+  ) {
+    const issues: CourseSourceIssue[] = [{
+      code: "schema.invalid",
+      path: "",
+      message: "The goal-context request must contain exactly goalRef and reconciliationRequest.",
+    }];
+    return deepFreeze({
+      status: "unavailable",
+      reconciliation: invalidResult(issues),
+      context: null,
+      issues,
+    });
+  }
+  const reconciliation = await reconcileCourseSourceSnapshot(snapshotRecord.reconciliationRequest);
+  const parsedGoal = courseSourceGoalRefSchema.safeParse(snapshotRecord.goalRef);
   if (!parsedGoal.success) {
     const issues: CourseSourceIssue[] = parsedGoal.error.issues.map((entry) => ({
       code: "schema.invalid",

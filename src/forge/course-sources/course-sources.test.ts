@@ -539,4 +539,117 @@ describe("ADR-010 university course-source candidate boundary", () => {
     });
     expect(Object.isFrozen(result.context)).toBe(true);
   });
+
+  it("reconciles from one detached snapshot without reading the caller graph through proxy getters", async () => {
+    const callerRequest = request();
+    let ordinaryReads = 0;
+    const descriptorReads = new Map<PropertyKey, number>();
+    const guardedRequest = new Proxy(callerRequest, {
+      get() {
+        ordinaryReads += 1;
+        throw new Error("the caller graph must not be parsed directly");
+      },
+      getOwnPropertyDescriptor(target, key) {
+        descriptorReads.set(key, (descriptorReads.get(key) ?? 0) + 1);
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+
+    const result = await reconcileCourseSources(guardedRequest);
+
+    expect(result.status).toBe("connected_sources_reviewed");
+    expect(ordinaryReads).toBe(0);
+    expect([...descriptorReads.values()]).toEqual(
+      Array.from({ length: Reflect.ownKeys(callerRequest).length }, () => 1),
+    );
+  });
+
+  it("fails reconciliation closed without invoking an accessor or leaking a hostile proxy failure", async () => {
+    let getterCalls = 0;
+    const accessorRequest = request() as Record<string, unknown>;
+    Object.defineProperty(accessorRequest, "scope", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        throw new Error("must not execute");
+      },
+    });
+    const proxyRequest = new Proxy(request(), {
+      ownKeys() {
+        throw new Error("hostile proxy");
+      },
+    });
+
+    const accessorResult = await reconcileCourseSources(accessorRequest);
+    const proxyResult = await reconcileCourseSources(proxyRequest);
+
+    expect(accessorResult.status).toBe("invalid");
+    expect(accessorResult.issues.map((entry) => entry.code)).toContain("schema.invalid");
+    expect(getterCalls).toBe(0);
+    expect(proxyResult.status).toBe("invalid");
+    expect(proxyResult.issues.map((entry) => entry.code)).toContain("schema.invalid");
+  });
+
+  it("builds goal context from one wrapper snapshot and never revisits wrapper accessors", async () => {
+    const callerInput = {
+      goalRef: {
+        schemaVersion: "learner-goal.v1",
+        goalId: "goal.finish-assignment-one",
+        storageClass: "learner-owned-device-local",
+      },
+      reconciliationRequest: request(),
+    };
+    let ordinaryReads = 0;
+    const descriptorReads = new Map<PropertyKey, number>();
+    const guardedInput = new Proxy(callerInput, {
+      get() {
+        ordinaryReads += 1;
+        throw new Error("the goal-context wrapper must not be parsed directly");
+      },
+      getOwnPropertyDescriptor(target, key) {
+        descriptorReads.set(key, (descriptorReads.get(key) ?? 0) + 1);
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+
+    const result = await buildCourseSourceGoalContext(guardedInput);
+
+    expect(result.status).toBe("available");
+    expect(ordinaryReads).toBe(0);
+    expect([...descriptorReads.values()]).toEqual([1, 1]);
+
+    const extraWrapperKeyInput = {
+      ...callerInput,
+      ignored: "wrapper keys are exact",
+    };
+    const extraWrapperKey = await buildCourseSourceGoalContext(extraWrapperKeyInput);
+    expect(extraWrapperKey.status).toBe("unavailable");
+    expect(extraWrapperKey.reconciliation.status).toBe("invalid");
+    expect(extraWrapperKey.issues.map((entry) => entry.code)).toContain("schema.invalid");
+
+    let getterCalls = 0;
+    const hostileInput = {
+      reconciliationRequest: request(),
+    } as Record<string, unknown>;
+    Object.defineProperty(hostileInput, "goalRef", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        throw new Error("must not execute");
+      },
+    });
+    const rejected = await buildCourseSourceGoalContext(
+      hostileInput as {
+        readonly goalRef: unknown;
+        readonly reconciliationRequest: unknown;
+      },
+    );
+
+    expect(rejected.status).toBe("unavailable");
+    expect(rejected.reconciliation.status).toBe("invalid");
+    expect(rejected.issues.map((entry) => entry.code)).toContain("schema.invalid");
+    expect(getterCalls).toBe(0);
+  });
 });

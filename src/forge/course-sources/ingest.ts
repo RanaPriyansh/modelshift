@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { boundedJsonSnapshot } from "../bounded-json-snapshot";
 import { deepFreeze } from "../deep-freeze";
 import { canonicalJson, sha256Digest } from "../events";
 import {
@@ -230,68 +231,11 @@ function invalidResult(
   });
 }
 
-/**
- * Copies only finite, accessor-free, plain JSON data before schema parsing.
- * No caller property is read through ordinary traversal.
- */
-function ownJsonCopy(value: unknown): unknown {
-  const budget = { nodes: 0 };
-  const visit = (candidate: unknown, depth: number): unknown => {
-    budget.nodes += 1;
-    if (budget.nodes > 4_096 || depth > 12) throw new TypeError("Input graph exceeds the ingestion boundary.");
-    if (
-      candidate === null
-      || typeof candidate === "string"
-      || typeof candidate === "boolean"
-      || (typeof candidate === "number" && Number.isFinite(candidate))
-    ) return candidate;
-    if (typeof candidate !== "object") throw new TypeError("Input must be finite JSON data.");
-
-    if (Array.isArray(candidate)) {
-      if (Object.getPrototypeOf(candidate) !== Array.prototype || candidate.length > 512) {
-        throw new TypeError("Input array is not allowed.");
-      }
-      const keys = Reflect.ownKeys(candidate);
-      if (keys.some((key) => key !== "length" && (typeof key !== "string" || !/^(0|[1-9]\d*)$/.test(key)))) {
-        throw new TypeError("Input array has undeclared properties.");
-      }
-      const output: unknown[] = [];
-      for (let index = 0; index < candidate.length; index += 1) {
-        const descriptor = Object.getOwnPropertyDescriptor(candidate, String(index));
-        if (!descriptor || !("value" in descriptor) || descriptor.get || descriptor.set) {
-          throw new TypeError("Input arrays must be dense data arrays.");
-        }
-        output.push(visit(descriptor.value, depth + 1));
-      }
-      return output;
-    }
-
-    if (Object.getPrototypeOf(candidate) !== Object.prototype) {
-      throw new TypeError("Input objects must use the ordinary object prototype.");
-    }
-    const keys = Reflect.ownKeys(candidate);
-    if (keys.length > 256 || keys.some((key) => typeof key !== "string")) {
-      throw new TypeError("Input object keys are not allowed.");
-    }
-    const output: Record<string, unknown> = {};
-    for (const key of keys as string[]) {
-      const descriptor = Object.getOwnPropertyDescriptor(candidate, key);
-      if (!descriptor || !("value" in descriptor) || descriptor.get || descriptor.set) {
-        throw new TypeError("Input accessors are not allowed.");
-      }
-      output[key] = visit(descriptor.value, depth + 1);
-    }
-    return output;
-  };
-
-  return visit(value, 0);
-}
-
 function structuralRequest(
   value: unknown,
 ): { readonly request: ParsedIngestionRequest | null; readonly issues: readonly CourseSourceIngestionIssue[] } {
   try {
-    const result = ingestionRequestSchema.safeParse(ownJsonCopy(value));
+    const result = ingestionRequestSchema.safeParse(boundedJsonSnapshot(value));
     if (result.success) return { request: result.data, issues: [] };
     return {
       request: null,
