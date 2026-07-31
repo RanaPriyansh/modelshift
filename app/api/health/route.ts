@@ -11,6 +11,7 @@ export function GET() {
       "Cache-Control": "no-store, max-age=0",
       "X-Content-Type-Options": "nosniff",
       "X-Forge-Release-Sha": health.release_sha,
+      "X-Forge-Build-Source-Sha": health.build_source_sha,
     },
   });
 }

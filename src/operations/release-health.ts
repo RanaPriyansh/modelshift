@@ -5,6 +5,7 @@ const RELEASE_SHA_PATTERN = /^[0-9a-f]{40}$/i;
 const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/i;
 const MIGRATION_IDENTITY_PATTERN = /^(?:not_configured|[A-Za-z0-9._:-]{1,160})$/;
+const COMPILED_BUILD_SOURCE_SHA = process.env.FORGE_COMPILED_SOURCE_SHA;
 
 type ReleaseEnvironment = Readonly<Record<string, string | undefined>>;
 
@@ -14,6 +15,7 @@ export type ReleaseHealth = {
   service: "forge-learning-os";
   app_name: "FORGE";
   release_sha: string | "unknown";
+  build_source_sha: string | "unknown";
   build_time: string | "unknown";
   runtime_mode: "fallback_only" | "managed_openai";
   cloud_accounts_enabled: boolean;
@@ -86,6 +88,7 @@ export function buildReleaseHealth(environment: ReleaseEnvironment = process.env
     service: "forge-learning-os",
     app_name: "FORGE",
     release_sha: resolveReleaseSha(environment),
+    build_source_sha: validSha(COMPILED_BUILD_SOURCE_SHA),
     build_time: validBuildTime(environment.FORGE_BUILD_TIME),
     runtime_mode: managedOpenAI ? "managed_openai" : "fallback_only",
     cloud_accounts_enabled: cloudAccountsEnabled,

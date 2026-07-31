@@ -5,6 +5,11 @@ import { relative, resolve, sep } from "node:path";
 import { PRIMARY_SOURCE_RUNTIME_BINDING } from "../../src/forge/world-runtime/primary-source-binding";
 import { BUILT_IN_WORLD_PACKS } from "../../src/forge/worlds";
 
+import {
+  framedFileTreeDigest,
+  readStableRegularFile,
+} from "./file-tree-identity";
+
 type RetainedContentEntry = {
   readonly id: string;
   readonly version: string;
@@ -65,15 +70,13 @@ export function readPublicAssetDigest(root = process.cwd()): string {
   const realStaticDirectory = realpathSync(staticDirectory);
   const files = filesUnder(staticDirectory, realStaticDirectory).sort();
   if (files.length === 0) throw new Error("Public asset digest requires a non-empty .next/static build output.");
-  const hash = createHash("sha256");
-  for (const file of files) {
-    const relativePath = relative(realStaticDirectory, file).split(sep).join("/");
-    hash.update(relativePath, "utf8");
-    hash.update("\0", "utf8");
-    hash.update(readFileSync(file));
-    hash.update("\0", "utf8");
-  }
-  return hash.digest("hex");
+  return framedFileTreeDigest(
+    "forge-public-static-file-tree.v1",
+    files.map((file) => ({
+      path: relative(realStaticDirectory, file).split(sep).join("/"),
+      bytes: readStableRegularFile(file),
+    })),
+  );
 }
 
 function sha256Reference(value: string): string {

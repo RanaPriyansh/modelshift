@@ -14,6 +14,10 @@ import {
   scanUniversityRecoveryProductionPublicAssets,
 } from "../../src/components/forge/university/university-recovery-public-artifact-boundary";
 import {
+  assertNoUniversityResearchReadinessPublicArtifactLeaks,
+  scanUniversityResearchReadinessProductionPublicAssets,
+} from "../../src/components/forge/university/university-research-readiness-public-artifact-boundary";
+import {
   assertNoUniversityProtectedStudyPublicArtifactLeaks,
   scanUniversityProtectedStudyProductionPublicAssets,
 } from "../../src/components/forge/university/university-protected-study-public-artifact-boundary";
@@ -28,6 +32,10 @@ import {
 
 import { readPublicAssetDigest } from "./release-digests";
 import { publicBuildBoundaryReceiptLine } from "./public-build-boundary-receipt";
+import {
+  clearProductionRuntimeCache,
+  writeProductionBuildReceipt,
+} from "./production-build-receipt";
 
 const RETAINED_ARGUMENT_EVIDENCE_MARKERS = [
   "argument-evidence",
@@ -70,6 +78,8 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
   const adultPilotLeaks = scanAdultPilotProductionPublicAssets(root);
   const universitySourceReviewLeaks = scanUniversitySourceReviewProductionPublicAssets(root);
   const universityRecoveryLeaks = scanUniversityRecoveryProductionPublicAssets(root);
+  const universityResearchReadinessLeaks =
+    scanUniversityResearchReadinessProductionPublicAssets(root);
   const universityProtectedStudyLeaks = scanUniversityProtectedStudyProductionPublicAssets(root);
   const universitySemesterLoopLeaks = scanUniversitySemesterLoopProductionPublicAssets(root);
   const universityTodayLeaks = scanUniversityTodayProductionPublicAssets(root);
@@ -79,10 +89,22 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
   assertNoAdultPilotPublicArtifactLeaks(adultPilotLeaks);
   assertNoUniversitySourceReviewPublicArtifactLeaks(universitySourceReviewLeaks);
   assertNoUniversityRecoveryPublicArtifactLeaks(universityRecoveryLeaks);
+  assertNoUniversityResearchReadinessPublicArtifactLeaks(
+    universityResearchReadinessLeaks,
+  );
   assertNoUniversityProtectedStudyPublicArtifactLeaks(universityProtectedStudyLeaks);
   assertNoUniversitySemesterLoopPublicArtifactLeaks(universitySemesterLoopLeaks);
   assertNoUniversityTodayPublicArtifactLeaks(universityTodayLeaks);
-  process.stdout.write(publicBuildBoundaryReceiptLine(files.length, readPublicAssetDigest(root)));
+  clearProductionRuntimeCache(root);
+  const publicAssetDigest = readPublicAssetDigest(root);
+  process.stdout.write(publicBuildBoundaryReceiptLine(
+    files.length,
+    publicAssetDigest,
+  ));
+  const buildReceipt = writeProductionBuildReceipt(root);
+  process.stdout.write(
+    `Production build receipt: ${buildReceipt.sourceState} source ${buildReceipt.sourceCommit}; ${buildReceipt.artifactFileCount} files; artifact ${buildReceipt.artifactDigest}.\n`,
+  );
 }
 
 verifyPublicBuildBoundary();

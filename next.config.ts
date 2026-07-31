@@ -1,8 +1,19 @@
 import type { NextConfig } from "next";
 
+import {
+  productionBuildId,
+  readBuildSourceCommit,
+} from "./scripts/ops/build-source-identity";
+
+const buildSourceCommit = readBuildSourceCommit();
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  env: {
+    FORGE_COMPILED_SOURCE_SHA: buildSourceCommit,
+  },
+  generateBuildId: async () => productionBuildId(buildSourceCommit),
   async headers() {
     return [
       {

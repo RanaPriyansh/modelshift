@@ -11,6 +11,7 @@ describe("release health", () => {
   it("normalizes an explicit release SHA and safe build identity", () => {
     const health = buildReleaseHealth({ FORGE_RELEASE_SHA: SHA.toUpperCase(), FORGE_BUILD_TIME: "2026-07-22T00:00:00.000Z", FORGE_LOCKFILE_DIGEST: DIGEST, FORGE_CONTENT_MANIFEST_DIGEST: DIGEST, FORGE_EVALUATOR_BASELINE_DIGEST: DIGEST });
     expect(health.release_sha).toBe(SHA);
+    expect(health.build_source_sha).toMatch(/^(?:unknown|[a-f0-9]{40})$/);
     expect(health.app_name).toBe("FORGE");
     expect(health.build_time).toBe("2026-07-22T00:00:00.000Z");
     expect(health.runtime_mode).toBe("fallback_only");

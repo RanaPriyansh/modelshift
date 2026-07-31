@@ -5,17 +5,52 @@ import { resolve } from "node:path";
 import type { Readable } from "node:stream";
 import { pathToFileURL } from "node:url";
 
+import {
+  assertExactProductionBuild,
+  readProductionBuildSource,
+} from "./production-build-receipt";
+import {
+  createProductionRuntimeSnapshot,
+  removeProductionRuntimeSnapshot,
+  verifyCompletedProductionRuntimeSnapshot,
+} from "./production-runtime-snapshot";
+
 type ServerProcess = ChildProcessByStdio<null, Readable, Readable>;
 const STARTUP_TIMEOUT_MS = 90_000;
 export const MAX_SERVER_LOG_BYTES = 16_000;
 const arg = (name: string): string | undefined => { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : undefined; };
 const require = createRequire(import.meta.url);
 
+export function productionBrowserSpec(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  if (
+    !/^tests\/e2e\/[A-Za-z0-9._/-]+\.spec\.ts$/.test(value)
+    || value.includes("..")
+    || value.includes("\\")
+  ) {
+    throw new Error(
+      "--spec must be a repository-relative Playwright spec under tests/e2e",
+    );
+  }
+  return value;
+}
+
 /** Start the actual Next CLI process so shutdown cannot orphan a pnpm child. */
-export function productionServerInvocation(port: number): { command: string; args: string[] } {
+export function productionServerInvocation(
+  port: number,
+  projectDirectory?: string,
+): { command: string; args: string[] } {
   return {
     command: process.execPath,
-    args: [require.resolve("next/dist/bin/next"), "start", "--hostname", "127.0.0.1", "--port", String(port)],
+    args: [
+      require.resolve("next/dist/bin/next"),
+      "start",
+      ...(projectDirectory ? [projectDirectory] : []),
+      "--hostname",
+      "127.0.0.1",
+      "--port",
+      String(port),
+    ],
   };
 }
 
@@ -50,11 +85,16 @@ export async function stopProductionServer(child: ServerProcess): Promise<void> 
   child.kill("SIGKILL");
   if (!(await waitForExit(child, 5_000))) throw new Error("production browser server did not exit after SIGKILL");
 }
-function browserEnvironment(baseUrl: string): NodeJS.ProcessEnv {
+function browserEnvironment(
+  baseUrl: string,
+  expectedSha: string,
+): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     CI: "true",
     NODE_ENV: "production",
     PLAYWRIGHT_BASE_URL: baseUrl,
+    FORGE_EXPECTED_RELEASE_SHA: expectedSha.toLowerCase(),
+    FORGE_PLAYWRIGHT_PRODUCTION_BROWSER: "1",
     OPENAI_API_KEY: "",
     OPENAI_INTERPRETATION_ENABLED: "false",
     OPENAI_INTERPRETATION_DISABLED: "true",
@@ -71,18 +111,100 @@ function browserEnvironment(baseUrl: string): NodeJS.ProcessEnv {
   return env;
 }
 async function main() {
-  const expectedSha = arg("--expected-sha"); if (!expectedSha || !/^[0-9a-f]{40}$/i.test(expectedSha)) throw new Error("--expected-sha must be a full 40-character Git SHA");
-  const port = await availablePort(); const baseUrl = `http://127.0.0.1:${port}`; const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-  const serverEnv: NodeJS.ProcessEnv = { NODE_ENV: "production", NEXT_TELEMETRY_DISABLED: "1", OPENAI_API_KEY: "", OPENAI_INTERPRETATION_ENABLED: "false", OPENAI_FORGE_PLANNER_ENABLED: "false", FORGE_CLOUD_ACCOUNTS_ENABLED: "false", FORGE_RELEASE_SHA: expectedSha.toLowerCase(), FORGE_BUILD_TIME: process.env.FORGE_BUILD_TIME ?? "unknown", FORGE_LOCKFILE_DIGEST: process.env.FORGE_LOCKFILE_DIGEST, FORGE_CONTENT_MANIFEST_DIGEST: process.env.FORGE_CONTENT_MANIFEST_DIGEST, FORGE_EVALUATOR_BASELINE_DIGEST: process.env.FORGE_EVALUATOR_BASELINE_DIGEST, FORGE_DATABASE_MIGRATION_IDENTITY: process.env.FORGE_DATABASE_MIGRATION_IDENTITY ?? "not_configured" };
-  for (const key of ["PATH", "HOME", "TMPDIR", "PNPM_HOME", "COREPACK_HOME", "CI"]) if (process.env[key]) serverEnv[key] = process.env[key];
-  const server = productionServerInvocation(port);
-  const child = spawn(server.command, server.args, { cwd: process.cwd(), env: serverEnv, stdio: ["ignore", "pipe", "pipe"] });
-  let logs: Buffer<ArrayBufferLike> = Buffer.alloc(0);
-  const appendLog = (chunk: Buffer) => { logs = appendBoundedServerLog(logs, chunk); };
-  child.stdout.on("data", appendLog); child.stderr.on("data", appendLog);
-  try { await waitForServer(baseUrl, child); const result = await new Promise<number>((resolveExit) => { const browser = spawn(command, ["exec", "playwright", "test"], { cwd: process.cwd(), env: browserEnvironment(baseUrl), stdio: "inherit" }); browser.once("exit", (code) => resolveExit(code ?? 1)); }); if (result !== 0) process.exitCode = result; }
-  catch (error) { const bounded = logs.toString("utf8").replace(/\bsk-[A-Za-z0-9_-]{12,}\b/g, "[REDACTED_TOKEN]"); if (bounded) console.error(`bounded production server log:\n${bounded}`); throw error; }
-  finally { await stopProductionServer(child); }
+  const requestedSha = arg("--expected-sha");
+  const currentSource = readProductionBuildSource();
+  const expectedSha = requestedSha ?? (
+    currentSource.sourceCommit === "unknown"
+      ? undefined
+      : currentSource.sourceCommit
+  );
+  if (!expectedSha || !/^[0-9a-f]{40}$/i.test(expectedSha)) {
+    throw new Error(
+      "--expected-sha must be a full 40-character Git SHA when the current checkout identity is unavailable",
+    );
+  }
+  const spec = productionBrowserSpec(arg("--spec"));
+  const buildReceipt = assertExactProductionBuild(expectedSha);
+  const runtimeSnapshot = createProductionRuntimeSnapshot(expectedSha);
+  process.stdout.write(
+    `Exact production build verified for ${buildReceipt.sourceCommit}; artifact ${buildReceipt.artifactDigest}.\n`,
+  );
+  try {
+    const port = await availablePort();
+    const baseUrl = `http://127.0.0.1:${port}`;
+    const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+    const serverEnv: NodeJS.ProcessEnv = {
+      NODE_ENV: "production",
+      NEXT_TELEMETRY_DISABLED: "1",
+      NODE_PATH: resolve(process.cwd(), "node_modules"),
+      OPENAI_API_KEY: "",
+      OPENAI_INTERPRETATION_ENABLED: "false",
+      OPENAI_FORGE_PLANNER_ENABLED: "false",
+      FORGE_CLOUD_ACCOUNTS_ENABLED: "false",
+      FORGE_UNIVERSITY_RESEARCH_READINESS_FIXTURE:
+        "forge-university-research-readiness.v1",
+      FORGE_RELEASE_SHA: expectedSha.toLowerCase(),
+      FORGE_BUILD_TIME: process.env.FORGE_BUILD_TIME ?? "unknown",
+      FORGE_LOCKFILE_DIGEST: process.env.FORGE_LOCKFILE_DIGEST,
+      FORGE_CONTENT_MANIFEST_DIGEST:
+        process.env.FORGE_CONTENT_MANIFEST_DIGEST,
+      FORGE_EVALUATOR_BASELINE_DIGEST:
+        process.env.FORGE_EVALUATOR_BASELINE_DIGEST,
+      FORGE_DATABASE_MIGRATION_IDENTITY:
+        process.env.FORGE_DATABASE_MIGRATION_IDENTITY ?? "not_configured",
+    };
+    for (const key of [
+      "PATH",
+      "HOME",
+      "TMPDIR",
+      "PNPM_HOME",
+      "COREPACK_HOME",
+      "CI",
+    ]) {
+      if (process.env[key]) serverEnv[key] = process.env[key];
+    }
+    const server = productionServerInvocation(port, runtimeSnapshot.root);
+    const child = spawn(server.command, server.args, {
+      cwd: process.cwd(),
+      env: serverEnv,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let logs: Buffer<ArrayBufferLike> = Buffer.alloc(0);
+    const appendLog = (chunk: Buffer) => {
+      logs = appendBoundedServerLog(logs, chunk);
+    };
+    child.stdout.on("data", appendLog);
+    child.stderr.on("data", appendLog);
+    try {
+      await waitForServer(baseUrl, child);
+      const result = await new Promise<number>((resolveExit) => {
+        const browser = spawn(
+          command,
+          ["exec", "playwright", "test", ...(spec ? [spec] : [])],
+          {
+            cwd: process.cwd(),
+            env: browserEnvironment(baseUrl, expectedSha),
+            stdio: "inherit",
+          },
+        );
+        browser.once("exit", (code) => resolveExit(code ?? 1));
+      });
+      if (result !== 0) process.exitCode = result;
+    } catch (error) {
+      const bounded = logs.toString("utf8").replace(
+        /\bsk-[A-Za-z0-9_-]{12,}\b/g,
+        "[REDACTED_TOKEN]",
+      );
+      if (bounded) console.error(`bounded production server log:\n${bounded}`);
+      throw error;
+    } finally {
+      await stopProductionServer(child);
+      verifyCompletedProductionRuntimeSnapshot(runtimeSnapshot);
+      assertExactProductionBuild(expectedSha);
+    }
+  } finally {
+    removeProductionRuntimeSnapshot(runtimeSnapshot);
+  }
 }
 const entryUrl = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : "";
 if (import.meta.url === entryUrl) void main().catch((error: unknown) => { console.error(`production browser verification failed: ${error instanceof Error ? error.message : "unknown error"}`); process.exitCode = 1; });

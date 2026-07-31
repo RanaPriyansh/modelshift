@@ -158,7 +158,7 @@ function PrimaryNavigation({
   active,
   items,
 }: {
-  active: ForgeSection;
+  active: ForgeSection | null;
   items: ReadonlyArray<{ href: string; label: string; section: ForgeSection }>;
 }) {
   return (
@@ -180,7 +180,7 @@ function MobileNavigation({
   active,
   items,
 }: {
-  active: ForgeSection;
+  active: ForgeSection | null;
   items: ReadonlyArray<{ href: string; label: string; section: ForgeSection }>;
 }) {
   return (
@@ -202,10 +202,12 @@ function MobileNavigation({
 export function ForgeShell({
   active,
   children,
+  mobileNavigation = true,
   surface = "legacy",
 }: {
-  active: ForgeSection;
+  active: ForgeSection | null;
   children: ReactNode;
+  mobileNavigation?: boolean;
   surface?: ForgeSurface;
 }) {
   const items = navItemsFor(surface);
@@ -227,7 +229,9 @@ export function ForgeShell({
         </div>
       </header>
       {children}
-      <MobileNavigation active={active} items={mobileItems} />
+      {mobileNavigation
+        ? <MobileNavigation active={active} items={mobileItems} />
+        : null}
     </div>
   );
 }
