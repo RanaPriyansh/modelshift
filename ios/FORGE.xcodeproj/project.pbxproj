@@ -13,6 +13,7 @@
 		4C02678EBF2F0B155AAAD562 /* PathView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0AA5ECAA8954E35193C29C2 /* PathView.swift */; };
 		4DE50F3B65F669092259F572 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EDBE5F8545E762F93FF1E9B /* OnboardingView.swift */; };
 		52BF204406822DBCDFB21E69 /* FocusPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAD7EE04AAFE61C667AC138E /* FocusPreviewView.swift */; };
+		5D3BB652699B2D94E2531BC0 /* FORGEUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FA2520B50D2F7E8F28A99C8 /* FORGEUITests.swift */; };
 		60B4952419BB7B5F192EFA49 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 987908C74A2981D584337E92 /* AppRootView.swift */; };
 		6513BD2F700DE40F1E401CF7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A191E6072CCB46827E419E3B /* SettingsView.swift */; };
 		73EA905FE726B81CF40470CA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8362C29D610749EF0CDF7EFD /* PrivacyInfo.xcprivacy */; };
@@ -31,6 +32,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		BCBA645400D0A1878D098BFF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 974BB42F2AE227D4DA7EB26D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DF9C63A4E359B7B1A6A7BF71;
+			remoteInfo = FORGE;
+		};
 		FCE0A100A0132C43742A70E0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 974BB42F2AE227D4DA7EB26D /* Project object */;
@@ -58,8 +66,10 @@
 		12CD3529EF5014B4D6F12E51 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		19B6A9845D459751588F41C5 /* ContinueLearningIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueLearningIntent.swift; sourceTree = "<group>"; };
 		1A1094F6EBFEBC12E3F39813 /* FORGE.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FORGE.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		39FFF43C245119FDF26FDDFC /* FORGEUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = FORGEUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7313C2039DCBB0F48DC4AE4D /* SettingsToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsToolbar.swift; sourceTree = "<group>"; };
 		8362C29D610749EF0CDF7EFD /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		8FA2520B50D2F7E8F28A99C8 /* FORGEUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FORGEUITests.swift; sourceTree = "<group>"; };
 		944C4E28695B135F001CBF4D /* ContinueLearningWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueLearningWidget.swift; sourceTree = "<group>"; };
 		987908C74A2981D584337E92 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
 		9EDBE5F8545E762F93FF1E9B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -100,6 +110,7 @@
 			isa = PBXGroup;
 			children = (
 				1A1094F6EBFEBC12E3F39813 /* FORGE.app */,
+				39FFF43C245119FDF26FDDFC /* FORGEUITests.xctest */,
 				B2F04DAF31BF5077B9A00420 /* FORGEWidgets.appex */,
 			);
 			name = Products;
@@ -111,6 +122,14 @@
 				944C4E28695B135F001CBF4D /* ContinueLearningWidget.swift */,
 			);
 			path = Widgets;
+			sourceTree = "<group>";
+		};
+		4867F3F96DCDB17076E33806 /* FORGEUITests */ = {
+			isa = PBXGroup;
+			children = (
+				8FA2520B50D2F7E8F28A99C8 /* FORGEUITests.swift */,
+			);
+			path = FORGEUITests;
 			sourceTree = "<group>";
 		};
 		5EC8499BC15C83BE78CB5D26 /* Screens */ = {
@@ -160,6 +179,14 @@
 			path = Packages;
 			sourceTree = "<group>";
 		};
+		7F11D7F3C4574FCC30965357 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				4867F3F96DCDB17076E33806 /* FORGEUITests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
 		C1886AC0AAB106DBA4A1B7C1 /* App */ = {
 			isa = PBXGroup;
 			children = (
@@ -205,6 +232,7 @@
 				782EE5086B04332224FB7BB0 /* Packages */,
 				E38BA80940223380DA32632A /* Resources */,
 				612263FC87DF98CE9F8CC497 /* Sources */,
+				7F11D7F3C4574FCC30965357 /* Tests */,
 				0C66B97DADD3C0C7BBBCF43D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -231,6 +259,24 @@
 			productName = FORGEWidgets;
 			productReference = B2F04DAF31BF5077B9A00420 /* FORGEWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
+		};
+		576A97376251247C5A996205 /* FORGEUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 268AFE59AC3DB3DDFCAFF193 /* Build configuration list for PBXNativeTarget "FORGEUITests" */;
+			buildPhases = (
+				02EDE53626BD58DEE1BDBE10 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				61534055C97AA777153A2463 /* PBXTargetDependency */,
+			);
+			name = FORGEUITests;
+			packageProductDependencies = (
+			);
+			productName = FORGEUITests;
+			productReference = 39FFF43C245119FDF26FDDFC /* FORGEUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 		DF9C63A4E359B7B1A6A7BF71 /* FORGE */ = {
 			isa = PBXNativeTarget;
@@ -263,6 +309,9 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					576A97376251247C5A996205 = {
+						TestTargetID = DF9C63A4E359B7B1A6A7BF71;
+					};
 				};
 			};
 			buildConfigurationList = BFAE167A785FC72DDF66EB62 /* Build configuration list for PBXProject "FORGE" */;
@@ -283,6 +332,7 @@
 			projectRoot = "";
 			targets = (
 				DF9C63A4E359B7B1A6A7BF71 /* FORGE */,
+				576A97376251247C5A996205 /* FORGEUITests */,
 				04D11E5CD4802FDF24B75D2A /* FORGEWidgets */,
 			);
 		};
@@ -309,6 +359,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		02EDE53626BD58DEE1BDBE10 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5D3BB652699B2D94E2531BC0 /* FORGEUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1D71B8E740A3D01409314A42 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -345,6 +403,11 @@
 			isa = PBXTargetDependency;
 			target = 04D11E5CD4802FDF24B75D2A /* FORGEWidgets */;
 			targetProxy = FCE0A100A0132C43742A70E0 /* PBXContainerItemProxy */;
+		};
+		61534055C97AA777153A2463 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DF9C63A4E359B7B1A6A7BF71 /* FORGE */;
+			targetProxy = BCBA645400D0A1878D098BFF /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -473,6 +536,24 @@
 			};
 			name = Debug;
 		};
+		982D21E3059043BA43BA0746 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.forgelearning.app.uitests;
+				PRODUCT_NAME = FORGEUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = FORGE;
+			};
+			name = Release;
+		};
 		B2A2099AF5BDD04A8ED1B828 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -552,9 +633,36 @@
 			};
 			name = Release;
 		};
+		E4C7F77ABC8945E8355B090E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.forgelearning.app.uitests;
+				PRODUCT_NAME = FORGEUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = FORGE;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		268AFE59AC3DB3DDFCAFF193 /* Build configuration list for PBXNativeTarget "FORGEUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E4C7F77ABC8945E8355B090E /* Debug */,
+				982D21E3059043BA43BA0746 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		5DE82195B5AD32DA30B28D54 /* Build configuration list for PBXNativeTarget "FORGEWidgets" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

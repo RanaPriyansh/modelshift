@@ -4,7 +4,7 @@
 - **Current decision:** `NO_SHIP`
 - **Current candidate state:** `FOUNDATION_CANDIDATE`
 - **Highest recorded evidence level:** `CORE_TESTED`
-- **Native implementation base:** `edbce3ea59783b4bea9140b406372b6cb85cc92b`
+- **Native implementation base:** `850df36a1f99e0f9401cba3f9688124b62f4c27f`
 - **Distribution candidate commit:** `NOT_SELECTED`
 - **Strategy web source:** `cd84e20f6f78d68a430666c185b00efa99c49a87`
 
@@ -33,6 +33,8 @@ The current records state that ten `ForgeCore` tests passed. They also state tha
 The current records state that property lists, entitlements, privacy data, and asset JSON passed local validation.
 
 The current records state that unsigned arm64 source compilation passed. The build excluded `Assets.xcassets` after the asset compiler failed.
+
+The current source contains four UI journeys. Their unsigned arm64 XCTest runner compiles, but the journeys did not run.
 
 No installed simulator runtime was available for the recorded build. No complete asset build exists in the current evidence.
 
@@ -151,7 +153,9 @@ Pass this gate only when the final binary, device tests, policy, and App Privacy
 
 The source contains accessibility labels and hints. No accessibility audit or manual assistive-technology result exists.
 
-The Xcode project does not contain a UI test target. No `performAccessibilityAudit` result exists.
+The Xcode project contains a UI test target and one `performAccessibilityAudit` journey.
+
+The UI test target compiles. No UI journey or accessibility audit result exists.
 
 - [ ] Test all screens on the minimum supported iOS version.
 - [ ] Test all screens on the current target iOS version.
@@ -336,5 +340,7 @@ Residual gates:
 
 Keep the decision at `NO_SHIP`.
 
-The next valid action is to select and push one clean candidate commit.
-Then run the full asset build and Release archive checks.
+The next local action requires an installed simulator runtime and sufficient storage.
+Then run the full asset build, UI journeys, and accessibility audit.
+
+Select and push one clean candidate only after these local gates pass.

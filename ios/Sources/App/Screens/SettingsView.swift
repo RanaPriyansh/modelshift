@@ -20,6 +20,7 @@ struct SettingsView: View {
             model.isReminderOperationRunning
               || model.isLocalDataResetRunning
           )
+          .accessibilityIdentifier("settings.grown-up-reminders")
         }
 
         Toggle(
@@ -34,6 +35,7 @@ struct SettingsView: View {
             || model.isLocalDataResetRunning
             || (!model.remindersEnabled && !model.canEnableReminders)
         )
+        .accessibilityIdentifier("settings.return-reminders")
 
         if model.isReminderOperationRunning {
           ProgressView("Updating reminders")
@@ -68,6 +70,7 @@ struct SettingsView: View {
         Button("Review onboarding") {
           model.reviewOnboarding()
         }
+        .accessibilityIdentifier("settings.review-onboarding")
       }
 
       Section {
@@ -81,6 +84,7 @@ struct SettingsView: View {
         .accessibilityHint(
           "Shows a confirmation before local learning data is deleted."
         )
+        .accessibilityIdentifier("settings.clear-local-data")
 
         if model.isLocalDataResetRunning {
           ProgressView("Clearing local data")
@@ -107,6 +111,7 @@ struct SettingsView: View {
       Button("Clear data", role: .destructive) {
         model.clearLocalData()
       }
+      .accessibilityIdentifier("settings.confirm-clear-local-data")
     } message: {
       Text(
         "This action deletes local learning data and scheduled reminders. You cannot undo this action."

@@ -8,6 +8,7 @@ struct SettingsToolbar: ToolbarContent {
       }
       .accessibilityLabel("Settings")
       .accessibilityHint("Opens reminder and data settings.")
+      .accessibilityIdentifier("settings.open")
     }
   }
 }

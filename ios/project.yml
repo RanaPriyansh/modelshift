@@ -88,6 +88,19 @@ targets:
     dependencies:
       - package: ForgeCore
 
+  FORGEUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/FORGEUITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.forgelearning.app.uitests
+        PRODUCT_NAME: FORGEUITests
+        GENERATE_INFOPLIST_FILE: true
+    dependencies:
+      - target: FORGE
+
 schemes:
   FORGE:
     build:
@@ -96,5 +109,9 @@ schemes:
         FORGEWidgets: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - FORGEUITests
     archive:
       config: Release

@@ -30,7 +30,8 @@ The script performs these checks:
 - It validates the property lists, entitlements, privacy manifest, and asset catalogs.
 - It runs the `ForgeCore` package tests.
 - It reads the checked-in project and scheme.
-- It builds the unsigned arm64 app and widget with the iPhoneOS SDK.
+- It builds Debug and Release versions of the unsigned arm64 app and widget.
+- It compiles the unsigned arm64 UI test source.
 
 The script uses an isolated temporary directory. It does not boot a simulator.
 
@@ -38,6 +39,9 @@ The script retries source compilation without the asset catalog when no simulato
 Static checks still validate the required icon files.
 Run the full asset build before distribution.
 Continuous integration requires the full asset build.
+
+The `FORGE` scheme includes UI journeys and an accessibility audit.
+Run these tests on an installed iOS simulator runtime before distribution.
 
 Run only the static checks when storage or the Apple toolchain is unavailable:
 

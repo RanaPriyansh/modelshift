@@ -103,6 +103,7 @@ struct TodayView: View {
       .buttonStyle(.borderedProminent)
       .controlSize(.large)
       .accessibilityHint("Opens a full-screen preview. It records no evidence.")
+      .accessibilityIdentifier("today.open-focus")
     }
     .padding(ForgeDesign.Spacing.large)
     .background(ForgeDesign.raisedSurface)
@@ -158,6 +159,7 @@ struct TodayView: View {
       "Delayed return, \(dueReturn.status), due \(dueReturn.dueAt.formatted(date: .long, time: .shortened))"
     )
     .accessibilityHint("Opens the read-only focus preview.")
+    .accessibilityIdentifier("today.open-return")
   }
 
   private var boundaryCard: some View {

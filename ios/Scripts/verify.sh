@@ -52,6 +52,7 @@ required_files=(
   "$ios_root/Resources/Assets.xcassets/AppIcon.appiconset/Contents.json"
   "$ios_root/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
   "$ios_root/Packages/ForgeCore/Package.swift"
+  "$ios_root/Tests/FORGEUITests/FORGEUITests.swift"
 )
 
 plist_files=(
@@ -110,6 +111,14 @@ if [[ -z "$temp_base" || "$temp_base" != /* ]]; then
 fi
 
 scratch_root="$(mktemp -d "$temp_base/forge-ios-verify.XXXXXX")"
+module_cache="$scratch_root/ModuleCache"
+package_cache="$scratch_root/PackageCache"
+task_cache="$scratch_root/Cache"
+mkdir -p "$module_cache" "$package_cache" "$task_cache"
+
+export CLANG_MODULE_CACHE_PATH="$module_cache"
+export SWIFTPM_MODULECACHE_OVERRIDE="$module_cache"
+export XDG_CACHE_HOME="$task_cache"
 
 cleanup() {
   case "$scratch_root" in
@@ -127,12 +136,14 @@ trap cleanup EXIT
 
 step "Run ForgeCore tests"
 swift test \
+  --disable-sandbox \
   --package-path "$ios_root/Packages/ForgeCore" \
   --scratch-path "$scratch_root/ForgeCore"
 
 step "Read the Xcode project"
 xcodebuild \
   -project "$ios_root/FORGE.xcodeproj" \
+  -packageCachePath "$package_cache" \
   -list \
   -json >"$scratch_root/project-list.json"
 
@@ -143,8 +154,8 @@ fi
 
 build_arguments=(
   -project "$ios_root/FORGE.xcodeproj" \
+  -packageCachePath "$package_cache" \
   -target FORGE \
-  -configuration Debug \
   -sdk iphoneos \
   OBJROOT="$scratch_root/Build/Intermediates" \
   SYMROOT="$scratch_root/Build/Products" \
@@ -156,29 +167,54 @@ build_arguments=(
   -quiet
 )
 
-step "Build the unsigned arm64 iOS device target"
-build_log="$scratch_root/xcodebuild.log"
+for configuration in Debug Release; do
+  step "Build the unsigned arm64 $configuration iOS device target"
+  build_log="$scratch_root/xcodebuild-$configuration.log"
 
-if ! xcodebuild "${build_arguments[@]}" build >"$build_log" 2>&1; then
-  if ! grep -q "No available simulator runtimes" "$build_log"; then
-    cat "$build_log" >&2
-    exit 1
-  fi
-
-  if [[ "${FORGE_REQUIRE_ASSET_BUILD:-0}" == "1" ]]; then
-    cat "$build_log" >&2
-    exit 1
-  fi
-
-  cat "$build_log"
-  step "Build application source without asset compilation"
-  printf '%s\n' \
-    "No simulator runtime is installed. The static checks validated the AppIcon files."
-  xcodebuild \
+  if ! xcodebuild \
     "${build_arguments[@]}" \
-    EXCLUDED_SOURCE_FILE_NAMES=Assets.xcassets \
-    ASSETCATALOG_COMPILER_APPICON_NAME= \
-    build
-fi
+    -configuration "$configuration" \
+    build >"$build_log" 2>&1; then
+    if ! grep -q "No available simulator runtimes" "$build_log"; then
+      cat "$build_log" >&2
+      exit 1
+    fi
+
+    if [[ "${FORGE_REQUIRE_ASSET_BUILD:-0}" == "1" ]]; then
+      cat "$build_log" >&2
+      exit 1
+    fi
+
+    cat "$build_log"
+    step "Build $configuration application source without asset compilation"
+    printf '%s\n' \
+      "No simulator runtime is installed. The static checks validated the AppIcon files."
+    xcodebuild \
+      "${build_arguments[@]}" \
+      -configuration "$configuration" \
+      EXCLUDED_SOURCE_FILE_NAMES=Assets.xcassets \
+      ASSETCATALOG_COMPILER_APPICON_NAME= \
+      build
+  fi
+done
+
+step "Compile the unsigned arm64 UI test source"
+xcodebuild \
+  -project "$ios_root/FORGE.xcodeproj" \
+  -packageCachePath "$package_cache" \
+  -target FORGEUITests \
+  -configuration Debug \
+  -sdk iphoneos \
+  OBJROOT="$scratch_root/Build/Intermediates" \
+  SYMROOT="$scratch_root/Build/Products" \
+  SHARED_PRECOMPS_DIR="$scratch_root/Build/PrecompiledHeaders" \
+  ARCHS=arm64 \
+  ONLY_ACTIVE_ARCH=YES \
+  CODE_SIGNING_ALLOWED=NO \
+  COMPILER_INDEX_STORE_ENABLE=NO \
+  EXCLUDED_SOURCE_FILE_NAMES=Assets.xcassets \
+  ASSETCATALOG_COMPILER_APPICON_NAME= \
+  -quiet \
+  build
 
 step "iOS verification completed"

@@ -23,11 +23,13 @@ struct OnboardingView: View {
           .textInputAutocapitalization(.sentences)
           .accessibilityLabel("Learning goal")
           .accessibilityHint("Enter at least eight characters.")
+          .accessibilityIdentifier("onboarding.goal")
 
           Button("Use a safe sample goal") {
             model.onboardingDraft.goal = "Test AI claims against reliable sources"
           }
           .accessibilityHint("Fills the goal field with a device-only example.")
+          .accessibilityIdentifier("onboarding.safe-sample")
 
           goalReadiness
         }
@@ -40,6 +42,7 @@ struct OnboardingView: View {
             }
           }
           .pickerStyle(.navigationLink)
+          .accessibilityIdentifier("onboarding.learner-mode")
 
           Picker("Path depth", selection: $model.onboardingDraft.depth) {
             ForEach(StudyDepth.allCases) { depth in
@@ -48,6 +51,7 @@ struct OnboardingView: View {
             }
           }
           .pickerStyle(.navigationLink)
+          .accessibilityIdentifier("onboarding.path-depth")
 
           Picker(
             "Time available",
@@ -60,6 +64,7 @@ struct OnboardingView: View {
           }
           .pickerStyle(.segmented)
           .accessibilityLabel("Time available")
+          .accessibilityIdentifier("onboarding.time")
         } header: {
           Text("Shape the path")
         } footer: {
@@ -72,6 +77,7 @@ struct OnboardingView: View {
               "A grown-up is present",
               isOn: $model.onboardingDraft.grownUpPresent
             )
+            .accessibilityIdentifier("onboarding.grown-up-present")
 
             Text("This check applies only to this local setup.")
               .font(.footnote)
@@ -114,6 +120,7 @@ struct OnboardingView: View {
           Button("Close") {
             model.skipOnboarding()
           }
+          .accessibilityIdentifier("onboarding.close")
         }
       }
     }
@@ -173,6 +180,7 @@ struct OnboardingView: View {
       .controlSize(.large)
       .disabled(!model.onboardingDraft.isReady)
       .accessibilityHint("Saves this setup on the device and opens Today.")
+      .accessibilityIdentifier("onboarding.continue")
 
       if !model.onboardingDraft.isReady {
         Text("Complete the required choices to continue.")

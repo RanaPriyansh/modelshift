@@ -18,6 +18,7 @@ struct AppRootView: View {
       .tabItem {
         Label("Today", systemImage: "sun.max")
       }
+      .accessibilityIdentifier("tab.today")
       .tag(AppTab.today)
 
       NavigationStack(path: $model.pathPath) {
@@ -29,6 +30,7 @@ struct AppRootView: View {
       .tabItem {
         Label("Path", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
       }
+      .accessibilityIdentifier("tab.path")
       .tag(AppTab.path)
 
       NavigationStack(path: $model.evidencePath) {
@@ -40,6 +42,7 @@ struct AppRootView: View {
       .tabItem {
         Label("Evidence", systemImage: "doc.text.magnifyingglass")
       }
+      .accessibilityIdentifier("tab.evidence")
       .tag(AppTab.evidence)
     }
     .sheet(isPresented: $model.isOnboardingPresented) {

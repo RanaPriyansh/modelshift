@@ -65,6 +65,7 @@ struct FocusPreviewView: View {
               ? "Hides source, safety, and access information."
               : "Shows source, safety, and access information."
           )
+          .accessibilityIdentifier("focus.support")
 
           Button(action: togglePause) {
             Label(
@@ -79,10 +80,12 @@ struct FocusPreviewView: View {
           .accessibilityHint(
             "Changes only this preview. It does not record progress."
           )
+          .accessibilityIdentifier("focus.pause")
 
           Button("End preview", role: .cancel, action: endPreview)
             .frame(maxWidth: .infinity)
             .accessibilityHint("Closes the preview without recording progress.")
+            .accessibilityIdentifier("focus.end")
         }
         .frame(maxWidth: 680, alignment: .leading)
         .padding()
@@ -94,6 +97,7 @@ struct FocusPreviewView: View {
         ToolbarItem(placement: .cancellationAction) {
           Button("Close", action: endPreview)
             .accessibilityHint("Closes the preview without recording progress.")
+            .accessibilityIdentifier("focus.close")
         }
       }
     }

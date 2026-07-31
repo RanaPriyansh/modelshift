@@ -283,9 +283,11 @@ The current foundation has this evidence:
 - Property lists, entitlements, privacy manifest, and asset JSON: passed validation.
 - Application icon: 1024 by 1024 pixels and opaque.
 - Application, widget, and App Intent source: compiled in Debug and Release for unsigned arm64 iOS.
+- Four UI test journeys: compiled for an unsigned arm64 iOS XCTest runner.
 - App Intent metadata extraction: passed.
 - The complete local verification script: passed with its documented asset fallback.
 
 The source build excluded `Assets.xcassets` after the asset compiler reported no installed simulator runtime.
+The UI journeys and accessibility audit did not run because no simulator runtime exists.
 
 Do not classify this evidence as `SIMULATOR_VERIFIED`, `DEVICE_VERIFIED`, or App Store ready.
