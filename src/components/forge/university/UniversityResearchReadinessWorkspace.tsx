@@ -790,7 +790,12 @@ export function UniversityResearchReadinessWorkspace({
       </header>
 
       <div className={styles.boundary} role="note">
-        <strong>Rehearsal is not permission</strong>
+        <strong>Participant operation: BLOCKED</strong>
+        <span>
+          Reason: at least {OPEN_GATE_PRESENTATIONS.length} research gates
+          {" "}remain open
+        </span>
+        <span>Rehearsal is not permission</span>
         <span>No recruitment or contact</span>
         <span>No recording or coursework capture</span>
         <span>No export, send, persistence, or external event emission</span>

@@ -124,6 +124,8 @@ function CandidateScenarioRegion({
     `university-research-candidate-${surface.ordinal}-effects-title`;
   const tasksTitleId =
     `university-research-candidate-${surface.ordinal}-tasks-title`;
+  const journeyTitleId =
+    `university-research-candidate-${surface.ordinal}-journey-title`;
 
   return (
     <section
@@ -143,7 +145,10 @@ function CandidateScenarioRegion({
         </div>
       </section>
 
-      <nav className={styles.journey} aria-label="Semester learning loop">
+      <section className={styles.journey} aria-labelledby={journeyTitleId}>
+        <h2 className="sr-only" id={journeyTitleId}>
+          Semester learning loop
+        </h2>
         <ol>
           {journey.map((stage, index) => (
             <li
@@ -157,7 +162,7 @@ function CandidateScenarioRegion({
             </li>
           ))}
         </ol>
-      </nav>
+      </section>
 
       <section className={styles.currentJob}>
         <div>

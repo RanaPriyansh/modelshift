@@ -197,6 +197,24 @@ describe("UniversityResearchCandidateWorkspace", () => {
     );
   });
 
+  it("presents each inert journey as a labelled region rather than navigation", async () => {
+    await renderCandidate();
+    const article = screen.getByRole("article", {
+      name: "University research candidate",
+    });
+
+    expect(within(article).queryByRole("navigation", {
+      name: "Semester learning loop",
+    })).not.toBeInTheDocument();
+    const journeys = within(article).getAllByRole("region", {
+      name: "Semester learning loop",
+    });
+    expect(journeys).toHaveLength(7);
+    journeys.forEach((journey) => {
+      expect(within(journey).getByRole("list").children).toHaveLength(5);
+    });
+  });
+
   it("keeps each native radio bound to one separately compiled scenario selector", () => {
     const css = readFileSync(
       resolve(

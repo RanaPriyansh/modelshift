@@ -40,6 +40,16 @@ describe("UniversityResearchReadinessWorkspace", () => {
       level: 2,
       name: "Repair the protocol before any rehearsal.",
     })).toBeInTheDocument();
+    const operatingBoundary = screen.getByRole("note");
+    expect(operatingBoundary).toHaveTextContent(
+      "Participant operation: BLOCKED",
+    );
+    expect(operatingBoundary).toHaveTextContent(
+      "Reason: at least 6 research gates remain open",
+    );
+    expect(operatingBoundary).toHaveTextContent(
+      "Rehearsal is not permission",
+    );
 
     const readiness = screen.getByRole("region", {
       name: "Research readiness gates",
@@ -72,6 +82,9 @@ describe("UniversityResearchReadinessWorkspace", () => {
       expect(container.querySelector("article")).toHaveAttribute(
         "data-status",
         status,
+      );
+      expect(screen.getByRole("note")).toHaveTextContent(
+        "Participant operation: BLOCKED",
       );
       expect(screen.getByRole("heading", {
         level: 2,
