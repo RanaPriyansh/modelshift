@@ -161,6 +161,10 @@ The candidate checks passed:
 - TypeScript typecheck; and
 - whitespace and patch validation.
 
+The production dependency audit at
+`docs/security/PRODUCTION_DEPENDENCY_AUDIT_2026-08-01.md` reported no known
+advisory for the exact resolved production dependency graph.
+
 The exact clean production build and commit receipt belong to the final
 candidate handoff. This report does not claim them.
 
@@ -174,5 +178,5 @@ The following items remain outside this candidate:
 - retention, export, correction, deletion, and backup reconciliation;
 - provider consent, quota, input binding, and live transport evidence;
 - live security-header and edge configuration verification;
-- dependency advisory review against the release environment; and
+- dependency and operating-system review against the release environment; and
 - incident response, rollback, and external security review.
