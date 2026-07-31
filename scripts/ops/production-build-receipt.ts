@@ -1,5 +1,4 @@
 import { execFileSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
 import {
   closeSync,
   constants,
@@ -9,13 +8,13 @@ import {
   openSync,
   readdirSync,
   realpathSync,
-  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { relative, resolve, sep } from "node:path";
 
 import {
+  hiddenBuildInputExceptions,
   productionBuildId,
   sourceCommitFromProductionBuildId,
 } from "./build-source-identity";
@@ -26,7 +25,7 @@ import {
 import { readPublicAssetDigest } from "./release-digests";
 
 export const PRODUCTION_BUILD_RECEIPT_SCHEMA_VERSION =
-  "forge-production-build-receipt.v2" as const;
+  "forge-production-build-receipt.v3" as const;
 export const PRODUCTION_BUILD_RECEIPT_FILE =
   "forge-production-build-receipt.json" as const;
 
@@ -57,7 +56,16 @@ export type ProductionBuildReceipt = Readonly<{
   publicDirectoryDigest: string;
   publicDirectoryFileCount: number;
   runtimeCachePolicy: "fresh_ephemeral_next_cache_v1";
+  runtimeConfigurationDigest: string;
+  runtimeConfigurationFileCount: number;
 }>;
+
+export const PRODUCTION_RUNTIME_CONFIGURATION_FILES = Object.freeze([
+  "next.config.ts",
+  "package.json",
+  "scripts/ops/build-source-identity.ts",
+  "tsconfig.json",
+] as const);
 
 function git(root: string, args: readonly string[]): string {
   return execFileSync("git", [...args], {
@@ -96,29 +104,7 @@ export function readProductionBuildSource(
 }
 
 function exactBuildInputExceptions(root: string): readonly string[] {
-  const unusualIndexEntries = git(root, ["ls-files", "-v"])
-    .split("\n")
-    .filter(Boolean)
-    .filter((entry) => entry[0] !== "H");
-  const ignoredBuildInputs = git(root, [
-    "ls-files",
-    "--others",
-    "--ignored",
-    "--exclude-standard",
-    "--",
-    ".env",
-    ".env.local",
-    ".env.production",
-    ".env.production.local",
-    "app",
-    "src",
-    "public",
-    "next.config.ts",
-  ]).split("\n").filter(Boolean);
-  return Object.freeze([
-    ...unusualIndexEntries.map((entry) => `index:${entry}`),
-    ...ignoredBuildInputs.map((entry) => `ignored:${entry}`),
-  ]);
+  return hiddenBuildInputExceptions(root);
 }
 
 export function assertExactBuildInputBoundary(
@@ -285,6 +271,25 @@ export function readProductionPublicDirectoryIdentity(
   });
 }
 
+export function readProductionRuntimeConfigurationIdentity(
+  root: string = process.cwd(),
+): Readonly<{
+  runtimeConfigurationDigest: string;
+  runtimeConfigurationFileCount: number;
+}> {
+  const entries = PRODUCTION_RUNTIME_CONFIGURATION_FILES.map((path) => ({
+    path,
+    bytes: readStableRegularFile(resolve(root, path), 2_000_000),
+  }));
+  return Object.freeze({
+    runtimeConfigurationDigest: `sha256:${framedFileTreeDigest(
+      "forge-production-runtime-configuration.v1",
+      entries,
+    )}`,
+    runtimeConfigurationFileCount: entries.length,
+  });
+}
+
 function readBuildId(root: string): string {
   const buildId = readStableRegularFile(
     resolve(root, ".next/BUILD_ID"),
@@ -301,6 +306,8 @@ export function createProductionBuildReceipt(
   const source = readProductionBuildSource(root);
   const artifact = readProductionArtifactIdentity(root);
   const publicDirectory = readProductionPublicDirectoryIdentity(root);
+  const runtimeConfiguration =
+    readProductionRuntimeConfigurationIdentity(root);
   const buildId = readBuildId(root);
   const buildBoundCommit = sourceCommitFromProductionBuildId(buildId);
   if (
@@ -321,6 +328,7 @@ export function createProductionBuildReceipt(
     artifactFileCount: artifact.artifactFileCount,
     ...publicDirectory,
     runtimeCachePolicy: "fresh_ephemeral_next_cache_v1",
+    ...runtimeConfiguration,
   });
 }
 
@@ -331,15 +339,11 @@ export function writeProductionBuildReceipt(
   const nextDirectory = resolve(root, ".next");
   const realNextDirectory = realpathSync(nextDirectory);
   const receiptPath = resolve(nextDirectory, PRODUCTION_BUILD_RECEIPT_FILE);
-  const temporaryPath = resolve(
-    nextDirectory,
-    `.${PRODUCTION_BUILD_RECEIPT_FILE}.${process.pid}.${randomUUID()}.tmp`,
-  );
   containedRealPath(realNextDirectory, nextDirectory, true);
   let fileDescriptor: number | null = null;
   try {
     fileDescriptor = openSync(
-      temporaryPath,
+      receiptPath,
       constants.O_CREAT
         | constants.O_EXCL
         | constants.O_WRONLY
@@ -354,10 +358,8 @@ export function writeProductionBuildReceipt(
     fsyncSync(fileDescriptor);
     closeSync(fileDescriptor);
     fileDescriptor = null;
-    renameSync(temporaryPath, receiptPath);
   } catch (error) {
     if (fileDescriptor !== null) closeSync(fileDescriptor);
-    rmSync(temporaryPath, { force: true });
     throw error;
   }
   return receipt;
@@ -393,6 +395,8 @@ export function parseProductionBuildReceipt(
     "publicDirectoryDigest",
     "publicDirectoryFileCount",
     "runtimeCachePolicy",
+    "runtimeConfigurationDigest",
+    "runtimeConfigurationFileCount",
     "schemaVersion",
     "sourceCommit",
     "sourceState",
@@ -424,6 +428,11 @@ export function parseProductionBuildReceipt(
     || !Number.isInteger(parsed.publicDirectoryFileCount)
     || Number(parsed.publicDirectoryFileCount) < 0
     || parsed.runtimeCachePolicy !== "fresh_ephemeral_next_cache_v1"
+    || typeof parsed.runtimeConfigurationDigest !== "string"
+    || !DIGEST.test(parsed.runtimeConfigurationDigest)
+    || !Number.isInteger(parsed.runtimeConfigurationFileCount)
+    || Number(parsed.runtimeConfigurationFileCount)
+      !== PRODUCTION_RUNTIME_CONFIGURATION_FILES.length
     || !Number.isInteger(parsed.artifactFileCount)
     || Number(parsed.artifactFileCount) < 1
   ) {
@@ -443,6 +452,8 @@ export function parseProductionBuildReceipt(
     publicDirectoryDigest: parsed.publicDirectoryDigest,
     publicDirectoryFileCount: parsed.publicDirectoryFileCount,
     runtimeCachePolicy: parsed.runtimeCachePolicy,
+    runtimeConfigurationDigest: parsed.runtimeConfigurationDigest,
+    runtimeConfigurationFileCount: parsed.runtimeConfigurationFileCount,
   } as ProductionBuildReceipt);
 }
 
@@ -463,30 +474,33 @@ export function clearProductionRuntimeCache(
     nextDirectory,
     "required-server-files.json",
   );
-  if (existsSync(requiredServerFilesPath)) {
-    let requiredServerFiles: unknown;
-    try {
-      requiredServerFiles = JSON.parse(readStableRegularFile(
-        requiredServerFilesPath,
-        2_000_000,
-      ).toString("utf8"));
-    } catch {
-      throw new Error(
-        "Production runtime cache reset could not validate required server files.",
-      );
-    }
-    if (
-      !isRecord(requiredServerFiles)
-      || !Array.isArray(requiredServerFiles.files)
-      || requiredServerFiles.files.some((file) => typeof file !== "string")
-      || requiredServerFiles.files.some((file) =>
-        /(?:^|\/)\.next\/cache(?:\/|$)/.test(String(file).replaceAll("\\", "/"))
-      )
-    ) {
-      throw new Error(
-        "Production runtime cache reset rejected a required or malformed cache input.",
-      );
-    }
+  if (!existsSync(requiredServerFilesPath)) {
+    throw new Error(
+      "Production runtime cache reset requires required-server-files.json.",
+    );
+  }
+  let requiredServerFiles: unknown;
+  try {
+    requiredServerFiles = JSON.parse(readStableRegularFile(
+      requiredServerFilesPath,
+      2_000_000,
+    ).toString("utf8"));
+  } catch {
+    throw new Error(
+      "Production runtime cache reset could not validate required server files.",
+    );
+  }
+  if (
+    !isRecord(requiredServerFiles)
+    || !Array.isArray(requiredServerFiles.files)
+    || requiredServerFiles.files.some((file) => typeof file !== "string")
+    || requiredServerFiles.files.some((file) =>
+      /(?:^|\/)\.next\/cache(?:\/|$)/.test(String(file).replaceAll("\\", "/"))
+    )
+  ) {
+    throw new Error(
+      "Production runtime cache reset rejected a required or malformed cache input.",
+    );
   }
   for (const directoryName of ["cache", "dev"]) {
     const transientDirectory = resolve(nextDirectory, directoryName);
@@ -526,6 +540,8 @@ export function assertExactProductionBuild(
   assertProductionRuntimeCacheAbsent(root);
   const artifact = readProductionArtifactIdentity(root);
   const publicDirectory = readProductionPublicDirectoryIdentity(root);
+  const runtimeConfiguration =
+    readProductionRuntimeConfigurationIdentity(root);
   const publicAssetDigest = `sha256:${readPublicAssetDigest(root)}`;
   const buildId = readBuildId(root);
   if (
@@ -543,6 +559,10 @@ export function assertExactProductionBuild(
     || receipt.publicDirectoryDigest !== publicDirectory.publicDirectoryDigest
     || receipt.publicDirectoryFileCount
       !== publicDirectory.publicDirectoryFileCount
+    || receipt.runtimeConfigurationDigest
+      !== runtimeConfiguration.runtimeConfigurationDigest
+    || receipt.runtimeConfigurationFileCount
+      !== runtimeConfiguration.runtimeConfigurationFileCount
   ) {
     throw new Error(
       "Production build receipt does not bind this clean checkout, Git tree, and complete .next artifact to the expected SHA.",

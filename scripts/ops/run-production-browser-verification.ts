@@ -68,6 +68,62 @@ async function availablePort(): Promise<number> {
   });
 }
 async function waitForServer(baseUrl: string, child: ServerProcess): Promise<void> { const deadline = Date.now() + STARTUP_TIMEOUT_MS; while (Date.now() < deadline) { if (child.exitCode !== null) throw new Error(`production server exited during startup with code ${child.exitCode}`); try { const response = await fetch(new URL("/api/health", baseUrl), { signal: AbortSignal.timeout(1_000), redirect: "manual" }); if (response.status === 200) return; } catch { /* bounded startup poll */ } await new Promise((done) => setTimeout(done, 250)); } throw new Error("production browser server did not become ready within 90 seconds"); }
+export async function assertProductionServerIdentity(
+  baseUrl: string,
+  expectedSha: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const normalizedExpected = expectedSha.toLowerCase();
+  if (!/^[a-f0-9]{40}$/.test(normalizedExpected)) {
+    throw new Error(
+      "Production server identity requires a full expected Git SHA.",
+    );
+  }
+  const response = await fetchImpl(new URL("/api/health", baseUrl), {
+    headers: { "Cache-Control": "no-cache" },
+    redirect: "manual",
+    signal: AbortSignal.timeout(5_000),
+  });
+  const contentLength = Number(response.headers.get("content-length") ?? "0");
+  if (
+    response.status !== 200
+    || !response.headers.get("cache-control")?.includes("no-store")
+    || response.headers.get("x-forge-release-sha") !== normalizedExpected
+    || response.headers.get("x-forge-build-source-sha")
+      !== normalizedExpected
+    || (
+      Number.isFinite(contentLength)
+      && contentLength > 0
+      && contentLength > 64_000
+    )
+  ) {
+    throw new Error(
+      "Production server health did not bind runtime and build source identity.",
+    );
+  }
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length > 64_000) {
+    throw new Error("Production server health exceeded its response limit.");
+  }
+  let health: unknown;
+  try {
+    health = JSON.parse(bytes.toString("utf8"));
+  } catch {
+    throw new Error("Production server health was not valid JSON.");
+  }
+  if (
+    health === null
+    || typeof health !== "object"
+    || Array.isArray(health)
+    || (health as Record<string, unknown>).release_sha !== normalizedExpected
+    || (health as Record<string, unknown>).build_source_sha
+      !== normalizedExpected
+  ) {
+    throw new Error(
+      "Production server health body did not bind runtime and build source identity.",
+    );
+  }
+}
 function hasExited(child: ServerProcess): boolean { return child.exitCode !== null || child.signalCode !== null; }
 async function waitForExit(child: ServerProcess, timeoutMs: number): Promise<boolean> {
   if (hasExited(child)) return true;
@@ -177,6 +233,7 @@ async function main() {
     child.stderr.on("data", appendLog);
     try {
       await waitForServer(baseUrl, child);
+      await assertProductionServerIdentity(baseUrl, expectedSha);
       const result = await new Promise<number>((resolveExit) => {
         const browser = spawn(
           command,
@@ -189,6 +246,7 @@ async function main() {
         );
         browser.once("exit", (code) => resolveExit(code ?? 1));
       });
+      await assertProductionServerIdentity(baseUrl, expectedSha);
       if (result !== 0) process.exitCode = result;
     } catch (error) {
       const bounded = logs.toString("utf8").replace(

@@ -125,19 +125,21 @@ exact artifact:
 1. the build records a source marker from the clean, full Git SHA at build
    time; a release SHA supplied only when the server starts cannot substitute
    for that marker;
-2. the post-build receipt records the same clean source SHA and Git tree, the
-   build ID, the immutable production `.next` digest and file count, emitted
-   static-asset identity, the full `public` directory identity, and the
-   fresh-ephemeral `.next/cache` policy; declared development, diagnostic,
-   trace, receipt, and runtime-cache paths are not part of the immutable set;
+2. one create-only post-build receipt records the same clean source SHA and Git
+   tree, the build ID, the immutable production `.next` digest and file count,
+   emitted static-asset identity, the full `public` directory identity, copied
+   runtime-configuration identity, and the fresh-ephemeral `.next/cache`
+   policy; declared development, diagnostic, trace, receipt, and runtime-cache
+   paths are not part of the immutable set;
 3. the harness validates that receipt against the unchanged clean checkout and
    expected full SHA before copying the built artifact into an isolated runtime
    snapshot;
 4. the copied snapshot seals the measured immutable paths against ordinary
-   test writes, exposes only a fresh ephemeral cache location, and checks its
-   receipt, build-time source marker, build ID, artifact digest, file count,
-   static assets, and `public` directory before the server starts and again
-   after the browser and server stop; and
+   test writes, exposes only a fresh ephemeral cache location, self-checks
+   runtime and compiled-source health identity before and after browser
+   execution, and checks its receipt, build ID, artifact digest, file count,
+   runtime configuration, static assets, and `public` directory before server
+   startup and again after browser and server shutdown; and
 5. any source, receipt, marker, or artifact identity drift invalidates the run
    rather than producing browser evidence.
 

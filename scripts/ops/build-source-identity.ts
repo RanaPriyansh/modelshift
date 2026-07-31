@@ -2,11 +2,75 @@ import { execFileSync } from "node:child_process";
 
 export const PRODUCTION_BUILD_ID_PREFIX = "forge-source-v1-" as const;
 const SHA = /^[a-f0-9]{40}$/;
+const ALLOWED_IGNORED_DIRECTORIES = Object.freeze([
+  ".next",
+  ".playwright-cli",
+  "coverage",
+  "node_modules",
+  "out",
+  "playwright-report",
+  "test-results",
+]);
 
 function normalizedSha(value: string | undefined): string | null {
   if (!value) return null;
   const normalized = value.trim().toLowerCase();
   return SHA.test(normalized) ? normalized : null;
+}
+
+function allowedIgnoredBuildOutput(path: string): boolean {
+  const normalized = path.replaceAll("\\", "/").replace(/\/$/, "");
+  if (
+    normalized.length === 0
+    || normalized.startsWith("/")
+    || normalized.split("/").some((part) => part === "..")
+  ) return false;
+  if (
+    ALLOWED_IGNORED_DIRECTORIES.some((directory) =>
+      normalized === directory || normalized.startsWith(`${directory}/`)
+    )
+  ) return true;
+  const basename = normalized.split("/").at(-1) ?? "";
+  return (
+    basename === ".DS_Store"
+    || basename.endsWith(".swp")
+    || basename.endsWith(".tsbuildinfo")
+  );
+}
+
+export function hiddenBuildInputExceptions(
+  root: string = process.cwd(),
+): readonly string[] {
+  const indexExceptions = execFileSync(
+    "git",
+    ["ls-files", "-v"],
+    {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    },
+  ).split("\n").filter(Boolean).filter((entry) => entry[0] !== "H");
+  const ignoredEntries = execFileSync(
+    "git",
+    [
+      "ls-files",
+      "--others",
+      "--ignored",
+      "--exclude-standard",
+      "--directory",
+    ],
+    {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    },
+  ).split("\n").filter(Boolean);
+  return Object.freeze([
+    ...indexExceptions.map((entry) => `index:${entry}`),
+    ...ignoredEntries
+      .filter((entry) => !allowedIgnoredBuildOutput(entry))
+      .map((entry) => `ignored:${entry}`),
+  ]);
 }
 
 /**
@@ -43,43 +107,11 @@ export function readBuildSourceCommit(
         stdio: ["ignore", "pipe", "ignore"],
       },
     ).trim();
-    const indexExceptions = execFileSync(
-      "git",
-      ["ls-files", "-v"],
-      {
-        cwd: root,
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"],
-      },
-    ).split("\n").filter(Boolean).some((entry) => entry[0] !== "H");
-    const ignoredBuildInputs = execFileSync(
-      "git",
-      [
-        "ls-files",
-        "--others",
-        "--ignored",
-        "--exclude-standard",
-        "--",
-        ".env",
-        ".env.local",
-        ".env.production",
-        ".env.production.local",
-        "app",
-        "src",
-        "public",
-        "next.config.ts",
-      ],
-      {
-        cwd: root,
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"],
-      },
-    ).trim();
+    const inputExceptions = hiddenBuildInputExceptions(root);
     if (
       commit
       && status === ""
-      && !indexExceptions
-      && ignoredBuildInputs === ""
+      && inputExceptions.length === 0
     ) {
       return commit;
     }

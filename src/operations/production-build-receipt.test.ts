@@ -9,6 +9,7 @@ import {
   readFileSync,
   rmSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -63,7 +64,7 @@ function initializedReceiptRoot(): Readonly<{
   rmSync(resolve(directory, ".next/cache"), { recursive: true });
   writeFileSync(
     resolve(directory, ".gitignore"),
-    ".next/\n.env.production\noutside-receipt.json\n",
+    ".next/\n.env.production\n",
   );
   writeFileSync(resolve(directory, "source.txt"), "source-one\n");
   writeFileSync(resolve(directory, "package.json"), "{}\n");
@@ -159,6 +160,8 @@ describe("production build receipt", () => {
       publicDirectoryDigest: `sha256:${"e".repeat(64)}`,
       publicDirectoryFileCount: 2,
       runtimeCachePolicy: "fresh_ephemeral_next_cache_v1",
+      runtimeConfigurationDigest: `sha256:${"f".repeat(64)}`,
+      runtimeConfigurationFileCount: 4,
     };
     expect(parseProductionBuildReceipt(JSON.stringify(valid))).toEqual(valid);
     expect(() => parseProductionBuildReceipt(JSON.stringify({
@@ -206,9 +209,14 @@ describe("production build receipt", () => {
       .not.toBe(rightIdentity.artifactDigest);
   });
 
-  it("binds receipt creation to the build marker and replaces a receipt symlink without following it", () => {
+  it("binds receipt creation to the build marker and publishes only once without following a symlink", () => {
     const { directory, sourceCommit } = initializedReceiptRoot();
-    const outside = resolve(directory, "outside-receipt.json");
+    const outsideDirectory = mkdtempSync(resolve(
+      tmpdir(),
+      "forge-outside-receipt-",
+    ));
+    temporaryRoots.push(outsideDirectory);
+    const outside = resolve(outsideDirectory, "outside-receipt.json");
     const receiptPath = resolve(
       directory,
       ".next",
@@ -217,6 +225,11 @@ describe("production build receipt", () => {
     writeFileSync(outside, "outside sentinel\n");
     symlinkSync(outside, receiptPath);
 
+    expect(() => writeProductionBuildReceipt(directory)).toThrow();
+    expect(lstatSync(receiptPath).isSymbolicLink()).toBe(true);
+    expect(readFileSync(outside, "utf8")).toBe("outside sentinel\n");
+    unlinkSync(receiptPath);
+
     const receipt = writeProductionBuildReceipt(directory);
     expect(receipt.sourceCommit).toBe(sourceCommit);
     expect(receipt.sourceState).toBe("clean");
@@ -224,12 +237,14 @@ describe("production build receipt", () => {
     expect(readFileSync(outside, "utf8")).toBe("outside sentinel\n");
     expect(assertExactProductionBuild(sourceCommit, directory))
       .toEqual(receipt);
+    expect(() => writeProductionBuildReceipt(directory)).toThrow();
 
     writeFileSync(resolve(directory, "source.txt"), "source-two\n");
     execFileSync("git", ["add", "source.txt"], { cwd: directory });
     execFileSync("git", ["commit", "--quiet", "-m", "source two"], {
       cwd: directory,
     });
+    unlinkSync(receiptPath);
     expect(() => writeProductionBuildReceipt(directory)).toThrow(
       "different source commit",
     );
@@ -256,6 +271,17 @@ describe("production build receipt", () => {
     expect(readBuildSourceCommit(directory)).toBe("unverified");
     rmSync(resolve(directory, ".env.production"));
 
+    writeFileSync(
+      resolve(directory, ".git/info/exclude"),
+      "instrumentation.ts\n",
+    );
+    writeFileSync(
+      resolve(directory, "instrumentation.ts"),
+      "export function register() {}\n",
+    );
+    expect(readBuildSourceCommit(directory)).toBe("unverified");
+    rmSync(resolve(directory, "instrumentation.ts"));
+
     expect(readBuildSourceCommit(directory, {
       ...process.env,
       VERCEL: "1",
@@ -274,6 +300,15 @@ describe("production build receipt", () => {
     );
     expect(lstatSync(resolve(directory, ".next/cache")).isDirectory())
       .toBe(true);
+
+    const missingManifestRoot = root();
+    rmSync(resolve(
+      missingManifestRoot,
+      ".next/required-server-files.json",
+    ));
+    expect(() => clearProductionRuntimeCache(missingManifestRoot)).toThrow(
+      "requires required-server-files.json",
+    );
   });
 
   it("serves verification from an isolated byte snapshot and detects snapshot mutation", () => {
@@ -289,6 +324,15 @@ describe("production build receipt", () => {
         "mutated original artifact",
       );
       expect(() => assertProductionRuntimeSnapshot(snapshot)).not.toThrow();
+
+      const snapshotConfigFile = resolve(snapshot.root, "next.config.ts");
+      const originalSnapshotConfig = readFileSync(snapshotConfigFile);
+      chmodSync(snapshotConfigFile, 0o600);
+      writeFileSync(snapshotConfigFile, "export default { drift: true };\n");
+      expect(() => assertProductionRuntimeSnapshot(snapshot)).toThrow(
+        "no longer matches",
+      );
+      writeFileSync(snapshotConfigFile, originalSnapshotConfig);
 
       const snapshotPublicFile = resolve(
         snapshot.root,

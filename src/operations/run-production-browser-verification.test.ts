@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 
 import {
   appendBoundedServerLog,
+  assertProductionServerIdentity,
   productionBrowserSpec,
   productionServerInvocation,
 } from "../../scripts/ops/run-production-browser-verification";
@@ -50,5 +51,40 @@ describe("production browser server-log buffer", () => {
         "--spec must be a repository-relative Playwright spec under tests/e2e",
       );
     }
+  });
+
+  it("binds both runtime and compiled build identity around browser execution", async () => {
+    const sha = "a".repeat(40);
+    const response = Response.json({
+      release_sha: sha,
+      build_source_sha: sha,
+    }, {
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+        "X-Forge-Release-Sha": sha,
+        "X-Forge-Build-Source-Sha": sha,
+      },
+    });
+    await expect(assertProductionServerIdentity(
+      "http://127.0.0.1:43127",
+      sha,
+      async () => response,
+    )).resolves.toBeUndefined();
+
+    const spoofed = Response.json({
+      release_sha: sha,
+      build_source_sha: "b".repeat(40),
+    }, {
+      headers: {
+        "Cache-Control": "no-store",
+        "X-Forge-Release-Sha": sha,
+        "X-Forge-Build-Source-Sha": "b".repeat(40),
+      },
+    });
+    await expect(assertProductionServerIdentity(
+      "http://127.0.0.1:43127",
+      sha,
+      async () => spoofed,
+    )).rejects.toThrow("did not bind");
   });
 });

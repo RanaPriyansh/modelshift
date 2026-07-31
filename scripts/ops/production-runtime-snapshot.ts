@@ -18,11 +18,13 @@ import { dirname, relative, resolve, sep } from "node:path";
 import { readStableRegularFile } from "./file-tree-identity";
 import {
   PRODUCTION_BUILD_RECEIPT_FILE,
+  PRODUCTION_RUNTIME_CONFIGURATION_FILES,
   assertExactProductionBuild,
   clearProductionRuntimeCache,
   readProductionArtifactIdentity,
   readProductionBuildReceipt,
   readProductionPublicDirectoryIdentity,
+  readProductionRuntimeConfigurationIdentity,
   type ProductionBuildReceipt,
 } from "./production-build-receipt";
 import { readPublicAssetDigest } from "./release-digests";
@@ -144,6 +146,8 @@ export function assertProductionRuntimeSnapshot(
   const receipt = readProductionBuildReceipt(snapshot.root);
   const artifact = readProductionArtifactIdentity(snapshot.root);
   const publicDirectory = readProductionPublicDirectoryIdentity(snapshot.root);
+  const runtimeConfiguration =
+    readProductionRuntimeConfigurationIdentity(snapshot.root);
   const publicAssetDigest = `sha256:${readPublicAssetDigest(snapshot.root)}`;
   if (
     !sameReceiptIdentity(receipt, snapshot.receipt)
@@ -155,6 +159,10 @@ export function assertProductionRuntimeSnapshot(
       !== publicDirectory.publicDirectoryDigest
     || receipt.publicDirectoryFileCount
       !== publicDirectory.publicDirectoryFileCount
+    || receipt.runtimeConfigurationDigest
+      !== runtimeConfiguration.runtimeConfigurationDigest
+    || receipt.runtimeConfigurationFileCount
+      !== runtimeConfiguration.runtimeConfigurationFileCount
   ) {
     throw new Error(
       "Production runtime snapshot no longer matches its verified receipt.",
@@ -183,18 +191,12 @@ export function createProductionRuntimeSnapshot(
       excludeRootFiles: EXCLUDED_NEXT_FILES,
     });
     copyVerifiedTree(resolve(root, "public"), resolve(snapshotRoot, "public"));
-    for (const file of ["package.json", "next.config.ts", "tsconfig.json"]) {
+    for (const file of PRODUCTION_RUNTIME_CONFIGURATION_FILES) {
       writeExclusiveRegularFile(
         resolve(snapshotRoot, file),
         readStableRegularFile(resolve(root, file)),
       );
     }
-    writeExclusiveRegularFile(
-      resolve(snapshotRoot, "scripts/ops/build-source-identity.ts"),
-      readStableRegularFile(
-        resolve(root, "scripts/ops/build-source-identity.ts"),
-      ),
-    );
 
     // Recheck the original after copying to close the verify-to-copy window,
     // then verify the copied bytes independently.
