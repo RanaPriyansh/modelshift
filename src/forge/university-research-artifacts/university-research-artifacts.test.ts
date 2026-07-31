@@ -268,6 +268,7 @@ describe("university research artifact preflight", () => {
       "anchor_navigation",
       "fact_table",
       "choice_list",
+      "next_job",
       "effect_boundary",
       "task_prompt",
       "terminal_note",
@@ -737,6 +738,8 @@ describe("university research artifact preflight", () => {
       const suffix = packIndex === 0 ? " p" : " q";
       pack.scenarios[0].context.termLabel = `${"T".repeat(230)}${suffix}`;
       pack.scenarios[0].context.courseLabel = `${"C".repeat(230)}${suffix}`;
+      pack.scenarios[0].deadline.title = `${"D".repeat(230)}${suffix}`;
+      pack.scenarios[0].path.actionTitle = `${"A".repeat(230)}${suffix}`;
     });
     await refreshPackBindings(input);
 

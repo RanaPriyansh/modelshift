@@ -18,6 +18,10 @@ import {
   scanUniversityResearchReadinessProductionPublicAssets,
 } from "../../src/components/forge/university/university-research-readiness-public-artifact-boundary";
 import {
+  assertNoUniversityResearchSubstitutePublicArtifactLeaks,
+  scanUniversityResearchSubstituteProductionPublicAssets,
+} from "../../src/components/forge/university/university-research-substitute-public-artifact-boundary";
+import {
   assertNoUniversityProtectedStudyPublicArtifactLeaks,
   scanUniversityProtectedStudyProductionPublicAssets,
 } from "../../src/components/forge/university/university-protected-study-public-artifact-boundary";
@@ -80,8 +84,11 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
   const universityRecoveryLeaks = scanUniversityRecoveryProductionPublicAssets(root);
   const universityResearchReadinessLeaks =
     scanUniversityResearchReadinessProductionPublicAssets(root);
+  const universityResearchSubstituteLeaks =
+    scanUniversityResearchSubstituteProductionPublicAssets(root);
   const universityProtectedStudyLeaks = scanUniversityProtectedStudyProductionPublicAssets(root);
-  const universitySemesterLoopLeaks = scanUniversitySemesterLoopProductionPublicAssets(root);
+  const universitySemesterLoopAndResearchCandidateLeaks =
+    scanUniversitySemesterLoopProductionPublicAssets(root);
   const universityTodayLeaks = scanUniversityTodayProductionPublicAssets(root);
   if (leaks.length > 0) {
     throw new Error(`Retained unavailable Argument & Evidence data reached public build assets:\n${leaks.join("\n")}`);
@@ -92,8 +99,13 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
   assertNoUniversityResearchReadinessPublicArtifactLeaks(
     universityResearchReadinessLeaks,
   );
+  assertNoUniversityResearchSubstitutePublicArtifactLeaks(
+    universityResearchSubstituteLeaks,
+  );
   assertNoUniversityProtectedStudyPublicArtifactLeaks(universityProtectedStudyLeaks);
-  assertNoUniversitySemesterLoopPublicArtifactLeaks(universitySemesterLoopLeaks);
+  assertNoUniversitySemesterLoopPublicArtifactLeaks(
+    universitySemesterLoopAndResearchCandidateLeaks,
+  );
   assertNoUniversityTodayPublicArtifactLeaks(universityTodayLeaks);
   clearProductionRuntimeCache(root);
   const publicAssetDigest = readPublicAssetDigest(root);

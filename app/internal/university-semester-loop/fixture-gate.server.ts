@@ -1,19 +1,49 @@
 import "server-only";
 
+import { types as nodeUtilTypes } from "node:util";
+
+import type { UniversityResearchCandidatePackId } from "@/src/forge/university-research-artifacts/candidate-contracts";
+
 const SEMESTER_LOOP_FIXTURE_ENVIRONMENT_KEY =
   "FORGE_UNIVERSITY_SEMESTER_LOOP_FIXTURE";
-const SEMESTER_LOOP_FIXTURE_TOKEN = "forge-university-semester-loop.v1";
+const SEMESTER_LOOP_FIXTURE_TOKENS = Object.freeze({
+  "forge-university-semester-loop.v1": {
+    mode: "legacy" as const,
+    packId: null,
+  },
+  "forge-university-research-candidate.pack-p.v1": {
+    mode: "research_candidate" as const,
+    packId: "pack-p" as const,
+  },
+  "forge-university-research-candidate.pack-q.v1": {
+    mode: "research_candidate" as const,
+    packId: "pack-q" as const,
+  },
+});
 
 export type UniversitySemesterLoopEnvironment = Readonly<
   Record<string, string | undefined>
 >;
 
-export type UniversitySemesterLoopGate = Readonly<{
-  enabled: boolean;
-  status:
-    | "semester-loop-fixture-enabled"
-    | "semester-loop-fixture-unavailable";
-}>;
+export type UniversitySemesterLoopGate =
+  | Readonly<{
+      enabled: true;
+      status: "semester-loop-fixture-enabled";
+      mode: "legacy";
+      packId: null;
+    }>
+  | Readonly<{
+      enabled: true;
+      status: "semester-loop-research-candidate-enabled";
+      mode: "research_candidate";
+      packId: UniversityResearchCandidatePackId;
+    }>
+  | Readonly<{
+      enabled: false;
+      status: "semester-loop-fixture-unavailable";
+      mode: null;
+      packId: null;
+    }>;
 
 /**
  * This exact server-owned switch admits one transient synthetic composition
@@ -23,14 +53,44 @@ export type UniversitySemesterLoopGate = Readonly<{
 export function readUniversitySemesterLoopGate(
   environment: UniversitySemesterLoopEnvironment = process.env,
 ): UniversitySemesterLoopGate {
-  const enabled =
-    environment[SEMESTER_LOOP_FIXTURE_ENVIRONMENT_KEY] ===
-    SEMESTER_LOOP_FIXTURE_TOKEN;
+  const descriptor = (
+    typeof environment === "object"
+    && environment !== null
+    && !nodeUtilTypes.isProxy(environment)
+  )
+    ? Object.getOwnPropertyDescriptor(
+        environment,
+        SEMESTER_LOOP_FIXTURE_ENVIRONMENT_KEY,
+      )
+    : undefined;
+  const value = descriptor && "value" in descriptor
+    ? descriptor.value
+    : undefined;
+  const selection = typeof value === "string"
+    ? SEMESTER_LOOP_FIXTURE_TOKENS[
+        value as keyof typeof SEMESTER_LOOP_FIXTURE_TOKENS
+      ]
+    : undefined;
 
-  return Object.freeze({
-    enabled,
-    status: enabled
-      ? "semester-loop-fixture-enabled"
-      : "semester-loop-fixture-unavailable",
-  });
+  if (!selection) {
+    return Object.freeze({
+      enabled: false,
+      status: "semester-loop-fixture-unavailable",
+      mode: null,
+      packId: null,
+    });
+  }
+  return selection.mode === "legacy"
+    ? Object.freeze({
+        enabled: true,
+        status: "semester-loop-fixture-enabled",
+        mode: "legacy",
+        packId: null,
+      })
+    : Object.freeze({
+        enabled: true,
+        status: "semester-loop-research-candidate-enabled",
+        mode: "research_candidate",
+        packId: selection.packId,
+      });
 }

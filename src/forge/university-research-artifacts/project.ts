@@ -297,7 +297,7 @@ function scenarioSemanticsValid(
       : "fits";
   const navigationExpected =
     scenario.nextJob.primaryControl.effect
-      === "navigate_to_separate_synthetic_view";
+      === "navigate_to_local_synthetic_detail";
   const exactWorldBinding = scenario.world.state !== "binding_changed"
     ? scenario.world.acceptedWorldRef === scenario.world.suppliedWorldRef
     : scenario.world.acceptedWorldRef !== scenario.world.suppliedWorldRef;
@@ -515,6 +515,7 @@ function substituteManifestDensityValid(
         ...scenario.choices.map(
           (choice) => `Choice: ${choice.label}; ${choice.owner}`,
         ),
+        `Current bounded job: ${scenario.nextJob.kind}; ${scenario.nextJob.owner}; ${scenario.nextJob.primaryControl.kind}; ${scenario.nextJob.primaryControl.label ?? "no label"}; ${scenario.nextJob.primaryControl.effect}`,
         ...request.moderatorPacket.exposureTasks,
       ];
       return visibleLines.join("\n").length

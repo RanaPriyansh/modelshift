@@ -1,13 +1,7 @@
 import type { Metadata } from "next";
 
 import { ForgeShell } from "@/src/components/forge/ForgeShell";
-import {
-  UniversitySemesterLoopUnavailable,
-  UniversitySemesterLoopWorkspace,
-} from "@/src/components/forge/university/UniversitySemesterLoopWorkspace";
-
-import { readUniversitySemesterLoopGate } from "./fixture-gate.server";
-import { universitySemesterLoopFixtureScenarios } from "./semester-loop-fixture.server";
+import styles from "@/src/components/forge/university/UniversitySemesterLoopWorkspace.module.css";
 
 export const metadata: Metadata = {
   title: "Internal university semester-loop research | FORGE",
@@ -16,24 +10,32 @@ export const metadata: Metadata = {
 };
 
 export default async function InternalUniversitySemesterLoopPage() {
-  const gate = process.env.NODE_ENV === "development"
-    ? readUniversitySemesterLoopGate()
-    : {
-        enabled: false as const,
-        status: "semester-loop-fixture-unavailable" as const,
-      };
+  const developmentSurface = process.env.NODE_ENV === "development"
+    ? (
+        await import("./semester-loop-development-surface.server")
+      ).UniversitySemesterLoopDevelopmentSurface
+    : null;
 
   return (
     <ForgeShell active="learn" surface="author">
       <main id="forge-main" tabIndex={-1}>
-        {gate.enabled
-          ? (
-              <UniversitySemesterLoopWorkspace
-                scenarios={await universitySemesterLoopFixtureScenarios()}
-              />
-            )
+        {developmentSurface
+          ? await developmentSurface()
           : <UniversitySemesterLoopUnavailable />}
       </main>
     </ForgeShell>
+  );
+}
+
+function UniversitySemesterLoopUnavailable() {
+  return (
+    <section className={`${styles.surface} ${styles.unavailable}`} role="alert">
+      <p className={styles.kicker}>Fixture unavailable</p>
+      <h1>No university semester-loop state is available.</h1>
+      <p>
+        No source, capacity, accepted path, recovery draft, World, action,
+        session, evidence, or external effect was exposed.
+      </p>
+    </section>
   );
 }

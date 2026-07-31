@@ -204,7 +204,7 @@ const scenarioSchema = z.strictObject({
     primaryControl: z.strictObject({
       kind: z.enum(["local_anchor_navigation", "no_control"]),
       label: safeTextSchema.nullable(),
-      effect: z.enum(["navigate_to_separate_synthetic_view", "remain_in_place"]),
+      effect: z.enum(["navigate_to_local_synthetic_detail", "remain_in_place"]),
     }),
   }),
   effects: z.strictObject({
@@ -241,7 +241,7 @@ export const universityResearchScenarioPackSchema = z.strictObject({
   schemaVersion: z.literal(UNIVERSITY_RESEARCH_SCENARIO_PACK_SCHEMA_VERSION),
   packId: z.enum(["pack-p", "pack-q"]),
   artifactRef: identifierSchema,
-  artifactVersion: z.literal("1.0.0"),
+  artifactVersion: z.literal("1.1.0"),
   protocolBinding: protocolBindingSchema,
   syntheticBoundary: syntheticBoundarySchema,
   scenarios: z.array(scenarioSchema).length(
@@ -272,6 +272,12 @@ const substituteNodeSchema = z.discriminatedUnion("kind", [
     nodeRef: identifierSchema,
     heading: safeTextSchema,
     source: z.literal("scenario.choices"),
+  }),
+  z.strictObject({
+    kind: z.literal("next_job"),
+    nodeRef: identifierSchema,
+    heading: safeTextSchema,
+    source: z.literal("scenario.nextJob"),
   }),
   z.strictObject({
     kind: z.literal("effect_boundary"),
@@ -306,14 +312,14 @@ const substituteNodeSchema = z.discriminatedUnion("kind", [
 export const universityResearchNeutralSubstituteSchema = z.strictObject({
   schemaVersion: z.literal(UNIVERSITY_RESEARCH_NEUTRAL_SUBSTITUTE_SCHEMA_VERSION),
   artifactRef: z.literal("matched-substitute.phase-minus-one.v1"),
-  artifactVersion: z.literal("1.0.0"),
+  artifactVersion: z.literal("1.1.0"),
   rendererId: z.literal(UNIVERSITY_RESEARCH_NEUTRAL_RENDERER_ID),
   rendererBindingDigest: digestSchema,
   protocolBinding: protocolBindingSchema,
   delivery: z.literal("static_local_keyboard_packet"),
   surface: z.strictObject({
     title: safeTextSchema,
-    nodes: z.array(substituteNodeSchema).length(7),
+    nodes: z.array(substituteNodeSchema).length(8),
     brandPresence: z.literal("none"),
     candidateStatusNamesAllowed: z.literal(false),
     computedHierarchyAllowed: z.literal(false),
@@ -336,7 +342,7 @@ export const universityResearchNeutralSubstituteSchema = z.strictObject({
     urlInputAllowed: z.literal(false),
   }),
   density: z.strictObject({
-    maximumVisibleCharactersPerScenario: z.literal(1_800),
+    maximumVisibleCharactersPerScenario: z.literal(2_400),
     maximumFactRows: z.literal(8),
     maximumChoices: z.literal(3),
   }),
