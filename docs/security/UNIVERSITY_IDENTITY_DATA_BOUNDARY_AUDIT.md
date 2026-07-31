@@ -150,13 +150,42 @@ also has a fixed timeout and fixed output-token budget.
 reader. It retains its SDK output-token limit and strict structured-output
 validation.
 
+### SEC-UV1-004: Credential attempt buckets had no count limit
+
+**Severity:** Low while cloud identity is disabled
+
+**Status:** Fixed in this candidate
+
+**Location before the fix:**
+`src/lib/forge-auth/abuse-controls.server.ts:17-39` at commit `1d0bdea`.
+
+**Evidence before the fix:** The process-local limiter stored one SHA-256 map
+entry for each normalized email. Expired entries were removed only when the
+same email returned. Unique addresses could therefore increase the map without
+a fixed ceiling.
+
+**Impact:** A future enabled sign-in action could use increasing server memory
+when it receives many unique addresses. Unsalted address hashes also increase
+the value of an in-memory disclosure.
+
+**Fix:** The limiter now has a fixed 10,000-bucket ceiling, rejects new buckets
+at capacity, and prunes expired buckets at the earliest known expiry. It uses a
+random per-process HMAC key and rejects invalid clocks, limits, and identifiers.
+
+**Mitigation:** Cloud identity remains structurally disabled. The limiter is
+still only a process-local secondary control. Provider-side CAPTCHA and durable
+distributed abuse controls remain release gates.
+
+**False-positive notes:** The current public sign-in page contains no
+credential form. This finding concerns a future authorized activation.
+
 ## Verification
 
 The candidate checks passed:
 
-- 173 application test files with 1,517 tests;
+- 173 application test files with 1,519 tests;
 - two evaluator test files with 13 tests;
-- 1,530 tests in total;
+- 1,532 tests in total;
 - ESLint with zero warnings;
 - TypeScript typecheck; and
 - whitespace and patch validation.
