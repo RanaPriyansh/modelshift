@@ -10,6 +10,8 @@
   },
   "scripts": {
     "dev": "next dev",
+    "design:tokens:build": "node scripts/design/build-forge-terrain-tokens.mjs --write",
+    "design:tokens:check": "node scripts/design/build-forge-terrain-tokens.mjs --check",
     "build": "next build && tsx scripts/ops/verify-public-build-boundary.ts",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",

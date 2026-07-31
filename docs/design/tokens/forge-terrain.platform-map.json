@@ -1,0 +1,110 @@
+{
+  "schemaVersion": "1.0",
+  "designTokenFormat": "DTCG 2025.10",
+  "figma": {
+    "primitiveCollection": "FORGE / Primitive",
+    "semanticCollection": "FORGE / Semantic",
+    "modes": [
+      "Light",
+      "Dark"
+    ]
+  },
+  "tokens": {
+    "color/bg/default": {
+      "css": "--forge-bg",
+      "figma": "color/bg/default",
+      "swift": "ForgeTerrainColor.background",
+      "meaning": "Main canvas"
+    },
+    "color/bg/deep": {
+      "css": "--forge-bg-deep",
+      "figma": "color/bg/deep",
+      "swift": "ForgeTerrainColor.backgroundDeep",
+      "meaning": "Deep canvas"
+    },
+    "color/surface/default": {
+      "css": "--forge-surface",
+      "figma": "color/surface/default",
+      "swift": "ForgeTerrainColor.surface",
+      "meaning": "Work surface"
+    },
+    "color/surface/strong": {
+      "css": "--forge-surface-strong",
+      "figma": "color/surface/strong",
+      "swift": "ForgeTerrainColor.surfaceStrong",
+      "meaning": "Emphasis surface"
+    },
+    "color/border/default": {
+      "css": "--forge-line",
+      "figma": "color/border/default",
+      "swift": "ForgeTerrainColor.border",
+      "meaning": "Boundary"
+    },
+    "color/border/strong": {
+      "css": "--forge-line-strong",
+      "figma": "color/border/strong",
+      "swift": "ForgeTerrainColor.borderStrong",
+      "meaning": "Strong boundary"
+    },
+    "color/text/default": {
+      "css": "--forge-ink",
+      "figma": "color/text/default",
+      "swift": "ForgeTerrainColor.text",
+      "meaning": "Main text"
+    },
+    "color/text/muted": {
+      "css": "--forge-muted",
+      "figma": "color/text/muted",
+      "swift": "ForgeTerrainColor.textMuted",
+      "meaning": "Supporting text"
+    },
+    "color/text/dim": {
+      "css": "--forge-dim",
+      "figma": "color/text/dim",
+      "swift": "ForgeTerrainColor.textDim",
+      "meaning": "Secondary metadata"
+    },
+    "color/action/learner": {
+      "css": "--forge-amber",
+      "figma": "color/action/learner",
+      "swift": "ForgeTerrainColor.learnerAction",
+      "meaning": "Learner commitment"
+    },
+    "color/action/learner-strong": {
+      "css": "--forge-amber-deep",
+      "figma": "color/action/learner-strong",
+      "swift": "ForgeTerrainColor.learnerActionStrong",
+      "meaning": "Strong learner state"
+    },
+    "color/contribution/ai": {
+      "css": "--forge-violet",
+      "figma": "color/contribution/ai",
+      "swift": "ForgeTerrainColor.aiContribution",
+      "meaning": "Disclosed AI contribution"
+    },
+    "color/contribution/ai-strong": {
+      "css": "--forge-violet-deep",
+      "figma": "color/contribution/ai-strong",
+      "swift": "ForgeTerrainColor.aiContributionStrong",
+      "meaning": "Strong AI state"
+    },
+    "color/evidence/tested": {
+      "css": "--forge-cyan",
+      "figma": "color/evidence/tested",
+      "swift": "ForgeTerrainColor.testedEvidence",
+      "meaning": "Tested consequence"
+    },
+    "color/evidence/tested-strong": {
+      "css": "--forge-cyan-deep",
+      "figma": "color/evidence/tested-strong",
+      "swift": "ForgeTerrainColor.testedEvidenceStrong",
+      "meaning": "Strong tested state"
+    },
+    "color/focus": {
+      "css": "--forge-focus",
+      "figma": "color/focus",
+      "swift": "ForgeTerrainColor.focus",
+      "meaning": "Keyboard and assistive focus"
+    }
+  }
+}

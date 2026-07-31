@@ -1,0 +1,248 @@
+{
+  "$description": "FORGE Terrain semantic colors for Light appearance.",
+  "$extensions": {
+    "org.forge.version": "1.0.0",
+    "org.forge.collection": "FORGE / Semantic",
+    "org.forge.mode": "Light"
+  },
+  "color": {
+    "bg": {
+      "default": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.95686275,
+            0.96862745,
+            0.94509804
+          ],
+          "alpha": 1,
+          "hex": "#F4F7F1"
+        },
+        "$description": "Main canvas"
+      },
+      "deep": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.93333333,
+            0.95294118,
+            0.92941176
+          ],
+          "alpha": 1,
+          "hex": "#EEF3ED"
+        },
+        "$description": "Deep canvas"
+      }
+    },
+    "surface": {
+      "default": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.98431373,
+            0.99215686,
+            0.97254902
+          ],
+          "alpha": 1,
+          "hex": "#FBFDF8"
+        },
+        "$description": "Work surface"
+      },
+      "strong": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.89411765,
+            0.92156863,
+            0.89411765
+          ],
+          "alpha": 1,
+          "hex": "#E4EBE4"
+        },
+        "$description": "Emphasis surface"
+      }
+    },
+    "border": {
+      "default": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.80392157,
+            0.85098039,
+            0.81568627
+          ],
+          "alpha": 1,
+          "hex": "#CDD9D0"
+        },
+        "$description": "Boundary"
+      },
+      "strong": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.59607843,
+            0.66666667,
+            0.61960784
+          ],
+          "alpha": 1,
+          "hex": "#98AA9E"
+        },
+        "$description": "Strong boundary"
+      }
+    },
+    "text": {
+      "default": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.0627451,
+            0.1254902,
+            0.09803922
+          ],
+          "alpha": 1,
+          "hex": "#102019"
+        },
+        "$description": "Main text"
+      },
+      "muted": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.3372549,
+            0.39215686,
+            0.36470588
+          ],
+          "alpha": 1,
+          "hex": "#56645D"
+        },
+        "$description": "Supporting text"
+      },
+      "dim": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.40784314,
+            0.4627451,
+            0.43137255
+          ],
+          "alpha": 1,
+          "hex": "#68766E"
+        },
+        "$description": "Secondary metadata"
+      }
+    },
+    "action": {
+      "learner": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.94117647,
+            0.39215686,
+            0.23137255
+          ],
+          "alpha": 1,
+          "hex": "#F0643B"
+        },
+        "$description": "Learner commitment"
+      },
+      "learner-strong": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.6627451,
+            0.23529412,
+            0.1254902
+          ],
+          "alpha": 1,
+          "hex": "#A93C20"
+        },
+        "$description": "Strong learner state"
+      }
+    },
+    "contribution": {
+      "ai": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.18431373,
+            0.4,
+            0.84705882
+          ],
+          "alpha": 1,
+          "hex": "#2F66D8"
+        },
+        "$description": "Disclosed AI contribution"
+      },
+      "ai-strong": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.09019608,
+            0.30588235,
+            0.68235294
+          ],
+          "alpha": 1,
+          "hex": "#174EAE"
+        },
+        "$description": "Strong AI state"
+      }
+    },
+    "evidence": {
+      "tested": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.17254902,
+            0.54117647,
+            0.38039216
+          ],
+          "alpha": 1,
+          "hex": "#2C8A61"
+        },
+        "$description": "Tested consequence"
+      },
+      "tested-strong": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.09411765,
+            0.37254902,
+            0.2627451
+          ],
+          "alpha": 1,
+          "hex": "#185F43"
+        },
+        "$description": "Strong tested state"
+      }
+    },
+    "focus": {
+      "$type": "color",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.07843137,
+          0.35686275,
+          0.84313725
+        ],
+        "alpha": 1,
+        "hex": "#145BD7"
+      },
+      "$description": "Keyboard and assistive focus"
+    }
+  }
+}

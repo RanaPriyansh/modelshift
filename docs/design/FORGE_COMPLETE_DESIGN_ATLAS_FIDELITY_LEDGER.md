@@ -107,7 +107,26 @@ No Figma variables, styles, components, or screen frames were created.
 
 Phase 1 requires explicit user approval.
 
-## 6. iOS boundary
+## 6. Token handoff
+
+The portable handoff uses the stable DTCG 2025.10 format.
+
+It includes:
+
+- One Primitive collection file.
+- Light and Dark Semantic collection files.
+- One CSS, Figma, and Swift identifier map.
+- One iOS design handoff.
+
+The generator checks:
+
+- 16 identical Light and Dark semantic token names.
+- Figma-supported token values.
+- Exact Light and Dark color matches in `app/forge-system.css`.
+
+No token file was imported into Figma.
+
+## 7. iOS boundary
 
 The iOS frames use native Apple structure as a design requirement.
 
@@ -124,7 +143,7 @@ No SwiftUI target or native iOS source was created.
 
 The coded phone frames are visual specimens.
 
-## 7. Rendered evidence
+## 8. Rendered evidence
 
 | Evidence | Dimensions | SHA-256 |
 | --- | --- | --- |
@@ -132,12 +151,13 @@ The coded phone frames are visual specimens.
 | `docs/design/evidence/forge-terrain/forge-web-app-atlas.png` | 1440 by 7269 | `9cea12f2f1a28d665580843f3c831650e180e360d7bc0e57a8ea3bd14ed9cf4c` |
 | `docs/design/evidence/forge-terrain/forge-ios-app-atlas.png` | 1440 by 2574 | `06ab393088dc89a3be6c48a3f167c16cd23db416936e95b89dd0b84949ae06cf` |
 | `docs/design/evidence/forge-terrain/forge-product-atlas-320.png` | 320 by 800 | `bd3505f6a253ec74581c39def790efb596e8c710a86546e093531c8f4128ac2e` |
+| `docs/design/evidence/forge-terrain/forge-terrain-forced-colors.png` | 1440 by 1241 | `2d979bfea5ff1f2b4fce8fd6e84b69506233fe9406d70c2e506fb3daa4ebbd51` |
 
 The screenshots embed the existing local landscape asset.
 
 The asset rights remain uncleared for production.
 
-## 8. Browser verification
+## 9. Browser verification
 
 Playwright checked the development atlas at 1440 by 900 CSS pixels.
 
@@ -157,24 +177,34 @@ Observed results:
 - System theme stored `forge.color-theme.v1="system"`.
 - Reduced-motion emulation matched the reduced-motion media query.
 - The rendered page had zero active animations during that check.
-- The corrected development session had zero console errors.
+- The prior corrected development session had zero console errors.
 - The corrected development session had two unused preload warnings.
+- Forced Colors produced a white Canvas, black CanvasText, and black boundaries.
+- Forced Colors kept images at 0.2 opacity behind readable text.
+- Forced Colors kept the skip link visible with a three CSS pixel system outline.
+- Forced Colors had no horizontal overflow at 320 CSS pixels.
+- Forced Colors had zero active animations with Reduce Motion.
 
 The two warnings referenced development error and not-found CSS.
 
+The fresh Forced Colors session also logged the known `/favicon.ico` 404.
+
+It had no application runtime error.
+
 This browser review is not an accessibility conformance claim.
 
-## 9. Verification
+## 10. Verification
 
-### 9.1 Static checks
+### 10.1 Static checks
 
 | Check | Result |
 | --- | --- |
 | `./node_modules/.bin/eslint . --max-warnings=0` | Pass |
 | `./node_modules/.bin/tsc --noEmit` | Pass |
+| `node scripts/design/build-forge-terrain-tokens.mjs --check` | Pass |
 | `git diff --check` | Pass |
 
-### 9.2 Source and evaluation tests
+### 10.2 Source and evaluation tests
 
 Source result:
 
@@ -191,7 +221,7 @@ Combined result:
 - 107 test files passed.
 - 967 tests passed.
 
-### 9.3 Production build
+### 10.3 Production build
 
 Command:
 
@@ -211,7 +241,7 @@ Commit `de531955855bd7949ee973190365ba961b3526b9` moved testable handlers into s
 
 The route behavior and focused contract tests remained unchanged.
 
-### 9.4 Public build boundary
+### 10.4 Public build boundary
 
 Command:
 
@@ -224,14 +254,13 @@ Result:
 - 108 static assets were checked.
 - Public asset digest: `fe1f9b55a69c42c25fbcd6d1e49cc55ab9b6fa303c59667168c5aceed2b97799`.
 
-## 10. Remaining gates
+## 11. Remaining gates
 
 The remaining design gates are:
 
 - Explicit approval for Figma Phase 1.
 - Figma variables, styles, components, and screen frames.
 - Native SwiftUI implementation.
-- Forced Colors browser verification.
 - Representative learner review.
 - Image rights clearance.
 - Production deployment verification.

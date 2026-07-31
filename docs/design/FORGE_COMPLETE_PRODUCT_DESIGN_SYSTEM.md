@@ -472,6 +472,26 @@ Use Simple Design System components only as temporary construction aids.
 
 Final web components must use FORGE variables and names.
 
+### 14.1 Token handoff
+
+The portable token source uses the DTCG 2025.10 format.
+
+Files:
+
+- `docs/design/tokens/forge-terrain.core.tokens.json`
+- `docs/design/tokens/forge-terrain.semantic.light.tokens.json`
+- `docs/design/tokens/forge-terrain.semantic.dark.tokens.json`
+- `docs/design/tokens/forge-terrain.platform-map.json`
+- `docs/design/tokens/forge-terrain.ios.json`
+
+The semantic files contain the same 16 names and types.
+
+The platform map connects each token to CSS, Figma, and Swift identifiers.
+
+The generator verifies every color against `app/forge-system.css`.
+
+Do not import the files into Figma before Phase 1 approval.
+
 ## 15. Acceptance
 
 A surface is ready for design review when:

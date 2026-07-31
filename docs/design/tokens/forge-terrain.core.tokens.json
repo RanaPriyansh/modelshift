@@ -1,0 +1,145 @@
+{
+  "$description": "FORGE Terrain core values. Import this file as one Figma variable mode.",
+  "$extensions": {
+    "org.forge.version": "1.0.0",
+    "org.forge.collection": "FORGE / Primitive"
+  },
+  "space": {
+    "1": {
+      "$value": {
+        "value": 4,
+        "unit": "px"
+      }
+    },
+    "2": {
+      "$value": {
+        "value": 8,
+        "unit": "px"
+      }
+    },
+    "3": {
+      "$value": {
+        "value": 12,
+        "unit": "px"
+      }
+    },
+    "4": {
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      }
+    },
+    "5": {
+      "$value": {
+        "value": 24,
+        "unit": "px"
+      }
+    },
+    "6": {
+      "$value": {
+        "value": 32,
+        "unit": "px"
+      }
+    },
+    "7": {
+      "$value": {
+        "value": 48,
+        "unit": "px"
+      }
+    },
+    "8": {
+      "$value": {
+        "value": 64,
+        "unit": "px"
+      }
+    },
+    "$type": "dimension"
+  },
+  "radius": {
+    "$type": "dimension",
+    "sm": {
+      "$value": {
+        "value": 6,
+        "unit": "px"
+      }
+    },
+    "md": {
+      "$value": {
+        "value": 12,
+        "unit": "px"
+      }
+    }
+  },
+  "target": {
+    "$type": "dimension",
+    "minimum": {
+      "$value": {
+        "value": 44,
+        "unit": "px"
+      }
+    }
+  },
+  "layout": {
+    "$type": "dimension",
+    "mobileMinimum": {
+      "$value": {
+        "value": 320,
+        "unit": "px"
+      }
+    },
+    "contentMaximum": {
+      "$value": {
+        "value": 1280,
+        "unit": "px"
+      }
+    },
+    "iosMargin": {
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      }
+    },
+    "iosSection": {
+      "$value": {
+        "value": 24,
+        "unit": "px"
+      }
+    }
+  },
+  "motion": {
+    "$type": "duration",
+    "control": {
+      "$value": {
+        "value": 0.18,
+        "unit": "s"
+      }
+    },
+    "surface": {
+      "$value": {
+        "value": 0.24,
+        "unit": "s"
+      }
+    },
+    "scene": {
+      "$value": {
+        "value": 0.45,
+        "unit": "s"
+      }
+    }
+  },
+  "typeface": {
+    "$type": "fontFamily",
+    "interface": {
+      "$value": "Geist"
+    },
+    "mono": {
+      "$value": "Geist Mono"
+    },
+    "reflection": {
+      "$value": "Libre Baskerville"
+    },
+    "ios": {
+      "$value": "SF Pro"
+    }
+  }
+}

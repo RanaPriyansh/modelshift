@@ -196,3 +196,18 @@ Phase 1 will not create final page designs.
 
 Explicit user approval is required before Phase 1 starts.
 
+## 10. Import-ready token handoff
+
+The local handoff now includes DTCG 2025.10 import files.
+
+The files are in `docs/design/tokens`.
+
+The Semantic collection has identical Light and Dark token names and types.
+
+The Primitive collection contains Figma-supported dimensions, durations, and font families.
+
+The generator verifies 16 semantic colors against the current CSS implementation.
+
+These files prepare Phase 1.
+
+They were not imported into Figma.

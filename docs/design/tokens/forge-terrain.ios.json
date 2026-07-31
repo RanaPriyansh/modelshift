@@ -1,0 +1,158 @@
+{
+  "schemaVersion": "1.0",
+  "status": "design-handoff",
+  "implementationStatus": "no-native-target",
+  "source": "forge-terrain.semantic.light.tokens.json and forge-terrain.semantic.dark.tokens.json",
+  "typography": {
+    "interface": "SF Pro through native text styles",
+    "technicalIdentifiers": "SF Mono",
+    "dynamicTypeRequired": true
+  },
+  "layout": {
+    "compactMarginPoints": 16,
+    "sectionSpacingPoints": 24,
+    "minimumTargetPoints": 44,
+    "nativeSafeAreasRequired": true
+  },
+  "behavior": {
+    "navigation": "NavigationStack",
+    "tabBar": "native",
+    "reduceMotionRequired": true,
+    "voiceOverOrderRequired": true,
+    "localDraftRecoveryRequired": true
+  },
+  "appearances": {
+    "light": {
+      "background": {
+        "hex": "#F4F7F1",
+        "role": "Main canvas"
+      },
+      "backgroundDeep": {
+        "hex": "#EEF3ED",
+        "role": "Deep canvas"
+      },
+      "surface": {
+        "hex": "#FBFDF8",
+        "role": "Work surface"
+      },
+      "surfaceStrong": {
+        "hex": "#E4EBE4",
+        "role": "Emphasis surface"
+      },
+      "border": {
+        "hex": "#CDD9D0",
+        "role": "Boundary"
+      },
+      "borderStrong": {
+        "hex": "#98AA9E",
+        "role": "Strong boundary"
+      },
+      "text": {
+        "hex": "#102019",
+        "role": "Main text"
+      },
+      "textMuted": {
+        "hex": "#56645D",
+        "role": "Supporting text"
+      },
+      "textDim": {
+        "hex": "#68766E",
+        "role": "Secondary metadata"
+      },
+      "learnerAction": {
+        "hex": "#F0643B",
+        "role": "Learner commitment"
+      },
+      "learnerActionStrong": {
+        "hex": "#A93C20",
+        "role": "Strong learner state"
+      },
+      "aiContribution": {
+        "hex": "#2F66D8",
+        "role": "Disclosed AI contribution"
+      },
+      "aiContributionStrong": {
+        "hex": "#174EAE",
+        "role": "Strong AI state"
+      },
+      "testedEvidence": {
+        "hex": "#2C8A61",
+        "role": "Tested consequence"
+      },
+      "testedEvidenceStrong": {
+        "hex": "#185F43",
+        "role": "Strong tested state"
+      },
+      "focus": {
+        "hex": "#145BD7",
+        "role": "Keyboard and assistive focus"
+      }
+    },
+    "dark": {
+      "background": {
+        "hex": "#071722",
+        "role": "Main canvas"
+      },
+      "backgroundDeep": {
+        "hex": "#06131D",
+        "role": "Deep canvas"
+      },
+      "surface": {
+        "hex": "#0D202B",
+        "role": "Work surface"
+      },
+      "surfaceStrong": {
+        "hex": "#142A35",
+        "role": "Emphasis surface"
+      },
+      "border": {
+        "hex": "#29414B",
+        "role": "Boundary"
+      },
+      "borderStrong": {
+        "hex": "#44606A",
+        "role": "Strong boundary"
+      },
+      "text": {
+        "hex": "#F3F7F0",
+        "role": "Main text"
+      },
+      "textMuted": {
+        "hex": "#A8B9B1",
+        "role": "Supporting text"
+      },
+      "textDim": {
+        "hex": "#82958B",
+        "role": "Secondary metadata"
+      },
+      "learnerAction": {
+        "hex": "#FF8059",
+        "role": "Learner commitment"
+      },
+      "learnerActionStrong": {
+        "hex": "#FF9B7B",
+        "role": "Strong learner state"
+      },
+      "aiContribution": {
+        "hex": "#85AAFF",
+        "role": "Disclosed AI contribution"
+      },
+      "aiContributionStrong": {
+        "hex": "#6F96EE",
+        "role": "Strong AI state"
+      },
+      "testedEvidence": {
+        "hex": "#79C995",
+        "role": "Tested consequence"
+      },
+      "testedEvidenceStrong": {
+        "hex": "#67BD84",
+        "role": "Strong tested state"
+      },
+      "focus": {
+        "hex": "#8FB0FF",
+        "role": "Keyboard and assistive focus"
+      }
+    }
+  }
+}
