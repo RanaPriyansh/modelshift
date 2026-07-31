@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { types as nodeUtilTypes } from "node:util";
 
 import {
   BOUNDED_JSON_SNAPSHOT_LIMITS,
@@ -66,6 +67,28 @@ describe("bounded JSON snapshot", () => {
     expect(setterCalls).toBe(0);
   });
 
+  it("rejects non-enumerable object fields and array elements", () => {
+    const hiddenObject: Record<string, unknown> = {};
+    Object.defineProperty(hiddenObject, "schemaVersion", {
+      configurable: true,
+      enumerable: false,
+      value: "hidden",
+      writable: true,
+    });
+    const hiddenArray = ["visible"];
+    Object.defineProperty(hiddenArray, "0", {
+      configurable: true,
+      enumerable: false,
+      value: "hidden",
+      writable: true,
+    });
+
+    expect(Object.keys(hiddenObject)).toEqual([]);
+    expect(Object.keys(hiddenArray)).toEqual([]);
+    expect(() => boundedJsonSnapshot(hiddenObject)).toThrow(TypeError);
+    expect(() => boundedJsonSnapshot(hiddenArray)).toThrow(TypeError);
+  });
+
   it("never uses ordinary proxy property reads and contains hostile proxy failures", () => {
     let getCalls = 0;
     const descriptorOnlyProxy = new Proxy({ value: "safe snapshot" }, {
@@ -86,6 +109,27 @@ describe("bounded JSON snapshot", () => {
     });
     expect(() => boundedJsonSnapshot(hostileProxy)).toThrow("hostile proxy");
     expect(ownKeyCalls).toBe(1);
+  });
+
+  it("lets a trusted runtime reject proxies before any reflection trap", () => {
+    let ownKeyCalls = 0;
+    let prototypeCalls = 0;
+    const proxy = new Proxy({ value: "must not be inspected" }, {
+      ownKeys() {
+        ownKeyCalls += 1;
+        return ["value"];
+      },
+      getPrototypeOf() {
+        prototypeCalls += 1;
+        return Object.prototype;
+      },
+    });
+
+    expect(() => boundedJsonSnapshot(proxy, {
+      rejectObject: nodeUtilTypes.isProxy,
+    })).toThrow(TypeError);
+    expect(ownKeyCalls).toBe(0);
+    expect(prototypeCalls).toBe(0);
   });
 
   it("rejects symbol keys, sparse arrays, and arrays with undeclared properties", () => {

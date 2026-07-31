@@ -7,6 +7,7 @@ describe("university recovery route gate", () => {
     expect(readUniversityRecoveryGate({})).toEqual({
       enabled: false,
       status: "recovery-fixture-unavailable",
+      mode: null,
     });
     expect(readUniversityRecoveryGate({
       FORGE_UNIVERSITY_RECOVERY_FIXTURE: "true",
@@ -22,7 +23,20 @@ describe("university recovery route gate", () => {
     })).toEqual({
       enabled: true,
       status: "recovery-fixture-enabled",
+      mode: "legacy",
     });
+    expect(readUniversityRecoveryGate({
+      FORGE_UNIVERSITY_RECOVERY_FIXTURE:
+        "forge-university-recovery-what-if.v1",
+    })).toEqual({
+      enabled: true,
+      status: "recovery-what-if-enabled",
+      mode: "capacity_what_if",
+    });
+    expect(readUniversityRecoveryGate({
+      FORGE_UNIVERSITY_RECOVERY_FIXTURE:
+        "forge-university-recovery-what-if.v1 ",
+    }).enabled).toBe(false);
   });
 
   it("fails closed for inherited values, accessors, and proxies without ordinary reads", () => {

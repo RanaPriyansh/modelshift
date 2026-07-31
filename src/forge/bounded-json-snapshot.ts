@@ -14,6 +14,12 @@ export interface BoundedJsonSnapshotOptions {
    * ingestion keeps the ordinary-object-only default.
    */
   readonly allowNullPrototypeObjects?: boolean;
+  /**
+   * Optional trusted-runtime classifier checked before reflective traversal.
+   * Server-only callers use this with Node's intrinsic Proxy detector so a
+   * caller Proxy is refused without invoking any of its traps.
+   */
+  readonly rejectObject?: (value: object) => boolean;
 }
 
 /**
@@ -54,6 +60,9 @@ export function boundedJsonSnapshot(
     if (typeof candidate !== "object") {
       throw new TypeError("Input must be finite JSON data.");
     }
+    if (options.rejectObject?.(candidate) === true) {
+      throw new TypeError("Input object is not allowed.");
+    }
 
     if (Array.isArray(candidate)) {
       if (Object.getPrototypeOf(candidate) !== Array.prototype) {
@@ -83,7 +92,13 @@ export function boundedJsonSnapshot(
       const output: unknown[] = [];
       for (let index = 0; index < length; index += 1) {
         const descriptor = Object.getOwnPropertyDescriptor(candidate, String(index));
-        if (!descriptor || !("value" in descriptor) || descriptor.get || descriptor.set) {
+        if (
+          !descriptor
+          || !descriptor.enumerable
+          || !("value" in descriptor)
+          || descriptor.get
+          || descriptor.set
+        ) {
           throw new TypeError("Input arrays must be dense data arrays.");
         }
         output.push(visit(descriptor.value, depth + 1));
@@ -108,7 +123,13 @@ export function boundedJsonSnapshot(
     const output: Record<string, unknown> = {};
     for (const key of keys as string[]) {
       const descriptor = Object.getOwnPropertyDescriptor(candidate, key);
-      if (!descriptor || !("value" in descriptor) || descriptor.get || descriptor.set) {
+      if (
+        !descriptor
+        || !descriptor.enumerable
+        || !("value" in descriptor)
+        || descriptor.get
+        || descriptor.set
+      ) {
         throw new TypeError("Input accessors are not allowed.");
       }
       Object.defineProperty(output, key, {

@@ -4,6 +4,11 @@ import { relative, resolve } from "node:path";
 /** Server-only recovery sample identities and course content forbidden in public assets. */
 export const UNIVERSITY_RECOVERY_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS = Object.freeze([
   "forge-university-recovery.v1",
+  "forge-university-recovery-what-if.v1",
+  "university-recovery-what-if-request.v1",
+  "university-recovery-what-if-projection.v1",
+  "university-recovery-what-if-fixture.v1",
+  "development_only_transient_recovery_capacity_what_if",
   "recovery-item.sample-cs102",
   "recovery-item.sample-math110",
   "course-source-revision.sample-recovery-cs102-syllabus",
@@ -16,17 +21,38 @@ export const UNIVERSITY_RECOVERY_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS = Object.free
   "2026-09-14T09:00:00.000Z",
 ] as const);
 
+export const UNIVERSITY_RECOVERY_WHAT_IF_SURFACE_LEXICAL_SET = Object.freeze([
+  "Recovery capacity what-if",
+  "What changes if the time you can use changes?",
+  "Held fixed in every what-if",
+  "No option is selected for you.",
+] as const);
+
+const UNIVERSITY_RECOVERY_WHAT_IF_SURFACE_LEXICAL_SET_MARKER =
+  "university recovery what-if server-only surface lexical set";
+
 export type UniversityRecoveryPublicAsset = Readonly<{ path: string; contents: string }>;
 export type UniversityRecoveryPublicArtifactLeak = Readonly<{ path: string; marker: string }>;
 
 export function findUniversityRecoveryPublicArtifactLeaks(
   assets: readonly UniversityRecoveryPublicAsset[],
 ): readonly UniversityRecoveryPublicArtifactLeak[] {
-  return Object.freeze(assets.flatMap((asset) => (
-    UNIVERSITY_RECOVERY_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS.flatMap((marker) => (
+  return Object.freeze(assets.flatMap((asset) => {
+    const markerLeaks =
+      UNIVERSITY_RECOVERY_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS.flatMap((marker) => (
       asset.contents.includes(marker) ? [Object.freeze({ path: asset.path, marker })] : []
-    ))
-  )));
+      ));
+    const surfaceLeak = UNIVERSITY_RECOVERY_WHAT_IF_SURFACE_LEXICAL_SET.every(
+      (copy) => asset.contents.includes(copy),
+    )
+      ? [Object.freeze({
+          path: asset.path,
+          marker:
+            UNIVERSITY_RECOVERY_WHAT_IF_SURFACE_LEXICAL_SET_MARKER,
+        })]
+      : [];
+    return [...markerLeaks, ...surfaceLeak];
+  }));
 }
 
 export function assertNoUniversityRecoveryPublicArtifactLeaks(

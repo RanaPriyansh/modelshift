@@ -22,7 +22,7 @@
     "test:eval-runner": "vitest run --config evals/vitest.config.ts",
     "test:e2e": "playwright test",
     "test:e2e:research-readiness": "FORGE_UNIVERSITY_RESEARCH_READINESS_FIXTURE=forge-university-research-readiness.v1 playwright test tests/e2e/university-research-readiness.spec.ts",
-    "test:e2e:prod": "PLAYWRIGHT_BASE_URL=${PLAYWRIGHT_BASE_URL:?Set PLAYWRIGHT_BASE_URL} FORGE_EXPECTED_RELEASE_SHA=${FORGE_EXPECTED_RELEASE_SHA:?Set FORGE_EXPECTED_RELEASE_SHA} playwright test tests/e2e/production.spec.ts tests/e2e/university-research-readiness-production.spec.ts tests/e2e/university-semester-loop-production.spec.ts",
+    "test:e2e:prod": "PLAYWRIGHT_BASE_URL=${PLAYWRIGHT_BASE_URL:?Set PLAYWRIGHT_BASE_URL} FORGE_EXPECTED_RELEASE_SHA=${FORGE_EXPECTED_RELEASE_SHA:?Set FORGE_EXPECTED_RELEASE_SHA} playwright test tests/e2e/production.spec.ts tests/e2e/university-research-readiness-production.spec.ts tests/e2e/university-semester-loop-production.spec.ts tests/e2e/university-recovery-production.spec.ts",
     "test:e2e:research-readiness:prod": "tsx scripts/ops/run-production-browser-verification.ts --spec tests/e2e/university-research-readiness-production.spec.ts"
   },
   "dependencies": {

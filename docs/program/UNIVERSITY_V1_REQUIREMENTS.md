@@ -161,6 +161,28 @@ This reversible slice tests recovery as a distinct student job. It does not crea
 | `UV1-RECOVERY-013` | Test comprehension under fixed uncertainty states before changing the learner home. | `UNIVERSITY_RECOVERY_UX_EXPERIMENT_LOOP.md` fixes reset-fits, choice-needed, human-help, and source-review states plus desktop, 320 CSS px, keyboard, reduced-motion, forced-colors, console, and production-boundary checks. |
 | `UV1-RECOVERY-014` | Preserve the claim ceiling. | UI and handoff say synthetic, learner fixture, copied deadline, and not established; no demand, live student, institutional truth, recovery efficacy, accessibility conformance, or production claim. |
 
+### Internal transient recovery capacity what-if
+
+**Decision note:** test one changed learner-fixture available-time declaration
+against the same exact reviewed Recovery request. Keep the protected buffer,
+coursework, sources, deadlines, effort ranges, classifications, learning value,
+dependencies, and human route locked. This is a preview, not a general
+replanner or durable edit.
+
+| ID | Requirement | Acceptance evidence |
+| --- | --- | --- |
+| `UV1-RECOVERY-WHATIF-001` | Test one atomic job: preview how changed available time affects the synthetic Recovery draft without changing coursework or creating a plan. | ADR-020, a fixed research question, exact synthetic base request, bounded task script, and explicit preview-only/not-saved copy exist. |
+| `UV1-RECOVERY-WHATIF-002` | Recompute from one exact raw `UniversityRecoveryRequestV1`; never accept a supplied projection, lane, status, capacity result, or command. | Selecting the baseline value produces the same canonical Recovery projection and digest as direct projection; strict parsing rejects supplied result and effect fields. |
+| `UV1-RECOVERY-WHATIF-003` | Permit only `recoveryWindow.availableMinutes` to vary. | Structural binding and tests keep scope, `asOf`, labels, window endpoints, buffer, courses, sources, candidates, decisions, deadlines, effort, dispositions, learning value, dependencies, routes, and IDs unchanged. |
+| `UV1-RECOVERY-WHATIF-004` | Preserve source uncertainty as the first blocking boundary. | Source review produces no capacity comparison, lanes, choice controls, or what-if result. |
+| `UV1-RECOVERY-WHATIF-005` | Show exact available-minus-buffer arithmetic and preserve the full authored effort range. | Fixed cases prove 240−30=210 and full fit, 130−30=100 and low-only fit, and 100−30=70 and insufficient fit; invalid bounds fail closed. |
+| `UV1-RECOVERY-WHATIF-006` | Delegate every consequence to the canonical Recovery projector without recommending a value. | No best, optimized, suggested, rank, risk, priority, ability, mastery, utilization, or score field exists. |
+| `UV1-RECOVERY-WHATIF-007` | Compare one selected preview transparently without apply, accept, save, or history state. | Output binds baseline, selected value, locked fields, and result; reset clears browser selection; UI has no apply, save, accept-plan, undo-history, calendar, reminder, or sync control. |
+| `UV1-RECOVERY-WHATIF-008` | Keep learner and authority claims at fixture-only level. | Identity is synthetic; capacity is learner-fixture only; tenancy, rights, source authenticity, and institutional completeness are unestablished; recommendation, scheduling, persistence, message, event, session, evidence, and external-effect authority remain false. |
+| `UV1-RECOVERY-WHATIF-009` | Keep the compositor bounded, accessor-safe, proxy-rejecting, deterministic, immutable, and side-effect free. | Hostile getter/proxy, hidden property, exotic prototype, cycle, depth/node, undeclared-key, unsafe-number, determinism, deep-freeze, fetch, storage, clipboard, history, and navigation checks pass; operational event and external-effect authority is false. |
+| `UV1-RECOVERY-WHATIF-010` | Keep raw requests and projection logic server-internal; expose only closed synthetic presentation outcomes to the browser. | Server precomputes three neutral value-labelled options; client receives no raw request, source identity, internal status/digest, arbitrary input, projector, or command; no option is selected initially. |
+| `UV1-RECOVERY-WHATIF-011` | Keep the new baseline internal, production-unavailable, and separately evaluated. | Exact what-if token is development-only; legacy token remains unchanged; production is unavailable; marker scan, desktop, 320 CSS px, keyboard/focus, reduced-motion, forced-colors, overflow, console, and separate adult-observation gates are recorded without upgraded claims. |
+
 ### Internal protected-study research slice
 
 This reversible slice tests whether the enforced learning contract is legible

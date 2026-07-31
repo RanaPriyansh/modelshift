@@ -151,7 +151,7 @@ function recoveryItem(
   };
 }
 
-function request(options: {
+export function universityRecoveryFixtureRequest(options: {
   availableMinutes?: number;
   bufferMinutes?: number;
   csDueAt?: string;
@@ -220,15 +220,17 @@ export async function universityRecoveryFixtureScenarios(): Promise<
   readonly UniversityRecoveryFixtureScenario[]
 > {
   const projections = await Promise.all([
-    projectUniversityRecovery(request()),
-    projectUniversityRecovery(request({
+    projectUniversityRecovery(universityRecoveryFixtureRequest()),
+    projectUniversityRecovery(universityRecoveryFixtureRequest({
       availableMinutes: 130,
       includeNegotiable: true,
     })),
-    projectUniversityRecovery(request({
+    projectUniversityRecovery(universityRecoveryFixtureRequest({
       csDueAt: "2026-09-13T12:30:00+05:30",
     })),
-    projectUniversityRecovery(request({ conflict: true })),
+    projectUniversityRecovery(universityRecoveryFixtureRequest({
+      conflict: true,
+    })),
   ]);
   return Object.freeze([
     Object.freeze({ id: "reset-fits", label: "Reset fits", projection: projections[0]! }),
