@@ -302,6 +302,32 @@ Recovery axis and one direct canonical semester-loop result per course.
 | `UV1-OVERVIEW-012` | Keep the route internal, removable, production-unavailable, and absent from public assets. | Development requires exact token `FORGE_UNIVERSITY_SEMESTER_OVERVIEW_FIXTURE=forge-university-semester-overview.v1`; production imports/renders only the unavailable shell; schema, token, fixture, scenario, and complete-surface markers are absent from `.next/static`. |
 | `UV1-OVERVIEW-013` | Evaluate scan accuracy, term/course separation, order calibration, learner control, access, and harm without upgrading the claim. | `UNIVERSITY_SEMESTER_OVERVIEW_UX_EXPERIMENT.md` fixes four states, separate evidence dimensions, desktop, exact 320 CSS px, keyboard, focus, reduced motion, forced colors, overflow, console, production-boundary, and participant stop gates; `UV1-GATE-001..003` remain open. |
 
+### Internal transient semester desk
+
+**Decision note:** test the complete declared product shape—one course deep,
+all current courses shallow—inside one transient learner-directed inspection
+surface. Course inspection is reversible browser-memory view state, not course
+selection, priority, activation, recommendation, continuity, or an event. This
+is the final planned synthetic product-shape slice before direct approved
+research.
+
+| ID | Requirement | Acceptance evidence |
+| --- | --- | --- |
+| `UV1-DESK-001` | Compose the desk only from the exact canonical semester-overview and per-course semester-loop results for one synthetic term. | The server-authored fixture derives the complete course set, term boundary, per-course Today/loop labels, journey, current job, evidence boundary, and announcement from canonical projections; no caller- or browser-supplied projection, status, selected course, priority, or command is accepted. |
+| `UV1-DESK-002` | Preserve one exact synthetic term and exact course identities across shallow and deep views. | Owner, tenant, term, `asOf`, labels, time zone, source binding, course set, and child status/digest equality remain exact; missing, extra, duplicate, swapped, or merely similar course context fails before a usable fixture. |
+| `UV1-DESK-003` | Begin with no inspected course and no implicit default. | On first render and refresh, mixed term may be the scenario baseline but no course radio is checked, no course has selected/current styling, no deep detail or clear control exists, and course-ID order is explicitly not priority. |
+| `UV1-DESK-004` | Make course inspection an explicit learner-owned view choice only. | Each equally weighted native course radio is labelled as inspection; checking one reveals only its server-authored bounded detail and states that the learner chose the view, while assignment, priority, recommendation, activation, session, navigation, and action authority remain false. |
+| `UV1-DESK-005` | Keep term Recovery, course Today/semester-loop status, journey stage, current job, and evidence boundary visibly separate. | Opening one course never flattens these axes into readiness, score, progress, feasibility, risk, mastery, or a global next action; the term boundary and every course row remain visible. |
+| `UV1-DESK-006` | Preserve course-ID order and equal inspection affordance without hidden ranking. | No ready, first, teal, difficult, urgent, or otherwise available row is highlighted or preselected; no cross-course capacity sum, workload total, recommendation, priority label, progress value, or global CTA exists. |
+| `UV1-DESK-007` | Make inspection reversible and scenario-local. | Clear removes only the in-memory detail and restores focus to the previously chosen course radio; every scenario change clears inspection; revisiting a scenario and refresh restore no course choice. |
+| `UV1-DESK-008` | Keep the browser fixture presentation-only and bounded. | The client receives four closed scenarios with bounded labels, term summaries, course options, journey/current-job/evidence copy, and announcements only; it receives no raw Today/Recovery request, World, source record, path identity, receipt, child projection/digest, projector, or command. |
+| `UV1-DESK-009` | Preserve native keyboard, focus, announcement, reflow, and forced-color semantics. | Scenario and course radio groups use native arrow-key behavior; controls and clear retain visible focus and at least 44 CSS pixel targets; exactly one polite live region announces bounded changes; desktop and exact 320 CSS px have no horizontal overflow; reduced motion removes nonessential transitions and forced colors retain native radio state. |
+| `UV1-DESK-010` | Keep every consequential authority and effect false. | Inspection changes no local/session storage, cookie, URL, history, clipboard, database, session, path, evidence, event, message, schedule, provider, model, retrieval, or external system; network observation after initial navigation records no interaction-triggered request. |
+| `UV1-DESK-011` | Keep selection persistence and legal event ownership explicitly unresolved. | No course-selection event or storage adapter is added; ADR-023 states that future ephemeral-versus-durable inspection semantics require a separate identity, ownership, conflict, export/deletion, replay, and release decision. |
+| `UV1-DESK-012` | Keep the route internal, removable, production-unavailable, and absent from public assets. | Development requires exact token `FORGE_UNIVERSITY_SEMESTER_DESK_FIXTURE=forge-university-semester-desk.v1`; production imports/renders only the unavailable shell even when the token is present; token, fixture schema identity, and complete surface lexical set are absent from `.next/static`. |
+| `UV1-DESK-013` | Evaluate scan-to-inspection comprehension without upgrading the claim. | `UNIVERSITY_SEMESTER_DESK_UX_EXPERIMENT.md` fixes initial no-selection, four scenarios, separate scan/selection/order/trust/control/access/harm evidence, desktop, exact 320 CSS px, keyboard, focus, one live region, reduced motion, forced colors, overflow, console, storage, production-denial, and participant stop gates; `UV1-GATE-001..003` remain open. |
+| `UV1-DESK-014` | End speculative synthetic product-shape construction after this slice. | The next program action is the separately approved Phase -1 direct observation/matched-substitution protocol, one preregistered repair or narrowing grounded in that evidence, or stopping/rejecting the wedge. Absent participant/data authority means blocked research or a program decision, not another internal feature; any exception requires a principal amendment naming an unanswered research question and why existing artifacts cannot answer it. |
+
 ## First slice acceptance
 
 The slice is ready for review only when:
@@ -314,15 +340,20 @@ The slice is ready for review only when:
 
 ## Next implementation decision
 
-After direct workflow evidence, choose one:
+Semester Desk is the final planned synthetic product-shape slice. Its
+implementation evidence does not close `UV1-GATE-001..003` and does not
+authorize a public route, persistence, live coursework, provider operation, or
+another speculative feature.
 
-- evaluate the implemented transient source-review-to-loop sandbox, then
-  accept, narrow, repair, or reject the transition;
-- evaluate the transient manual/ICS subset in the internal review workflow,
-  then choose whether to add a local file-selection surface;
-- evaluate recovery and one-next-action as separate jobs and as one loop;
-- narrow to guarded learning and protected checking;
-- repair the combined loop;
-- stop the university wedge.
+The next program action must be one of:
 
-Durable storage, live course data, UI route replacement, and generative tutoring are not the next automatic step.
+- run the separately approved Phase -1 direct observation and matched
+  substitution protocol, then accept, narrow, repair, or reject;
+- repair or narrow one preregistered defect observed through that authorized
+  research while preserving the same claim ceiling; or
+- stop or reject the university wedge.
+
+If participant or data authority is unavailable, remain blocked or make a
+program decision. Do not convert the absence of direct evidence into another
+synthetic product surface. Durable storage, live course data, UI route
+replacement, and generative tutoring are not the next automatic step.

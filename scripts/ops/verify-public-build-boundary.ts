@@ -34,6 +34,10 @@ import {
   scanUniversitySemesterLoopProductionPublicAssets,
 } from "../../src/components/forge/university/university-semester-loop-public-artifact-boundary";
 import {
+  assertNoUniversitySemesterDeskPublicArtifactLeaks,
+  scanUniversitySemesterDeskProductionPublicAssets,
+} from "../../src/components/forge/university/university-semester-desk-public-artifact-boundary";
+import {
   assertNoUniversitySemesterOverviewPublicArtifactLeaks,
   scanUniversitySemesterOverviewProductionPublicAssets,
 } from "../../src/components/forge/university/university-semester-overview-public-artifact-boundary";
@@ -99,6 +103,8 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
     scanUniversityPostAttemptRepairProductionPublicAssets(root);
   const universitySemesterLoopAndResearchCandidateLeaks =
     scanUniversitySemesterLoopProductionPublicAssets(root);
+  const universitySemesterDeskLeaks =
+    scanUniversitySemesterDeskProductionPublicAssets(root);
   const universitySemesterOverviewLeaks =
     scanUniversitySemesterOverviewProductionPublicAssets(root);
   const universityTodayLeaks = scanUniversityTodayProductionPublicAssets(root);
@@ -120,6 +126,9 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
   );
   assertNoUniversitySemesterLoopPublicArtifactLeaks(
     universitySemesterLoopAndResearchCandidateLeaks,
+  );
+  assertNoUniversitySemesterDeskPublicArtifactLeaks(
+    universitySemesterDeskLeaks,
   );
   assertNoUniversitySemesterOverviewPublicArtifactLeaks(
     universitySemesterOverviewLeaks,
