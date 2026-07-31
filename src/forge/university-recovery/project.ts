@@ -6,6 +6,7 @@ import {
   type CourseSourceReconciliationResult,
   type CourseSourceScopeV1,
 } from "../course-sources";
+import { boundedJsonSnapshot } from "../bounded-json-snapshot";
 import { deepFreeze } from "../deep-freeze";
 import { canonicalJson, sha256Digest } from "../events";
 import {
@@ -20,9 +21,6 @@ import {
   type UniversityRecoveryRequestV1,
   universityRecoveryRequestSchema,
 } from "./contracts";
-
-const MAX_JSON_DEPTH = 12;
-const MAX_JSON_NODES = 4_096;
 
 const AUTHORITY = deepFreeze({
   projectionClass: "fixture_only_recovery_draft",
@@ -43,63 +41,6 @@ const AUTHORITY = deepFreeze({
   messageSendAllowed: false,
   externalSideEffectsAllowed: false,
 } satisfies UniversityRecoveryAuthority);
-
-class UnsafeJsonInput extends Error {}
-
-function copyPlainJson(value: unknown): unknown {
-  const budget = { nodes: 0 };
-
-  function visit(current: unknown, depth: number): unknown {
-    budget.nodes += 1;
-    if (budget.nodes > MAX_JSON_NODES || depth > MAX_JSON_DEPTH) throw new UnsafeJsonInput();
-    if (
-      current === null
-      || typeof current === "string"
-      || typeof current === "boolean"
-    ) return current;
-    if (typeof current === "number") {
-      if (!Number.isFinite(current)) throw new UnsafeJsonInput();
-      return current;
-    }
-    if (typeof current !== "object") throw new UnsafeJsonInput();
-
-    if (Array.isArray(current)) {
-      const names = Object.getOwnPropertyNames(current);
-      if (
-        names.some((name) => name !== "length" && !/^(0|[1-9][0-9]*)$/.test(name))
-        || names.length !== current.length + 1
-      ) throw new UnsafeJsonInput();
-      return names
-        .filter((name) => name !== "length")
-        .sort((left, right) => Number(left) - Number(right))
-        .map((name) => {
-          const descriptor = Object.getOwnPropertyDescriptor(current, name);
-          if (!descriptor || !("value" in descriptor)) throw new UnsafeJsonInput();
-          return visit(descriptor.value, depth + 1);
-        });
-    }
-
-    const prototype = Object.getPrototypeOf(current);
-    if (prototype !== Object.prototype && prototype !== null) throw new UnsafeJsonInput();
-    const copy: Record<string, unknown> = Object.create(null);
-    for (const name of Object.getOwnPropertyNames(current).sort()) {
-      const descriptor = Object.getOwnPropertyDescriptor(current, name);
-      if (
-        !descriptor
-        || !descriptor.enumerable
-        || !("value" in descriptor)
-        || name === "__proto__"
-        || name === "prototype"
-        || name === "constructor"
-      ) throw new UnsafeJsonInput();
-      copy[name] = visit(descriptor.value, depth + 1);
-    }
-    if (Object.getOwnPropertySymbols(current).length > 0) throw new UnsafeJsonInput();
-    return copy;
-  }
-
-  return visit(value, 0);
-}
 
 function orderedIssues(issues: readonly UniversityRecoveryIssue[]): readonly UniversityRecoveryIssue[] {
   return [...issues].sort((left, right) => {
@@ -287,7 +228,12 @@ export async function projectUniversityRecovery(
   try {
     let copied: unknown;
     try {
-      copied = copyPlainJson(value);
+      copied = boundedJsonSnapshot(value, {
+        // Trusted projectors may already have detached the request into
+        // null-prototype dictionaries. Snapshot again before parsing while
+        // preserving that internal composition boundary.
+        allowNullPrototypeObjects: true,
+      });
     } catch {
       return invalidProjection([{
         code: "schema.invalid",

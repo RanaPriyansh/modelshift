@@ -502,4 +502,45 @@ describe("projectUniversityRecovery", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });
+
+  it.each([
+    {
+      label: "an oversized array",
+      value: {
+        ...request(),
+        unexpected: Array.from({ length: 513 }, (_, index) => index),
+      },
+    },
+    {
+      label: "an oversized object",
+      value: {
+        ...request(),
+        unexpected: Object.fromEntries(
+          Array.from({ length: 257 }, (_, index) => [`key${index}`, index]),
+        ),
+      },
+    },
+    {
+      label: "an over-deep graph",
+      value: {
+        ...request(),
+        unexpected: Array.from({ length: 14 }).reduce<Record<string, unknown>>(
+          (nested) => ({ nested }),
+          {},
+        ),
+      },
+    },
+  ])("fails closed before schema traversal for $label", async ({ value }) => {
+    const projection = await projectUniversityRecovery(value);
+
+    expect(projection).toMatchObject({
+      status: "invalid",
+      projectionDigest: null,
+      issues: [{
+        code: "schema.invalid",
+        path: "",
+        message: "The recovery request must be bounded accessor-free plain JSON.",
+      }],
+    });
+  });
 });

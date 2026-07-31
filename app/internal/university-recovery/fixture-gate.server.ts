@@ -1,5 +1,7 @@
 import "server-only";
 
+import { types as nodeUtilTypes } from "node:util";
+
 const RECOVERY_FIXTURE_ENVIRONMENT_KEY = "FORGE_UNIVERSITY_RECOVERY_FIXTURE";
 const RECOVERY_FIXTURE_TOKEN = "forge-university-recovery.v1";
 
@@ -18,7 +20,19 @@ export type UniversityRecoveryGate = Readonly<{
 export function readUniversityRecoveryGate(
   environment: UniversityRecoveryEnvironment = process.env,
 ): UniversityRecoveryGate {
-  const enabled = environment[RECOVERY_FIXTURE_ENVIRONMENT_KEY] === RECOVERY_FIXTURE_TOKEN;
+  const descriptor = (
+    typeof environment === "object"
+    && environment !== null
+    && !nodeUtilTypes.isProxy(environment)
+  )
+    ? Object.getOwnPropertyDescriptor(
+        environment,
+        RECOVERY_FIXTURE_ENVIRONMENT_KEY,
+      )
+    : undefined;
+  const enabled = descriptor !== undefined
+    && "value" in descriptor
+    && descriptor.value === RECOVERY_FIXTURE_TOKEN;
   return Object.freeze({
     enabled,
     status: enabled ? "recovery-fixture-enabled" : "recovery-fixture-unavailable",
