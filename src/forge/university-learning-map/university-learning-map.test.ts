@@ -1,0 +1,187 @@
+import { describe, expect, it, vi } from "vitest";
+
+import {
+  projectUniversityLearningMap,
+  type UniversityLearningMapRequestV1,
+} from ".";
+
+function request(): UniversityLearningMapRequestV1 {
+  return {
+    schemaVersion: "university-learning-map-request.v1",
+    course: {
+      courseRef: "course.local-01",
+      ownership: "student_owned",
+      sourceAuthority: "learner_declared_unverified",
+    },
+    outcomes: [{
+      outcomeRef: "outcome.reason-01",
+      declaration: "learner_declared_unverified",
+    }],
+    concepts: [{
+      conceptRef: "concept.foundation-01",
+      outcomeRefs: ["outcome.reason-01"],
+      prerequisiteConceptRefs: [],
+      prerequisiteKnowledge: "declared",
+    }],
+    evidence: [
+      {
+        evidenceRef: "evidence.attempt-01",
+        kind: "attempt_receipt",
+        authority: "bounded_reference_only",
+        contentCaptured: false,
+      },
+      {
+        evidenceRef: "evidence.help-01",
+        kind: "source_reference",
+        authority: "bounded_reference_only",
+        contentCaptured: false,
+      },
+    ],
+    attempts: [{
+      attemptRef: "attempt.local-01",
+      conceptRefs: ["concept.foundation-01"],
+      attemptedOn: "2026-08-01",
+      disposition: "completed",
+      evidenceRefs: ["evidence.attempt-01"],
+      helpUsed: [{
+        helpRef: "help.local-01",
+        kind: "ai",
+        provenanceEvidenceRef: "evidence.help-01",
+        effect: "unknown",
+      }],
+    }],
+    delayedReturns: [{
+      returnRef: "return.local-01",
+      sourceAttemptRef: "attempt.local-01",
+      conceptRefs: ["concept.foundation-01"],
+      dueOn: "2026-08-08",
+      completion: "scheduled",
+    }],
+    unknowns: [],
+  };
+}
+
+describe("university learning map", () => {
+  it("projects student-owned continuity without upgrading learner authority", () => {
+    const projection = projectUniversityLearningMap(request());
+    expect(projection.status).toBe("ready_for_inspection");
+    expect(projection.map?.attempts[0]?.helpUsed[0]).toMatchObject({
+      provenanceEvidenceRef: "evidence.help-01",
+      effect: "unknown",
+    });
+    expect(projection.map?.delayedReturns[0]?.dueOn).toBe("2026-08-08");
+    expect(projection.authority).toEqual({
+      projectionClass: "student_owned_inspection_only",
+      masteryEstablished: false,
+      abilityScored: false,
+      diagnosisAllowed: false,
+      recommendationAllowed: false,
+      answerGenerationAllowed: false,
+      persistenceAllowed: false,
+      networkAllowed: false,
+      eventEmissionAllowed: false,
+      personalDataAllowed: false,
+    });
+    expect(Object.isFrozen(projection)).toBe(true);
+    expect(Object.isFrozen(projection.map?.attempts)).toBe(true);
+  });
+
+  it("keeps explicit unknowns and structural gaps visible for review", () => {
+    const value = request();
+    value.concepts[0]!.prerequisiteKnowledge = "unknown";
+    value.attempts[0]!.disposition = "unknown";
+    value.delayedReturns[0]!.completion = "unknown";
+    value.unknowns.push({
+      unknownRef: "unknown.prerequisite-01",
+      scopeRef: "concept.foundation-01",
+      kind: "prerequisite_unknown",
+      state: "explicit",
+    });
+    const projection = projectUniversityLearningMap(value);
+    expect(projection.status).toBe("review_required");
+    expect(projection.review?.explicitUnknownCount).toBe(1);
+    expect(projection.issues.map((entry) => entry.code)).toContain("unknowns.explicit");
+  });
+
+  it("requires review for cycles, missing evidence, due-date inversion, and unmapped outcomes", () => {
+    const value = request();
+    value.outcomes.push({
+      outcomeRef: "outcome.unmapped-02",
+      declaration: "learner_declared_unverified",
+    });
+    value.concepts[0]!.prerequisiteConceptRefs = ["concept.loop-02"];
+    value.concepts.push({
+      conceptRef: "concept.loop-02",
+      outcomeRefs: ["outcome.reason-01"],
+      prerequisiteConceptRefs: ["concept.foundation-01"],
+      prerequisiteKnowledge: "declared",
+    });
+    value.attempts[0]!.evidenceRefs = [];
+    value.delayedReturns[0]!.dueOn = "2026-07-31";
+    const projection = projectUniversityLearningMap(value);
+    expect(projection.status).toBe("review_required");
+    expect(projection.issues.map((entry) => entry.code)).toEqual([
+      "attempts.evidence_missing",
+      "delayed_returns.order_invalid",
+      "outcomes.unmapped",
+      "prerequisites.cycle",
+    ]);
+  });
+
+  it("fails closed for dangling references, duplicate IDs, PII, prose, and authority fields", () => {
+    const dangling = request();
+    dangling.attempts[0]!.conceptRefs = ["concept.missing-99"];
+    const duplicate = request();
+    duplicate.evidence.push({ ...duplicate.evidence[0]! });
+    const cases: unknown[] = [
+      dangling,
+      duplicate,
+      { ...request(), studentName: "Person" },
+      { ...request(), answer: "content" },
+      { ...request(), recommendation: "next concept" },
+      { ...request(), course: { ...request().course, title: "Private course" } },
+    ];
+    expect(cases.map(projectUniversityLearningMap).map((entry) => entry.status)).toEqual([
+      "invalid",
+      "invalid",
+      "invalid",
+      "invalid",
+      "invalid",
+      "invalid",
+    ]);
+  });
+
+  it("never invokes accessors and rejects proxies, symbols, sparse arrays, cycles, and exotic objects", () => {
+    const getter = vi.fn(() => request());
+    const accessor = Object.defineProperty({}, "schemaVersion", {
+      enumerable: true,
+      get: getter,
+    });
+    const symbol = request() as unknown as Record<PropertyKey, unknown>;
+    symbol[Symbol("hidden")] = true;
+    const sparse = request();
+    sparse.outcomes = new Array(2) as UniversityLearningMapRequestV1["outcomes"];
+    const cyclic = request() as unknown as Record<string, unknown>;
+    cyclic.self = cyclic;
+    const proxied = new Proxy(request(), {});
+    const exotic = new Date();
+    const results = [accessor, symbol, sparse, cyclic, proxied, exotic]
+      .map(projectUniversityLearningMap);
+    expect(results.every((entry) => entry.status === "invalid")).toBe(true);
+    expect(getter).not.toHaveBeenCalled();
+  });
+
+  it("is deterministic, detached, deeply frozen, and exposes only the closed statuses", () => {
+    const firstInput = request();
+    firstInput.outcomes.reverse();
+    const first = projectUniversityLearningMap(firstInput);
+    const second = projectUniversityLearningMap(request());
+    expect(first).toEqual(second);
+    firstInput.attempts[0]!.disposition = "blocked";
+    expect(first.map?.attempts[0]?.disposition).toBe("completed");
+    expect(["invalid", "review_required", "ready_for_inspection"]).toContain(first.status);
+    expect(JSON.stringify(first)).not.toMatch(
+      /studentName|email|courseTitle|generatedAnswer|abilityScore":/,
+    );
+  });
+});
