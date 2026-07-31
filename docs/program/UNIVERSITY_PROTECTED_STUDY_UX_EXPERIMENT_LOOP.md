@@ -23,8 +23,9 @@ The test harness always contains:
 - one synthetic adult university course;
 - one existing accepted reviewed path action;
 - one exact released source-corroboration World package;
-- no account, network, provider, model call, database, browser storage, or
-  session start;
+- no account, automatic network request, provider, model call, database,
+  browser storage, or session start; explicit preview or review navigation is
+  the only permitted network effect;
 - four fixed states: ready brief, source blocked, World changed, World paused;
 - the same 320 CSS pixel, keyboard, reduced-motion, forced-colors, and console
   checks.
@@ -92,7 +93,8 @@ Automation may confirm only implementation behavior:
 - reduced-motion and forced-colors adaptations are present;
 - no console error occurs in the tested browser path;
 - production exposes only the unavailable shell;
-- server-only fixture markers are absent from public static assets.
+- server-only fixture markers and the complete enabled surface are absent from
+  public and server build artifacts.
 
 Automation does not establish participant comprehension or accessibility
 conformance.

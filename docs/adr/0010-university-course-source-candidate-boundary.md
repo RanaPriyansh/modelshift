@@ -87,7 +87,8 @@ Rejected. The first contract needs only a digest, bounded derived fact, and exac
 ## Acceptance conditions
 
 - requirements `UV1-SRC-001..013` are represented in code and focused tests;
-- no production route, migration, provider, connector, auth, or deployment change;
+- no production-enabled route, migration, provider, connector, auth, or
+  deployment change;
 - malformed and semantically mixed-scope records fail closed;
 - learner confirmation cannot alter fixed authority ceilings;
 - policy candidates cannot relax restricted assessment;

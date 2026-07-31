@@ -1,37 +1,64 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  UNIVERSITY_PROTECTED_STUDY_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS,
-  assertNoUniversityProtectedStudyPublicArtifactLeaks,
-  findUniversityProtectedStudyPublicArtifactLeaks,
+  UNIVERSITY_PROTECTED_STUDY_PRODUCTION_ARTIFACT_FORBIDDEN_MARKERS,
+  UNIVERSITY_PROTECTED_STUDY_SURFACE_LEXICAL_SET,
+  assertNoUniversityProtectedStudyProductionArtifactLeaks,
+  findUniversityProtectedStudyProductionArtifactLeaks,
 } from "./university-protected-study-public-artifact-boundary";
 
-describe("university protected-study public artifact boundary", () => {
-  it("rejects every server-only sample marker in a public asset", () => {
+describe("university protected-study production artifact boundary", () => {
+  it("rejects every server-only sample marker", () => {
     for (
       const marker of
-      UNIVERSITY_PROTECTED_STUDY_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS
+      UNIVERSITY_PROTECTED_STUDY_PRODUCTION_ARTIFACT_FORBIDDEN_MARKERS
     ) {
-      expect(findUniversityProtectedStudyPublicArtifactLeaks([{
-        path: "static/chunks/university-protected-study.js",
+      expect(findUniversityProtectedStudyProductionArtifactLeaks([{
+        path: ".next/server/chunks/university-protected-study.js",
         contents: marker,
       }])).toEqual([{
-        path: "static/chunks/university-protected-study.js",
+        path: ".next/server/chunks/university-protected-study.js",
         marker,
       }]);
     }
-    expect(findUniversityProtectedStudyPublicArtifactLeaks([{
-      path: "static/chunks/university-protected-study.js",
+  });
+
+  it("rejects the complete enabled surface across production artifacts", () => {
+    const artifacts = UNIVERSITY_PROTECTED_STUDY_SURFACE_LEXICAL_SET.map(
+      (contents, index) => ({
+        path: `.next/${index % 2 === 0
+          ? "static"
+          : "server"}/protected-${index}.js`,
+        contents,
+      }),
+    );
+    expect(findUniversityProtectedStudyProductionArtifactLeaks(artifacts))
+      .toContainEqual({
+        path: "<production-artifacts>",
+        marker: "University protected-study server-only surface lexical set",
+      });
+  });
+
+  it("allows incomplete lexical sets and the unavailable shell", () => {
+    expect(findUniversityProtectedStudyProductionArtifactLeaks([{
+      path: ".next/server/app/internal/university-protected-study/page.js",
+      contents: [
+        ...UNIVERSITY_PROTECTED_STUDY_SURFACE_LEXICAL_SET.slice(0, -1),
+        "No protected-study research state is available.",
+      ].join("\n"),
+    }])).toEqual([]);
+    expect(findUniversityProtectedStudyProductionArtifactLeaks([{
+      path: ".next/static/chunks/university-protected-study.js",
       contents: "generic unavailable route shell",
     }])).toEqual([]);
   });
 
   it("fails the build boundary when a sample marker is found", () => {
-    expect(() => assertNoUniversityProtectedStudyPublicArtifactLeaks([{
-      path: ".next/static/chunks/university-protected-study.js",
+    expect(() => assertNoUniversityProtectedStudyProductionArtifactLeaks([{
+      path: ".next/server/chunks/university-protected-study.js",
       marker: "forge-university-protected-study.v1",
     }])).toThrow(
-      "University protected-study sample data reached public build assets",
+      "University protected-study sample data reached production build artifacts",
     );
   });
 });

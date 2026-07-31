@@ -23,7 +23,10 @@ Add a removable `src/forge/university-today/**` composition boundary and a devel
 6. When the declared window is below the low effort bound, the result is `capacity_conflict`; when it is between the bounds, the result is `learner_choice_required`. The projector does not compress the task or pretend it fits.
 7. Every usable result is deterministic, deeply immutable, and digest-bound. Invalid or cross-goal/scope/binding input fails closed.
 8. The projector has no model, tool, connector, network, browser-storage, database, event, session-start, path-activation, or external side effect.
-9. The internal route is unavailable in production and requires an exact server-owned development fixture token. Its sample identities and content are forbidden in production public assets.
+9. The internal route is unavailable in production and requires an exact
+   server-owned development fixture token. Production imports only the
+   unavailable shell. Sample identities, content, and the complete enabled
+   surface are forbidden in public and server build artifacts.
 10. The existing public `/app` remains unchanged until direct workflow evidence passes the predeclared product gates.
 
 ## Architecture summary
@@ -41,7 +44,12 @@ The connected-source branch contributes only bounded context and uncertainty. Th
 
 ## State and memory
 
-There is no projector memory. Every state is supplied in one bounded request and returned in one immutable projection. The internal UI may switch among server-created sample projections in browser memory for observation, but it cannot write storage, emit events, start a study session, or call a network API.
+There is no projector memory. Every state is supplied in one bounded request
+and returned in one immutable projection. The internal UI may switch among
+server-created sample projections in browser memory for observation. It cannot
+write storage, emit events, start a study session, or make an automatic network
+request. User-initiated navigation through the visible internal links is the
+only permitted network effect.
 
 ## Context budget
 
@@ -67,7 +75,7 @@ There is no projector memory. Every state is supplied in one bounded request and
 
 - contract tests for ready, source-review, capacity-conflict, tight-window, complete, blocked, malformed, cross-goal, cross-scope, effort mismatch, determinism, immutability, hostile input, and no side effects;
 - component tests for all primary states, semantic headings, accessible selection, no storage/network, and precise authority language;
-- route-gate and production-public-artifact tests;
+- route-gate and production public-and-server-artifact tests;
 - full unit/evaluator, lint, typecheck, and production build;
 - rendered development evidence at desktop and 320 CSS px plus keyboard, reduced-motion, forced-colors, and console checks;
 - direct student workflow observation remains required before any public route or normative product decision.

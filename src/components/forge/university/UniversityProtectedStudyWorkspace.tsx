@@ -6,6 +6,7 @@ import { useState } from "react";
 import type { UniversityProtectedStudyFixtureScenario } from "@/app/internal/university-protected-study/protected-study-fixture.server";
 import type { UniversityProtectedStudyProjectionV1 } from "@/src/forge/university-protected-study";
 
+import { UniversityProtectedStudyUnavailable } from "./UniversityProtectedStudyUnavailable";
 import styles from "./UniversityProtectedStudyWorkspace.module.css";
 
 function readable(value: string): string {
@@ -67,7 +68,7 @@ export function UniversityProtectedStudyWorkspace({
   >(scenarios[0]?.id ?? "ready");
   const selected =
     scenarios.find((scenario) => scenario.id === selectedId) ?? scenarios[0];
-  if (!selected) return <UniversityProtectedStudyWorkspaceUnavailable />;
+  if (!selected) return <UniversityProtectedStudyUnavailable />;
 
   const projection = selected.projection;
   const copy = presentation(projection);
@@ -132,7 +133,9 @@ export function UniversityProtectedStudyWorkspace({
         <p className={styles.objective}>{copy.body}</p>
         {projection.status === "ready" && projection.world ? (
           <div className={styles.actionControl}>
-            <Link href={projection.world.route}>Preview exact reviewed World</Link>
+            <Link href={projection.world.route} prefetch={false}>
+              Preview exact reviewed World
+            </Link>
             <p>
               Preview only. This fixture does not create a learner-owned session,
               transfer course state, or record completion.
@@ -140,7 +143,12 @@ export function UniversityProtectedStudyWorkspace({
           </div>
         ) : projection.status === "today_not_ready" ? (
           <div className={styles.actionControl}>
-            <Link href="/internal/university-source-review">Review source copies</Link>
+            <Link
+              href="/internal/university-source-review"
+              prefetch={false}
+            >
+              Review source copies
+            </Link>
             <p>No protected activity is exposed while Today is not ready.</p>
           </div>
         ) : (
@@ -305,15 +313,5 @@ export function UniversityProtectedStudyWorkspace({
         </dl>
       </footer>
     </article>
-  );
-}
-
-export function UniversityProtectedStudyWorkspaceUnavailable() {
-  return (
-    <section className={`${styles.surface} ${styles.unavailable}`} role="alert">
-      <p className={styles.kicker}>Fixture unavailable</p>
-      <h1>No protected-study research state is available.</h1>
-      <p>No World was exposed, session was started, or evidence was claimed.</p>
-    </section>
   );
 }

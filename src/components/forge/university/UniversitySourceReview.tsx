@@ -216,7 +216,7 @@ export function UniversitySourceReview({
       <div className={styles.boundary} role="note">
         <strong>Local reviewed sample</strong>
         <span>No durable save</span>
-        <span>No network request</span>
+        <span>No automatic network request</span>
         <span>No recommendation</span>
       </div>
 

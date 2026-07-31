@@ -72,6 +72,12 @@ The ready state may link to the exact reviewed public World route. The link is
 explicitly a preview. It carries no fixture course state, starts no
 learner-owned session, and records no course completion.
 
+The route shell and visible preview or review links disable automatic
+prefetch. User-initiated navigation is the only permitted network effect.
+Production imports only the unavailable shell. The production build scans
+public and server artifacts for fixture markers and the complete enabled
+surface lexical set.
+
 ## Authority ceiling
 
 The output is a `fixture_only_protected_study_brief`.

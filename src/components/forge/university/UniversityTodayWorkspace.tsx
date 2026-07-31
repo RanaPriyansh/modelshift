@@ -113,7 +113,7 @@ export function UniversityTodayWorkspace({
       <div className={styles.boundary} role="note">
         <strong>Synthetic adult fixture</strong>
         <span>No save</span>
-        <span>No network</span>
+        <span>No automatic fetch</span>
         <span>No session start</span>
         <span>No source-based recommendation</span>
       </div>
@@ -144,17 +144,32 @@ export function UniversityTodayWorkspace({
 
           {projection.status === "learner_choice_required" || projection.status === "capacity_conflict" ? (
             <div className={styles.actionControl}>
-              <Link href="/internal/university-recovery">Open recovery draft</Link>
+              <Link
+                href="/internal/university-recovery"
+                prefetch={false}
+              >
+                Open recovery draft
+              </Link>
               <p>This opens a separate synthetic fixture. No capacity, work item, deadline, or decision is transferred or saved.</p>
             </div>
           ) : projection.action ? (
             <div className={styles.actionControl}>
-              <Link href="/internal/university-protected-study">Inspect protected study brief</Link>
+              <Link
+                href="/internal/university-protected-study"
+                prefetch={false}
+              >
+                Inspect protected study brief
+              </Link>
               <p>This opens a separate synthetic integrity brief. No action, course state, or session is transferred or saved.</p>
             </div>
           ) : projection.status === "source_review_required" ? (
             <div className={styles.actionControl}>
-              <Link href="/internal/university-source-review">Review source copies</Link>
+              <Link
+                href="/internal/university-source-review"
+                prefetch={false}
+              >
+                Review source copies
+              </Link>
               <p>The review sample keeps conflicting facts blocked and prepares a question for a human.</p>
             </div>
           ) : (

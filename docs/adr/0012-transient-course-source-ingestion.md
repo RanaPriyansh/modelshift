@@ -110,7 +110,8 @@ Focused evidence covers:
 - no network or declared side-effect authority;
 - source-review and University Today regression integration.
 
-Full repository lint, typecheck, unit/evaluator, production build, and public-asset scan remain required before the packet is reviewable.
+Full repository lint, typecheck, unit/evaluator, production build, and public
+and server artifact scans remain required before the packet is reviewable.
 
 ## Rejected alternatives
 

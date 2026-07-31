@@ -6,8 +6,8 @@ import {
   scanAdultPilotProductionPublicAssets,
 } from "../../src/components/forge/pilot/adult-pilot-public-artifact-boundary";
 import {
-  assertNoUniversitySourceReviewPublicArtifactLeaks,
-  scanUniversitySourceReviewProductionPublicAssets,
+  assertNoUniversitySourceReviewProductionArtifactLeaks,
+  scanUniversitySourceReviewProductionArtifacts,
 } from "../../src/components/forge/university/university-source-review-public-artifact-boundary";
 import {
   assertNoUniversityRecoveryPublicArtifactLeaks,
@@ -22,8 +22,8 @@ import {
   scanUniversityResearchSubstituteProductionPublicAssets,
 } from "../../src/components/forge/university/university-research-substitute-public-artifact-boundary";
 import {
-  assertNoUniversityProtectedStudyPublicArtifactLeaks,
-  scanUniversityProtectedStudyProductionPublicAssets,
+  assertNoUniversityProtectedStudyProductionArtifactLeaks,
+  scanUniversityProtectedStudyProductionArtifacts,
 } from "../../src/components/forge/university/university-protected-study-public-artifact-boundary";
 import {
   assertNoUniversityPostAttemptRepairPublicArtifactLeaks,
@@ -42,8 +42,8 @@ import {
   scanUniversitySemesterOverviewProductionPublicAssets,
 } from "../../src/components/forge/university/university-semester-overview-public-artifact-boundary";
 import {
-  assertNoUniversityTodayPublicArtifactLeaks,
-  scanUniversityTodayProductionPublicAssets,
+  assertNoUniversityTodayProductionArtifactLeaks,
+  scanUniversityTodayProductionArtifacts,
 } from "../../src/components/forge/university/university-today-public-artifact-boundary";
 import {
   assertNoUniversityFoundationPublicArtifactLeaks,
@@ -96,13 +96,15 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
     }
   }
   const adultPilotLeaks = scanAdultPilotProductionPublicAssets(root);
-  const universitySourceReviewLeaks = scanUniversitySourceReviewProductionPublicAssets(root);
+  const universitySourceReviewLeaks =
+    scanUniversitySourceReviewProductionArtifacts(root);
   const universityRecoveryLeaks = scanUniversityRecoveryProductionPublicAssets(root);
   const universityResearchReadinessLeaks =
     scanUniversityResearchReadinessProductionPublicAssets(root);
   const universityResearchSubstituteLeaks =
     scanUniversityResearchSubstituteProductionPublicAssets(root);
-  const universityProtectedStudyLeaks = scanUniversityProtectedStudyProductionPublicAssets(root);
+  const universityProtectedStudyLeaks =
+    scanUniversityProtectedStudyProductionArtifacts(root);
   const universityPostAttemptRepairLeaks =
     scanUniversityPostAttemptRepairProductionPublicAssets(root);
   const universitySemesterLoopAndResearchCandidateLeaks =
@@ -111,14 +113,16 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
     scanUniversitySemesterDeskProductionPublicAssets(root);
   const universitySemesterOverviewLeaks =
     scanUniversitySemesterOverviewProductionPublicAssets(root);
-  const universityTodayLeaks = scanUniversityTodayProductionPublicAssets(root);
+  const universityTodayLeaks = scanUniversityTodayProductionArtifacts(root);
   const universityFoundationLeaks =
     scanUniversityFoundationProductionArtifacts(root);
   if (leaks.length > 0) {
     throw new Error(`Retained unavailable Argument & Evidence data reached public build assets:\n${leaks.join("\n")}`);
   }
   assertNoAdultPilotPublicArtifactLeaks(adultPilotLeaks);
-  assertNoUniversitySourceReviewPublicArtifactLeaks(universitySourceReviewLeaks);
+  assertNoUniversitySourceReviewProductionArtifactLeaks(
+    universitySourceReviewLeaks,
+  );
   assertNoUniversityRecoveryPublicArtifactLeaks(universityRecoveryLeaks);
   assertNoUniversityResearchReadinessPublicArtifactLeaks(
     universityResearchReadinessLeaks,
@@ -126,7 +130,9 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
   assertNoUniversityResearchSubstitutePublicArtifactLeaks(
     universityResearchSubstituteLeaks,
   );
-  assertNoUniversityProtectedStudyPublicArtifactLeaks(universityProtectedStudyLeaks);
+  assertNoUniversityProtectedStudyProductionArtifactLeaks(
+    universityProtectedStudyLeaks,
+  );
   assertNoUniversityPostAttemptRepairPublicArtifactLeaks(
     universityPostAttemptRepairLeaks,
   );
@@ -139,7 +145,7 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
   assertNoUniversitySemesterOverviewPublicArtifactLeaks(
     universitySemesterOverviewLeaks,
   );
-  assertNoUniversityTodayPublicArtifactLeaks(universityTodayLeaks);
+  assertNoUniversityTodayProductionArtifactLeaks(universityTodayLeaks);
   assertNoUniversityFoundationPublicArtifactLeaks(universityFoundationLeaks);
   clearProductionRuntimeCache(root);
   const publicAssetDigest = readPublicAssetDigest(root);

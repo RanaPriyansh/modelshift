@@ -37,7 +37,7 @@ Every experiment is checked at:
 - reduced motion;
 - forced colors;
 - production route without the development token;
-- production public-asset boundary.
+- production public-and-server-artifact boundary.
 
 The projector, fixture facts, action path, authority ceiling, and test questions stay fixed during a UI experiment. Changing one of those creates a new baseline, not a comparable iteration.
 

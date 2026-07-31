@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 
 import { ForgeShell } from "@/src/components/forge/ForgeShell";
-import { UniversityTodayWorkspace } from "@/src/components/forge/university/UniversityTodayWorkspace";
 import { UniversityTodayWorkspaceUnavailable } from "@/src/components/forge/university/UniversityTodayWorkspaceUnavailable";
-
-import { readUniversityTodayGate } from "./fixture-gate.server";
-import { universityTodayFixtureScenarios } from "./today-fixture.server";
 
 export const metadata: Metadata = {
   title: "Internal university Today research · FORGE",
@@ -13,15 +9,21 @@ export const metadata: Metadata = {
 };
 
 export default async function InternalUniversityTodayPage() {
-  const gate = process.env.NODE_ENV === "development"
-    ? readUniversityTodayGate()
-    : { enabled: false as const, status: "today-fixture-unavailable" as const };
+  const developmentSurface = process.env.NODE_ENV === "development"
+    ? (
+        await import("./development-surface.server")
+      ).UniversityTodayDevelopmentSurface
+    : null;
 
   return (
-    <ForgeShell active="learn" surface="author">
+    <ForgeShell
+      active="learn"
+      navigationPrefetch={false}
+      surface="author"
+    >
       <main id="forge-main" tabIndex={-1}>
-        {gate.enabled
-          ? <UniversityTodayWorkspace scenarios={await universityTodayFixtureScenarios()} />
+        {developmentSurface
+          ? await developmentSurface()
           : <UniversityTodayWorkspaceUnavailable />}
       </main>
     </ForgeShell>
