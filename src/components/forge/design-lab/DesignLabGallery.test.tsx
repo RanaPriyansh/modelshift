@@ -44,6 +44,10 @@ describe("DesignLabGallery", () => {
       "href",
       "#field-guide-ios",
     );
+    expect(screen.getByRole("link", { name: "Complete product atlas" })).toHaveAttribute(
+      "href",
+      "#forge-terrain-foundations",
+    );
   });
 
   it("renders descriptive visual evidence and the theme choice", () => {
@@ -60,5 +64,38 @@ describe("DesignLabGallery", () => {
       screen.getByRole("region", { name: "Evidence Atelier display-only design preview" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/does not change learning logic/i)).toBeInTheDocument();
+  });
+
+  it("renders the complete public, web application, iOS, and state atlas", () => {
+    render(<DesignLabGallery />);
+
+    expect(screen.getByRole("heading", { name: "FORGE Terrain" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "A landscape opens the door. The product earns trust below it.",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "One next action. Every boundary remains visible.",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "Native structure carries the same learning contract.",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "Failure stays truthful and recoverable.",
+      }),
+    ).toBeInTheDocument();
+
+    expect(screen.getByText("PUB-01")).toBeInTheDocument();
+    expect(screen.getByText("APP-01")).toBeInTheDocument();
+    expect(screen.getByText("IOS-01")).toBeInTheDocument();
+    expect(screen.getAllByText("Protected proof").length).toBeGreaterThan(0);
+    expect(screen.getByText("Contaminated")).toBeInTheDocument();
+    expect(screen.getByText("Safe fallback")).toBeInTheDocument();
   });
 });

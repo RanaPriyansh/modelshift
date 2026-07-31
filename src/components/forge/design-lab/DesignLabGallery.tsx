@@ -5,6 +5,7 @@ import { ForgeThemeControl } from "@/src/components/forge/ForgeThemeControl";
 
 import { EvidenceAtelierShowcase } from "./EvidenceAtelierShowcase";
 import { FieldGuideIPhoneSample } from "./FieldGuideIPhoneSample";
+import { ProductDesignAtlas } from "./ProductDesignAtlas";
 import styles from "./DesignLabGallery.module.css";
 
 const VIVID_DETAILS = [
@@ -70,6 +71,7 @@ export function DesignLabGallery() {
             <a href="#evidence-atelier">Evidence Atelier</a>
             <a href="#expedition-atlas">Expedition Atlas</a>
             <a href="#field-guide-ios">Field Guide iOS study</a>
+            <a href="#forge-terrain-foundations">Complete product atlas</a>
           </nav>
         </section>
 
@@ -210,6 +212,8 @@ export function DesignLabGallery() {
             <FieldGuideIPhoneSample />
           </div>
         </section>
+
+        <ProductDesignAtlas />
 
         <footer className={styles.footer}>
           <p>

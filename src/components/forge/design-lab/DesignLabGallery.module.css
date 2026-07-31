@@ -36,20 +36,31 @@
   z-index: 30;
   top: 12px;
   left: 12px;
-  min-height: 44px;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
   display: flex;
   align-items: center;
   border: 1px solid var(--lab-line-strong);
-  padding: 0 16px;
+  padding: 0;
   background: var(--lab-surface);
   color: var(--lab-ink);
   font-size: 0.875rem;
   font-weight: 750;
-  transform: translateY(-180%);
 }
 
 .skipLink:focus {
-  transform: translateY(0);
+  width: auto;
+  height: auto;
+  min-height: 44px;
+  margin: 0;
+  overflow: visible;
+  clip-path: none;
+  padding: 0 16px;
 }
 
 .labHeader {
