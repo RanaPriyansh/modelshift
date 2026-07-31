@@ -12,7 +12,7 @@ afterEach(() => {
 });
 
 describe("UniversityCommandCenterWorkspace", () => {
-  it("exposes six equal, explicit links with no default priority", () => {
+  it("exposes eight equal, explicit links with no default priority", () => {
     render(<UniversityCommandCenterWorkspace />);
     const navigation = screen.getByRole("navigation", {
       name: "University workspaces",
@@ -20,13 +20,17 @@ describe("UniversityCommandCenterWorkspace", () => {
     const links = within(navigation).getAllByRole("link");
 
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      "/internal/university-degree-map",
+      "/internal/university-learning-map",
       "/internal/university-post-attempt-repair",
       "/internal/university-protected-study",
-      "/internal/university-research-readiness",
       "/internal/university-recovery",
+      "/internal/university-research-readiness",
       "/internal/university-semester-desk",
       "/internal/university-source-review",
     ]);
+    expect(navigation).toHaveTextContent("Degree map");
+    expect(navigation).toHaveTextContent("Learning map");
     expect(navigation).toHaveTextContent("Post-attempt repair");
     expect(screen.getByText("Alphabetical order / not priority"))
       .toBeInTheDocument();

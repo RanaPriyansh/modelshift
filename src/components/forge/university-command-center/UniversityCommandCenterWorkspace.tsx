@@ -4,6 +4,18 @@ import styles from "./UniversityCommandCenterWorkspace.module.css";
 
 const WORKSPACES = Object.freeze([
   {
+    name: "Degree map",
+    href: "/internal/university-degree-map",
+    description:
+      "Inspect a learner-declared degree structure without graduation claims.",
+  },
+  {
+    name: "Learning map",
+    href: "/internal/university-learning-map",
+    description:
+      "Inspect declared learning continuity without a mastery judgment.",
+  },
+  {
     name: "Post-attempt repair",
     href: "/internal/university-post-attempt-repair",
     description: "Inspect a bounded repair after one synthetic attempt.",
@@ -14,14 +26,14 @@ const WORKSPACES = Object.freeze([
     description: "Inspect the protected-study boundary before proof.",
   },
   {
-    name: "Research readiness",
-    href: "/internal/university-research-readiness",
-    description: "Review open research gates without involving a person.",
-  },
-  {
     name: "Recovery",
     href: "/internal/university-recovery",
     description: "Inspect a learner-owned capacity recovery draft.",
+  },
+  {
+    name: "Research readiness",
+    href: "/internal/university-research-readiness",
+    description: "Review open research gates without involving a person.",
   },
   {
     name: "Semester desk",
@@ -58,7 +70,7 @@ export function UniversityCommandCenterWorkspace() {
       </div>
 
       <section className={styles.introduction}>
-        <p className={styles.index} aria-hidden="true">06</p>
+        <p className={styles.index} aria-hidden="true">08</p>
         <div>
           <p className={styles.eyebrow}>Explicit learner or operator choice</p>
           <h1 id="university-command-center-title">

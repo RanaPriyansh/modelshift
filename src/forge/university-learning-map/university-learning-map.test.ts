@@ -128,6 +128,75 @@ describe("university learning map", () => {
     ]);
   });
 
+  it("classifies a self-prerequisite as a cycle in every array position", () => {
+    const first = request();
+    first.concepts.push({
+      conceptRef: "concept.other-02",
+      outcomeRefs: ["outcome.reason-01"],
+      prerequisiteConceptRefs: [],
+      prerequisiteKnowledge: "declared",
+    });
+    first.concepts[0]!.prerequisiteConceptRefs = [
+      "concept.foundation-01",
+      "concept.other-02",
+    ];
+    const second = request();
+    second.concepts.push({
+      conceptRef: "concept.other-02",
+      outcomeRefs: ["outcome.reason-01"],
+      prerequisiteConceptRefs: [],
+      prerequisiteKnowledge: "declared",
+    });
+    second.concepts[0]!.prerequisiteConceptRefs = [
+      "concept.other-02",
+      "concept.foundation-01",
+    ];
+
+    for (const candidate of [first, second]) {
+      const projection = projectUniversityLearningMap(candidate);
+      expect(projection.status).toBe("review_required");
+      expect(projection.review?.cyclicConceptRefs).toEqual([
+        "concept.foundation-01",
+      ]);
+      expect(projection.issues).toContainEqual({
+        code: "prerequisites.cycle",
+        path: "concepts",
+      });
+    }
+  });
+
+  it("rejects repeated nested references before schema traversal", () => {
+    const value = request();
+    const sharedOutcomeRefs = value.concepts[0]!.outcomeRefs;
+    value.concepts.push({
+      conceptRef: "concept.other-02",
+      outcomeRefs: sharedOutcomeRefs,
+      prerequisiteConceptRefs: [],
+      prerequisiteKnowledge: "declared",
+    });
+
+    expect(projectUniversityLearningMap(value)).toMatchObject({
+      status: "invalid",
+      issues: [{ code: "schema.invalid", path: "" }],
+    });
+  });
+
+  it("rejects a delayed return that was not part of its source attempt", () => {
+    const value = request();
+    value.concepts.push({
+      conceptRef: "concept.other-02",
+      outcomeRefs: ["outcome.reason-01"],
+      prerequisiteConceptRefs: [],
+      prerequisiteKnowledge: "declared",
+    });
+    value.delayedReturns[0]!.conceptRefs = ["concept.other-02"];
+
+    expect(projectUniversityLearningMap(value)).toMatchObject({
+      status: "invalid",
+      issues: [{ code: "references.missing", path: "" }],
+    });
+  });
+
   it("fails closed for dangling references, duplicate IDs, PII, prose, and authority fields", () => {
     const dangling = request();
     dangling.attempts[0]!.conceptRefs = ["concept.missing-99"];
@@ -149,6 +218,20 @@ describe("university learning map", () => {
       "invalid",
       "invalid",
     ]);
+  });
+
+  it("rejects calendar-shaped text that is not a real date", () => {
+    const invalidAttemptDate = request();
+    invalidAttemptDate.attempts[0]!.attemptedOn = "2026-02-30";
+    const invalidReturnDate = request();
+    invalidReturnDate.delayedReturns[0]!.dueOn = "2026-13-01";
+
+    expect(projectUniversityLearningMap(invalidAttemptDate).status).toBe(
+      "invalid",
+    );
+    expect(projectUniversityLearningMap(invalidReturnDate).status).toBe(
+      "invalid",
+    );
   });
 
   it("never invokes accessors and rejects proxies, symbols, sparse arrays, cycles, and exotic objects", () => {

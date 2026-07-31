@@ -1,0 +1,88 @@
+// @vitest-environment jsdom
+
+import "@testing-library/jest-dom/vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import {
+  universityDegreeMapPresentation,
+} from "@/app/internal/university-degree-map/degree-map-fixture.server";
+
+import { UniversityDegreeMapWorkspace } from "./UniversityDegreeMapWorkspace";
+
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+
+describe("UniversityDegreeMapWorkspace", () => {
+  it("renders the bounded projector presentation with semantic structure", () => {
+    const presentation = universityDegreeMapPresentation();
+    render(<UniversityDegreeMapWorkspace presentation={presentation} />);
+
+    const article = screen.getByRole("article", {
+      name: "Inspect the map. Keep the decision.",
+    });
+    expect(within(article).getByRole("heading", { level: 1 }))
+      .toHaveTextContent("Inspect the map. Keep the decision.");
+    expect(screen.getByLabelText("Declared credit totals"))
+      .toHaveTextContent("All declared15");
+    expect(within(screen.getByRole("list", { name: "Declared courses" }))
+      .getAllByRole("listitem")).toHaveLength(4);
+    expect(within(screen.getByRole("list", { name: "Declared requirements" }))
+      .getAllByRole("listitem")).toHaveLength(3);
+    expect(screen.getByRole("complementary", {
+      name: "Inspection boundary",
+    })).toHaveTextContent("No rank or recommendation");
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.queryByRole("form")).not.toBeInTheDocument();
+
+    expect(presentation.courses.length).toBeLessThanOrEqual(8);
+    expect(presentation.requirements.length).toBeLessThanOrEqual(8);
+    expect(JSON.stringify(presentation)).not.toMatch(
+      /sha256:|declaredSourceDigest|sourceRegistry|sourceRef/,
+    );
+    expect(Object.isFrozen(presentation)).toBe(true);
+  });
+
+  it("is effect-free and includes the 320px and access media gates", () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const storageSpy = vi.spyOn(Storage.prototype, "setItem");
+    render(
+      <UniversityDegreeMapWorkspace
+        presentation={universityDegreeMapPresentation()}
+      />,
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(storageSpy).not.toHaveBeenCalled();
+
+    const css = readFileSync(
+      resolve(
+        process.cwd(),
+        "src/components/forge/university-degree-map/UniversityDegreeMapWorkspace.module.css",
+      ),
+      "utf8",
+    );
+    expect(css).toContain("@media (max-width: 320px)");
+    expect(css).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(css).toContain("@media (forced-colors: active)");
+    expect(css).toContain("grid-template-columns: minmax(0, 1fr)");
+
+    const page = readFileSync(
+      resolve(
+        process.cwd(),
+        "app/internal/university-degree-map/page.tsx",
+      ),
+      "utf8",
+    );
+    expect(page).toContain('process.env.NODE_ENV === "development"');
+    expect(page).toContain('await import("./development-surface.server")');
+    expect(page).toContain("UniversityDegreeMapUnavailable");
+    expect(page).not.toContain("UniversityDegreeMapWorkspace");
+    expect(page).not.toContain("projectUniversityDegreeMap");
+    expect(page).not.toContain("degree-map-fixture.server");
+  });
+});

@@ -184,6 +184,38 @@ describe("projectUniversityDegreeMap", () => {
     expect(projections.every((entry) => entry.programRef === null)).toBe(true);
   });
 
+  it("rejects whitespace normalization and opaque identifier collisions", () => {
+    const paddedProgram = request();
+    paddedProgram.program.programRef = " program.computing.v1 ";
+    const paddedSource = request();
+    paddedSource.sourceRegistry[0]!.sourceRef = " source.catalog.v1 ";
+    paddedSource.program.sourceRef = " source.catalog.v1 ";
+    paddedSource.courses.forEach((course) => {
+      course.sourceRef = " source.catalog.v1 ";
+    });
+    paddedSource.requirements.forEach((requirement) => {
+      requirement.sourceRef = " source.catalog.v1 ";
+    });
+    const sourceCollision = request();
+    sourceCollision.sourceRegistry.push({
+      ...sourceCollision.sourceRegistry[0]!,
+      sourceRef: " source.catalog.v1 ",
+    });
+
+    for (const candidate of [
+      paddedProgram,
+      paddedSource,
+      sourceCollision,
+    ]) {
+      const projection = projectUniversityDegreeMap(candidate);
+      expect(projection.status).toBe("invalid");
+      expect(projection.programRef).toBeNull();
+      expect(projection.issues.every(
+        (entry) => entry.code === "schema.invalid",
+      )).toBe(true);
+    }
+  });
+
   it("does not execute hostile accessors or proxy traps", () => {
     const getter = vi.fn(() => request().schemaVersion);
     const accessor = request() as unknown as Record<string, unknown>;

@@ -175,6 +175,24 @@ describe("bounded JSON snapshot", () => {
     )).toThrow(TypeError);
   });
 
+  it("can reject repeated nested object and array references", () => {
+    const sharedObject = { value: "shared" };
+    const sharedArray = ["shared"];
+
+    expect(() => boundedJsonSnapshot({
+      left: sharedObject,
+      right: sharedObject,
+    }, {
+      rejectRepeatedReferences: true,
+    })).toThrow(TypeError);
+    expect(() => boundedJsonSnapshot({
+      left: sharedArray,
+      right: sharedArray,
+    }, {
+      rejectRepeatedReferences: true,
+    })).toThrow(TypeError);
+  });
+
   it("pins the exact node, array-length, and object-key boundaries", () => {
     const exactNodeLimit = nodeBoundaryGraph();
     const overNodeLimit = nodeBoundaryGraph(1);

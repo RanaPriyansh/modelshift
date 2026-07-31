@@ -20,6 +20,11 @@ export interface BoundedJsonSnapshotOptions {
    * caller Proxy is refused without invoking any of its traps.
    */
   readonly rejectObject?: (value: object) => boolean;
+  /**
+   * Rejects cycles and repeated object references. Use this when the caller
+   * must supply a tree that has the same reference semantics as parsed JSON.
+   */
+  readonly rejectRepeatedReferences?: boolean;
 }
 
 /**
@@ -40,6 +45,9 @@ export function boundedJsonSnapshot(
   options: Readonly<BoundedJsonSnapshotOptions> = {},
 ): unknown {
   const budget = { nodes: 0 };
+  const visited = options.rejectRepeatedReferences
+    ? new WeakSet<object>()
+    : null;
 
   function visit(candidate: unknown, depth: number): unknown {
     budget.nodes += 1;
@@ -63,6 +71,10 @@ export function boundedJsonSnapshot(
     if (options.rejectObject?.(candidate) === true) {
       throw new TypeError("Input object is not allowed.");
     }
+    if (visited?.has(candidate)) {
+      throw new TypeError("Input graph contains a repeated object reference.");
+    }
+    visited?.add(candidate);
 
     if (Array.isArray(candidate)) {
       if (Object.getPrototypeOf(candidate) !== Array.prototype) {

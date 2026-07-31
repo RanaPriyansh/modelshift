@@ -38,10 +38,10 @@ export interface UniversityDegreeMapIssue {
   readonly message: string;
 }
 
-const opaqueIdSchema = z.string().trim().min(3).max(96).regex(
+const opaqueIdSchema = z.string().min(3).max(96).regex(
   /^[a-z0-9]+(?:[._-][a-z0-9]+)+$/,
 );
-const sourceRefSchema = z.string().trim().min(3).max(120).regex(
+const sourceRefSchema = z.string().min(3).max(120).regex(
   /^source\.[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
 );
 const digestSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);

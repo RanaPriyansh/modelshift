@@ -94,6 +94,7 @@ export function projectUniversityLearningMap(
     try {
       detached = boundedJsonSnapshot(value, {
         rejectObject: (candidate) => nodeUtilTypes.isProxy(candidate),
+        rejectRepeatedReferences: true,
       });
     } catch {
       return invalid([issue("schema.invalid", "")]);
@@ -124,15 +125,16 @@ export function projectUniversityLearningMap(
     const missingReference = request.concepts.some((entry) => (
       entry.outcomeRefs.some((ref) => !outcomes.has(ref))
       || entry.prerequisiteConceptRefs.some((ref) => !concepts.has(ref))
-      || entry.conceptRef === entry.prerequisiteConceptRefs[0]
     )) || request.attempts.some((entry) => (
       entry.conceptRefs.some((ref) => !concepts.has(ref))
       || entry.evidenceRefs.some((ref) => !evidence.has(ref))
       || entry.helpUsed.some((help) => !evidence.has(help.provenanceEvidenceRef))
-    )) || request.delayedReturns.some((entry) => (
-      !attempts.has(entry.sourceAttemptRef)
-      || entry.conceptRefs.some((ref) => !concepts.has(ref))
-    )) || request.unknowns.some((entry) => !allScopeRefs.has(entry.scopeRef));
+    )) || request.delayedReturns.some((entry) => {
+      const sourceAttempt = attempts.get(entry.sourceAttemptRef);
+      return !sourceAttempt || entry.conceptRefs.some((ref) => (
+        !concepts.has(ref) || !sourceAttempt.conceptRefs.includes(ref)
+      ));
+    }) || request.unknowns.some((entry) => !allScopeRefs.has(entry.scopeRef));
     if (missingReference) return invalid([issue("references.missing", "")]);
 
     const reviewIssues: UniversityLearningMapIssue[] = [];
