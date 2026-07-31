@@ -11,6 +11,10 @@ const SEMESTER_LOOP_FIXTURE_TOKENS = Object.freeze({
     mode: "legacy" as const,
     packId: null,
   },
+  "forge-university-semester-sandbox.v1": {
+    mode: "semester_sandbox" as const,
+    packId: null,
+  },
   "forge-university-research-candidate.pack-p.v1": {
     mode: "research_candidate" as const,
     packId: "pack-p" as const,
@@ -30,6 +34,12 @@ export type UniversitySemesterLoopGate =
       enabled: true;
       status: "semester-loop-fixture-enabled";
       mode: "legacy";
+      packId: null;
+    }>
+  | Readonly<{
+      enabled: true;
+      status: "semester-loop-sandbox-enabled";
+      mode: "semester_sandbox";
       packId: null;
     }>
   | Readonly<{
@@ -67,6 +77,7 @@ export function readUniversitySemesterLoopGate(
     ? descriptor.value
     : undefined;
   const selection = typeof value === "string"
+    && Object.hasOwn(SEMESTER_LOOP_FIXTURE_TOKENS, value)
     ? SEMESTER_LOOP_FIXTURE_TOKENS[
         value as keyof typeof SEMESTER_LOOP_FIXTURE_TOKENS
       ]
@@ -80,17 +91,26 @@ export function readUniversitySemesterLoopGate(
       packId: null,
     });
   }
-  return selection.mode === "legacy"
-    ? Object.freeze({
-        enabled: true,
-        status: "semester-loop-fixture-enabled",
-        mode: "legacy",
-        packId: null,
-      })
-    : Object.freeze({
-        enabled: true,
-        status: "semester-loop-research-candidate-enabled",
-        mode: "research_candidate",
-        packId: selection.packId,
-      });
+  if (selection.mode === "legacy") {
+    return Object.freeze({
+      enabled: true,
+      status: "semester-loop-fixture-enabled",
+      mode: "legacy",
+      packId: null,
+    });
+  }
+  if (selection.mode === "semester_sandbox") {
+    return Object.freeze({
+      enabled: true,
+      status: "semester-loop-sandbox-enabled",
+      mode: "semester_sandbox",
+      packId: null,
+    });
+  }
+  return Object.freeze({
+    enabled: true,
+    status: "semester-loop-research-candidate-enabled",
+    mode: "research_candidate",
+    packId: selection.packId,
+  });
 }

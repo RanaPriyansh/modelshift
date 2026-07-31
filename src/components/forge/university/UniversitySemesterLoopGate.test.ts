@@ -32,6 +32,29 @@ describe("university semester-loop route gate", () => {
     });
     expect(readUniversitySemesterLoopGate({
       FORGE_UNIVERSITY_SEMESTER_LOOP_FIXTURE:
+        "forge-university-semester-sandbox.v1",
+    })).toEqual({
+      enabled: true,
+      status: "semester-loop-sandbox-enabled",
+      mode: "semester_sandbox",
+      packId: null,
+    });
+    expect(readUniversitySemesterLoopGate({
+      FORGE_UNIVERSITY_SEMESTER_LOOP_FIXTURE:
+        "forge-university-semester-sandbox.v1 ",
+    }).enabled).toBe(false);
+    for (const inheritedKey of ["__proto__", "constructor", "toString"]) {
+      expect(readUniversitySemesterLoopGate({
+        FORGE_UNIVERSITY_SEMESTER_LOOP_FIXTURE: inheritedKey,
+      })).toEqual({
+        enabled: false,
+        status: "semester-loop-fixture-unavailable",
+        mode: null,
+        packId: null,
+      });
+    }
+    expect(readUniversitySemesterLoopGate({
+      FORGE_UNIVERSITY_SEMESTER_LOOP_FIXTURE:
         "forge-university-research-candidate.pack-p.v1",
     })).toEqual({
       enabled: true,

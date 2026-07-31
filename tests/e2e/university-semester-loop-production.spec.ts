@@ -18,14 +18,18 @@ test("production exposes only the semester-loop unavailable shell", async ({
 
   await expect(unavailable.getByRole("heading", {
     level: 1,
-    name: "No university semester-loop research state is available.",
+    name: "No university semester-loop state is available.",
   })).toBeVisible();
   await expect(unavailable.getByRole("radio")).toHaveCount(0);
   await expect(unavailable.getByText("CS102: Evidence and computation")).toHaveCount(0);
   await expect(unavailable.getByText("One semester. One honest next move.")).toHaveCount(0);
+  await expect(unavailable.getByText(
+    "Does this copied deadline match the checked source?",
+  )).toHaveCount(0);
+  await expect(unavailable.getByText("Use sample correction")).toHaveCount(0);
   await expect(unavailable.getByRole("link")).toHaveCount(0);
   await expect(unavailable.getByText(
-    /No source, action, recovery draft, World, session, message, or evidence was exposed/,
+    /No source, capacity, accepted path, recovery draft, World, action, session, evidence, or external effect was exposed/,
   )).toBeVisible();
   expect(consoleFailures).toEqual([]);
 });

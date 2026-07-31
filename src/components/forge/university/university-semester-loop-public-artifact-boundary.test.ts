@@ -15,6 +15,7 @@ import {
   UNIVERSITY_RESEARCH_CANDIDATE_PACK_Q_SCENARIO_REFS,
   UNIVERSITY_RESEARCH_CANDIDATE_STATUS_CODES,
   UNIVERSITY_RESEARCH_CANDIDATE_SURFACE_LEXICAL_SET,
+  UNIVERSITY_SEMESTER_SANDBOX_SURFACE_LEXICAL_SET,
   UNIVERSITY_SEMESTER_LOOP_FIXTURE_LABELS,
   UNIVERSITY_SEMESTER_LOOP_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS,
   assertNoUniversitySemesterLoopPublicArtifactLeaks,
@@ -78,6 +79,20 @@ describe("university semester-loop public artifact boundary", () => {
     expect(findUniversitySemesterLoopPublicArtifactLeaks([{
       path: "static/chunks/generic-job.js",
       contents: "Current bounded job",
+    }])).toEqual([]);
+  });
+
+  it("rejects the complete semester-sandbox lexical set without broad copy matches", () => {
+    expect(findUniversitySemesterLoopPublicArtifactLeaks([{
+      path: "static/chunks/university-semester-sandbox.js",
+      contents: UNIVERSITY_SEMESTER_SANDBOX_SURFACE_LEXICAL_SET.join(" | "),
+    }])).toEqual([{
+      path: "static/chunks/university-semester-sandbox.js",
+      marker: "university semester-sandbox server-only surface lexical set",
+    }]);
+    expect(findUniversitySemesterLoopPublicArtifactLeaks([{
+      path: "static/chunks/generic-source-review.js",
+      contents: "Does this copied value belong here?",
     }])).toEqual([]);
   });
 

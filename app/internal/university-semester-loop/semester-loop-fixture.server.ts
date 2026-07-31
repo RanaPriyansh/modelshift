@@ -12,7 +12,7 @@ import { SOURCE_CORROBORATION_WORLD } from "@/src/forge/worlds";
 
 import { universityTodayFixtureRequest } from "../university-today/today-fixture.server";
 
-type UniversitySemesterLoopFixtureId =
+export type UniversitySemesterLoopFixtureId =
   | "ready"
   | "source-review"
   | "capacity-break"
@@ -120,7 +120,7 @@ function recoveryRequestFor(
   };
 }
 
-async function request(
+export async function universitySemesterLoopFixtureRequest(
   scenario: UniversitySemesterLoopFixtureId,
 ): Promise<UniversitySemesterLoopRequestV1> {
   const todayScenario = scenario === "source-review"
@@ -175,13 +175,27 @@ export async function universitySemesterLoopFixtureScenarios(): Promise<
     pathComplete,
     pathBlocked,
   ] = await Promise.all([
-    projectUniversitySemesterLoop(await request("ready")),
-    projectUniversitySemesterLoop(await request("source-review")),
-    projectUniversitySemesterLoop(await request("capacity-break")),
-    projectUniversitySemesterLoop(await request("tight-window")),
-    projectUniversitySemesterLoop(await request("world-changed")),
-    projectUniversitySemesterLoop(await request("path-complete")),
-    projectUniversitySemesterLoop(await request("path-blocked")),
+    projectUniversitySemesterLoop(
+      await universitySemesterLoopFixtureRequest("ready"),
+    ),
+    projectUniversitySemesterLoop(
+      await universitySemesterLoopFixtureRequest("source-review"),
+    ),
+    projectUniversitySemesterLoop(
+      await universitySemesterLoopFixtureRequest("capacity-break"),
+    ),
+    projectUniversitySemesterLoop(
+      await universitySemesterLoopFixtureRequest("tight-window"),
+    ),
+    projectUniversitySemesterLoop(
+      await universitySemesterLoopFixtureRequest("world-changed"),
+    ),
+    projectUniversitySemesterLoop(
+      await universitySemesterLoopFixtureRequest("path-complete"),
+    ),
+    projectUniversitySemesterLoop(
+      await universitySemesterLoopFixtureRequest("path-blocked"),
+    ),
   ]);
 
   return Object.freeze([

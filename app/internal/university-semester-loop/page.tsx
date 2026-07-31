@@ -17,7 +17,7 @@ export default async function InternalUniversitySemesterLoopPage() {
     : null;
 
   return (
-    <ForgeShell active="learn" surface="author">
+    <ForgeShell active={null} surface="author">
       <main id="forge-main" tabIndex={-1}>
         {developmentSurface
           ? await developmentSurface()

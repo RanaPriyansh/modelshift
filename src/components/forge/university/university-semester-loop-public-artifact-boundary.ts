@@ -7,9 +7,13 @@ export const UNIVERSITY_SEMESTER_LOOP_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS =
     "/internal/university-semester-loop",
     "FORGE_UNIVERSITY_SEMESTER_LOOP_FIXTURE",
     "forge-university-semester-loop.v1",
+    "forge-university-semester-sandbox.v1",
     "forge-university-research-candidate.pack-p.v1",
     "forge-university-research-candidate.pack-q.v1",
     "university-semester-loop-projection.v1",
+    "university-semester-sandbox-request.v1",
+    "university-semester-sandbox-projection.v1",
+    "university-semester-sandbox-fixture.v1",
     "university-research-candidate-compilation.v1",
     "university-research-candidate-compiler.v1",
     "university-research-surface-packet.v1",
@@ -85,6 +89,16 @@ export const UNIVERSITY_RESEARCH_CANDIDATE_SURFACE_LEXICAL_SET = Object.freeze([
 const UNIVERSITY_RESEARCH_CANDIDATE_SURFACE_LEXICAL_SET_MARKER =
   "university research-candidate server-only surface lexical set";
 
+export const UNIVERSITY_SEMESTER_SANDBOX_SURFACE_LEXICAL_SET = Object.freeze([
+  "From copied context to one bounded job",
+  "Does this copied deadline match the checked source?",
+  "Four closed server-authored outcomes",
+  "The learner chooses. The fixture only shows the consequence.",
+] as const);
+
+const UNIVERSITY_SEMESTER_SANDBOX_SURFACE_LEXICAL_SET_MARKER =
+  "university semester-sandbox server-only surface lexical set";
+
 export const UNIVERSITY_RESEARCH_CANDIDATE_PACK_P_SCENARIO_REFS =
   Object.freeze([
     "scenario.northstar.ready",
@@ -156,6 +170,15 @@ export function findUniversitySemesterLoopPublicArtifactLeaks(
               UNIVERSITY_RESEARCH_CANDIDATE_SURFACE_LEXICAL_SET_MARKER,
           })]
         : [];
+    const sandboxSurfaceLexicalSetLeak =
+      UNIVERSITY_SEMESTER_SANDBOX_SURFACE_LEXICAL_SET.every(
+        (copy) => asset.contents.includes(copy),
+      )
+        ? [Object.freeze({
+            path: asset.path,
+            marker: UNIVERSITY_SEMESTER_SANDBOX_SURFACE_LEXICAL_SET_MARKER,
+          })]
+        : [];
     const packPScenarioSetLeak =
       UNIVERSITY_RESEARCH_CANDIDATE_PACK_P_SCENARIO_REFS.every(
         (scenarioRef) => asset.contents.includes(scenarioRef),
@@ -181,6 +204,7 @@ export function findUniversitySemesterLoopPublicArtifactLeaks(
       ...labelSetLeak,
       ...candidateStatusSetLeak,
       ...candidateSurfaceLexicalSetLeak,
+      ...sandboxSurfaceLexicalSetLeak,
       ...packPScenarioSetLeak,
       ...packQScenarioSetLeak,
     ];
