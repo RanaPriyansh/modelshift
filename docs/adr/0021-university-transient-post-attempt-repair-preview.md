@@ -191,6 +191,7 @@ are forbidden in public and server build artifacts. Bare World and validator
 identifiers already shipped by the released public World remain public. The
 scanner does not pretend that this slice can make those existing identifiers
 secret.
+The route shell disables automatic prefetch.
 
 ## Interaction and visual decision
 

@@ -164,6 +164,7 @@ Production imports and renders only a generic unavailable shell. The token,
 fixture schema identity, and complete development-surface lexical set are
 forbidden in public and server build artifacts. A production process must
 remain unavailable even if the development token is present.
+The route shell disables automatic prefetch.
 
 The visual basis is
 `docs/design/university-semester-desk-concept.png`. The implementation keeps

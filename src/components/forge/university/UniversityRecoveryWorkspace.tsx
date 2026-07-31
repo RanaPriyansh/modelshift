@@ -207,7 +207,12 @@ export function UniversityRecoveryWorkspace({
           <p>{copy.body}</p>
           {projection.status === "source_review_required" ? (
             <div className={styles.primaryAction}>
-              <Link href="/internal/university-source-review">Review source copies</Link>
+              <Link
+                href="/internal/university-source-review"
+                prefetch={false}
+              >
+                Review source copies
+              </Link>
               <p>The source-review fixture keeps conflicts blocked and prepares a responsible-human question.</p>
             </div>
           ) : null}

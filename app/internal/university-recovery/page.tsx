@@ -16,7 +16,11 @@ export default async function InternalUniversityRecoveryPage() {
     : null;
 
   return (
-    <ForgeShell active={null} surface="author">
+    <ForgeShell
+      active={null}
+      navigationPrefetch={false}
+      surface="author"
+    >
       <main id="forge-main" tabIndex={-1}>
         {developmentSurface
           ? await developmentSurface()

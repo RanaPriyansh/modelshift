@@ -63,6 +63,8 @@ Production always renders the unavailable shell, including when that token is
 present. Production scans public and server build artifacts for server fixture
 markers and the complete server-owned scenario-label set. Route and gate names
 remain forbidden only in public client assets.
+The operator workspace shell disables automatic prefetch. It cannot make a
+background navigation request.
 
 The protocol fixes:
 

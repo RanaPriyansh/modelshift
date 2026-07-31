@@ -152,7 +152,7 @@ export function UniversitySemesterSandboxWorkspace({
         <span>Refresh-clear</span>
         <span>No real coursework</span>
         <span>No save</span>
-        <span>No network</span>
+        <span>No automatic network request</span>
         <span>No recommendation</span>
       </div>
 

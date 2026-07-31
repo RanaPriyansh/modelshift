@@ -30,7 +30,8 @@ Add a removable `src/forge/university-recovery/**` projection boundary and a dev
 11. No backlog-debt counter, streak, progress bar, guilt message, diagnosis, wellbeing inference, or engagement optimization exists.
 12. Input is copied through an accessor-free bounded plain-JSON boundary before schema traversal. Dependency cycles, malformed input, scope/time mismatch, and missing source references fail closed.
 13. Every usable projection is deterministic, deeply immutable, and digest-bound. The projector has no model, connector, network, browser storage, database, event, calendar, session, message, or external side effect.
-14. The internal route is unavailable in production and requires an exact server-owned development fixture token. Sample identities and content are forbidden in public production assets.
+14. The internal route shell and visible source-review link disable automatic prefetch. User-initiated internal navigation is the only permitted network effect.
+15. The internal route is unavailable in production and requires an exact server-owned development fixture token. Sample identities and content are forbidden in public and server build artifacts.
 
 ## User need and conceptual model
 
@@ -93,8 +94,8 @@ There is no save, send, accept, edit, undo, or post-action state in this slice b
 ## Evaluation plan
 
 - contract tests for fit, tight range, negotiable essential work, insufficient capacity, overdue consequential work, source conflict/staleness, cross-course/time scope, missing deadline, dependency cycle, determinism, immutability, hostile input, and no side effects;
-- component tests for all four research states, lane semantics, copy, native controls, source-review routing, no send control, no storage/network, and banned dash characters;
-- exact route-gate and production-public-artifact tests;
+- component tests for all four research states, lane semantics, copy, native controls, source-review routing, no send control, no storage write or automatic network request, and banned dash characters;
+- exact route-gate and production public-and-server-artifact tests;
 - lint, typecheck, full application/evaluator tests, and production build;
 - rendered desktop and 320 CSS px checks, keyboard state switching, reduced motion, forced colors, console review, and production route denial;
 - approved adult observation under the fixed UX experiment loop before any public route or product claim.

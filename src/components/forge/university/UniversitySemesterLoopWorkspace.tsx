@@ -315,7 +315,9 @@ export function UniversitySemesterLoopWorkspace({
           <p>{job.body}</p>
           {job.route && job.routeLabel ? (
             <div className={styles.actionControl}>
-              <Link href={job.route}>{job.routeLabel}</Link>
+              <Link href={job.route} prefetch={false}>
+                {job.routeLabel}
+              </Link>
               <small>{job.routeBoundary}</small>
             </div>
           ) : (

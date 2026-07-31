@@ -92,6 +92,8 @@ The legacy seven-state fixture and the frozen research-candidate mode retain
 their existing exact tokens and behavior. Production renders the unavailable
 shell for every token. Sandbox markers and fixture copy are scanned out of
 public and server build artifacts.
+The shared route shell disables automatic prefetch. The sandbox copy states
+that it makes no automatic network request.
 
 ## Authority ceiling
 
