@@ -205,6 +205,26 @@ met.
 | `UV1-LOOP-011` | Test integrated-loop comprehension under one fixed same-envelope harness. | `UNIVERSITY_SEMESTER_LOOP_UX_EXPERIMENT.md` fixes seven states, separate comprehension/trust/autonomy/harm evidence, native-keyboard tasks, desktop, 320 CSS px, reduced-motion, forced-colors, console, and production-boundary gates. |
 | `UV1-LOOP-012` | Preserve the claim ceiling and all live gates. | UI, ADR, experiment, and handoff say synthetic, learner-fixture, copied source, transient, no persistence/session/evidence, and not production; `UV1-GATE-001..003` remain open. |
 
+### Internal transient review-to-loop sandbox
+
+**Decision note:** connect one source decision to the exact raw semester
+envelope without creating a request-controlled, durable, or live-data
+boundary. The lower-level projector is server-internal. The rendered fixture
+may select only closed server-authored outcomes in browser memory.
+
+| ID | Requirement | Acceptance evidence |
+| --- | --- | --- |
+| `UV1-SANDBOX-001` | Begin from the exact ready Today fixture with its retained source decision removed, not from the stale/partial conflict fixture. | Pending input is canonical to the ready request except for an empty decisions array; initial projection is `review_required`. |
+| `UV1-SANDBOX-002` | Accept only raw semester inputs and strict source decisions. | Caller-supplied status, child projection, readiness, effect, extra keys, malformed input, and hostile graphs fail closed before a usable projection. |
+| `UV1-SANDBOX-003` | Rebuild the same exact source request into Today and the matching Recovery course. | Canonical source identity must match before rebuilding; the accepted output is exactly equal, including digest, to direct canonical semester-loop projection. |
+| `UV1-SANDBOX-004` | Preserve literal learner-fixture choice identity. | Accept reuses the fixed decision ID, candidate, scope, and `2026-08-25T08:00:00.000Z`; correction is one fixed same-kind explicit-offset alternative; no wall clock, browser zone, model, or inferred choice is used. |
+| `UV1-SANDBOX-005` | Keep the accepted path as the only action selector. | Accept and correction may unblock copied context but never create, rank, recommend, activate, or start an action; the action remains byte-equal across accepted/corrected results. |
+| `UV1-SANDBOX-006` | Treat rejection as source replacement required, not readiness. | Reject leaves no effective deadline, the complete loop fails closed through its Recovery child, and UI/contract tests forbid ready wording or an exposed action. |
+| `UV1-SANDBOX-007` | Keep every authority and effect false. | Identity, tenancy, authenticity, completeness, source review, action selection, recommendation, session, persistence, evidence, message, event, and external-effect bits are false; no fetch, storage, clipboard, navigation, provider, or database operation exists. |
+| `UV1-SANDBOX-008` | Keep the rendered control closed and transient. | DOM selects only `pending`, `accept`, `fixed_correct`, or `reject` among server-precomputed projections; refresh resets; no arbitrary decision or raw request reaches the client. |
+| `UV1-SANDBOX-009` | Preserve the internal production boundary. | Exact sandbox token is development-only; legacy and research-candidate tokens are unchanged; production is unavailable; sandbox markers are absent from public assets. |
+| `UV1-SANDBOX-010` | Verify legibility without upgrading the claim. | Component and Chrome checks cover keyboard, focus, 320 CSS px, desktop, reduced motion, overflow, and console; forced colors, manual assistive technology, participant evidence, data authority, and production remain open until actually completed. |
+
 ## First slice acceptance
 
 The slice is ready for review only when:
@@ -219,7 +239,10 @@ The slice is ready for review only when:
 
 After direct workflow evidence, choose one:
 
-- evaluate the implemented transient manual/ICS subset in the internal review workflow, then choose whether to add a local file-selection surface;
+- evaluate the implemented transient source-review-to-loop sandbox, then
+  accept, narrow, repair, or reject the transition;
+- evaluate the transient manual/ICS subset in the internal review workflow,
+  then choose whether to add a local file-selection surface;
 - evaluate recovery and one-next-action as separate jobs and as one loop;
 - narrow to guarded learning and protected checking;
 - repair the combined loop;
