@@ -83,13 +83,45 @@ disabled. The account binding key also remains unavailable.
 masked email projection. This finding applies only to correlation-only server
 consumers.
 
+### SEC-UV1-002: Environment-specific secret files were not ignored
+
+**Severity:** Low
+
+**Status:** Fixed in this candidate
+
+**Location before the fix:** `.gitignore:14-17` at commit `a2ce47b`.
+
+**Evidence before the fix:**
+
+```gitignore
+.env
+.env.local
+.env.*.local
+```
+
+`git check-ignore --no-index` did not ignore `.env.production`,
+`.env.development`, `.env.test`, or `.env.preview`.
+
+**Impact:** A developer could stage an environment-specific file that contains
+provider, identity, or database secrets.
+
+**Fix:** `.gitignore` now ignores `.env*` and explicitly keeps only
+`.env.example` visible. A Git-backed regression test covers common deployment
+modes and a nested environment file.
+
+**Mitigation:** No secret-bearing environment file was tracked at the audit
+base. `.env.example` contains empty or non-secret example values.
+
+**False-positive notes:** An environment-specific file might contain only
+public data. FORGE still treats the complete file as sensitive by default.
+
 ## Verification
 
 The candidate checks passed:
 
-- 172 application test files with 1,514 tests;
+- 173 application test files with 1,516 tests;
 - two evaluator test files with 13 tests;
-- 1,527 tests in total;
+- 1,529 tests in total;
 - ESLint with zero warnings;
 - TypeScript typecheck; and
 - whitespace and patch validation.

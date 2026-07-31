@@ -12,9 +12,8 @@
 /.playwright-cli
 
 # local environment
-.env
-.env.local
-.env.*.local
+.env*
+!.env.example
 
 # deployment
 .vercel
