@@ -392,3 +392,17 @@ Wave 4:
 - Role-gated author and operations workflows.
 - Representative learner review.
 
+## 11. Local atlas coverage
+
+The local design atlas contains:
+
+- Six representative public-site frames.
+- Six representative web application frames.
+- Six representative iOS frames.
+- Eight shared failure and recovery states.
+
+The representative frames establish shared layouts and state language.
+
+They do not replace final designs for every route variant.
+
+Exact rendered evidence is in `docs/design/FORGE_COMPLETE_DESIGN_ATLAS_FIDELITY_LEDGER.md`.

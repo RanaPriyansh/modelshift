@@ -509,3 +509,17 @@ These inputs guide the design.
 
 They do not prove that the implementation improves learning.
 
+## 17. Local atlas evidence
+
+The local design atlas is available at `/internal/design-lab` during development.
+
+The route is unavailable in production.
+
+The atlas source is:
+
+- `src/components/forge/design-lab/ProductDesignAtlas.tsx`
+- `src/components/forge/design-lab/ProductDesignAtlas.module.css`
+
+Rendered evidence is in `docs/design/evidence/forge-terrain`.
+
+Exact checks and remaining gates are in `docs/design/FORGE_COMPLETE_DESIGN_ATLAS_FIDELITY_LEDGER.md`.
