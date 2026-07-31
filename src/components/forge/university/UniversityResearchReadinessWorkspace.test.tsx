@@ -5,6 +5,9 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { universityResearchReadinessFixtureScenarios } from "@/app/internal/university-research-readiness/research-readiness-fixture.server";
+import { universitySemesterLoopFixtureScenarios } from "@/app/internal/university-semester-loop/semester-loop-fixture.server";
+import { UNIVERSITY_RESEARCH_ARTIFACT_DIGEST_DOMAINS } from "@/src/forge/university-research-artifacts";
+import { canonicalJson, sha256Digest } from "@/src/forge/events";
 import { projectUniversityResearchReadiness } from "@/src/forge/university-research-operations";
 
 import {
@@ -42,10 +45,10 @@ describe("UniversityResearchReadinessWorkspace", () => {
       name: "Research readiness gates",
     });
     expect(readiness).toHaveTextContent("Protocol");
-    expect(readiness).toHaveTextContent("Comparator");
-    expect(readiness).toHaveTextContent("Approval");
+    expect(readiness).toHaveTextContent("Artifact comparator");
+    expect(readiness).toHaveTextContent("Research approval refs");
     expect(readiness).toHaveTextContent("Operator");
-    expect(readiness).toHaveTextContent("Preflight");
+    expect(readiness).toHaveTextContent("Plan preflight");
     expect(readiness.querySelectorAll("li")).toHaveLength(5);
     expect(readiness.querySelector('[data-tone="stopped"]')).toHaveTextContent(
       "Protocol",
@@ -89,7 +92,7 @@ describe("UniversityResearchReadinessWorkspace", () => {
     expect(screen.getByText("4 of 4")).toBeInTheDocument();
     expect(screen.getByText("6 of 6 required roles")).toBeInTheDocument();
     expect(screen.getByText(
-      "Information and task declarations align; schedule is locked",
+      "Shared information and task manifest aligns; candidate/substitute rendering not checked",
     )).toBeInTheDocument();
     expect(screen.getByText(
       "Future adult-only target: 5-10; current fixture: no people",
@@ -108,7 +111,7 @@ describe("UniversityResearchReadinessWorkspace", () => {
     expect(screen.queryByText("4 of 4")).not.toBeInTheDocument();
     expect(screen.queryByText("6 of 6 required roles")).not.toBeInTheDocument();
     expect(screen.queryByText(
-      "Information and task declarations align; schedule is locked",
+      "Shared information and task manifest aligns; candidate/substitute rendering not checked",
     )).not.toBeInTheDocument();
     expect(screen.getByText(/\(supplied, stopped\)$/)).toBeInTheDocument();
   });
@@ -123,6 +126,7 @@ describe("UniversityResearchReadinessWorkspace", () => {
           id: "invalid-protocol",
           label: "Invalid protocol",
           projection,
+          artifactProjection: null,
         }]}
       />,
     );
@@ -188,6 +192,176 @@ describe("UniversityResearchReadinessWorkspace", () => {
         Reflect.deleteProperty(navigator, "clipboard");
       }
     }
+  });
+
+  it("shows exact authored identities while keeping review and approval open", async () => {
+    const { scenarios } = await renderWorkspace();
+    fireEvent.click(screen.getByRole("radio", {
+      name: "Synthetic plan coherent",
+    }));
+    const artifact = screen.getByRole("region", {
+      name: "Artifact evidence stops before review.",
+    });
+    const authored = scenarios.find(
+      (scenario) => scenario.id === "synthetic-plan-coherent",
+    )?.artifactProjection;
+
+    expect(artifact).toHaveTextContent(
+      "The manifests match mechanically. Independent review is still required.",
+    );
+    expect(artifact).toHaveTextContent("Requested; not completed");
+    expect(artifact).toHaveTextContent("Artifact approval");
+    expect(artifact).toHaveTextContent("Not established");
+    expect(artifact).toHaveTextContent("All six gates remain open");
+    expect(artifact).toHaveTextContent(
+      "candidate build digest remains caller asserted and unverified",
+    );
+    expect(artifact).toHaveTextContent("Substitute manifest digest");
+    expect(artifact).toHaveTextContent("Supplied renderer binding digest");
+    expect(artifact).toHaveTextContent(
+      "Expected renderer descriptor digest",
+    );
+    expect(artifact).toHaveTextContent("Declared checklist digest");
+    expect(artifact).toHaveTextContent(
+      "Expected review checklist digest",
+    );
+    expect(artifact).toHaveTextContent("Declared delivery contract");
+    expect(artifact).toHaveTextContent(
+      "Static local keyboard packet; not rendered",
+    );
+    expect(artifact).not.toHaveTextContent("Compiled artifact digest");
+    expect(artifact).toHaveTextContent("Candidate rendered parity");
+    expect(artifact).toHaveTextContent("Substitute rendered parity");
+    expect(artifact).toHaveTextContent("Not rendered");
+    expect(artifact.textContent).not.toContain("...");
+    expect(artifact.textContent).not.toContain("Participant ready");
+    expect(artifact.textContent).not.toContain("Rehearsal ready");
+
+    const exactDigests = [
+      authored?.artifacts?.packP.digest,
+      authored?.artifacts?.packQ.digest,
+      authored?.artifacts?.substitute.rendererBindingDigest,
+      authored?.artifacts?.substitute.templateDigest,
+      authored?.artifacts?.substitute.artifactDigest,
+      authored?.artifacts?.moderatorPacket.digest,
+      authored?.artifacts?.independentReview.checklistDigest,
+      authored?.artifacts?.independentReview.envelopeDigest,
+    ].filter((value): value is string => Boolean(value));
+    expect(exactDigests).toHaveLength(8);
+    exactDigests.forEach((digest) => expect(artifact).toHaveTextContent(digest));
+  });
+
+  it("renders every exact scenario identity in protocol order with no inferred pairing", async () => {
+    const { scenarios } = await renderWorkspace();
+    fireEvent.click(screen.getByRole("radio", {
+      name: "Synthetic plan coherent",
+    }));
+    const ledger = screen.getByRole("region", {
+      name: "Scenario identity ledger",
+    });
+    const rows = Array.from(ledger.querySelectorAll(":scope > ol > li"));
+    const authored = scenarios.find(
+      (scenario) => scenario.id === "synthetic-plan-coherent",
+    )?.artifactProjection?.artifacts;
+
+    expect(rows).toHaveLength(7);
+    expect(rows.map((row) => row.querySelector("code")?.textContent)).toEqual([
+      "ready",
+      "source-review",
+      "capacity-break",
+      "tight-window",
+      "world-changed",
+      "path-complete",
+      "path-blocked",
+    ]);
+    rows.forEach((row, index) => {
+      expect(row).toHaveTextContent("Pack P scenario digest");
+      expect(row).toHaveTextContent("Pack Q scenario digest");
+      expect(row).toHaveTextContent("Matched mechanically");
+      expect(row).toHaveTextContent("Shared signature digest");
+      const digests = Array.from(row.querySelectorAll("dd code")).map(
+        (entry) => entry.textContent,
+      );
+      expect(digests).toEqual([
+        authored?.packP.scenarios[index]?.scenarioDigest,
+        authored?.packQ.scenarios[index]?.scenarioDigest,
+        authored?.packP.scenarios[index]?.semanticSignatureDigest,
+      ]);
+      digests.forEach((digest) => {
+        expect(digest).toMatch(/^sha256:[a-f0-9]{64}$/);
+      });
+    });
+    expect(ledger.querySelectorAll("dd code")).toHaveLength(21);
+  });
+
+  it("domain-separates the candidate fixture identity from raw JSON and other artifact domains", async () => {
+    const [readinessScenarios, candidateScenarios] = await Promise.all([
+      universityResearchReadinessFixtureScenarios(),
+      universitySemesterLoopFixtureScenarios(),
+    ]);
+    const coherent = readinessScenarios.find(
+      (scenario) => scenario.id === "synthetic-plan-coherent",
+    );
+    const [expected, raw, wrongDomain] = await Promise.all([
+      sha256Digest(canonicalJson({
+        digestDomain:
+          UNIVERSITY_RESEARCH_ARTIFACT_DIGEST_DOMAINS.candidateFixture,
+        value: candidateScenarios,
+      })),
+      sha256Digest(canonicalJson(candidateScenarios)),
+      sha256Digest(canonicalJson({
+        digestDomain:
+          UNIVERSITY_RESEARCH_ARTIFACT_DIGEST_DOMAINS.scenarioPack,
+        value: candidateScenarios,
+      })),
+    ]);
+
+    expect(coherent?.projection.protocol?.fixtureDigest).toBe(expected);
+    expect(expected).not.toBe(raw);
+    expect(expected).not.toBe(wrongDomain);
+  });
+
+  it("distinguishes artifact mismatch from a protocol-stop non-evaluation", async () => {
+    await renderWorkspace();
+    const artifact = screen.getByRole("region", {
+      name: "Artifact evidence stops before review.",
+    });
+
+    expect(artifact).toHaveTextContent(
+      "Artifact preflight was not evaluated.",
+    );
+    expect(artifact).not.toHaveTextContent("Mismatch");
+    expect(artifact).toHaveTextContent(
+      "Artifact identities and deterministic checks were not evaluated.",
+    );
+
+    fireEvent.click(screen.getByRole("radio", {
+      name: "Comparator mismatch",
+    }));
+    expect(artifact).toHaveTextContent(
+      "The authored manifests do not match mechanically.",
+    );
+    expect(artifact).toHaveTextContent("substitute.binding_mismatch");
+    expect(artifact).toHaveTextContent("Mismatch");
+    expect(artifact).toHaveTextContent("Requested; blocked until repair");
+  });
+
+  it("keeps artifact state announcements concise and non-identifying", async () => {
+    await renderWorkspace();
+    const status = screen.getByRole("status");
+
+    expect(status).toHaveTextContent(
+      "Artifact preflight was not evaluated.",
+    );
+    fireEvent.click(screen.getByRole("radio", {
+      name: "Synthetic plan coherent",
+    }));
+    expect(status).toHaveTextContent(
+      "The manifests match mechanically. Independent review is still required.",
+    );
+    expect(status).toHaveTextContent("Independent review remains required.");
+    expect(status).not.toHaveTextContent("sha256:");
+    expect(status).not.toHaveTextContent("Open gates");
   });
 
   it("fails closed when no fixture scenarios are supplied", () => {

@@ -13,6 +13,42 @@ const researchReadinessFixtureEnabled =
   process.env.FORGE_UNIVERSITY_RESEARCH_READINESS_FIXTURE
     === RESEARCH_READINESS_FIXTURE_TOKEN;
 const EFFECT_EVIDENCE_KEY = "__forgeResearchReadinessEffectEvidence";
+const FOCUSABLE_OR_ACTION_SELECTOR = [
+  "a[href]",
+  "area[href]",
+  "button",
+  "input",
+  "select",
+  "textarea",
+  "summary",
+  "iframe",
+  "object",
+  "embed",
+  "audio[controls]",
+  "video[controls]",
+  "[contenteditable]:not([contenteditable=\"false\"])",
+  "[tabindex]",
+  "[role=\"button\"]",
+  "[role=\"link\"]",
+].join(", ");
+const UNEXPECTED_WORKSPACE_ACTION_SELECTOR = [
+  "a[href]",
+  "area[href]",
+  "button",
+  "input:not([type=\"radio\"])",
+  "select",
+  "textarea",
+  "summary",
+  "iframe",
+  "object",
+  "embed",
+  "audio[controls]",
+  "video[controls]",
+  "[contenteditable]:not([contenteditable=\"false\"])",
+  "[tabindex]",
+  "[role=\"button\"]",
+  "[role=\"link\"]",
+].join(", ");
 
 type BrowserEffectEvent = Readonly<{
   kind:
@@ -657,12 +693,54 @@ test("moves through all five readiness states with native keyboard controls", as
   await expect(page.getByRole("region", {
     name: "Research readiness gates",
   })).toContainText("Fixture roles represented");
+  const artifactEvidence = page.getByRole("region", {
+    name: "Artifact evidence stops before review.",
+  });
+  await expect(artifactEvidence.getByRole("heading", {
+    level: 3,
+    name:
+      "The manifests match mechanically. Independent review is still required.",
+  })).toBeVisible();
+  await expect(artifactEvidence).toContainText("All six gates remain open");
+  await expect(artifactEvidence).toContainText("Requested; not completed");
+  await expect(artifactEvidence).toContainText(
+    "Candidate packs are declared, not runtime-bound.",
+  );
+  await expect(artifactEvidence).toContainText(
+    "candidate build digest remains caller asserted and unverified",
+  );
+  await expect(artifactEvidence).toContainText("Candidate rendered parity");
+  await expect(artifactEvidence).toContainText("Substitute rendered parity");
+  await expect(artifactEvidence).toContainText("Not rendered");
+  await expect(artifactEvidence).toContainText("Substitute manifest digest");
+  await expect(artifactEvidence).toContainText(
+    "Supplied renderer binding digest",
+  );
+  await expect(artifactEvidence).toContainText(
+    "Expected renderer descriptor digest",
+  );
+  await expect(artifactEvidence).toContainText("Declared checklist digest");
+  await expect(artifactEvidence).toContainText(
+    "Expected review checklist digest",
+  );
+  await expect(artifactEvidence).not.toContainText("Compiled artifact digest");
+  await expect(artifactEvidence.locator(FOCUSABLE_OR_ACTION_SELECTOR))
+    .toHaveCount(0);
+  await expect(page.getByRole("region", {
+    name: "Scenario identity ledger",
+  }).locator(":scope > ol > li")).toHaveCount(7);
   await expect(page.getByRole("navigation", {
     name: "Primary navigation",
   }).locator('[aria-current="page"]')).toHaveCount(0);
   const workspace = page.locator("main article");
-  await expect(workspace.getByRole("link")).toHaveCount(0);
-  await expect(workspace.getByRole("button")).toHaveCount(0);
+  await expect(workspace.locator(UNEXPECTED_WORKSPACE_ACTION_SELECTOR))
+    .toHaveCount(0);
+  await expect(workspace.locator(
+    'input[type="radio"][name="university-research-readiness-scenario"]',
+  )).toHaveCount(5);
+  await expect(workspace.locator(
+    'input[type="radio"]:not([name="university-research-readiness-scenario"])',
+  )).toHaveCount(0);
   expect(consoleFailures).toEqual([]);
 });
 
@@ -700,10 +778,10 @@ test("keeps rehearsal selection local and exposes no action surface", async ({
     "Future adult-only target: 5-10; current fixture: no people",
   )).toBeVisible();
   await expect(page.getByText(
-    "Information and task declarations align; schedule is locked",
+    "Shared information and task manifest aligns; candidate/substitute rendering not checked",
   )).toBeVisible();
-  await expect(workspace.getByRole("link")).toHaveCount(0);
-  await expect(workspace.getByRole("button")).toHaveCount(0);
+  await expect(workspace.locator(UNEXPECTED_WORKSPACE_ACTION_SELECTOR))
+    .toHaveCount(0);
   await page.evaluate(() => new Promise<void>((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
   }));
@@ -856,6 +934,98 @@ test("has no horizontal overflow at exactly 320 CSS pixels", async ({ page }) =>
       item.contained && item.contentFits && item.height >= 44
     ))).toBe(true);
   }
+
+  await page.getByText("Synthetic plan coherent", { exact: true }).click();
+  const mobileArtifactEvidence = page.getByRole("region", {
+    name: "Artifact evidence stops before review.",
+  });
+  const artifactLayout = await mobileArtifactEvidence.evaluate((region) => {
+    const regionBox = region.getBoundingClientRect();
+    const descendants = Array.from(region.querySelectorAll("*"));
+    return {
+      regionContained: regionBox.left >= 0 && regionBox.right <= 320,
+      overflowing: descendants
+        .filter((element) => {
+          const box = element.getBoundingClientRect();
+          return (
+            box.width > 0
+            && (
+              box.left < -0.5
+              || box.right > 320.5
+              || element.scrollWidth > element.clientWidth + 1
+            )
+          );
+        })
+        .map((element) => ({
+          className: element.className,
+          tag: element.tagName,
+          text: element.textContent?.slice(0, 80),
+        })),
+    };
+  });
+  expect(artifactLayout.regionContained).toBe(true);
+  expect(artifactLayout.overflowing).toEqual([]);
+  const fullDigests = await page.getByRole("region", {
+    name: "Artifact identity ledger",
+  }).locator("bdi code").allTextContents();
+  expect(fullDigests.length).toBeGreaterThanOrEqual(8);
+  expect(fullDigests.every(
+    (digest) => /^sha256:[a-f0-9]{64}$/.test(digest),
+  )).toBe(true);
+  const scenarioDigests = await page.getByRole("region", {
+    name: "Scenario identity ledger",
+  }).locator("dd code").allTextContents();
+  expect(scenarioDigests).toHaveLength(21);
+  expect(scenarioDigests.every(
+    (digest) => /^sha256:[a-f0-9]{64}$/.test(digest),
+  )).toBe(true);
+
+  const proofFontSizes = await mobileArtifactEvidence
+    .locator("dt, ol > li > em")
+    .evaluateAll((elements) => elements.map(
+      (element) => Number.parseFloat(getComputedStyle(element).fontSize),
+    ));
+  expect(proofFontSizes.length).toBeGreaterThan(0);
+  expect(Math.min(...proofFontSizes)).toBeGreaterThanOrEqual(10);
+  const digestFontSizes = await mobileArtifactEvidence.locator("bdi code")
+    .evaluateAll((elements) => elements.map(
+      (element) => Number.parseFloat(getComputedStyle(element).fontSize),
+    ));
+  expect(Math.min(...digestFontSizes)).toBeGreaterThanOrEqual(11);
+
+  await page.getByText("Comparator mismatch", { exact: true }).click();
+  const mismatchLayout = await page.getByRole("region", {
+    name: "Artifact evidence stops before review.",
+  }).evaluate((region) => {
+    const descendants = Array.from(region.querySelectorAll("*"));
+    return descendants
+      .filter((element) => {
+        const box = element.getBoundingClientRect();
+        return box.width > 0 && (
+          box.left < -0.5
+          || box.right > 320.5
+          || element.scrollWidth > element.clientWidth + 1
+        );
+      })
+      .map((element) => ({
+        className: element.className,
+        tag: element.tagName,
+        text: element.textContent?.slice(0, 80),
+      }));
+  });
+  expect(mismatchLayout).toEqual([]);
+  const mismatchIssue = page.getByText(
+    "substitute.binding_mismatch",
+    { exact: true },
+  ).locator("..");
+  await expect(mismatchIssue).toBeVisible();
+  const mismatchIssueWidth = await mismatchIssue.evaluate((element) => ({
+    client: element.clientWidth,
+    scroll: element.scrollWidth,
+  }));
+  expect(mismatchIssueWidth.scroll).toBeLessThanOrEqual(
+    mismatchIssueWidth.client + 1,
+  );
 });
 
 test("collapses scenario-control transitions under reduced motion", async ({
@@ -872,6 +1042,22 @@ test("collapses scenario-control transitions under reduced motion", async ({
 
   expect(mediaMatches).toBe(true);
   expect(Number.parseFloat(transitionDuration)).toBeLessThanOrEqual(0.000_01);
+  await page.getByText("Synthetic plan coherent", { exact: true }).click();
+  const artifactMotion = await page.getByRole("region", {
+    name: "Artifact evidence stops before review.",
+  }).evaluate((region) => Array.from(region.querySelectorAll("*")).map(
+    (element) => {
+      const style = getComputedStyle(element);
+      return {
+        animationName: style.animationName,
+        transitionDuration: style.transitionDuration,
+      };
+    },
+  ));
+  expect(artifactMotion.every((entry) => (
+    entry.animationName === "none"
+    && Number.parseFloat(entry.transitionDuration || "0") <= 0.000_01
+  ))).toBe(true);
 });
 
 test("keeps focused and selected controls visible in forced colors", async ({
@@ -927,4 +1113,24 @@ test("keeps focused and selected controls visible in forced colors", async ({
   expect(selectedControlStyle.borderWidth).not.toBe(
     unselectedControlStyle.borderWidth,
   );
+  const artifactGateStyle = await page.getByRole("region", {
+    name: "Artifact evidence stops before review.",
+  }).getByText("Participant operation", { exact: true })
+    .locator("xpath=ancestor::li[1]")
+    .evaluate((element) => {
+      const style = getComputedStyle(element);
+      const state = element.querySelector("em");
+      return {
+        borderTopColor: style.borderTopColor,
+        borderTopStyle: style.borderTopStyle,
+        borderTopWidth: style.borderTopWidth,
+        stateColor: state ? getComputedStyle(state).color : "",
+        stateText: state?.textContent ?? "",
+      };
+    });
+  expect(artifactGateStyle.borderTopStyle).toBe("solid");
+  expect(artifactGateStyle.borderTopWidth).not.toBe("0px");
+  expect(artifactGateStyle.borderTopColor).not.toBe("");
+  expect(artifactGateStyle.stateColor).not.toBe("");
+  expect(artifactGateStyle.stateText).toBe("Open");
 });

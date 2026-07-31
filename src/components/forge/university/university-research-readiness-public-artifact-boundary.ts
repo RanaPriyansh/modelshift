@@ -8,10 +8,19 @@ export const UNIVERSITY_RESEARCH_READINESS_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS =
     "FORGE_UNIVERSITY_RESEARCH_READINESS_FIXTURE",
     "forge-university-research-readiness.v1",
     "university-research-readiness-projection.v1",
+    "university-research-artifact-preflight-projection.v1",
     "synthetic_plan_coherent",
+    "mechanical_parity_passed_review_required",
     "draft_invalid",
     "Rehearsal is not permission.",
     "Review the plan. Do not involve a person.",
+    "Artifact evidence stops before review.",
+    "research-scenario-pack.northstar.v1",
+    "research-scenario-pack.riverglass.v1",
+    "matched-substitute.phase-minus-one.v1",
+    "moderator-packet.phase-minus-one.v1",
+    "Systems Sketching",
+    "Evidence Mapping",
   ] as const);
 
 /**

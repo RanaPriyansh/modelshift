@@ -1,6 +1,13 @@
 import "server-only";
 
 import {
+  UNIVERSITY_RESEARCH_ARTIFACT_DIGEST_DOMAINS,
+  authoredUniversityResearchArtifactPreflightRequest,
+  projectUniversityResearchArtifacts,
+  type UniversityResearchArtifactPreflightProjectionV1,
+  type UniversityResearchArtifactPreflightRequestV1,
+} from "@/src/forge/university-research-artifacts";
+import {
   UNIVERSITY_RESEARCH_ACCEPTED_SOURCE_COMMIT,
   UNIVERSITY_RESEARCH_CANDIDATE_ROUTE,
   UNIVERSITY_RESEARCH_DECISION_OUTCOMES,
@@ -32,72 +39,47 @@ type UniversityResearchReadinessFixtureId =
   | "comparator-mismatch"
   | "synthetic-plan-coherent";
 
-const INFORMATION_ITEMS = Object.freeze([
-  Object.freeze({
-    itemId: "research-information.term",
-    digest: "sha256:1111111111111111111111111111111111111111111111111111111111111111",
-  }),
-  Object.freeze({
-    itemId: "research-information.source",
-    digest: "sha256:2222222222222222222222222222222222222222222222222222222222222222",
-  }),
-  Object.freeze({
-    itemId: "research-information.deadline",
-    digest: "sha256:3333333333333333333333333333333333333333333333333333333333333333",
-  }),
-  Object.freeze({
-    itemId: "research-information.capacity",
-    digest: "sha256:4444444444444444444444444444444444444444444444444444444444444444",
-  }),
-  Object.freeze({
-    itemId: "research-information.path",
-    digest: "sha256:5555555555555555555555555555555555555555555555555555555555555555",
-  }),
-  Object.freeze({
-    itemId: "research-information.world",
-    digest: "sha256:6666666666666666666666666666666666666666666666666666666666666666",
-  }),
-  Object.freeze({
-    itemId: "research-information.effects",
-    digest: "sha256:7777777777777777777777777777777777777777777777777777777777777777",
-  }),
-] as const);
-
 type ArtifactDigests = Readonly<{
   candidate: string;
   substitute: string;
   packP: string;
   packQ: string;
+  informationItems: UniversityResearchReadinessRequestV1[
+    "conditions"
+  ]["candidate"]["informationItems"];
 }>;
 
 async function artifactDigests(): Promise<ArtifactDigests> {
-  const candidateScenarios = await universitySemesterLoopFixtureScenarios();
-  const candidate = await sha256Digest(canonicalJson(candidateScenarios));
-  const substitute = await sha256Digest(canonicalJson({
-    artifactRef: "matched-substitute.phase-minus-one.v1",
-    status: "planned_not_authored",
-    delivery: "static_manual_packet",
-    informationItems: INFORMATION_ITEMS,
-    taskFamilies: UNIVERSITY_RESEARCH_TASK_FAMILIES,
-    taskScriptDigest: UNIVERSITY_RESEARCH_EXPOSURE_TASK_SET_DIGEST,
-    automatedSynthesisAllowed: false,
-    participantDataCaptureAllowed: false,
-  }));
-  const packP = await sha256Digest(canonicalJson({
-    packId: "pack-p",
-    status: "planned_not_authored",
-    scenarioIds: UNIVERSITY_RESEARCH_SCENARIO_IDS,
-  }));
-  const packQ = await sha256Digest(canonicalJson({
-    packId: "pack-q",
-    status: "planned_not_authored",
-    scenarioIds: UNIVERSITY_RESEARCH_SCENARIO_IDS,
+  const [candidateScenarios, artifactProjection] = await Promise.all([
+    universitySemesterLoopFixtureScenarios(),
+    authoredUniversityResearchArtifactPreflightRequest().then(
+      projectUniversityResearchArtifacts,
+    ),
+  ]);
+  if (
+    artifactProjection.status
+      !== "mechanical_parity_passed_review_required"
+    || artifactProjection.artifacts === null
+  ) {
+    throw new Error(
+      "The internal research-readiness fixture requires the exact authored artifact preflight.",
+    );
+  }
+  const candidate = await sha256Digest(canonicalJson({
+    digestDomain: UNIVERSITY_RESEARCH_ARTIFACT_DIGEST_DOMAINS.candidateFixture,
+    value: candidateScenarios,
   }));
   return Object.freeze({
     candidate,
-    substitute,
-    packP,
-    packQ,
+    substitute: artifactProjection.artifacts.substitute.artifactDigest,
+    packP: artifactProjection.artifacts.packP.digest,
+    packQ: artifactProjection.artifacts.packQ.digest,
+    informationItems: artifactProjection.informationItems.map((item) => ({
+      itemId: item.itemId as UniversityResearchReadinessRequestV1[
+        "conditions"
+      ]["candidate"]["informationItems"][number]["itemId"],
+      digest: item.digest,
+    })),
   });
 }
 
@@ -127,7 +109,7 @@ function baseRequest(digests: ArtifactDigests): UniversityResearchReadinessReque
         kind: "forge_semester_loop",
         delivery: "deterministic_internal_fixture",
         artifactDigest: digests.candidate,
-        informationItems: INFORMATION_ITEMS.map((item) => ({ ...item })),
+        informationItems: digests.informationItems.map((item) => ({ ...item })),
         taskFamilies: [...UNIVERSITY_RESEARCH_TASK_FAMILIES],
         taskScriptDigest: UNIVERSITY_RESEARCH_EXPOSURE_TASK_SET_DIGEST,
         automatedSynthesisAllowed: false,
@@ -139,7 +121,7 @@ function baseRequest(digests: ArtifactDigests): UniversityResearchReadinessReque
         delivery: "static_manual_packet",
         artifactRef: "matched-substitute.phase-minus-one.v1",
         artifactDigest: digests.substitute,
-        informationItems: INFORMATION_ITEMS.map((item) => ({ ...item })),
+        informationItems: digests.informationItems.map((item) => ({ ...item })),
         taskFamilies: [...UNIVERSITY_RESEARCH_TASK_FAMILIES],
         taskScriptDigest: UNIVERSITY_RESEARCH_EXPOSURE_TASK_SET_DIGEST,
         automatedSynthesisAllowed: false,
@@ -323,7 +305,24 @@ export type UniversityResearchReadinessFixtureScenario = Readonly<{
   id: UniversityResearchReadinessFixtureId;
   label: string;
   projection: Readonly<UniversityResearchReadinessProjectionV1>;
+  artifactProjection:
+    Readonly<UniversityResearchArtifactPreflightProjectionV1> | null;
 }>;
+
+async function artifactProjectionFor(
+  fixtureId: UniversityResearchReadinessFixtureId,
+): Promise<Readonly<UniversityResearchArtifactPreflightProjectionV1> | null> {
+  if (fixtureId === "invalid-protocol") return null;
+  const authored = await authoredUniversityResearchArtifactPreflightRequest();
+  const artifactRequest = JSON.parse(JSON.stringify(
+    authored,
+  )) as UniversityResearchArtifactPreflightRequestV1;
+  if (fixtureId === "comparator-mismatch") {
+    artifactRequest.substitute.packBindings[0].packDigest =
+      `sha256:${"0".repeat(64)}`;
+  }
+  return projectUniversityResearchArtifacts(artifactRequest);
+}
 
 export async function universityResearchReadinessFixtureScenarios(): Promise<
   readonly UniversityResearchReadinessFixtureScenario[]
@@ -345,32 +344,50 @@ export async function universityResearchReadinessFixtureScenarios(): Promise<
   ] = await Promise.all([
     ...requests.map((entry) => projectUniversityResearchReadiness(entry)),
   ]);
+  const [
+    invalidProtocolArtifact,
+    comparatorMismatchArtifact,
+    missingApprovalArtifact,
+    operatorGapArtifact,
+    syntheticPlanCoherentArtifact,
+  ] = await Promise.all([
+    artifactProjectionFor("invalid-protocol"),
+    artifactProjectionFor("comparator-mismatch"),
+    artifactProjectionFor("missing-approval"),
+    artifactProjectionFor("operator-gap"),
+    artifactProjectionFor("synthetic-plan-coherent"),
+  ]);
 
   return Object.freeze([
     Object.freeze({
       id: "invalid-protocol",
       label: "Invalid protocol",
       projection: invalidProtocol,
+      artifactProjection: invalidProtocolArtifact,
     }),
     Object.freeze({
       id: "comparator-mismatch",
       label: "Comparator mismatch",
       projection: comparatorMismatch,
+      artifactProjection: comparatorMismatchArtifact,
     }),
     Object.freeze({
       id: "missing-approval",
       label: "Missing approval",
       projection: missingApproval,
+      artifactProjection: missingApprovalArtifact,
     }),
     Object.freeze({
       id: "operator-gap",
       label: "Operator gap",
       projection: operatorGap,
+      artifactProjection: operatorGapArtifact,
     }),
     Object.freeze({
       id: "synthetic-plan-coherent",
       label: "Synthetic plan coherent",
       projection: syntheticPlanCoherent,
+      artifactProjection: syntheticPlanCoherentArtifact,
     }),
   ]);
 }
