@@ -179,7 +179,7 @@ Phase 0 did not create a native iOS project.
 
 Phase 0 did not deploy, push, merge, or change external data.
 
-## 9. Phase 1 approval gate
+## 9. Phase 1 approval and execution state
 
 Phase 1 will create Figma foundations only.
 
@@ -194,7 +194,26 @@ It will create:
 
 Phase 1 will not create final page designs.
 
-Explicit user approval is required before Phase 1 starts.
+The user approved Phase 1 on 2026-08-01.
+
+Execution state: `APPROVED_NOT_CREATED`.
+
+The connected Figma plan is Starter.
+
+Figma supports variable modes on Education, Professional, Organization, and Enterprise plans.
+
+The current target file cannot create the planned Light and Dark modes.
+
+The Figma connector also returned `INVALID_ARGUMENT` for read and write calls after the plan check.
+
+No Phase 1 mutation succeeded.
+
+Continue with one of these available structures:
+
+1. Use a paid-plan Figma file with one Semantic collection and Light and Dark modes.
+2. Approve separate Light and Dark Semantic collections as a Starter-compatible fallback.
+
+The exact build sequence is in `docs/design/FIGMA_PHASE_1_EXECUTION_PLAN.md`.
 
 ## 10. Import-ready token handoff
 

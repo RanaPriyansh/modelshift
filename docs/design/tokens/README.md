@@ -34,7 +34,13 @@ Core dimensions use `px`, durations use `s`, and font families use one string.
 
 These values match the current Figma DTCG importer requirements.
 
-Do not import these files before Phase 1 receives explicit approval.
+Phase 1 received explicit approval on 2026-08-01.
+
+Do not import these files before the Figma plan structure is selected.
+
+The current Starter plan cannot create the planned Light and Dark modes.
+
+Use `docs/design/FIGMA_PHASE_1_EXECUTION_PLAN.md` for the selected structure.
 
 ## Web mapping
 

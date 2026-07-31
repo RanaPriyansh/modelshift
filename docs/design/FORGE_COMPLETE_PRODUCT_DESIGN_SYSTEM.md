@@ -39,6 +39,10 @@ The permanent trust line is:
 
 ## 2. Taste model
 
+The controlling rule is:
+
+> Vivid at thresholds. Quiet during work.
+
 The supplied references establish these design preferences:
 
 - Saturated cobalt sky.
@@ -60,6 +64,8 @@ The product must feel vivid, calm, playful, rigorous, humane, and inspectable.
 The product must not feel like a generic AI product.
 
 The product must not use a card wall, chat-first home, game economy, or infinite feed.
+
+The detailed reference analysis is in `docs/design/FORGE_TASTE_SYNTHESIS.md`.
 
 ## 3. Product design principles
 
@@ -463,6 +469,12 @@ Create these variable collections:
 - `FORGE / Semantic`
 
 The Semantic collection has Light and Dark modes.
+
+The current Figma Starter plan does not support variable modes.
+
+Phase 1 needs a paid-plan file or an approved separate-collection fallback.
+
+The Phase 1 build sequence is in `docs/design/FIGMA_PHASE_1_EXECUTION_PLAN.md`.
 
 Create text styles, color styles, and minimal effect styles.
 
