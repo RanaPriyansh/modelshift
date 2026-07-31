@@ -355,6 +355,10 @@ promote an internal route.
 | `UV1-SYS-006` | Preserve degree and learning as separate axes under one opaque learner-owned binding. | Student context returns `review_required` when either valid child requires review and `ready_for_inspection` only when both declarations are coherent; it emits no combined readiness, progress, mastery, risk, graduation, priority, or global next-action value. |
 | `UV1-SYS-007` | Keep the internal inspection routes development-only and effect-free. | Exact environment tokens gate the command center, degree map, and learning map; production imports only unavailable shells; browser presentations contain bounded server-authored synthetic values and perform no fetch, storage, provider, model, message, event, or external action. |
 | `UV1-SYS-008` | Use one clear directory without hidden priority. | The university command center lists bounded internal workspaces in alphabetical order, starts with no selection, uses explicit native links, preserves keyboard focus and 320 CSS pixel reflow, and states that order is not priority or recommendation. |
+| `UV1-SYS-009` | Bind learner-declared maps to copied course-source candidates without upgrading source authority. | A pure source-map context enforces a 512 KiB request limit, recomputes raw student-context and course-source requests, verifies exact course, revision, digest, candidate, claim, and concept bindings, deduplicates exact degree-source records, and exposes no copied source label or complete fact. |
+| `UV1-SYS-010` | Keep source uncertainty explicit at the composition boundary. | The highest source-map state is `bound_review_candidate`; stale, partial, duplicate, conflicting, rejected, unresolved, missing, or unbound candidates and unbound concepts remain review-required; source authenticity and institutional completeness remain not established. |
+| `UV1-SYS-011` | Derive an adult account binding only from server authority. | A one-parameter server-only adapter uses fixed module-owned identity and key providers, accepts raw degree and learning requests without caller identity or context binding, derives a versioned domain-separated HMAC-SHA-256 pseudonym after active-adult identity admission, and returns only unavailable, invalid, or bound-for-inspection. |
+| `UV1-SYS-012` | Keep cloud identity and university persistence disabled until their separate gates pass. | The default account adapter remains unavailable while cloud auth is structurally disabled; no route, migration, browser store, provider, model, event, or external action is added; ADR-026 retains identity, tenant, retention, export, correction, deletion, backup, RLS, and release blockers. |
 
 ## First slice acceptance
 
@@ -373,11 +377,12 @@ slice. Its implementation evidence does not close `UV1-GATE-001..003` and
 does not authorize a public route, persistence, live coursework, provider
 operation, or a research claim.
 
-The 1 August 2026 principal amendment permits bounded internal engineering for
-the learner-owned degree map, learning map, student context, and inspection
-directory. That work must remain synthetic, effect-free, reversible, and
-separate from research evidence. It cannot select the Phase -1 target or
-justify a normative public product rebase.
+The 1 August 2026 principal amendments permit bounded internal engineering for
+the learner-owned degree map, learning map, student context, inspection
+directory, copied-source binding, and server-disabled adult account binding.
+That work must remain effect-free, reversible, and separate from research
+evidence. It cannot enable cloud identity, persistence, tutoring, select the
+Phase -1 target, or justify a normative public product rebase.
 
 The next program action must be one of:
 

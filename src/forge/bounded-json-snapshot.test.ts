@@ -193,6 +193,73 @@ describe("bounded JSON snapshot", () => {
     })).toThrow(TypeError);
   });
 
+  it("applies the optional string limit to values and object keys", () => {
+    expect(boundedJsonSnapshot({
+      four: "four",
+    }, {
+      maximumStringLength: 4,
+    })).toEqual({
+      four: "four",
+    });
+    expect(() => boundedJsonSnapshot({
+      value: "12345",
+    }, {
+      maximumStringLength: 4,
+    })).toThrow(TypeError);
+    expect(() => boundedJsonSnapshot({
+      "12345": null,
+    }, {
+      maximumStringLength: 4,
+    })).toThrow(TypeError);
+  });
+
+  it("pins the exact UTF-8 serialized JSON byte boundary", () => {
+    const input = {
+      é: ["\"", "\u0000", "😀"],
+      number: -0,
+      enabled: true,
+      empty: null,
+    };
+    const exactBytes = new TextEncoder().encode(JSON.stringify(input)).byteLength;
+
+    expect(boundedJsonSnapshot(input, {
+      maximumSerializedJsonBytes: exactBytes,
+    })).toEqual(input);
+    expect(() => boundedJsonSnapshot(input, {
+      maximumSerializedJsonBytes: exactBytes - 1,
+    })).toThrow(TypeError);
+  });
+
+  it("does not invoke accessors while it accounts for keys and punctuation", () => {
+    let getterCalls = 0;
+    const input: Record<string, unknown> = {};
+    Object.defineProperty(input, "privateValue", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return "must not run";
+      },
+    });
+
+    expect(() => boundedJsonSnapshot(input, {
+      maximumStringLength: 64,
+      maximumSerializedJsonBytes: 128,
+    })).toThrow(TypeError);
+    expect(getterCalls).toBe(0);
+  });
+
+  it("rejects invalid trusted limit options", () => {
+    for (const invalid of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => boundedJsonSnapshot(null, {
+        maximumStringLength: invalid,
+      })).toThrow(TypeError);
+      expect(() => boundedJsonSnapshot(null, {
+        maximumSerializedJsonBytes: invalid,
+      })).toThrow(TypeError);
+    }
+  });
+
   it("pins the exact node, array-length, and object-key boundaries", () => {
     const exactNodeLimit = nodeBoundaryGraph();
     const overNodeLimit = nodeBoundaryGraph(1);

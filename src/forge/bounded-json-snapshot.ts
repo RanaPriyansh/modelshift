@@ -25,6 +25,27 @@ export interface BoundedJsonSnapshotOptions {
    * must supply a tree that has the same reference semantics as parsed JSON.
    */
   readonly rejectRepeatedReferences?: boolean;
+  /**
+   * Rejects each string value and object key above this UTF-16 code-unit
+   * length. Callers must supply a trusted non-negative safe integer.
+   */
+  readonly maximumStringLength?: number;
+  /**
+   * Rejects a snapshot when its exact UTF-8 JSON representation exceeds this
+   * byte count. Callers must supply a trusted non-negative safe integer.
+   */
+  readonly maximumSerializedJsonBytes?: number;
+}
+
+function optionalTrustedLimit(
+  name: string,
+  value: number | undefined,
+): number | null {
+  if (value === undefined) return null;
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new TypeError(`${name} must be a non-negative safe integer.`);
+  }
+  return value;
 }
 
 /**
@@ -44,10 +65,72 @@ export function boundedJsonSnapshot(
   value: unknown,
   options: Readonly<BoundedJsonSnapshotOptions> = {},
 ): unknown {
-  const budget = { nodes: 0 };
+  const maximumStringLength = optionalTrustedLimit(
+    "maximumStringLength",
+    options.maximumStringLength,
+  );
+  const maximumSerializedJsonBytes = optionalTrustedLimit(
+    "maximumSerializedJsonBytes",
+    options.maximumSerializedJsonBytes,
+  );
+  const budget = { nodes: 0, serializedJsonBytes: 0 };
   const visited = options.rejectRepeatedReferences
     ? new WeakSet<object>()
     : null;
+
+  function accountSerializedBytes(bytes: number): void {
+    if (maximumSerializedJsonBytes === null) return;
+    if (bytes > maximumSerializedJsonBytes - budget.serializedJsonBytes) {
+      throw new TypeError(
+        "Input exceeds the serialized JSON byte boundary.",
+      );
+    }
+    budget.serializedJsonBytes += bytes;
+  }
+
+  function accountJsonString(candidate: string): void {
+    if (
+      maximumStringLength !== null
+      && candidate.length > maximumStringLength
+    ) {
+      throw new TypeError("Input string exceeds the string-length boundary.");
+    }
+    if (maximumSerializedJsonBytes === null) return;
+
+    accountSerializedBytes(2);
+    for (let index = 0; index < candidate.length; index += 1) {
+      const codeUnit = candidate.charCodeAt(index);
+      if (
+        codeUnit === 0x08
+        || codeUnit === 0x09
+        || codeUnit === 0x0a
+        || codeUnit === 0x0c
+        || codeUnit === 0x0d
+        || codeUnit === 0x22
+        || codeUnit === 0x5c
+      ) {
+        accountSerializedBytes(2);
+      } else if (codeUnit <= 0x1f) {
+        accountSerializedBytes(6);
+      } else if (codeUnit <= 0x7f) {
+        accountSerializedBytes(1);
+      } else if (codeUnit <= 0x7ff) {
+        accountSerializedBytes(2);
+      } else if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+        const nextCodeUnit = candidate.charCodeAt(index + 1);
+        if (nextCodeUnit >= 0xdc00 && nextCodeUnit <= 0xdfff) {
+          accountSerializedBytes(4);
+          index += 1;
+        } else {
+          accountSerializedBytes(6);
+        }
+      } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
+        accountSerializedBytes(6);
+      } else {
+        accountSerializedBytes(3);
+      }
+    }
+  }
 
   function visit(candidate: unknown, depth: number): unknown {
     budget.nodes += 1;
@@ -57,12 +140,20 @@ export function boundedJsonSnapshot(
     ) {
       throw new TypeError("Input graph exceeds the bounded JSON snapshot boundary.");
     }
-    if (
-      candidate === null
-      || typeof candidate === "string"
-      || typeof candidate === "boolean"
-      || (typeof candidate === "number" && Number.isFinite(candidate))
-    ) {
+    if (candidate === null) {
+      accountSerializedBytes(4);
+      return candidate;
+    }
+    if (typeof candidate === "string") {
+      accountJsonString(candidate);
+      return candidate;
+    }
+    if (typeof candidate === "boolean") {
+      accountSerializedBytes(candidate ? 4 : 5);
+      return candidate;
+    }
+    if (typeof candidate === "number" && Number.isFinite(candidate)) {
+      accountSerializedBytes(JSON.stringify(candidate).length);
       return candidate;
     }
     if (typeof candidate !== "object") {
@@ -92,6 +183,7 @@ export function boundedJsonSnapshot(
         throw new TypeError("Input array is not allowed.");
       }
       const length = lengthDescriptor.value;
+      accountSerializedBytes(2 + Math.max(0, length - 1));
       const keys = Reflect.ownKeys(candidate);
       if (
         keys.some((key) => (
@@ -132,8 +224,12 @@ export function boundedJsonSnapshot(
     ) {
       throw new TypeError("Input object keys are not allowed.");
     }
+    accountSerializedBytes(
+      2 + keys.length + Math.max(0, keys.length - 1),
+    );
     const output: Record<string, unknown> = {};
     for (const key of keys as string[]) {
+      accountJsonString(key);
       const descriptor = Object.getOwnPropertyDescriptor(candidate, key);
       if (
         !descriptor

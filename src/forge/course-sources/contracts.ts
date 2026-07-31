@@ -32,7 +32,7 @@ export const COURSE_SOURCE_COVERAGE_STATES = frozenVocabulary(COURSE_SOURCE_COVE
 export const COURSE_SOURCE_RETENTION_CLASSES = frozenVocabulary(COURSE_SOURCE_RETENTION_LITERALS);
 export const COURSE_SOURCE_FACT_KINDS = frozenVocabulary(COURSE_SOURCE_FACT_KIND_LITERALS);
 
-const timestampSchema = z.string().datetime({ offset: true });
+const timestampSchema = z.string().max(64).datetime({ offset: true });
 const uuidSchema = z.string().uuid();
 const termIdSchema = z.string().trim().max(160).regex(/^term\.[a-z0-9]+(?:[._-][a-z0-9]+)*$/);
 const courseIdSchema = z.string().trim().max(160).regex(/^course\.[a-z0-9]+(?:[._-][a-z0-9]+)*$/);
