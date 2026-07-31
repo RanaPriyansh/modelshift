@@ -182,7 +182,8 @@ FORGE_UNIVERSITY_SEMESTER_OVERVIEW_FIXTURE=forge-university-semester-overview.v1
 
 Production imports and renders only a generic unavailable shell. The token,
 schema identities, fixture markers, scenario copy, and complete
-development-surface lexical set are forbidden in public static assets.
+development-surface lexical set are forbidden in public and server build
+artifacts.
 
 ## Alternatives rejected
 

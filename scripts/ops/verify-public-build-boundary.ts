@@ -10,8 +10,8 @@ import {
   scanUniversitySourceReviewProductionArtifacts,
 } from "../../src/components/forge/university/university-source-review-public-artifact-boundary";
 import {
-  assertNoUniversityRecoveryPublicArtifactLeaks,
-  scanUniversityRecoveryProductionPublicAssets,
+  assertNoUniversityRecoveryProductionArtifactLeaks,
+  scanUniversityRecoveryProductionArtifacts,
 } from "../../src/components/forge/university/university-recovery-public-artifact-boundary";
 import {
   assertNoUniversityResearchReadinessPublicArtifactLeaks,
@@ -26,20 +26,20 @@ import {
   scanUniversityProtectedStudyProductionArtifacts,
 } from "../../src/components/forge/university/university-protected-study-public-artifact-boundary";
 import {
-  assertNoUniversityPostAttemptRepairPublicArtifactLeaks,
-  scanUniversityPostAttemptRepairProductionPublicAssets,
+  assertNoUniversityPostAttemptRepairProductionArtifactLeaks,
+  scanUniversityPostAttemptRepairProductionArtifacts,
 } from "../../src/components/forge/university/university-post-attempt-repair-public-artifact-boundary";
 import {
-  assertNoUniversitySemesterLoopPublicArtifactLeaks,
-  scanUniversitySemesterLoopProductionPublicAssets,
+  assertNoUniversitySemesterLoopProductionArtifactLeaks,
+  scanUniversitySemesterLoopProductionArtifacts,
 } from "../../src/components/forge/university/university-semester-loop-public-artifact-boundary";
 import {
-  assertNoUniversitySemesterDeskPublicArtifactLeaks,
-  scanUniversitySemesterDeskProductionPublicAssets,
+  assertNoUniversitySemesterDeskProductionArtifactLeaks,
+  scanUniversitySemesterDeskProductionArtifacts,
 } from "../../src/components/forge/university/university-semester-desk-public-artifact-boundary";
 import {
-  assertNoUniversitySemesterOverviewPublicArtifactLeaks,
-  scanUniversitySemesterOverviewProductionPublicAssets,
+  assertNoUniversitySemesterOverviewProductionArtifactLeaks,
+  scanUniversitySemesterOverviewProductionArtifacts,
 } from "../../src/components/forge/university/university-semester-overview-public-artifact-boundary";
 import {
   assertNoUniversityTodayProductionArtifactLeaks,
@@ -98,7 +98,7 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
   const adultPilotLeaks = scanAdultPilotProductionPublicAssets(root);
   const universitySourceReviewLeaks =
     scanUniversitySourceReviewProductionArtifacts(root);
-  const universityRecoveryLeaks = scanUniversityRecoveryProductionPublicAssets(root);
+  const universityRecoveryLeaks = scanUniversityRecoveryProductionArtifacts(root);
   const universityResearchReadinessLeaks =
     scanUniversityResearchReadinessProductionPublicAssets(root);
   const universityResearchSubstituteLeaks =
@@ -106,13 +106,13 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
   const universityProtectedStudyLeaks =
     scanUniversityProtectedStudyProductionArtifacts(root);
   const universityPostAttemptRepairLeaks =
-    scanUniversityPostAttemptRepairProductionPublicAssets(root);
+    scanUniversityPostAttemptRepairProductionArtifacts(root);
   const universitySemesterLoopAndResearchCandidateLeaks =
-    scanUniversitySemesterLoopProductionPublicAssets(root);
+    scanUniversitySemesterLoopProductionArtifacts(root);
   const universitySemesterDeskLeaks =
-    scanUniversitySemesterDeskProductionPublicAssets(root);
+    scanUniversitySemesterDeskProductionArtifacts(root);
   const universitySemesterOverviewLeaks =
-    scanUniversitySemesterOverviewProductionPublicAssets(root);
+    scanUniversitySemesterOverviewProductionArtifacts(root);
   const universityTodayLeaks = scanUniversityTodayProductionArtifacts(root);
   const universityFoundationLeaks =
     scanUniversityFoundationProductionArtifacts(root);
@@ -123,7 +123,7 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
   assertNoUniversitySourceReviewProductionArtifactLeaks(
     universitySourceReviewLeaks,
   );
-  assertNoUniversityRecoveryPublicArtifactLeaks(universityRecoveryLeaks);
+  assertNoUniversityRecoveryProductionArtifactLeaks(universityRecoveryLeaks);
   assertNoUniversityResearchReadinessPublicArtifactLeaks(
     universityResearchReadinessLeaks,
   );
@@ -133,16 +133,16 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
   assertNoUniversityProtectedStudyProductionArtifactLeaks(
     universityProtectedStudyLeaks,
   );
-  assertNoUniversityPostAttemptRepairPublicArtifactLeaks(
+  assertNoUniversityPostAttemptRepairProductionArtifactLeaks(
     universityPostAttemptRepairLeaks,
   );
-  assertNoUniversitySemesterLoopPublicArtifactLeaks(
+  assertNoUniversitySemesterLoopProductionArtifactLeaks(
     universitySemesterLoopAndResearchCandidateLeaks,
   );
-  assertNoUniversitySemesterDeskPublicArtifactLeaks(
+  assertNoUniversitySemesterDeskProductionArtifactLeaks(
     universitySemesterDeskLeaks,
   );
-  assertNoUniversitySemesterOverviewPublicArtifactLeaks(
+  assertNoUniversitySemesterOverviewProductionArtifactLeaks(
     universitySemesterOverviewLeaks,
   );
   assertNoUniversityTodayProductionArtifactLeaks(universityTodayLeaks);

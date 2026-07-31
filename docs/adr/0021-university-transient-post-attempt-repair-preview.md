@@ -187,9 +187,10 @@ FORGE_UNIVERSITY_POST_ATTEMPT_REPAIR_FIXTURE=forge-university-post-attempt-repai
 Production imports and renders only a generic unavailable shell. The token,
 schema names, repair policy identity, repair-specific compound criteria,
 authored sample/policy content, and complete development-surface lexical set
-are forbidden in public static assets. Bare World and validator identifiers
-already shipped by the released public World remain public; the scanner does
-not pretend that this slice can make those existing identifiers secret.
+are forbidden in public and server build artifacts. Bare World and validator
+identifiers already shipped by the released public World remain public. The
+scanner does not pretend that this slice can make those existing identifiers
+secret.
 
 ## Interaction and visual decision
 

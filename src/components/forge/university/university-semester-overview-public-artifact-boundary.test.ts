@@ -1,42 +1,42 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  UNIVERSITY_SEMESTER_OVERVIEW_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS,
+  UNIVERSITY_SEMESTER_OVERVIEW_PRODUCTION_ARTIFACT_FORBIDDEN_MARKERS,
   UNIVERSITY_SEMESTER_OVERVIEW_SURFACE_LEXICAL_SET,
-  assertNoUniversitySemesterOverviewPublicArtifactLeaks,
-  findUniversitySemesterOverviewPublicArtifactLeaks,
+  assertNoUniversitySemesterOverviewProductionArtifactLeaks,
+  findUniversitySemesterOverviewProductionArtifactLeaks,
 } from "./university-semester-overview-public-artifact-boundary";
 
-describe("university semester overview public artifact boundary", () => {
-  it("rejects every unique server-only marker in a public asset", () => {
+describe("university semester overview production artifact boundary", () => {
+  it("rejects every unique server-only marker", () => {
     for (
       const marker
-      of UNIVERSITY_SEMESTER_OVERVIEW_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS
+      of UNIVERSITY_SEMESTER_OVERVIEW_PRODUCTION_ARTIFACT_FORBIDDEN_MARKERS
     ) {
-      expect(findUniversitySemesterOverviewPublicArtifactLeaks([{
-        path: "static/chunks/semester-overview.js",
+      expect(findUniversitySemesterOverviewProductionArtifactLeaks([{
+        path: ".next/server/chunks/semester-overview.js",
         contents: marker,
       }])).toEqual([{
-        path: "static/chunks/semester-overview.js",
+        path: ".next/server/chunks/semester-overview.js",
         marker,
       }]);
     }
-    expect(findUniversitySemesterOverviewPublicArtifactLeaks([{
-      path: "static/chunks/public.js",
+    expect(findUniversitySemesterOverviewProductionArtifactLeaks([{
+      path: ".next/static/chunks/public.js",
       contents: "University semester overview is unavailable.",
     }])).toEqual([]);
   });
 
   it("rejects the complete development surface lexical set only", () => {
-    expect(findUniversitySemesterOverviewPublicArtifactLeaks([{
-      path: "static/chunks/semester-overview.js",
+    expect(findUniversitySemesterOverviewProductionArtifactLeaks([{
+      path: ".next/server/chunks/semester-overview.js",
       contents: UNIVERSITY_SEMESTER_OVERVIEW_SURFACE_LEXICAL_SET.join(" "),
     }])).toEqual([{
-      path: "static/chunks/semester-overview.js",
+      path: ".next/server/chunks/semester-overview.js",
       marker: "university semester overview server-only surface lexical set",
     }]);
-    expect(findUniversitySemesterOverviewPublicArtifactLeaks([{
-      path: "static/chunks/public.js",
+    expect(findUniversitySemesterOverviewProductionArtifactLeaks([{
+      path: ".next/static/chunks/public.js",
       contents: UNIVERSITY_SEMESTER_OVERVIEW_SURFACE_LEXICAL_SET[0]!,
     }])).toEqual([]);
   });
@@ -44,14 +44,17 @@ describe("university semester overview public artifact boundary", () => {
   it("rejects the complete development lexical set split across chunks", () => {
     const assets = UNIVERSITY_SEMESTER_OVERVIEW_SURFACE_LEXICAL_SET.map(
       (contents, index) => ({
-        path: `static/chunks/semester-overview-${index}.js`,
+        path: `.next/${index % 2 === 0
+          ? "static"
+          : "server"}/semester-overview-${index}.js`,
         contents,
       }),
     );
 
-    expect(findUniversitySemesterOverviewPublicArtifactLeaks(assets)).toEqual([
+    expect(findUniversitySemesterOverviewProductionArtifactLeaks(assets))
+      .toEqual([
       {
-        path: "<public-static-assets>",
+        path: "<production-artifacts>",
         marker:
           "university semester overview server-only surface lexical set",
       },
@@ -66,16 +69,16 @@ describe("university semester overview public artifact boundary", () => {
         contents,
       }));
 
-    expect(findUniversitySemesterOverviewPublicArtifactLeaks(assets))
+    expect(findUniversitySemesterOverviewProductionArtifactLeaks(assets))
       .toEqual([]);
   });
 
   it("fails the build boundary when any leak is found", () => {
-    expect(() => assertNoUniversitySemesterOverviewPublicArtifactLeaks([{
-      path: ".next/static/chunks/semester-overview.js",
+    expect(() => assertNoUniversitySemesterOverviewProductionArtifactLeaks([{
+      path: ".next/server/chunks/semester-overview.js",
       marker: "forge-university-semester-overview.v1",
     }])).toThrow(
-      "University semester overview fixture data reached public build assets",
+      "University semester overview fixture data reached production build artifacts",
     );
   });
 });

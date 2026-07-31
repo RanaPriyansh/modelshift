@@ -1,8 +1,8 @@
 import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
-/** Server-only recovery sample identities and course content forbidden in public assets. */
-export const UNIVERSITY_RECOVERY_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS = Object.freeze([
+/** Server-only recovery sample identities and course content. */
+export const UNIVERSITY_RECOVERY_PRODUCTION_ARTIFACT_FORBIDDEN_MARKERS = Object.freeze([
   "forge-university-recovery.v1",
   "forge-university-recovery-what-if.v1",
   "university-recovery-what-if-request.v1",
@@ -31,60 +31,91 @@ export const UNIVERSITY_RECOVERY_WHAT_IF_SURFACE_LEXICAL_SET = Object.freeze([
 const UNIVERSITY_RECOVERY_WHAT_IF_SURFACE_LEXICAL_SET_MARKER =
   "university recovery what-if server-only surface lexical set";
 
-export type UniversityRecoveryPublicAsset = Readonly<{ path: string; contents: string }>;
-export type UniversityRecoveryPublicArtifactLeak = Readonly<{ path: string; marker: string }>;
+export type UniversityRecoveryProductionArtifact =
+  Readonly<{ path: string; contents: string }>;
+export type UniversityRecoveryProductionArtifactLeak =
+  Readonly<{ path: string; marker: string }>;
 
-export function findUniversityRecoveryPublicArtifactLeaks(
-  assets: readonly UniversityRecoveryPublicAsset[],
-): readonly UniversityRecoveryPublicArtifactLeak[] {
-  return Object.freeze(assets.flatMap((asset) => {
+export function findUniversityRecoveryProductionArtifactLeaks(
+  artifacts: readonly UniversityRecoveryProductionArtifact[],
+): readonly UniversityRecoveryProductionArtifactLeak[] {
+  const leaks = artifacts.flatMap((artifact) => {
     const markerLeaks =
-      UNIVERSITY_RECOVERY_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS.flatMap((marker) => (
-      asset.contents.includes(marker) ? [Object.freeze({ path: asset.path, marker })] : []
+      UNIVERSITY_RECOVERY_PRODUCTION_ARTIFACT_FORBIDDEN_MARKERS.flatMap((marker) => (
+      artifact.contents.includes(marker)
+        ? [Object.freeze({ path: artifact.path, marker })]
+        : []
       ));
     const surfaceLeak = UNIVERSITY_RECOVERY_WHAT_IF_SURFACE_LEXICAL_SET.every(
-      (copy) => asset.contents.includes(copy),
+      (copy) => artifact.contents.includes(copy),
     )
       ? [Object.freeze({
-          path: asset.path,
+          path: artifact.path,
           marker:
             UNIVERSITY_RECOVERY_WHAT_IF_SURFACE_LEXICAL_SET_MARKER,
         })]
       : [];
     return [...markerLeaks, ...surfaceLeak];
-  }));
+  });
+  const oneArtifactAlreadyContainsSurface = leaks.some(
+    (leak) => leak.marker
+      === UNIVERSITY_RECOVERY_WHAT_IF_SURFACE_LEXICAL_SET_MARKER,
+  );
+  const allContents = artifacts.map((artifact) => artifact.contents).join("\n");
+  if (
+    !oneArtifactAlreadyContainsSurface
+    && UNIVERSITY_RECOVERY_WHAT_IF_SURFACE_LEXICAL_SET.every(
+      (copy) => allContents.includes(copy),
+    )
+  ) {
+    leaks.push(Object.freeze({
+      path: "<production-artifacts>",
+      marker: UNIVERSITY_RECOVERY_WHAT_IF_SURFACE_LEXICAL_SET_MARKER,
+    }));
+  }
+  return Object.freeze(leaks);
 }
 
-export function assertNoUniversityRecoveryPublicArtifactLeaks(
-  leaks: readonly UniversityRecoveryPublicArtifactLeak[],
+export function assertNoUniversityRecoveryProductionArtifactLeaks(
+  leaks: readonly UniversityRecoveryProductionArtifactLeak[],
 ): void {
   if (leaks.length > 0) {
-    throw new Error(`University recovery sample data reached public build assets:\n${leaks.map((leak) => `${leak.path}: ${leak.marker}`).join("\n")}`);
+    throw new Error(`University recovery sample data reached production build artifacts:\n${leaks.map((leak) => `${leak.path}: ${leak.marker}`).join("\n")}`);
   }
 }
 
-function publicStaticFiles(directory: string): readonly string[] {
+function productionArtifactFiles(directory: string): readonly string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const absolutePath = resolve(directory, entry.name);
     const stat = lstatSync(absolutePath);
     if (stat.isSymbolicLink()) {
-      throw new Error(`University recovery public-asset scan rejected symlink: ${absolutePath}`);
+      throw new Error(`University recovery artifact scan rejected symlink: ${absolutePath}`);
     }
-    if (stat.isDirectory()) return publicStaticFiles(absolutePath);
+    if (stat.isDirectory()) return productionArtifactFiles(absolutePath);
     return stat.isFile() ? [absolutePath] : [];
   });
 }
 
-export function scanUniversityRecoveryProductionPublicAssets(
+export function scanUniversityRecoveryProductionArtifacts(
   projectRoot: string = process.cwd(),
-): readonly UniversityRecoveryPublicArtifactLeak[] {
-  const staticDirectory = resolve(projectRoot, ".next/static");
-  if (!existsSync(staticDirectory) || !lstatSync(staticDirectory).isDirectory()) {
-    throw new Error("University recovery public-asset scan requires a completed production .next/static build.");
+): readonly UniversityRecoveryProductionArtifactLeak[] {
+  const directories = [
+    resolve(projectRoot, ".next/static"),
+    resolve(projectRoot, ".next/server"),
+  ];
+  for (const directory of directories) {
+    if (!existsSync(directory) || !lstatSync(directory).isDirectory()) {
+      throw new Error(
+        "University recovery artifact scan requires a completed production .next build.",
+      );
+    }
   }
-  const assets = publicStaticFiles(staticDirectory).map((absolutePath) => Object.freeze({
-    path: relative(projectRoot, absolutePath),
-    contents: readFileSync(absolutePath, "utf8"),
-  }));
-  return findUniversityRecoveryPublicArtifactLeaks(assets);
+  return findUniversityRecoveryProductionArtifactLeaks(
+    directories.flatMap((directory) => (
+      productionArtifactFiles(directory).map((absolutePath) => Object.freeze({
+        path: relative(projectRoot, absolutePath),
+        contents: readFileSync(absolutePath, "utf8"),
+      }))
+    )),
+  );
 }

@@ -6,8 +6,8 @@ import {
 } from "node:fs";
 import { relative, resolve } from "node:path";
 
-/** Unique server-only semester-desk identities forbidden in public assets. */
-export const UNIVERSITY_SEMESTER_DESK_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS =
+/** Unique server-only semester-desk identities. */
+export const UNIVERSITY_SEMESTER_DESK_PRODUCTION_ARTIFACT_FORBIDDEN_MARKERS =
   Object.freeze([
     "forge-university-semester-desk.v1",
     "university-semester-desk-fixture.v1",
@@ -35,98 +35,104 @@ export const UNIVERSITY_SEMESTER_DESK_SURFACE_LEXICAL_SET =
 const UNIVERSITY_SEMESTER_DESK_SURFACE_LEXICAL_SET_MARKER =
   "university semester desk server-only surface lexical set";
 
-export type UniversitySemesterDeskPublicAsset = Readonly<{
+export type UniversitySemesterDeskProductionArtifact = Readonly<{
   path: string;
   contents: string;
 }>;
 
-export type UniversitySemesterDeskPublicArtifactLeak = Readonly<{
+export type UniversitySemesterDeskProductionArtifactLeak = Readonly<{
   path: string;
   marker: string;
 }>;
 
-export function findUniversitySemesterDeskPublicArtifactLeaks(
-  assets: readonly UniversitySemesterDeskPublicAsset[],
-): readonly UniversitySemesterDeskPublicArtifactLeak[] {
-  const leaks = assets.flatMap((asset) => {
+export function findUniversitySemesterDeskProductionArtifactLeaks(
+  artifacts: readonly UniversitySemesterDeskProductionArtifact[],
+): readonly UniversitySemesterDeskProductionArtifactLeak[] {
+  const leaks = artifacts.flatMap((artifact) => {
     const markerLeaks =
-      UNIVERSITY_SEMESTER_DESK_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS.flatMap(
+      UNIVERSITY_SEMESTER_DESK_PRODUCTION_ARTIFACT_FORBIDDEN_MARKERS.flatMap(
         (marker) => (
-          asset.contents.includes(marker)
-            ? [Object.freeze({ path: asset.path, marker })]
+          artifact.contents.includes(marker)
+            ? [Object.freeze({ path: artifact.path, marker })]
             : []
         ),
       );
     const surfaceLeak =
       UNIVERSITY_SEMESTER_DESK_SURFACE_LEXICAL_SET.every(
-        (copy) => asset.contents.includes(copy),
+        (copy) => artifact.contents.includes(copy),
       )
         ? [Object.freeze({
-            path: asset.path,
+            path: artifact.path,
             marker: UNIVERSITY_SEMESTER_DESK_SURFACE_LEXICAL_SET_MARKER,
           })]
         : [];
     return [...markerLeaks, ...surfaceLeak];
   });
-  const oneAssetAlreadyContainsSurface = leaks.some(
+  const oneArtifactAlreadyContainsSurface = leaks.some(
     (leak) => leak.marker
       === UNIVERSITY_SEMESTER_DESK_SURFACE_LEXICAL_SET_MARKER,
   );
-  const allPublicContents = assets.map((asset) => asset.contents).join("\n");
+  const allContents = artifacts
+    .map((artifact) => artifact.contents)
+    .join("\n");
   if (
-    !oneAssetAlreadyContainsSurface
+    !oneArtifactAlreadyContainsSurface
     && UNIVERSITY_SEMESTER_DESK_SURFACE_LEXICAL_SET.every(
-      (copy) => allPublicContents.includes(copy),
+      (copy) => allContents.includes(copy),
     )
   ) {
     leaks.push(Object.freeze({
-      path: "<public-static-assets>",
+      path: "<production-artifacts>",
       marker: UNIVERSITY_SEMESTER_DESK_SURFACE_LEXICAL_SET_MARKER,
     }));
   }
   return Object.freeze(leaks);
 }
 
-export function assertNoUniversitySemesterDeskPublicArtifactLeaks(
-  leaks: readonly UniversitySemesterDeskPublicArtifactLeak[],
+export function assertNoUniversitySemesterDeskProductionArtifactLeaks(
+  leaks: readonly UniversitySemesterDeskProductionArtifactLeak[],
 ): void {
   if (leaks.length > 0) {
     throw new Error(
-      `University semester desk fixture data reached public build assets:\n${leaks.map((leak) => `${leak.path}: ${leak.marker}`).join("\n")}`,
+      `University semester desk fixture data reached production build artifacts:\n${leaks.map((leak) => `${leak.path}: ${leak.marker}`).join("\n")}`,
     );
   }
 }
 
-function publicStaticFiles(directory: string): readonly string[] {
+function productionArtifactFiles(directory: string): readonly string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const absolutePath = resolve(directory, entry.name);
     const stat = lstatSync(absolutePath);
     if (stat.isSymbolicLink()) {
       throw new Error(
-        `University semester desk public-asset scan rejected symlink: ${absolutePath}`,
+        `University semester desk artifact scan rejected symlink: ${absolutePath}`,
       );
     }
-    if (stat.isDirectory()) return publicStaticFiles(absolutePath);
+    if (stat.isDirectory()) return productionArtifactFiles(absolutePath);
     return stat.isFile() ? [absolutePath] : [];
   });
 }
 
-export function scanUniversitySemesterDeskProductionPublicAssets(
+export function scanUniversitySemesterDeskProductionArtifacts(
   projectRoot: string = process.cwd(),
-): readonly UniversitySemesterDeskPublicArtifactLeak[] {
-  const staticDirectory = resolve(projectRoot, ".next/static");
-  if (
-    !existsSync(staticDirectory)
-    || !lstatSync(staticDirectory).isDirectory()
-  ) {
-    throw new Error(
-      "University semester desk public-asset scan requires a completed production .next/static build.",
-    );
+): readonly UniversitySemesterDeskProductionArtifactLeak[] {
+  const directories = [
+    resolve(projectRoot, ".next/static"),
+    resolve(projectRoot, ".next/server"),
+  ];
+  for (const directory of directories) {
+    if (!existsSync(directory) || !lstatSync(directory).isDirectory()) {
+      throw new Error(
+        "University semester desk artifact scan requires a completed production .next build.",
+      );
+    }
   }
-  return findUniversitySemesterDeskPublicArtifactLeaks(
-    publicStaticFiles(staticDirectory).map((absolutePath) => Object.freeze({
-      path: relative(projectRoot, absolutePath),
-      contents: readFileSync(absolutePath, "utf8"),
-    })),
+  return findUniversitySemesterDeskProductionArtifactLeaks(
+    directories.flatMap((directory) => (
+      productionArtifactFiles(directory).map((absolutePath) => Object.freeze({
+        path: relative(projectRoot, absolutePath),
+        contents: readFileSync(absolutePath, "utf8"),
+      }))
+    )),
   );
 }

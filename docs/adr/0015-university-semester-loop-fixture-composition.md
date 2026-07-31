@@ -68,6 +68,10 @@ server-owned token
 present. Production always renders the unavailable shell, even if the token is
 configured.
 
+The production build scans public and server artifacts for fixture identities
+and complete development-surface sets. Route and gate names remain forbidden
+in public client assets, but the server route manifest may contain them.
+
 ## State composition
 
 ```text

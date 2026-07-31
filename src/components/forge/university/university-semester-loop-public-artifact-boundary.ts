@@ -1,11 +1,16 @@
 import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
-/** Server-only semester-loop identities forbidden in public assets. */
-export const UNIVERSITY_SEMESTER_LOOP_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS =
+/** Route and gate names forbidden only in public client assets. */
+export const UNIVERSITY_SEMESTER_LOOP_PUBLIC_ONLY_FORBIDDEN_MARKERS =
   Object.freeze([
     "/internal/university-semester-loop",
     "FORGE_UNIVERSITY_SEMESTER_LOOP_FIXTURE",
+  ] as const);
+
+/** Server-only semester-loop identities and fixture content. */
+export const UNIVERSITY_SEMESTER_LOOP_PRODUCTION_ARTIFACT_FORBIDDEN_MARKERS =
+  Object.freeze([
     "forge-university-semester-loop.v1",
     "forge-university-semester-sandbox.v1",
     "forge-university-research-candidate.pack-p.v1",
@@ -126,129 +131,192 @@ const UNIVERSITY_RESEARCH_CANDIDATE_PACK_P_SCENARIO_SET_MARKER =
 const UNIVERSITY_RESEARCH_CANDIDATE_PACK_Q_SCENARIO_SET_MARKER =
   "university research-candidate server-only Pack Q scenario set";
 
-export type UniversitySemesterLoopPublicAsset =
+export type UniversitySemesterLoopProductionArtifact =
   Readonly<{ path: string; contents: string }>;
-export type UniversitySemesterLoopPublicArtifactLeak =
+export type UniversitySemesterLoopProductionArtifactLeak =
   Readonly<{ path: string; marker: string }>;
 
-export function findUniversitySemesterLoopPublicArtifactLeaks(
-  assets: readonly UniversitySemesterLoopPublicAsset[],
-): readonly UniversitySemesterLoopPublicArtifactLeak[] {
-  return Object.freeze(assets.flatMap((asset) => {
-    const markerLeaks =
-      UNIVERSITY_SEMESTER_LOOP_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS.flatMap(
-        (marker) => (
-          asset.contents.includes(marker)
-            ? [Object.freeze({ path: asset.path, marker })]
-            : []
-        ),
-      );
-    const labelSetLeak = UNIVERSITY_SEMESTER_LOOP_FIXTURE_LABELS.every(
-      (label) => asset.contents.includes(label),
-    )
-      ? [Object.freeze({
-          path: asset.path,
-          marker: UNIVERSITY_SEMESTER_LOOP_FIXTURE_LABEL_SET_MARKER,
-        })]
-      : [];
-    const candidateStatusSetLeak =
-      UNIVERSITY_RESEARCH_CANDIDATE_STATUS_CODES.every(
-        (status) => asset.contents.includes(status),
-      )
-        ? [Object.freeze({
-            path: asset.path,
-            marker: UNIVERSITY_RESEARCH_CANDIDATE_STATUS_SET_MARKER,
-          })]
-        : [];
-    const candidateSurfaceLexicalSetLeak =
-      UNIVERSITY_RESEARCH_CANDIDATE_SURFACE_LEXICAL_SET.every(
-        (copy) => asset.contents.includes(copy),
-      )
-        ? [Object.freeze({
-            path: asset.path,
-            marker:
-              UNIVERSITY_RESEARCH_CANDIDATE_SURFACE_LEXICAL_SET_MARKER,
-          })]
-        : [];
-    const sandboxSurfaceLexicalSetLeak =
-      UNIVERSITY_SEMESTER_SANDBOX_SURFACE_LEXICAL_SET.every(
-        (copy) => asset.contents.includes(copy),
-      )
-        ? [Object.freeze({
-            path: asset.path,
-            marker: UNIVERSITY_SEMESTER_SANDBOX_SURFACE_LEXICAL_SET_MARKER,
-          })]
-        : [];
-    const packPScenarioSetLeak =
-      UNIVERSITY_RESEARCH_CANDIDATE_PACK_P_SCENARIO_REFS.every(
-        (scenarioRef) => asset.contents.includes(scenarioRef),
-      )
-        ? [Object.freeze({
-            path: asset.path,
-            marker:
-              UNIVERSITY_RESEARCH_CANDIDATE_PACK_P_SCENARIO_SET_MARKER,
-          })]
-        : [];
-    const packQScenarioSetLeak =
-      UNIVERSITY_RESEARCH_CANDIDATE_PACK_Q_SCENARIO_REFS.every(
-        (scenarioRef) => asset.contents.includes(scenarioRef),
-      )
-        ? [Object.freeze({
-            path: asset.path,
-            marker:
-              UNIVERSITY_RESEARCH_CANDIDATE_PACK_Q_SCENARIO_SET_MARKER,
-          })]
-        : [];
-    return [
-      ...markerLeaks,
-      ...labelSetLeak,
-      ...candidateStatusSetLeak,
-      ...candidateSurfaceLexicalSetLeak,
-      ...sandboxSurfaceLexicalSetLeak,
-      ...packPScenarioSetLeak,
-      ...packQScenarioSetLeak,
-    ];
-  }));
+function isPublicStaticArtifact(path: string): boolean {
+  return path.startsWith("static/") || path.includes("/static/");
 }
 
-export function assertNoUniversitySemesterLoopPublicArtifactLeaks(
-  leaks: readonly UniversitySemesterLoopPublicArtifactLeak[],
+function findLeaksInSemesterLoopArtifact(
+  artifact: UniversitySemesterLoopProductionArtifact,
+): readonly UniversitySemesterLoopProductionArtifactLeak[] {
+  const markerLeaks =
+    UNIVERSITY_SEMESTER_LOOP_PRODUCTION_ARTIFACT_FORBIDDEN_MARKERS.flatMap(
+      (marker) => (
+        artifact.contents.includes(marker)
+          ? [Object.freeze({ path: artifact.path, marker })]
+          : []
+      ),
+    );
+  const publicOnlyMarkerLeaks = isPublicStaticArtifact(artifact.path)
+    ? UNIVERSITY_SEMESTER_LOOP_PUBLIC_ONLY_FORBIDDEN_MARKERS.flatMap(
+        (marker) => (
+          artifact.contents.includes(marker)
+            ? [Object.freeze({ path: artifact.path, marker })]
+            : []
+        ),
+      )
+    : [];
+  const labelSetLeak = UNIVERSITY_SEMESTER_LOOP_FIXTURE_LABELS.every(
+    (label) => artifact.contents.includes(label),
+  )
+    ? [Object.freeze({
+        path: artifact.path,
+        marker: UNIVERSITY_SEMESTER_LOOP_FIXTURE_LABEL_SET_MARKER,
+      })]
+    : [];
+  const candidateStatusSetLeak =
+    UNIVERSITY_RESEARCH_CANDIDATE_STATUS_CODES.every(
+      (status) => artifact.contents.includes(status),
+    )
+      ? [Object.freeze({
+          path: artifact.path,
+          marker: UNIVERSITY_RESEARCH_CANDIDATE_STATUS_SET_MARKER,
+        })]
+      : [];
+  const candidateSurfaceLexicalSetLeak =
+    UNIVERSITY_RESEARCH_CANDIDATE_SURFACE_LEXICAL_SET.every(
+      (copy) => artifact.contents.includes(copy),
+    )
+      ? [Object.freeze({
+          path: artifact.path,
+          marker:
+            UNIVERSITY_RESEARCH_CANDIDATE_SURFACE_LEXICAL_SET_MARKER,
+        })]
+      : [];
+  const sandboxSurfaceLexicalSetLeak =
+    UNIVERSITY_SEMESTER_SANDBOX_SURFACE_LEXICAL_SET.every(
+      (copy) => artifact.contents.includes(copy),
+    )
+      ? [Object.freeze({
+          path: artifact.path,
+          marker: UNIVERSITY_SEMESTER_SANDBOX_SURFACE_LEXICAL_SET_MARKER,
+        })]
+      : [];
+  const packPScenarioSetLeak =
+    UNIVERSITY_RESEARCH_CANDIDATE_PACK_P_SCENARIO_REFS.every(
+      (scenarioRef) => artifact.contents.includes(scenarioRef),
+    )
+      ? [Object.freeze({
+          path: artifact.path,
+          marker:
+            UNIVERSITY_RESEARCH_CANDIDATE_PACK_P_SCENARIO_SET_MARKER,
+        })]
+      : [];
+  const packQScenarioSetLeak =
+    UNIVERSITY_RESEARCH_CANDIDATE_PACK_Q_SCENARIO_REFS.every(
+      (scenarioRef) => artifact.contents.includes(scenarioRef),
+    )
+      ? [Object.freeze({
+          path: artifact.path,
+          marker:
+            UNIVERSITY_RESEARCH_CANDIDATE_PACK_Q_SCENARIO_SET_MARKER,
+        })]
+      : [];
+  return [
+    ...markerLeaks,
+    ...publicOnlyMarkerLeaks,
+    ...labelSetLeak,
+    ...candidateStatusSetLeak,
+    ...candidateSurfaceLexicalSetLeak,
+    ...sandboxSurfaceLexicalSetLeak,
+    ...packPScenarioSetLeak,
+    ...packQScenarioSetLeak,
+  ];
+}
+
+export function findUniversitySemesterLoopProductionArtifactLeaks(
+  artifacts: readonly UniversitySemesterLoopProductionArtifact[],
+): readonly UniversitySemesterLoopProductionArtifactLeak[] {
+  const leaks: UniversitySemesterLoopProductionArtifactLeak[] =
+    artifacts.flatMap(findLeaksInSemesterLoopArtifact);
+  const allContents = artifacts
+    .map((artifact) => artifact.contents)
+    .join("\n");
+  const completeSets: readonly Readonly<{
+    values: readonly string[];
+    marker: string;
+  }>[] = [
+    {
+      values: UNIVERSITY_RESEARCH_CANDIDATE_SURFACE_LEXICAL_SET,
+      marker: UNIVERSITY_RESEARCH_CANDIDATE_SURFACE_LEXICAL_SET_MARKER,
+    },
+    {
+      values: UNIVERSITY_SEMESTER_SANDBOX_SURFACE_LEXICAL_SET,
+      marker: UNIVERSITY_SEMESTER_SANDBOX_SURFACE_LEXICAL_SET_MARKER,
+    },
+    {
+      values: UNIVERSITY_RESEARCH_CANDIDATE_PACK_P_SCENARIO_REFS,
+      marker: UNIVERSITY_RESEARCH_CANDIDATE_PACK_P_SCENARIO_SET_MARKER,
+    },
+    {
+      values: UNIVERSITY_RESEARCH_CANDIDATE_PACK_Q_SCENARIO_REFS,
+      marker: UNIVERSITY_RESEARCH_CANDIDATE_PACK_Q_SCENARIO_SET_MARKER,
+    },
+  ];
+  for (const completeSet of completeSets) {
+    if (
+      !leaks.some((leak) => leak.marker === completeSet.marker)
+      && completeSet.values.every((value) => allContents.includes(value))
+    ) {
+      leaks.push(Object.freeze({
+        path: "<production-artifacts>",
+        marker: completeSet.marker,
+      }));
+    }
+  }
+  return Object.freeze(leaks);
+}
+
+export function assertNoUniversitySemesterLoopProductionArtifactLeaks(
+  leaks: readonly UniversitySemesterLoopProductionArtifactLeak[],
 ): void {
   if (leaks.length > 0) {
     throw new Error(
-      `University semester-loop sample data reached public build assets:\n${leaks.map(
+      `University semester-loop sample data reached production build artifacts:\n${leaks.map(
         (leak) => `${leak.path}: ${leak.marker}`,
       ).join("\n")}`,
     );
   }
 }
 
-function publicStaticFiles(directory: string): readonly string[] {
+function productionArtifactFiles(directory: string): readonly string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const absolutePath = resolve(directory, entry.name);
     const stat = lstatSync(absolutePath);
     if (stat.isSymbolicLink()) {
       throw new Error(
-        `University semester-loop public-asset scan rejected symlink: ${absolutePath}`,
+        `University semester-loop artifact scan rejected symlink: ${absolutePath}`,
       );
     }
-    if (stat.isDirectory()) return publicStaticFiles(absolutePath);
+    if (stat.isDirectory()) return productionArtifactFiles(absolutePath);
     return stat.isFile() ? [absolutePath] : [];
   });
 }
 
-export function scanUniversitySemesterLoopProductionPublicAssets(
+export function scanUniversitySemesterLoopProductionArtifacts(
   projectRoot: string = process.cwd(),
-): readonly UniversitySemesterLoopPublicArtifactLeak[] {
-  const staticDirectory = resolve(projectRoot, ".next/static");
-  if (!existsSync(staticDirectory) || !lstatSync(staticDirectory).isDirectory()) {
-    throw new Error(
-      "University semester-loop public-asset scan requires a completed production .next/static build.",
-    );
+): readonly UniversitySemesterLoopProductionArtifactLeak[] {
+  const directories = [
+    resolve(projectRoot, ".next/static"),
+    resolve(projectRoot, ".next/server"),
+  ];
+  for (const directory of directories) {
+    if (!existsSync(directory) || !lstatSync(directory).isDirectory()) {
+      throw new Error(
+        "University semester-loop artifact scan requires a completed production .next build.",
+      );
+    }
   }
-  const assets = publicStaticFiles(staticDirectory).map((absolutePath) => Object.freeze({
-    path: relative(projectRoot, absolutePath),
-    contents: readFileSync(absolutePath, "utf8"),
-  }));
-  return findUniversitySemesterLoopPublicArtifactLeaks(assets);
+  return findUniversitySemesterLoopProductionArtifactLeaks(
+    directories.flatMap((directory) => (
+      productionArtifactFiles(directory).map((absolutePath) => Object.freeze({
+        path: relative(projectRoot, absolutePath),
+        contents: readFileSync(absolutePath, "utf8"),
+      }))
+    )),
+  );
 }

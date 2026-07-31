@@ -129,7 +129,8 @@ FORGE_UNIVERSITY_RECOVERY_FIXTURE=forge-university-recovery-what-if.v1
 The legacy exact token `forge-university-recovery.v1` retains its existing
 fixture behavior. Production renders only the unavailable shell for both
 tokens. What-if schemas, tokens, synthetic identities, and sample course copy
-are forbidden in public static assets.
+are forbidden in public and server build artifacts. The complete what-if
+surface lexical set is also forbidden across those artifacts.
 
 ## Interaction and evaluation boundary
 

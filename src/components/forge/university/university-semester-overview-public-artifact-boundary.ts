@@ -6,8 +6,8 @@ import {
 } from "node:fs";
 import { relative, resolve } from "node:path";
 
-/** Unique server-only semester-overview identities forbidden in public assets. */
-export const UNIVERSITY_SEMESTER_OVERVIEW_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS =
+/** Unique server-only semester-overview identities. */
+export const UNIVERSITY_SEMESTER_OVERVIEW_PRODUCTION_ARTIFACT_FORBIDDEN_MARKERS =
   Object.freeze([
     "forge-university-semester-overview.v1",
     "university-semester-overview-request.v1",
@@ -40,98 +40,104 @@ export const UNIVERSITY_SEMESTER_OVERVIEW_SURFACE_LEXICAL_SET =
 const UNIVERSITY_SEMESTER_OVERVIEW_SURFACE_LEXICAL_SET_MARKER =
   "university semester overview server-only surface lexical set";
 
-export type UniversitySemesterOverviewPublicAsset = Readonly<{
+export type UniversitySemesterOverviewProductionArtifact = Readonly<{
   path: string;
   contents: string;
 }>;
 
-export type UniversitySemesterOverviewPublicArtifactLeak = Readonly<{
+export type UniversitySemesterOverviewProductionArtifactLeak = Readonly<{
   path: string;
   marker: string;
 }>;
 
-export function findUniversitySemesterOverviewPublicArtifactLeaks(
-  assets: readonly UniversitySemesterOverviewPublicAsset[],
-): readonly UniversitySemesterOverviewPublicArtifactLeak[] {
-  const leaks = assets.flatMap((asset) => {
+export function findUniversitySemesterOverviewProductionArtifactLeaks(
+  artifacts: readonly UniversitySemesterOverviewProductionArtifact[],
+): readonly UniversitySemesterOverviewProductionArtifactLeak[] {
+  const leaks = artifacts.flatMap((artifact) => {
     const markerLeaks =
-      UNIVERSITY_SEMESTER_OVERVIEW_PUBLIC_ARTIFACT_FORBIDDEN_MARKERS.flatMap(
+      UNIVERSITY_SEMESTER_OVERVIEW_PRODUCTION_ARTIFACT_FORBIDDEN_MARKERS.flatMap(
         (marker) => (
-          asset.contents.includes(marker)
-            ? [Object.freeze({ path: asset.path, marker })]
+          artifact.contents.includes(marker)
+            ? [Object.freeze({ path: artifact.path, marker })]
             : []
         ),
       );
     const surfaceLeak =
       UNIVERSITY_SEMESTER_OVERVIEW_SURFACE_LEXICAL_SET.every(
-        (copy) => asset.contents.includes(copy),
+        (copy) => artifact.contents.includes(copy),
       )
         ? [Object.freeze({
-            path: asset.path,
+            path: artifact.path,
             marker: UNIVERSITY_SEMESTER_OVERVIEW_SURFACE_LEXICAL_SET_MARKER,
           })]
         : [];
     return [...markerLeaks, ...surfaceLeak];
   });
-  const oneAssetAlreadyContainsSurface = leaks.some(
+  const oneArtifactAlreadyContainsSurface = leaks.some(
     (leak) => leak.marker
       === UNIVERSITY_SEMESTER_OVERVIEW_SURFACE_LEXICAL_SET_MARKER,
   );
-  const allPublicContents = assets.map((asset) => asset.contents).join("\n");
+  const allContents = artifacts
+    .map((artifact) => artifact.contents)
+    .join("\n");
   if (
-    !oneAssetAlreadyContainsSurface
+    !oneArtifactAlreadyContainsSurface
     && UNIVERSITY_SEMESTER_OVERVIEW_SURFACE_LEXICAL_SET.every(
-      (copy) => allPublicContents.includes(copy),
+      (copy) => allContents.includes(copy),
     )
   ) {
     leaks.push(Object.freeze({
-      path: "<public-static-assets>",
+      path: "<production-artifacts>",
       marker: UNIVERSITY_SEMESTER_OVERVIEW_SURFACE_LEXICAL_SET_MARKER,
     }));
   }
   return Object.freeze(leaks);
 }
 
-export function assertNoUniversitySemesterOverviewPublicArtifactLeaks(
-  leaks: readonly UniversitySemesterOverviewPublicArtifactLeak[],
+export function assertNoUniversitySemesterOverviewProductionArtifactLeaks(
+  leaks: readonly UniversitySemesterOverviewProductionArtifactLeak[],
 ): void {
   if (leaks.length > 0) {
     throw new Error(
-      `University semester overview fixture data reached public build assets:\n${leaks.map((leak) => `${leak.path}: ${leak.marker}`).join("\n")}`,
+      `University semester overview fixture data reached production build artifacts:\n${leaks.map((leak) => `${leak.path}: ${leak.marker}`).join("\n")}`,
     );
   }
 }
 
-function publicStaticFiles(directory: string): readonly string[] {
+function productionArtifactFiles(directory: string): readonly string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const absolutePath = resolve(directory, entry.name);
     const stat = lstatSync(absolutePath);
     if (stat.isSymbolicLink()) {
       throw new Error(
-        `University semester overview public-asset scan rejected symlink: ${absolutePath}`,
+        `University semester overview artifact scan rejected symlink: ${absolutePath}`,
       );
     }
-    if (stat.isDirectory()) return publicStaticFiles(absolutePath);
+    if (stat.isDirectory()) return productionArtifactFiles(absolutePath);
     return stat.isFile() ? [absolutePath] : [];
   });
 }
 
-export function scanUniversitySemesterOverviewProductionPublicAssets(
+export function scanUniversitySemesterOverviewProductionArtifacts(
   projectRoot: string = process.cwd(),
-): readonly UniversitySemesterOverviewPublicArtifactLeak[] {
-  const staticDirectory = resolve(projectRoot, ".next/static");
-  if (
-    !existsSync(staticDirectory)
-    || !lstatSync(staticDirectory).isDirectory()
-  ) {
-    throw new Error(
-      "University semester overview public-asset scan requires a completed production .next/static build.",
-    );
+): readonly UniversitySemesterOverviewProductionArtifactLeak[] {
+  const directories = [
+    resolve(projectRoot, ".next/static"),
+    resolve(projectRoot, ".next/server"),
+  ];
+  for (const directory of directories) {
+    if (!existsSync(directory) || !lstatSync(directory).isDirectory()) {
+      throw new Error(
+        "University semester overview artifact scan requires a completed production .next build.",
+      );
+    }
   }
-  return findUniversitySemesterOverviewPublicArtifactLeaks(
-    publicStaticFiles(staticDirectory).map((absolutePath) => Object.freeze({
-      path: relative(projectRoot, absolutePath),
-      contents: readFileSync(absolutePath, "utf8"),
-    })),
+  return findUniversitySemesterOverviewProductionArtifactLeaks(
+    directories.flatMap((directory) => (
+      productionArtifactFiles(directory).map((absolutePath) => Object.freeze({
+        path: relative(projectRoot, absolutePath),
+        contents: readFileSync(absolutePath, "utf8"),
+      }))
+    )),
   );
 }

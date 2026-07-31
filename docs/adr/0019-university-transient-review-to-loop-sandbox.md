@@ -91,7 +91,7 @@ FORGE_UNIVERSITY_SEMESTER_LOOP_FIXTURE=forge-university-semester-sandbox.v1
 The legacy seven-state fixture and the frozen research-candidate mode retain
 their existing exact tokens and behavior. Production renders the unavailable
 shell for every token. Sandbox markers and fixture copy are scanned out of
-public static assets.
+public and server build artifacts.
 
 ## Authority ceiling
 

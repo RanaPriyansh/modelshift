@@ -162,8 +162,8 @@ FORGE_UNIVERSITY_SEMESTER_DESK_FIXTURE=forge-university-semester-desk.v1
 
 Production imports and renders only a generic unavailable shell. The token,
 fixture schema identity, and complete development-surface lexical set are
-forbidden in public static assets. A production process must remain
-unavailable even if the development token is present.
+forbidden in public and server build artifacts. A production process must
+remain unavailable even if the development token is present.
 
 The visual basis is
 `docs/design/university-semester-desk-concept.png`. The implementation keeps
