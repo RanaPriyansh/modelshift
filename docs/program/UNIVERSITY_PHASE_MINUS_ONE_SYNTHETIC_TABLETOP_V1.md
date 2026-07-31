@@ -144,6 +144,7 @@ ledger.
 
 | Field | Entry |
 | --- | --- |
+| Record class | `synthetic_persona_rehearsal` |
 | Drill opened at | `[ISO-8601 timestamp]` |
 | Drill closed at | `[ISO-8601 timestamp]` |
 | Operator rehearsal reference | `[invented role reference]` |
