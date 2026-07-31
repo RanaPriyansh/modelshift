@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type {
   UniversityRecoveryWhatIfChoiceId,
@@ -73,13 +73,51 @@ export function UniversityRecoveryWhatIfWorkspace({
   const [selectedId, setSelectedId] =
     useState<UniversityRecoveryWhatIfChoiceId | null>(null);
   const firstChoiceRef = useRef<HTMLInputElement>(null);
+  const pendingScrollPositionRef = useRef<{
+    readonly left: number;
+    readonly top: number;
+  } | null>(null);
   const selected = useMemo(() => (
     fixture.view === "capacity_choices"
       ? fixture.choices.find((choice) => choice.id === selectedId) ?? null
       : null
   ), [fixture, selectedId]);
 
+  useLayoutEffect(() => {
+    const pendingScrollPosition = pendingScrollPositionRef.current;
+    if (pendingScrollPosition === null) return;
+
+    pendingScrollPositionRef.current = null;
+    window.scrollTo({
+      behavior: "auto",
+      left: pendingScrollPosition.left,
+      top: pendingScrollPosition.top,
+    });
+  }, [selectedId]);
+
+  function selectChoice(
+    choiceId: UniversityRecoveryWhatIfChoiceId,
+    control: HTMLInputElement,
+  ) {
+    const activeBounds = control.getBoundingClientRect();
+    const focusOutlineClearance = 6;
+    const activeControlIsVisible = document.activeElement === control
+      && activeBounds.top >= focusOutlineClearance
+      && activeBounds.right <= window.innerWidth - focusOutlineClearance
+      && activeBounds.bottom <= window.innerHeight - focusOutlineClearance
+      && activeBounds.left >= focusOutlineClearance;
+
+    pendingScrollPositionRef.current = activeControlIsVisible
+      ? {
+          left: window.scrollX,
+          top: window.scrollY,
+        }
+      : null;
+    setSelectedId(choiceId);
+  }
+
   function reset() {
+    pendingScrollPositionRef.current = null;
     setSelectedId(null);
     firstChoiceRef.current?.focus();
   }
@@ -229,7 +267,9 @@ export function UniversityRecoveryWhatIfWorkspace({
                     name="university-recovery-what-if-choice"
                     value={choice.id}
                     checked={choice.id === selectedId}
-                    onChange={() => setSelectedId(choice.id)}
+                    onChange={(event) => {
+                      selectChoice(choice.id, event.currentTarget);
+                    }}
                   />
                   <span>
                     <strong>{choice.label}</strong>

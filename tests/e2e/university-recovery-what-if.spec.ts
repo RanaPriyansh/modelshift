@@ -1,18 +1,40 @@
 import { expect, test, type Page } from "@playwright/test";
 
-function captureConsoleFailures(page: Page): string[] {
+const consoleFailuresByPage = new WeakMap<Page, string[]>();
+
+test.beforeEach(async ({ page }) => {
   const failures: string[] = [];
+  consoleFailuresByPage.set(page, failures);
   page.on("console", (message) => {
-    if (message.type() === "error") failures.push(message.text());
+    if (message.type() === "error" || message.type() === "warning") {
+      failures.push(`console.${message.type()}: ${message.text()}`);
+    }
   });
-  page.on("pageerror", (error) => failures.push(error.message));
-  return failures;
+  page.on("pageerror", (error) => {
+    failures.push(`pageerror: ${error.message}`);
+  });
+});
+
+test.afterEach(async ({ page }, testInfo) => {
+  const failures = consoleFailuresByPage.get(page) ?? [];
+  if (failures.length > 0) {
+    await testInfo.attach("browser-errors", {
+      body: failures.join("\n"),
+      contentType: "text/plain",
+    });
+  }
+  expect(failures, "unexpected browser console or page errors").toEqual([]);
+});
+
+async function waitForLayoutAndScrollAnchoring(page: Page): Promise<void> {
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  }));
 }
 
 test("keeps evidence before neutral choices and preserves native keyboard focus", async ({
   page,
 }) => {
-  const consoleFailures = captureConsoleFailures(page);
   await page.goto("/internal/university-recovery");
 
   const evidence = page.getByRole("heading", {
@@ -70,7 +92,6 @@ test("keeps evidence before neutral choices and preserves native keyboard focus"
   await expect(page.getByLabel("No what-if result selected")).toBeVisible();
   await expect(page.getByRole("button", { name: /save|apply|accept|send/i }))
     .toHaveCount(0);
-  expect(consoleFailures).toEqual([]);
 });
 
 test("keeps a single-flow layout without overflow at exactly 320 CSS pixels", async ({
@@ -78,11 +99,56 @@ test("keeps a single-flow layout without overflow at exactly 320 CSS pixels", as
 }) => {
   await page.setViewportSize({ width: 320, height: 900 });
   await page.goto("/internal/university-recovery");
-  await page.getByRole("radio", { name: /1 h 40 min available/ }).press("Space");
+  const group = page.getByRole("group", {
+    name: "Try a sample amount of available time",
+  });
+  const second = page.getByRole("radio", {
+    name: /2 h 10 min available/,
+  });
+  const third = page.getByRole("radio", {
+    name: /1 h 40 min available/,
+  });
+  await second.press("Space");
+  await group.evaluate((element) => {
+    element.scrollIntoView({ block: "center" });
+  });
+  const visibleControlBounds = await page.locator(
+    'input[value="available-130"], input[value="available-100"]',
+  ).evaluateAll((elements) => elements.map((element) => {
+    const bounds = element.getBoundingClientRect();
+    return {
+      bottom: bounds.bottom,
+      top: bounds.top,
+      viewportHeight: window.innerHeight,
+    };
+  }));
+  visibleControlBounds.forEach(({ bottom, top, viewportHeight }) => {
+    expect(top).toBeGreaterThanOrEqual(0);
+    expect(bottom).toBeLessThanOrEqual(viewportHeight);
+  });
+
+  const scrollBeforeResultChange = await page.evaluate(() => window.scrollY);
+  await page.keyboard.press("ArrowRight");
+  await expect(third).toBeFocused();
+  await expect(third).toBeChecked();
   await expect(page.getByRole("heading", {
     level: 2,
     name: "Even the low estimate does not fit.",
   })).toBeVisible();
+  await expect(page.getByText("Prepared, not sent", { exact: true }))
+    .toBeVisible();
+  await waitForLayoutAndScrollAnchoring(page);
+  const scrollAfterResultChange = await page.evaluate(() => window.scrollY);
+
+  await page.keyboard.press("ArrowLeft");
+  await expect(second).toBeFocused();
+  await expect(second).toBeChecked();
+  await expect(page.getByText("Prepared, not sent", { exact: true }))
+    .toHaveCount(0);
+  await waitForLayoutAndScrollAnchoring(page);
+  const scrollAfterResultContraction = await page.evaluate(
+    () => window.scrollY,
+  );
 
   const widths = await page.evaluate(() => ({
     document: document.documentElement.scrollWidth,
@@ -96,6 +162,10 @@ test("keeps a single-flow layout without overflow at exactly 320 CSS pixels", as
   );
 
   expect(widths).toEqual({ document: 320, body: 320, client: 320 });
+  expect(Math.abs(scrollAfterResultChange - scrollBeforeResultChange))
+    .toBeLessThan(0.5);
+  expect(Math.abs(scrollAfterResultContraction - scrollBeforeResultChange))
+    .toBeLessThan(0.5);
   controlHeights.forEach((height) => expect(height).toBeGreaterThanOrEqual(44));
 });
 
@@ -127,8 +197,23 @@ test("preserves selected and focused controls in forced colors", async ({
   ).evaluate((element) => {
     const computed = getComputedStyle(element);
     return {
+      backgroundColor: computed.backgroundColor,
+      borderColor: computed.borderColor,
       borderStyle: computed.borderStyle,
-      borderWidth: computed.borderWidth,
+      borderTopWidth: computed.borderTopWidth,
+      color: computed.color,
+      outlineColor: computed.outlineColor,
+      outlineStyle: computed.outlineStyle,
+      outlineWidth: computed.outlineWidth,
+    };
+  });
+  const unselectedStyle = await page.locator(
+    'input[value="available-240"] + span',
+  ).evaluate((element) => {
+    const computed = getComputedStyle(element);
+    return {
+      backgroundColor: computed.backgroundColor,
+      borderColor: computed.borderColor,
       color: computed.color,
     };
   });
@@ -139,6 +224,18 @@ test("preserves selected and focused controls in forced colors", async ({
     matchMedia("(forced-colors: active)").matches
   ))).toBe(true);
   expect(style.borderStyle).toBe("solid");
-  expect(style.borderWidth).not.toBe("0px");
+  expect(style.borderTopWidth).not.toBe("0px");
   expect(style.color).not.toBe("");
+  expect(style.outlineStyle).not.toBe("none");
+  expect(style.outlineWidth).not.toBe("0px");
+  expect(style.outlineColor).not.toBe(style.backgroundColor);
+  expect({
+    backgroundColor: style.backgroundColor,
+    borderColor: style.borderColor,
+    color: style.color,
+  }).not.toEqual({
+    backgroundColor: unselectedStyle.backgroundColor,
+    borderColor: unselectedStyle.borderColor,
+    color: unselectedStyle.color,
+  });
 });

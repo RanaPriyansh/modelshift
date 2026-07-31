@@ -7,13 +7,17 @@ import {
   render,
   screen,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   universityRecoveryWhatIfFixture,
 } from "@/app/internal/university-recovery/recovery-what-if-fixture.server";
 
 import { UniversityRecoveryWhatIfWorkspace } from "./UniversityRecoveryWhatIfWorkspace";
+
+beforeEach(() => {
+  vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+});
 
 afterEach(() => {
   cleanup();
@@ -130,6 +134,73 @@ describe("UniversityRecoveryWhatIfWorkspace", () => {
       !(radio as HTMLInputElement).checked
     ))).toBe(true);
     expect(screen.getByLabelText("No what-if result selected")).toBeInTheDocument();
+  });
+
+  it("keeps native focus and restores a visible control after the result changes height", async () => {
+    const scrollTo = vi.mocked(window.scrollTo);
+    vi.spyOn(window, "scrollX", "get").mockReturnValue(7);
+    vi.spyOn(window, "scrollY", "get").mockReturnValue(311.5);
+    vi.spyOn(HTMLInputElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({
+        bottom: 110,
+        height: 68,
+        left: 16,
+        right: 304,
+        top: 42,
+        width: 288,
+        x: 16,
+        y: 42,
+        toJSON: () => ({}),
+      });
+    await renderWorkspace();
+    const second = screen.getByRole("radio", {
+      name: /2 h 10 min available/,
+    });
+    const third = screen.getByRole("radio", {
+      name: /1 h 40 min available/,
+    });
+
+    second.focus();
+    fireEvent.click(second);
+    third.focus();
+    fireEvent.click(third);
+
+    expect(document.activeElement).toBe(third);
+    expect(third).toBeChecked();
+    expect(screen.getByText("Prepared, not sent", { exact: true }))
+      .toBeInTheDocument();
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(scrollTo).toHaveBeenLastCalledWith({
+      behavior: "auto",
+      left: 7,
+      top: 311.5,
+    });
+  });
+
+  it("does not override native scrolling when the active control is outside the viewport", async () => {
+    const scrollTo = vi.mocked(window.scrollTo);
+    vi.spyOn(HTMLInputElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({
+        bottom: 67,
+        height: 68,
+        left: 16,
+        right: 304,
+        top: -1,
+        width: 288,
+        x: 16,
+        y: -1,
+        toJSON: () => ({}),
+      });
+    await renderWorkspace();
+    const third = screen.getByRole("radio", {
+      name: /1 h 40 min available/,
+    });
+
+    third.focus();
+    fireEvent.click(third);
+
+    expect(third).toBeChecked();
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 
   it("announces only one concise consequence in the ready view", async () => {
