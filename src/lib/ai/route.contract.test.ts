@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createInterpretPost, MAX_INTERPRET_REQUEST_BYTES, POST } from "../../../app/api/interpret/route";
+import {
+  createInterpretPost,
+  MAX_INTERPRET_REQUEST_BYTES,
+} from "../../../app/api/interpret/handler";
+import { POST } from "../../../app/api/interpret/route";
 import { interpretExplanation } from "./interpret";
 
 const body = {

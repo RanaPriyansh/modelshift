@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createLessonDraftPost, MAX_LESSON_STUDIO_REQUEST_BYTES, POST } from "../../../app/api/forge/lesson-draft/route";
+import {
+  createLessonDraftPost,
+  MAX_LESSON_STUDIO_REQUEST_BYTES,
+} from "../../../app/api/forge/lesson-draft/handler";
+import { POST } from "../../../app/api/forge/lesson-draft/route";
 import {
   generateLessonDraft,
   LessonStudioError,
