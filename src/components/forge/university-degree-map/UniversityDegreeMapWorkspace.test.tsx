@@ -29,13 +29,19 @@ describe("UniversityDegreeMapWorkspace", () => {
       .toHaveTextContent("Inspect the map. Keep the decision.");
     expect(screen.getByLabelText("Declared credit totals"))
       .toHaveTextContent("All declared15");
-    expect(within(screen.getByRole("list", { name: "Declared courses" }))
-      .getAllByRole("listitem")).toHaveLength(4);
-    expect(within(screen.getByRole("list", { name: "Declared requirements" }))
-      .getAllByRole("listitem")).toHaveLength(3);
+    const courses = screen.getByRole("list", { name: "Declared courses" });
+    const requirements = screen.getByRole("list", {
+      name: "Declared requirements",
+    });
+    expect(courses).toHaveAttribute("role", "list");
+    expect(requirements).toHaveAttribute("role", "list");
+    expect(within(courses).getAllByRole("listitem")).toHaveLength(4);
+    expect(within(requirements).getAllByRole("listitem")).toHaveLength(3);
     expect(screen.getByRole("complementary", {
       name: "Inspection boundary",
     })).toHaveTextContent("No rank or recommendation");
+    expect(article).toHaveTextContent("self-attested learner declaration");
+    expect(article).not.toHaveTextContent("learner-managed declaration");
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
     expect(screen.queryByRole("form")).not.toBeInTheDocument();

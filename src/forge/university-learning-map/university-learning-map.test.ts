@@ -281,4 +281,28 @@ describe("university learning map", () => {
       /studentName|email|courseTitle|generatedAnswer|abilityScore":/,
     );
   });
+
+  it("uses stable concept-reference order without inferring a study sequence", () => {
+    const value = request();
+    value.concepts[0] = {
+      ...value.concepts[0]!,
+      conceptRef: "concept.z-prerequisite",
+    };
+    value.concepts.push({
+      conceptRef: "concept.a-dependent",
+      outcomeRefs: ["outcome.reason-01"],
+      prerequisiteConceptRefs: ["concept.z-prerequisite"],
+      prerequisiteKnowledge: "declared",
+    });
+    value.attempts[0]!.conceptRefs = ["concept.z-prerequisite"];
+    value.delayedReturns[0]!.conceptRefs = ["concept.z-prerequisite"];
+
+    const projection = projectUniversityLearningMap(value);
+
+    expect(projection.status).toBe("ready_for_inspection");
+    expect(projection.map?.concepts.map((concept) => concept.conceptRef)).toEqual([
+      "concept.a-dependent",
+      "concept.z-prerequisite",
+    ]);
+  });
 });

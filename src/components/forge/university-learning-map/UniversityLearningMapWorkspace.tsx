@@ -25,7 +25,7 @@ export function UniversityLearningMapWorkspace({
       <div className={styles.boundary} role="note">
         <strong>{presentation.course.ownershipLabel}</strong>
         <span>{presentation.course.sourceLabel}</span>
-        <span>Declaration order, not priority</span>
+        <span>Concept-reference order; not priority or study sequence</span>
       </div>
 
       <section className={styles.hero}>
@@ -50,7 +50,7 @@ export function UniversityLearningMapWorkspace({
           <p className={styles.sectionIndex}>01</p>
           <h2 id="university-learning-map-outcomes">Declared outcomes</h2>
         </div>
-        <ul aria-label="Declared course outcomes">
+        <ul aria-label="Declared course outcomes" role="list">
           {presentation.outcomes.map((outcome) => (
             <li key={outcome.label}>
               <strong>{outcome.label}</strong>
@@ -67,14 +67,16 @@ export function UniversityLearningMapWorkspace({
         <header>
           <p className={styles.sectionIndex}>02</p>
           <div>
-            <h2 id="university-learning-map-path">Declared concept path</h2>
+            <h2 id="university-learning-map-path">
+              Declared concept references
+            </h2>
             <p>
-              The order follows declared prerequisites. It does not set
-              priority.
+              Concepts use stable reference order. The order does not set
+              priority or a study sequence.
             </p>
           </div>
         </header>
-        <ol aria-label="Declared concept path">
+        <ol aria-label="Declared concept references" role="list">
           {presentation.concepts.map((concept) => (
             <li key={concept.label}>
               <p className={styles.conceptIndex} aria-hidden="true">
@@ -124,7 +126,7 @@ export function UniversityLearningMapWorkspace({
             Keep the unknowns visible.
           </h2>
         </div>
-        <ul>
+        <ul role="list">
           {presentation.unknowns.map((unknown) => (
             <li key={unknown}>{unknown}</li>
           ))}

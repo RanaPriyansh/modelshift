@@ -147,13 +147,25 @@ The internal surfaces use the existing FORGE visual system. They must:
 
 - show source and authority limits before detailed facts;
 - keep all rows inspectable without a default selection;
+- show learning concepts in stable reference order without implying a study
+  sequence;
 - use explicit labels instead of color alone;
+- preserve list semantics when visual list markers are removed;
+- use the accessible accent token for small labels;
 - support keyboard focus and 320 CSS pixel reflow;
 - respect reduced motion and forced colors; and
-- perform no interaction-triggered network or storage effect.
+- perform no automatic network or storage effect.
 
 The command-center order is alphabetical. It is not a recommendation or
 priority.
+
+User-initiated navigation through explicit internal shell or directory links
+is the only permitted network effect. No surface writes storage or calls a
+provider, model, message, event, or external system.
+
+The three route shells disable automatic link prefetch. The production build
+scans public and server artifacts for fixture markers and complete development
+surface lexical sets.
 
 ## Alternatives rejected
 

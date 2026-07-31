@@ -85,7 +85,7 @@ export function UniversityCommandCenterWorkspace() {
       </section>
 
       <nav aria-label="University workspaces" className={styles.directory}>
-        <ul>
+        <ul role="list">
           {WORKSPACES.map((workspace, index) => (
             <li key={workspace.href}>
               <span className={styles.itemIndex}>

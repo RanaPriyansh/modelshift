@@ -17,8 +17,10 @@ describe("UniversityCommandCenterWorkspace", () => {
     const navigation = screen.getByRole("navigation", {
       name: "University workspaces",
     });
+    const list = within(navigation).getByRole("list");
     const links = within(navigation).getAllByRole("link");
 
+    expect(list).toHaveAttribute("role", "list");
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "/internal/university-degree-map",
       "/internal/university-learning-map",

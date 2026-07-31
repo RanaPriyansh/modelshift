@@ -18,7 +18,12 @@ export default async function InternalUniversityDegreeMapPage() {
     : null;
 
   return (
-    <ForgeShell active={null} mobileNavigation={false} surface="author">
+    <ForgeShell
+      active={null}
+      mobileNavigation={false}
+      navigationPrefetch={false}
+      surface="author"
+    >
       <main id="forge-main" tabIndex={-1}>
         {DevelopmentSurface
           ? <DevelopmentSurface />

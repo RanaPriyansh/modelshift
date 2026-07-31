@@ -72,8 +72,8 @@ export function UniversityDegreeMapWorkspace({
             Inspect the map. Keep the decision.
           </h1>
           <p>
-            This view shows one learner-managed declaration. It does not approve
-            a degree plan or verify a source.
+            This view shows one self-attested learner declaration. It does not
+            approve a degree plan or verify a source.
           </p>
           <code>{presentation.programRef}</code>
         </div>
@@ -93,7 +93,11 @@ export function UniversityDegreeMapWorkspace({
           <p>Course declarations</p>
           <h2 id="courses-title">Courses and prerequisites</h2>
         </div>
-        <ol className={styles.courseList} aria-label="Declared courses">
+        <ol
+          className={styles.courseList}
+          aria-label="Declared courses"
+          role="list"
+        >
           {presentation.courses.map((course, index) => (
             <li key={course.courseId}>
               <span className={styles.itemIndex} aria-hidden="true">
@@ -130,7 +134,11 @@ export function UniversityDegreeMapWorkspace({
           <p>Requirement declarations</p>
           <h2 id="requirements-title">Requirements</h2>
         </div>
-        <ul className={styles.requirementList} aria-label="Declared requirements">
+        <ul
+          className={styles.requirementList}
+          aria-label="Declared requirements"
+          role="list"
+        >
           {presentation.requirements.map((requirement) => (
             <li key={requirement.requirementId}>
               <div>

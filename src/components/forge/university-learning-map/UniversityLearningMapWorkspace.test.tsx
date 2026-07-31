@@ -83,8 +83,11 @@ describe("UniversityLearningMapWorkspace", () => {
       name: "Declared course outcomes",
     }).children).toHaveLength(2);
     expect(within(article).getByRole("list", {
-      name: "Declared concept path",
+      name: "Declared concept references",
     }).children).toHaveLength(3);
+    for (const list of within(article).getAllByRole("list")) {
+      expect(list).toHaveAttribute("role", "list");
+    }
     expect(within(article).getAllByRole("heading", { level: 3 }))
       .toHaveLength(3);
     expect(screen.getByText(
@@ -94,7 +97,10 @@ describe("UniversityLearningMapWorkspace", () => {
       "The authority of one evidence reference remains unknown.",
     )).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent(
-      "Declaration order, not priority",
+      "Concept-reference order; not priority or study sequence",
+    );
+    expect(container.textContent).not.toMatch(
+      /declaration order|concept path|follows declared prerequisites/i,
     );
 
     expect(screen.queryByRole("link")).not.toBeInTheDocument();

@@ -20,7 +20,12 @@ export function UniversityLearningMapDevelopmentSurface() {
   if (!presentation) return <UniversityLearningMapUnavailable />;
 
   return (
-    <ForgeShell active={null} mobileNavigation={false} surface="author">
+    <ForgeShell
+      active={null}
+      mobileNavigation={false}
+      navigationPrefetch={false}
+      surface="author"
+    >
       <main id="forge-main" tabIndex={-1}>
         <UniversityLearningMapWorkspace presentation={presentation} />
       </main>
