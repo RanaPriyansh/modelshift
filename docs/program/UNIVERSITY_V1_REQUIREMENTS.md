@@ -209,6 +209,31 @@ durable learning evidence.
 | `UV1-STUDY-010` | Test comprehension without turning people into one optimization metric. | `UNIVERSITY_PROTECTED_STUDY_UX_EXPERIMENT_LOOP.md` fixes the harness, separate comprehension/trust/harm observations, four states, and keep/stop rules. |
 | `UV1-STUDY-011` | Preserve the claim ceiling. | UI and handoff say synthetic, preview-only, honour-based, not persisted, and untested; no live student, institutional, learning, accessibility-conformance, production, or efficacy claim. |
 
+### Internal post-attempt repair research slice
+
+**Decision note:** move from generic bounded-result copy to one exact authored
+next cognitive operation without creating a live university session,
+diagnosis, answer surface, or automatic path mutation. The first slice covers
+one source-corroboration partial result only. An exact attested failure with no
+fixed internal authored research mapping must stop visibly rather than receive
+generic advice.
+
+| ID | Requirement | Acceptance evidence |
+| --- | --- | --- |
+| `UV1-AFTER-001` | Begin only from an exact process-local receipt emitted by the canonical source-corroboration runtime and a separately recomputed ready Protected Study fixture. | The exact canonical World object is required; `verifyPublicWorldRuntimeReceiptAttestation` accepts the same frozen object and rejects reconstructed, cloned, serialized, missing, or forged receipts. The raw Today request is recomputed only after receipt attestation and remains server-paired synthetic context, not receipt-attested learner/session continuity. |
+| `UV1-AFTER-002` | Bind the attested result to the exact released World and retained runtime identity without overstating context continuity. | World ID/version/content version, protocol, proof claim, task code/family, validator ID/output version, runtime binding digest, package integrity hash, and Protected Study World identity all match or no attempt evidence is exposed; this is World/runtime identity matching, not receipt attestation of Today, course, learner, path, or session. |
+| `UV1-AFTER-003` | Select repair content only through an immutable exact fixed internal authored research mapping. | One mapping binds exact result code, outcome, disposition, and ordered criteria; it carries no independent or domain-review provenance, and no score heuristic, free-form evidence, model, retrieval, learner profile, or generic fallback selects copy. |
+| `UV1-AFTER-004` | Turn the mapped result into one specific cognitive operation rather than praise, punishment, answer reveal, or “study more.” | The ready projection exposes one neutral error class, one operation, one empty response frame, one rationale, and one completion condition; it contains no correct choice, completed sentence, personality praise, shame, rank, grade, or mastery percentage. |
+| `UV1-AFTER-005` | Keep supported repair structurally separate from independent proof. | The preview states authored prompt support may exist only in repair, cannot upgrade the receipt, and any future proof must be a fresh task/attempt with instructional help absent. It starts neither state. |
+| `UV1-AFTER-006` | Preserve exact negative and uncovered states. | Exact pass returns `not_applicable`; exact unmapped fail returns `repair_mapping_missing`; missing/unattested/mismatched input returns `invalid`; no state silently becomes repair-ready or a stronger learning claim. |
+| `UV1-AFTER-007` | Keep learner interpretation contestable without inventing a decision write. | “Why this move” names the fixed internal authored mapping and its limits; the learner may inspect or ignore the preview; no accept, reject, agree, diagnose, rescore, or evidence-upgrade command exists. |
+| `UV1-AFTER-008` | Keep every consequential authority false. | Diagnosis, mastery, grade, capability, personalized recommendation, assignment, path mutation, session/retry/proof start, persistence, event, evidence upgrade, message, schedule, provider, and external-effect authority are false. |
+| `UV1-AFTER-009` | Keep the attested receipt and raw learning inputs server-only. | The client receives only four closed server-authored presentation projections; no raw Today request, World, receipt, attempt ID, timestamp, criteria ID, answer ID, learner prose, runtime/package digest, validator input, projector, or command reaches the browser. |
+| `UV1-AFTER-010` | Fail closed at the outer runtime boundary without traversing hostile input. | Attest the exact receipt before traversing Today; then capture a bounded detached snapshot whose trusted Node intrinsic rejects every nested Proxy before reflective traversal. Exact own data descriptors, no symbols/extra keys/arrays/exotic prototypes/accessors, and canonical child projectors prevent hostile input from reaching a usable result; unexpected exceptions produce `invalid`. |
+| `UV1-AFTER-011` | Keep the surface internal, removable, production-unavailable, and absent from public assets. | Development requires exact token `FORGE_UNIVERSITY_POST_ATTEMPT_REPAIR_FIXTURE=forge-university-post-attempt-repair.v1`; production imports/renders only the unavailable shell; repair-specific tokens, schemas, mapping identity, compound matching criteria, authored sample/policy copy, and the complete surface lexical set are absent from `.next/static`. Underlying identifiers already released by the public World remain public and are not misclassified as new repair leakage. |
+| `UV1-AFTER-012` | Evaluate the new grammar without upgrading its claim. | `UNIVERSITY_POST_ATTEMPT_REPAIR_UX_EXPERIMENT.md` fixes four states, separate comprehension/action/trust/control/access/harm observations, desktop, 320 CSS px, keyboard, focus, reduced motion, forced colors, overflow, console, and production-boundary gates; `UV1-GATE-001..003` stay open. |
+| `UV1-AFTER-013` | Keep synthetic course/path context visibly separate from receipt authority. | The projection declares `receiptContextBinding: not_established`; any course, term, activity, or accepted-path labels are server-paired synthetic context only and are never described as receipt-bound learner/session continuity. |
+
 ### Internal semester-loop composition research slice
 
 **Decision note:** compose the existing bounded student jobs only through one
