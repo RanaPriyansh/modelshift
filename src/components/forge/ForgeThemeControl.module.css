@@ -1,0 +1,101 @@
+.control {
+  position: relative;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.select {
+  min-height: 44px;
+  border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+  border-radius: 999px;
+  padding: 0 34px 0 14px;
+  color: inherit;
+  background-color: color-mix(in srgb, currentColor 7%, transparent);
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) calc(50% - 2px),
+    calc(100% - 12px) calc(50% - 2px);
+  background-repeat: no-repeat;
+  background-size: 4px 4px, 4px 4px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  appearance: none;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.select:hover {
+  border-color: color-mix(in srgb, currentColor 48%, transparent);
+  background-color: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.select:active {
+  transform: scale(0.98);
+}
+
+.select:focus-visible {
+  outline: 3px solid var(--forge-focus, #2f67d8);
+  outline-offset: 3px;
+}
+
+.overlay .select {
+  border-color: rgb(255 255 255 / 36%);
+  background-color: rgb(4 14 24 / 34%);
+  color: #f8faf2;
+}
+
+@media (max-width: 700px) {
+  .control::after {
+    position: absolute;
+    left: 50%;
+    color: currentColor;
+    content: "◐";
+    font-size: 17px;
+    pointer-events: none;
+    transform: translateX(-50%);
+  }
+
+  .select {
+    width: 48px;
+    padding: 0;
+    color: transparent;
+    background-image: none;
+    font-size: 16px;
+    text-indent: -9999px;
+  }
+
+  .select option {
+    color: initial;
+    text-indent: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .select {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .select,
+  .overlay .select {
+    border: 1px solid ButtonText;
+    background: Canvas;
+    color: ButtonText;
+  }
+}

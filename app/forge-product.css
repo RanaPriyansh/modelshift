@@ -2037,3 +2037,115 @@
     border-color: CanvasText;
   }
 }
+
+/* Vivid Learning Landscapes: calm application work with one scene threshold. */
+.forge-shell[data-forge-surface="app"] .forge-topbar,
+.forge-shell[data-forge-surface="app"] .forge-mobile-nav {
+  background: var(--forge-bg);
+}
+
+.forge-shell[data-forge-surface="app"] .forge-app-page {
+  padding-top: 48px;
+}
+
+.forge-shell[data-forge-surface="app"] .forge-app-page__hero {
+  position: relative;
+  isolation: isolate;
+  min-height: 370px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 24px;
+  padding: clamp(34px, 5vw, 58px);
+  color: #f8faf5;
+  background: #0f55d6;
+}
+
+.forge-shell[data-forge-surface="app"] .forge-app-page__hero::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgb(3 17 28 / 90%) 0%, rgb(3 17 28 / 66%) 52%, rgb(3 17 28 / 18%) 100%),
+    url("/forge/landscapes/learning-threshold-cobalt.png") center 58% / cover;
+  content: "";
+}
+
+.forge-shell[data-forge-surface="app"] .forge-app-page__hero--compact {
+  min-height: 320px;
+}
+
+.forge-shell[data-forge-surface="app"] .forge-app-page__hero .forge-kicker {
+  color: #ff9b7b;
+}
+
+.forge-shell[data-forge-surface="app"] .forge-app-page__hero h1 {
+  max-width: 880px;
+  font-family: var(--forge-display);
+  font-weight: 650;
+}
+
+.forge-shell[data-forge-surface="app"] .forge-app-page__hero > p {
+  max-width: 760px;
+  color: rgb(248 250 245 / 78%);
+}
+
+.forge-shell[data-forge-surface="app"] .forge-app-page__hero .forge-text-link {
+  color: #f8faf5;
+}
+
+.forge-shell[data-forge-surface="app"] :is(.forge-primary-action, .forge-secondary-action) {
+  border-radius: 12px;
+}
+
+.forge-shell[data-forge-surface="app"] .forge-primary-action:hover {
+  background: #f47a56;
+}
+
+.forge-shell[data-forge-surface="app"] .forge-next-action {
+  overflow: hidden;
+  border: 1px solid var(--forge-line-strong);
+  border-top: 5px solid var(--forge-cyan);
+  border-radius: 18px;
+}
+
+.forge-shell[data-forge-surface="app"] .forge-app-supporting section {
+  min-height: 220px;
+}
+
+@media (max-width: 760px) {
+  .forge-shell[data-forge-surface="app"] .forge-app-page {
+    padding-top: 28px;
+  }
+
+  .forge-shell[data-forge-surface="app"] .forge-app-page__hero,
+  .forge-shell[data-forge-surface="app"] .forge-app-page__hero--compact {
+    min-height: 390px;
+    border-radius: 18px;
+    padding: 28px 22px;
+  }
+
+  .forge-shell[data-forge-surface="app"] .forge-app-page__hero::before {
+    background:
+      linear-gradient(0deg, rgb(3 17 28 / 94%) 0%, rgb(3 17 28 / 63%) 72%, rgb(3 17 28 / 20%) 100%),
+      url("/forge/landscapes/learning-threshold-cobalt.png") 64% center / cover;
+  }
+}
+
+@media (forced-colors: active) {
+  .forge-shell[data-forge-surface="app"] .forge-app-page__hero {
+    border-color: CanvasText;
+    color: CanvasText;
+    background: Canvas;
+  }
+
+  .forge-shell[data-forge-surface="app"] .forge-app-page__hero::before {
+    display: none;
+  }
+
+  .forge-shell[data-forge-surface="app"] .forge-app-page__hero :is(.forge-kicker, p, .forge-text-link) {
+    color: CanvasText;
+  }
+}

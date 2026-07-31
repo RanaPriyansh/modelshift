@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { ForgeThemeControl } from "@/src/components/forge/ForgeThemeControl";
+
 import styles from "./PublicExperience.module.css";
 
 type PublicSection =
@@ -53,8 +55,9 @@ export function PublicFrame({
           ))}
         </nav>
         <div className={styles.headerActions}>
-          <Link className={styles.quietHeaderLink} href="/sign-in">
-            Device access
+          <ForgeThemeControl overlay={overlayHeader} />
+          <Link className={styles.quietHeaderLink} href="/app">
+            Open app
           </Link>
           <Link className={styles.headerCta} href="/start">
             Start learning
@@ -77,6 +80,7 @@ export function PublicFrame({
             </Link>
           ))}
           <Link href="/start">Start learning</Link>
+          <Link href="/app">Open app</Link>
           <Link href="/sign-in">Device access</Link>
         </nav>
         <p className={styles.footerTruth}>

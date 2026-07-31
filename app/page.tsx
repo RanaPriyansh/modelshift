@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import { PublicHome } from "@/src/components/forge/refoundation/public/PublicHome";
 
 export const metadata: Metadata = {
-  title: "FORGE — A path from ambition to capability",
+  title: "FORGE | Learn what matters next",
   description:
-    "Turn a real learning goal into focused work, ModelShift experiences, and evidence that distinguishes supported practice from independent proof.",
+    "Turn one real learning goal into difficult practice, clear feedback, independent proof, and a planned return.",
 };
 
 export default function HomePage() {

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { ForgePathCommand } from "./ForgePathCommand";
 import { ForgeTrustLine } from "./ForgePrimitives";
+import { ForgeThemeControl } from "./ForgeThemeControl";
 
 export type ForgeSection =
   | "home"
@@ -223,6 +224,7 @@ export function ForgeShell({
         <PrimaryNavigation active={active} items={items} />
         <div className="forge-topbar-actions">
           {surface === "app" ? <ForgePathCommand /> : null}
+          <ForgeThemeControl />
           <ForgeTrustLine className="forge-topbar-disclosure" />
         </div>
       </header>

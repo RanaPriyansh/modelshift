@@ -94,7 +94,7 @@ test.describe("FORGE sprint product routes", () => {
   test("keeps Learning OS authoritative and creates a persistent local workspace after validation", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", {
-      name: /A path from ambition to capability/i,
+      name: /Learn what matters next/i,
     })).toBeVisible();
     await page.getByRole("navigation", { name: "Public" })
       .getByRole("link", { name: "Project Sprint" })

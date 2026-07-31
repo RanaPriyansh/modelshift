@@ -8,24 +8,25 @@
 
 .forge-shell,
 .forge-world-frame {
-  --forge-bg: #f7f4ed;
-  --forge-bg-deep: #f7f4ed;
-  --forge-surface: #fffdf8;
-  --forge-surface-strong: #ece8df;
-  --forge-line: #d4cfc5;
-  --forge-line-strong: #aaa59b;
-  --forge-ink: #111714;
-  --forge-muted: #5e635f;
-  --forge-dim: #6d726b;
-  --forge-amber: #e8b94e;
-  --forge-amber-deep: #7b561a;
-  --forge-violet: #7458bb;
-  --forge-violet-deep: #544092;
-  --forge-cyan: #287f82;
-  --forge-cyan-deep: #185e62;
-  --forge-paper: #f7f4ed;
-  --forge-paper-line: #d4cfc5;
-  --forge-paper-ink: #111714;
+  --forge-bg: #f4f7f1;
+  --forge-bg-deep: #eef3ed;
+  --forge-surface: #fbfdf8;
+  --forge-surface-strong: #e4ebe4;
+  --forge-line: #cdd9d0;
+  --forge-line-strong: #98aa9e;
+  --forge-ink: #102019;
+  --forge-muted: #56645d;
+  --forge-dim: #68766e;
+  --forge-amber: #f0643b;
+  --forge-amber-deep: #a93c20;
+  --forge-violet: #2f66d8;
+  --forge-violet-deep: #174eae;
+  --forge-cyan: #2c8a61;
+  --forge-cyan-deep: #185f43;
+  --forge-paper: #f4f7f1;
+  --forge-paper-line: #cdd9d0;
+  --forge-paper-ink: #102019;
+  --forge-focus: #145bd7;
   --forge-space-1: 4px;
   --forge-space-2: 8px;
   --forge-space-3: 12px;
@@ -37,6 +38,54 @@
   --forge-radius-sm: 6px;
   --forge-radius-md: 12px;
   color-scheme: light;
+}
+
+:is(html[data-forge-theme="dark"] .forge-shell, html[data-forge-theme="dark"] .forge-world-frame) {
+  --forge-bg: #071722;
+  --forge-bg-deep: #06131d;
+  --forge-surface: #0d202b;
+  --forge-surface-strong: #142a35;
+  --forge-line: #29414b;
+  --forge-line-strong: #44606a;
+  --forge-ink: #f3f7f0;
+  --forge-muted: #a8b9b1;
+  --forge-dim: #82958b;
+  --forge-amber: #ff8059;
+  --forge-amber-deep: #ff9b7b;
+  --forge-violet: #85aaff;
+  --forge-violet-deep: #6f96ee;
+  --forge-cyan: #79c995;
+  --forge-cyan-deep: #67bd84;
+  --forge-paper: #0d202b;
+  --forge-paper-line: #29414b;
+  --forge-paper-ink: #f3f7f0;
+  --forge-focus: #8fb0ff;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :is(html:not([data-forge-theme]) .forge-shell, html:not([data-forge-theme]) .forge-world-frame) {
+    --forge-bg: #071722;
+    --forge-bg-deep: #06131d;
+    --forge-surface: #0d202b;
+    --forge-surface-strong: #142a35;
+    --forge-line: #29414b;
+    --forge-line-strong: #44606a;
+    --forge-ink: #f3f7f0;
+    --forge-muted: #a8b9b1;
+    --forge-dim: #82958b;
+    --forge-amber: #ff8059;
+    --forge-amber-deep: #ff9b7b;
+    --forge-violet: #85aaff;
+    --forge-violet-deep: #6f96ee;
+    --forge-cyan: #79c995;
+    --forge-cyan-deep: #67bd84;
+    --forge-paper: #0d202b;
+    --forge-paper-line: #29414b;
+    --forge-paper-ink: #f3f7f0;
+    --forge-focus: #8fb0ff;
+    color-scheme: dark;
+  }
 }
 
 .forge-shell :is(button, input, textarea, select),
@@ -58,7 +107,7 @@
 
 .forge-shell :is(a, button, input, textarea, select):focus-visible,
 .forge-world-frame :is(a, button, input, textarea, select):focus-visible {
-  outline: 3px solid var(--forge-cyan-deep);
+  outline: 3px solid var(--forge-focus);
   outline-offset: 3px;
 }
 
@@ -133,7 +182,10 @@
   stroke-width: 1.15;
 }
 
-.forge-brand { min-height: 44px; }
+.forge-brand {
+  min-width: 44px;
+  min-height: 44px;
+}
 
 .forge-brand strong {
   font-family: var(--forge-sans);
@@ -1525,7 +1577,17 @@
     min-height: 68px;
   }
 
-  .forge-brand small { display: none; }
+  .forge-topbar {
+    grid-template-columns: 1fr auto;
+  }
+
+  .forge-brand > span:last-child { display: none; }
+
+  .forge-topbar-actions {
+    grid-column: 2;
+    grid-row: 1;
+    gap: 8px;
+  }
 
   .forge-mobile-nav {
     min-height: 68px;
