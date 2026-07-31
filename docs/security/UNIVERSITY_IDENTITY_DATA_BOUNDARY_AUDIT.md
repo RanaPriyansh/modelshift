@@ -179,13 +179,41 @@ distributed abuse controls remain release gates.
 **False-positive notes:** The current public sign-in page contains no
 credential form. This finding concerns a future authorized activation.
 
+### SEC-UV1-005: Project sprint records had no raw byte limit
+
+**Severity:** Low
+
+**Status:** Fixed in this candidate
+
+**Location before the fix:** `src/lib/forge-sprint/model.ts:558-619` and
+`src/lib/forge-sprint/storage.ts:15-39` at commit `5ae2850`.
+
+**Evidence before the fix:** The browser-local project sprint reader passed the
+complete stored string to `JSON.parse`. The writer serialized and stored the
+complete object without an explicit byte ceiling.
+
+**Impact:** An oversized or corrupted browser value could increase parse time
+and memory use. A large outgoing record could also consume the shared browser
+storage quota and cause unrelated local continuity writes to fail.
+
+**Fix:** Sprint reads and writes now enforce a five MiB UTF-8 ceiling with the
+existing allocation-minimizing byte checker. Oversized reads remain untouched
+for explicit learner recovery or deletion. Oversized writes fail before
+storage mutation.
+
+**Mitigation:** Sprint schemas already bound record counts, arrays, and field
+lengths. Browser storage remains device-local and learner-controlled.
+
+**False-positive notes:** Browsers usually enforce their own origin quota.
+FORGE now has an explicit product boundary that does not depend on that quota.
+
 ## Verification
 
 The candidate checks passed:
 
-- 173 application test files with 1,519 tests;
+- 173 application test files with 1,520 tests;
 - two evaluator test files with 13 tests;
-- 1,532 tests in total;
+- 1,533 tests in total;
 - ESLint with zero warnings;
 - TypeScript typecheck; and
 - whitespace and patch validation.

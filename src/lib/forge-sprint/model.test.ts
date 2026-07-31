@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   FORGE_SPRINT_STORAGE_KEY,
+  MAX_FORGE_SPRINT_RAW_BYTES,
   addEvidenceLink,
   addSprintToStore,
   buildForgeProofMarkdown,
@@ -321,5 +322,27 @@ describe("Forge Sprint browser-local serialization", () => {
 
     deleteForgeSprintStore(storage);
     expect(readRawForgeSprintStore(storage)).toBeNull();
+  });
+
+  it("rejects oversized stored and outgoing sprint data without changing storage", () => {
+    const storage = new FakeStorage();
+    const existing = serializeForgeSprintStore(createEmptyForgeSprintStore());
+    storage.values.set(FORGE_SPRINT_STORAGE_KEY, existing);
+
+    const oversizedRaw = "x".repeat(MAX_FORGE_SPRINT_RAW_BYTES + 1);
+    expect(parseForgeSprintStore(oversizedRaw)).toEqual({
+      store: createEmptyForgeSprintStore(),
+      issues: ["Local sprint data exceeds the size limit. No stored data was changed."],
+    });
+
+    const oversizedStore = {
+      ...createEmptyForgeSprintStore(),
+      padding: oversizedRaw,
+    } as unknown as ReturnType<typeof createEmptyForgeSprintStore>;
+    expect(() => writeForgeSprintStore(storage, oversizedStore)).toThrow(
+      "sprint_store_size_exceeded",
+    );
+    expect(storage.values.get(FORGE_SPRINT_STORAGE_KEY)).toBe(existing);
+    expect(storage.writes).toBe(0);
   });
 });

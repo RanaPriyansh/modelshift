@@ -1,6 +1,9 @@
+import { exceedsUtf8ByteLimit } from "../storage/raw-byte-limit";
+
 export const FORGE_SPRINT_STORE_VERSION = 1 as const;
 export const FORGE_SPRINT_STORAGE_KEY = "forge.project-sprints:v1";
 export const MAX_LOCAL_SPRINTS = 50;
+export const MAX_FORGE_SPRINT_RAW_BYTES = 5 * 1024 * 1024;
 
 export type ForgeSprintTemplateId =
   | "campus-tool"
@@ -556,7 +559,16 @@ export function buildForgeProofMarkdown(sprint: ForgeSprint): string {
 }
 
 export function parseForgeSprintStore(raw: string | null): ForgeSprintParseResult {
-  if (raw === null || raw.trim() === "") {
+  if (raw === null) {
+    return { store: createEmptyForgeSprintStore(), issues: [] };
+  }
+  if (exceedsUtf8ByteLimit(raw, MAX_FORGE_SPRINT_RAW_BYTES)) {
+    return {
+      store: createEmptyForgeSprintStore(),
+      issues: ["Local sprint data exceeds the size limit. No stored data was changed."],
+    };
+  }
+  if (raw.trim() === "") {
     return { store: createEmptyForgeSprintStore(), issues: [] };
   }
 
@@ -615,7 +627,11 @@ export function parseForgeSprintStore(raw: string | null): ForgeSprintParseResul
 }
 
 export function serializeForgeSprintStore(store: ForgeSprintStore): string {
-  return JSON.stringify(store);
+  const encoded = JSON.stringify(store);
+  if (exceedsUtf8ByteLimit(encoded, MAX_FORGE_SPRINT_RAW_BYTES)) {
+    throw new Error("sprint_store_size_exceeded");
+  }
+  return encoded;
 }
 
 export function isInspectableUrl(value: string): boolean {
