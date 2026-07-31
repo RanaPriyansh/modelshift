@@ -11,7 +11,7 @@ import {
   projectUniversityStudentContext,
   UNIVERSITY_STUDENT_CONTEXT_REQUEST_SCHEMA_VERSION,
 } from "@/src/forge/university-student-context";
-import { readForgeCloudIdentity } from "@/src/lib/forge-auth/session.server";
+import { readForgeCloudIdentitySubject } from "@/src/lib/forge-auth/session.server";
 
 import {
   type UniversityAccountContextAuthority,
@@ -40,7 +40,6 @@ const typedArrayByteLength = Object.getOwnPropertyDescriptor(
 
 const forgeCloudIdentitySchema = z.strictObject({
   id: z.string().uuid(),
-  email: z.string().email().max(254).nullable(),
   accountKind: z.literal("cloud_identity"),
 });
 
@@ -213,7 +212,7 @@ export async function bindUniversityAccountContext(
 
     let rawIdentity: unknown;
     try {
-      rawIdentity = await readForgeCloudIdentity();
+      rawIdentity = await readForgeCloudIdentitySubject();
     } catch {
       return invalid("identity_reader_failed", [{
         code: "identity.reader_failed",

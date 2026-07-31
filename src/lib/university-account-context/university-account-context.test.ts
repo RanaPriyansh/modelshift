@@ -14,7 +14,7 @@ const moduleReaders = vi.hoisted(() => ({
 }));
 
 vi.mock("@/src/lib/forge-auth/session.server", () => ({
-  readForgeCloudIdentity: moduleReaders.identity,
+  readForgeCloudIdentitySubject: moduleReaders.identity,
 }));
 
 vi.mock("./binding-key-provider.server", () => ({
@@ -132,7 +132,6 @@ function request(): UniversityAccountContextRequestV2 {
 function identity(id = ACCOUNT_ID): unknown {
   return {
     id,
-    email: "learner@example.test",
     accountKind: "cloud_identity",
   };
 }
@@ -311,8 +310,24 @@ describe("bindUniversityAccountContext", () => {
     const serialized = JSON.stringify(result);
 
     expect(serialized).not.toContain(ACCOUNT_ID);
-    expect(serialized).not.toContain("learner@example.test");
     expect(serialized).not.toContain(JSON.stringify(Array.from(bindingKey())));
+  });
+
+  it("rejects contact data from the module-owned identity subject boundary", async () => {
+    moduleReaders.identity.mockResolvedValueOnce({
+      ...identity() as object,
+      email: "learner@example.test",
+    });
+
+    const result = await bindUniversityAccountContext(request());
+
+    expect(result).toMatchObject({
+      status: "invalid",
+      reason: "identity_record_invalid",
+      context: null,
+    });
+    expect(JSON.stringify(result)).not.toContain("learner@example.test");
+    expect(moduleReaders.bindingKey.calls).toBe(0);
   });
 
   it("rejects caller authority fields and ignores forged reader options", async () => {

@@ -102,8 +102,8 @@ not accept:
 
 The server adapter:
 
-- reads the existing module-owned authenticated active-adult identity
-  boundary;
+- reads the minimum module-owned authenticated active-adult identity subject
+  projection;
 - returns `unavailable` when that boundary has no usable identity;
 - derives one stable opaque binding with versioned, domain-separated
   HMAC-SHA-256 and a module-owned server key provider;
@@ -117,7 +117,8 @@ authority seam. The module-owned key provider returns no key in this slice.
 
 The derived binding is a pseudonymous correlation value. It is not a tenant,
 institutional enrollment, entitlement, consent, or durable-record identifier.
-The adapter does not use or expose the account email or raw account UUID. The
+The adapter rejects identity records that contain contact data or unknown
+fields. It does not use or expose the account email or raw account UUID. The
 binding key never enters request data, output, logs, client code, or a general
 application table. A value with at least 32 bytes satisfies only the runtime
 length boundary. Key secrecy, entropy, rotation, and environment separation

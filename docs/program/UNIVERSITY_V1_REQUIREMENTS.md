@@ -359,6 +359,7 @@ promote an internal route.
 | `UV1-SYS-010` | Keep source uncertainty explicit at the composition boundary. | The highest source-map state is `bound_review_candidate`; stale, partial, duplicate, conflicting, rejected, unresolved, missing, or unbound candidates and unbound concepts remain review-required; source authenticity and institutional completeness remain not established. |
 | `UV1-SYS-011` | Derive an adult account binding only from server authority. | A one-parameter server-only adapter uses fixed module-owned identity and key providers, accepts raw degree and learning requests without caller identity or context binding, derives a versioned domain-separated HMAC-SHA-256 pseudonym after active-adult identity admission, and returns only unavailable, invalid, or bound-for-inspection. |
 | `UV1-SYS-012` | Keep cloud identity and university persistence disabled until their separate gates pass. | The default account adapter remains unavailable while cloud auth is structurally disabled; no route, migration, browser store, provider, model, event, or external action is added; ADR-026 retains identity, tenant, retention, export, correction, deletion, backup, RLS, and release blockers. |
+| `UV1-SYS-013` | Minimize identity data at correlation-only server boundaries. | The active-adult identity reader projects only account ID and identity kind for account-context and provider-authority consumers; the account adapter rejects email and every unknown identity field before it reads a binding key. |
 
 ## First slice acceptance
 
