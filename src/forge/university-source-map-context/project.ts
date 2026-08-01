@@ -27,6 +27,7 @@ import {
 
 const UNIVERSITY_SOURCE_MAP_MAXIMUM_STRING_LENGTH = 4_096;
 const UNIVERSITY_SOURCE_MAP_MAXIMUM_SERIALIZED_JSON_BYTES = 512 * 1_024;
+const MAX_RETURNED_SCHEMA_ISSUES = 64;
 
 const AUTHORITY = deepFreeze({
   projectionClass: "learner_declared_source_map_inspection",
@@ -92,7 +93,7 @@ function invalidProjection(
 function zodIssues(
   error: ZodError,
 ): readonly UniversitySourceMapContextIssue[] {
-  return orderedIssues(error.issues.map((entry) => ({
+  return orderedIssues(error.issues.slice(0, MAX_RETURNED_SCHEMA_ISSUES).map((entry) => ({
     code: "schema.invalid",
     path: entry.path.join("."),
     message: entry.message,

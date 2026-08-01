@@ -22,6 +22,7 @@ const MAX_OBJECT_KEYS = 16;
 const MAX_PROPERTY_NAME_BYTES = 64;
 const MAX_STRING_BYTES = 512;
 const MAX_TOTAL_STRING_BYTES = 1_024 * 1_024;
+const MAX_RETURNED_SCHEMA_ISSUES = 64;
 const ARRAY_INDEX = /^(0|[1-9]\d*)$/;
 const POLLUTION_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
@@ -203,7 +204,7 @@ function invalidProjection(
 function structuralIssues(
   error: ZodError,
 ): readonly UniversityStudentContextIssue[] {
-  return orderedIssues(error.issues.map((entry) => {
+  return orderedIssues(error.issues.slice(0, MAX_RETURNED_SCHEMA_ISSUES).map((entry) => {
     const root = entry.path[0];
     const child = root === "degreeMapRequest" || root === "learningMapRequest";
     return {

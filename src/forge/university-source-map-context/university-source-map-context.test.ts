@@ -393,6 +393,21 @@ describe("projectUniversitySourceMapContext", () => {
     }
   });
 
+  it("caps structural issues for a maximum-size malformed binding array", async () => {
+    const invalidMaximum = {
+      ...request(),
+      bindings: Array.from({ length: 256 }, () => null),
+    };
+
+    const first = await projectUniversitySourceMapContext(invalidMaximum);
+    const second = await projectUniversitySourceMapContext(invalidMaximum);
+
+    expect(first.status).toBe("invalid");
+    expect(first.issues).toHaveLength(64);
+    expect(first.issues.length).toBeLessThanOrEqual(64);
+    expect(first).toEqual(second);
+  });
+
   it("keeps unresolved, stale, incomplete, and rejected bindings in review", async () => {
     const unresolved = request();
     unresolved.courseSourceReconciliationRequest.decisions = [];

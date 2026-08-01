@@ -242,6 +242,24 @@ describe("projectUniversityStudentContext", () => {
     }
   });
 
+  it("caps structural issues for a maximum-size malformed child array", () => {
+    const invalidMaximum = {
+      ...request(),
+      learningMapRequest: {
+        ...learningRequest(),
+        concepts: Array.from({ length: 96 }, () => null),
+      },
+    };
+
+    const first = projectUniversityStudentContext(invalidMaximum);
+    const second = projectUniversityStudentContext(invalidMaximum);
+
+    expect(first.status).toBe("invalid");
+    expect(first.issues).toHaveLength(64);
+    expect(first.issues.length).toBeLessThanOrEqual(64);
+    expect(first).toEqual(second);
+  });
+
   it("fails closed when the learning course is absent from the degree axis", () => {
     const value = request();
     value.learningMapRequest.course.courseRef = "course.unknown-999";

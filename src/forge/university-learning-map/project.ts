@@ -14,6 +14,7 @@ import {
 
 const MAXIMUM_STRING_LENGTH = 4_096;
 const MAXIMUM_SERIALIZED_JSON_BYTES = 512 * 1_024;
+const MAX_RETURNED_SCHEMA_ISSUES = 64;
 
 const AUTHORITY = deepFreeze({
   projectionClass: "learner_declared_learning_map_inspection",
@@ -40,7 +41,7 @@ function ordered(issues: readonly UniversityLearningMapIssue[]): readonly Univer
 }
 
 function structural(error: ZodError): readonly UniversityLearningMapIssue[] {
-  return ordered(error.issues.map((entry) => issue("schema.invalid", entry.path.join("."))));
+  return ordered(error.issues.slice(0, MAX_RETURNED_SCHEMA_ISSUES).map((entry) => issue("schema.invalid", entry.path.join("."))));
 }
 
 function invalid(issues: readonly UniversityLearningMapIssue[]): Readonly<UniversityLearningMapProjectionV2> {

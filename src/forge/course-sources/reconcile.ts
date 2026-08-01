@@ -36,6 +36,7 @@ export const COURSE_SOURCE_ISSUE_CODES = [
 const COURSE_SOURCE_SNAPSHOT_OPTIONS = {
   allowNullPrototypeObjects: true,
 } as const;
+const MAX_RETURNED_SCHEMA_ISSUES = 64;
 
 export type CourseSourceIssueCode = (typeof COURSE_SOURCE_ISSUE_CODES)[number];
 
@@ -201,7 +202,7 @@ function structuralRequest(value: unknown): {
   if (parsed.success) return { request: parsed.data, issues: [] };
   return {
     request: null,
-    issues: parsed.error.issues.map((entry) => ({
+    issues: parsed.error.issues.slice(0, MAX_RETURNED_SCHEMA_ISSUES).map((entry) => ({
       code: "schema.invalid",
       path: entry.path.join("."),
       message: entry.message,
@@ -579,7 +580,7 @@ export async function buildCourseSourceGoalContext(input: {
   const reconciliation = await reconcileCourseSourceSnapshot(snapshotRecord.reconciliationRequest);
   const parsedGoal = courseSourceGoalRefSchema.safeParse(snapshotRecord.goalRef);
   if (!parsedGoal.success) {
-    const issues: CourseSourceIssue[] = parsedGoal.error.issues.map((entry) => ({
+    const issues: CourseSourceIssue[] = parsedGoal.error.issues.slice(0, MAX_RETURNED_SCHEMA_ISSUES).map((entry) => ({
       code: "schema.invalid",
       path: `goalRef.${entry.path.join(".")}`,
       message: entry.message,
