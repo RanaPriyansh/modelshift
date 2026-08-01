@@ -25,6 +25,7 @@ This record does not establish production readiness, learning efficacy, accessib
 | Focus mode atlas commit | `62616e9bdf06d006ce9aeb3eab5ceb308a9ed1bb` |
 | Native iOS handoff commit | `c7b2e219eef5dd052fae350734157de99ff3f0bd` |
 | Complete public and web atlas commit | `6a08f80c968f402145fed66ab086a91133702fb3` |
+| Complete iOS atlas commit | `d04fe0d759087197eff63aca9f08ad7f204eb96c` |
 | Deployment | Not done |
 | Push or merge | Not done |
 
