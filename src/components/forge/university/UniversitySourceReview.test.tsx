@@ -2,13 +2,29 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { reviewedUniversitySourceRequest } from "@/app/internal/university-source-review/review-fixture.server";
 
 import { UniversitySourceReview } from "./UniversitySourceReview";
 
-afterEach(cleanup);
+let animationFrameCallbacks: FrameRequestCallback[];
+
+beforeEach(() => {
+  animationFrameCallbacks = [];
+  vi.stubGlobal("scrollTo", vi.fn());
+  vi.stubGlobal("requestAnimationFrame", vi.fn((callback: FrameRequestCallback) => {
+    animationFrameCallbacks.push(callback);
+    return animationFrameCallbacks.length;
+  }));
+  vi.stubGlobal("cancelAnimationFrame", vi.fn());
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe("UniversitySourceReview", () => {
   it("keeps conflicting copied facts blocked after both extractions are confirmed", async () => {
@@ -35,19 +51,74 @@ describe("UniversitySourceReview", () => {
   });
 
   it("preserves the copied value while applying a student correction", async () => {
+    vi.spyOn(window, "scrollX", "get").mockReturnValue(12.5);
+    vi.spyOn(window, "scrollY", "get").mockReturnValue(412);
     render(<UniversitySourceReview initialRequest={await reviewedUniversitySourceRequest()} />);
     expect((await screen.findAllByText(/Assignment one, due/)).length).toBeGreaterThan(1);
 
-    fireEvent.click(screen.getByRole("button", {
+    const correctionTrigger = screen.getByRole("button", {
       name: "Correct transcription: Copied syllabus, Assignment one deadline",
-    }));
+    });
+    fireEvent.click(correctionTrigger);
     const correction = screen.getByLabelText("Correct due date and time");
+    expect(correction).toHaveFocus();
     fireEvent.change(correction, { target: { value: "2026-09-14T15:30" } });
     fireEvent.click(screen.getByRole("button", { name: "Use my correction" }));
+    expect(window.scrollTo).not.toHaveBeenCalled();
 
-    await waitFor(() => expect(screen.getByText(/Your correction:/)).toBeInTheDocument());
+    await waitFor(() => {
+      expect(screen.getByText(/Your correction:/)).toBeInTheDocument();
+      expect(correctionTrigger).toHaveFocus();
+      expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1);
+    });
+    expect(window.scrollTo).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(window.scrollTo)).toHaveBeenLastCalledWith({
+      behavior: "auto",
+      left: 12.5,
+      top: 412,
+    });
+    animationFrameCallbacks[0]?.(0);
+    expect(window.scrollTo).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(window.scrollTo)).toHaveBeenLastCalledWith({
+      behavior: "auto",
+      left: 12.5,
+      top: 412,
+    });
     expect(screen.getAllByText(/Assignment one, due/).length).toBeGreaterThan(1);
     expect(screen.getByText("Student correction applied")).toBeInTheDocument();
+  });
+
+  it("restores correction trigger focus after cancel", async () => {
+    vi.spyOn(window, "scrollX", "get").mockReturnValue(18);
+    vi.spyOn(window, "scrollY", "get").mockReturnValue(603);
+    render(<UniversitySourceReview initialRequest={await reviewedUniversitySourceRequest()} />);
+    await screen.findByRole("heading", { name: "Two copies give different deadlines." });
+    const correctionTrigger = screen.getByRole("button", {
+      name: "Correct transcription: Exported course calendar, Assignment one deadline",
+    });
+
+    fireEvent.click(correctionTrigger);
+    const correction = screen.getByLabelText("Correct due date and time");
+    expect(correction).toHaveFocus();
+    expect(window.scrollTo).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByLabelText("Correct due date and time")).not.toBeInTheDocument();
+    expect(correctionTrigger).toHaveFocus();
+    expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1);
+    expect(window.scrollTo).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(window.scrollTo)).toHaveBeenLastCalledWith({
+      behavior: "auto",
+      left: 18,
+      top: 603,
+    });
+    animationFrameCallbacks[0]?.(0);
+    expect(window.scrollTo).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(window.scrollTo)).toHaveBeenLastCalledWith({
+      behavior: "auto",
+      left: 18,
+      top: 603,
+    });
   });
 
   it("keeps copied assessment permission in restricted mode after a transcription match", async () => {

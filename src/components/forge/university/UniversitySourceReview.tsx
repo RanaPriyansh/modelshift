@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   reconcileCourseSources,
@@ -14,6 +14,11 @@ import {
 import styles from "./UniversitySourceReview.module.css";
 
 type ReviewPhase = "loading" | "ready" | "error";
+
+type ScrollPosition = {
+  readonly left: number;
+  readonly top: number;
+};
 
 function readableDate(value: string, timeZone: string): string {
   return new Intl.DateTimeFormat("en", {
@@ -90,6 +95,36 @@ export function UniversitySourceReview({
   const [correctingCandidateId, setCorrectingCandidateId] = useState<string | null>(null);
   const [correctedDueAt, setCorrectedDueAt] = useState("");
   const correctionInputRef = useRef<HTMLInputElement>(null);
+  const correctionTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const pendingScrollPositionRef = useRef<ScrollPosition | null>(null);
+  const scrollRestoreFrameRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (correctingCandidateId !== null || phase !== "ready") return;
+    const pending = pendingScrollPositionRef.current;
+    if (!pending) return;
+    window.scrollTo({
+      behavior: "auto",
+      left: pending.left,
+      top: pending.top,
+    });
+    const frame = window.requestAnimationFrame(() => {
+      if (scrollRestoreFrameRef.current !== frame) return;
+      window.scrollTo({
+        behavior: "auto",
+        left: pending.left,
+        top: pending.top,
+      });
+      pendingScrollPositionRef.current = null;
+      scrollRestoreFrameRef.current = null;
+    });
+    scrollRestoreFrameRef.current = frame;
+    return () => {
+      if (scrollRestoreFrameRef.current !== frame) return;
+      window.cancelAnimationFrame(frame);
+      scrollRestoreFrameRef.current = null;
+    };
+  }, [correctingCandidateId, phase]);
 
   useEffect(() => {
     let active = true;
@@ -132,6 +167,8 @@ export function UniversitySourceReview({
   }
 
   function accept(candidate: CourseSourceCandidateProjection) {
+    correctionTriggerRef.current = null;
+    clearCorrectionScrollRestore();
     replaceDecision({
       schemaVersion: "course-source-decision.v1",
       decisionId: decisionId(candidate.candidateId, "accept"),
@@ -145,6 +182,8 @@ export function UniversitySourceReview({
   }
 
   function reject(candidate: CourseSourceCandidateProjection) {
+    correctionTriggerRef.current = null;
+    clearCorrectionScrollRestore();
     replaceDecision({
       schemaVersion: "course-source-decision.v1",
       decisionId: decisionId(candidate.candidateId, "reject"),
@@ -158,8 +197,12 @@ export function UniversitySourceReview({
     });
   }
 
-  function beginCorrection(candidate: CourseSourceCandidateProjection) {
+  function beginCorrection(
+    candidate: CourseSourceCandidateProjection,
+    trigger: HTMLButtonElement,
+  ) {
     if (candidate.originalFact.kind !== "deadline") return;
+    correctionTriggerRef.current = trigger;
     const localDate = new Date(candidate.originalFact.dueAt);
     const localValue = new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60_000)
       .toISOString()
@@ -172,6 +215,7 @@ export function UniversitySourceReview({
     if (candidate.originalFact.kind !== "deadline" || correctedDueAt.length === 0) return;
     const correctedDate = new Date(correctedDueAt);
     if (Number.isNaN(correctedDate.getTime())) return;
+    scheduleCorrectionScrollRestore();
     replaceDecision({
       schemaVersion: "course-source-decision.v1",
       decisionId: decisionId(candidate.candidateId, "correct"),
@@ -188,9 +232,39 @@ export function UniversitySourceReview({
       correctionReasonCode: "source_transcription_error",
       decidedAt: initialRequest.asOf,
     });
+    restoreCorrectionTrigger();
+  }
+
+  function cancelCorrection() {
+    scheduleCorrectionScrollRestore();
+    setCorrectingCandidateId(null);
+    restoreCorrectionTrigger();
+  }
+
+  function scheduleCorrectionScrollRestore() {
+    clearCorrectionScrollRestore();
+    pendingScrollPositionRef.current = {
+      left: window.scrollX,
+      top: window.scrollY,
+    };
+  }
+
+  function clearCorrectionScrollRestore() {
+    const frame = scrollRestoreFrameRef.current;
+    if (frame !== null) window.cancelAnimationFrame(frame);
+    scrollRestoreFrameRef.current = null;
+    pendingScrollPositionRef.current = null;
+  }
+
+  function restoreCorrectionTrigger() {
+    const trigger = correctionTriggerRef.current;
+    correctionTriggerRef.current = null;
+    trigger?.focus({ preventScroll: true });
   }
 
   function resetReview() {
+    correctionTriggerRef.current = null;
+    clearCorrectionScrollRestore();
     setPhase("loading");
     setDecisions(initialRequest.decisions);
     setCorrectingCandidateId(null);
@@ -266,11 +340,11 @@ export function UniversitySourceReview({
                     correctedDueAt={correctedDueAt}
                     correctionInputRef={correctionInputRef}
                     onAccept={() => accept(candidate)}
-                    onCorrect={() => beginCorrection(candidate)}
+                    onCorrect={(trigger) => beginCorrection(candidate, trigger)}
                     onReject={() => reject(candidate)}
                     onCorrectionChange={setCorrectedDueAt}
                     onCorrectionSave={() => commitCorrection(candidate)}
-                    onCorrectionCancel={() => setCorrectingCandidateId(null)}
+                    onCorrectionCancel={cancelCorrection}
                   />
                 ))}
               </ol>
@@ -391,7 +465,7 @@ function SourceCandidate({
   correctedDueAt?: string;
   correctionInputRef?: React.RefObject<HTMLInputElement | null>;
   onAccept: () => void;
-  onCorrect?: () => void;
+  onCorrect?: (trigger: HTMLButtonElement) => void;
   onReject: () => void;
   onCorrectionChange?: (value: string) => void;
   onCorrectionSave?: () => void;
@@ -437,7 +511,7 @@ function SourceCandidate({
             type="button"
             aria-label={`Correct transcription: ${sourceLabel}, ${factActionContext(candidate.originalFact)}`}
             aria-expanded={isCorrecting}
-            onClick={onCorrect}
+            onClick={(event) => onCorrect(event.currentTarget)}
           >
             Correct transcription
           </button>
