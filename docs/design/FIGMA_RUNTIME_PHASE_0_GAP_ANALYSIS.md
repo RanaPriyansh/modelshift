@@ -46,6 +46,12 @@ The Figma connector does not return a library inventory.
 
 It returns `INVALID_ARGUMENT` before the request executes.
 
+The metadata, Plugin API, library, and web design capture endpoints return the same error.
+
+The local design atlas returned HTTP 200 before the capture attempt.
+
+The capture endpoint failed before it created a Figma page or capture identifier.
+
 No external library is approved for this build.
 
 The local generator uses only local variables, styles, and components.
@@ -71,6 +77,8 @@ The preferred write path is the verified local development plugin.
 The browser import path is an allowed fallback for representative editable boards.
 
 The connector can become a write path only after its `INVALID_ARGUMENT` error is resolved.
+
+Paper remains an approved visual-review fallback after the macOS session is unlocked.
 
 ## Phase 0 exit
 

@@ -110,14 +110,33 @@ The design objective is complete only when all gates pass.
 
 ## 6. Current priority order
 
-1. Run the verified local generator in the valid editable Figma file.
-2. Audit all generated variables, styles, components, boards, and identifiers.
-3. Compare the representative Figma boards with the complete coded atlas.
-4. Complete route-level state and accessibility checks.
-5. Start native SwiftUI work after a native target exists.
-6. Test the design with representative learners.
+1. Preserve the verified generator, token sources, identifiers, and coded atlas as one import-ready source.
+2. Run the generator in Figma after the desktop session becomes available.
+3. Use Paper for visual review if Figma remains unavailable after desktop access returns.
+4. Audit all generated variables, styles, components, boards, and identifiers.
+5. Compare the representative editable boards with the complete coded atlas.
+6. Start native SwiftUI work after a native target exists.
+7. Test the design with representative learners.
 
-## 7. Current gate state
+## 7. Execution direction
+
+The design work follows three visual zones.
+
+1. **Thresholds** use vivid landscapes, large typography, and one clear action.
+2. **Work** uses quiet surfaces, strong hierarchy, and low visual noise.
+3. **Evidence** uses precise labels, source state, assistance state, and proof boundaries.
+
+The same system must work in Light and Dark appearances.
+
+The public site can use the strongest environmental imagery.
+
+The web application must give the learner more visual control than the environment.
+
+The iOS application must use native navigation, controls, motion, and accessibility behavior.
+
+No visual reward can replace useful learning feedback or independent evidence.
+
+## 8. Current gate state
 
 | Gate | Current state |
 | --- | --- |
@@ -132,7 +151,7 @@ The design objective is complete only when all gates pass.
 | iOS handoff | Complete design contract exists. No native target exists. |
 | Provenance | Local commits, hashes, and test results are recorded. |
 
-## 8. Boundaries
+## 9. Boundaries
 
 No local design evidence proves production operation, accessibility conformance, learning efficacy, or learner preference.
 

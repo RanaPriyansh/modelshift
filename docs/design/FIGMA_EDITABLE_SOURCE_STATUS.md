@@ -67,11 +67,22 @@ The plugin makes no network request.
 
 ## Current external blockers
 
-The Figma connector returns `INVALID_ARGUMENT` for the new file.
+The following Figma endpoints return `INVALID_ARGUMENT` for the target file:
+
+- Plugin API execution.
+- Metadata inspection.
+- Library inspection.
+- Web design capture.
+
+The local design atlas returned HTTP 200 before the web design capture attempt.
+
+The capture endpoint failed before it created a capture.
 
 The Chrome file chooser needs the extension file-access permission.
 
 The macOS session is locked.
+
+Paper cannot open while the macOS session is locked.
 
 The generator has not run in Figma.
 
@@ -79,11 +90,9 @@ No editable-source completion claim is valid yet.
 
 ## Next action
 
-Test a browser-based editable-board import.
+Unlock macOS.
 
-If that path cannot create correct editable layers, unlock macOS.
-
-Open the target file in the Figma desktop application.
+Open the target file in the Figma desktop application or open Paper for the approved fallback review.
 
 Import `scripts/design/figma-forge-terrain-plugin/manifest.json` as a development plugin.
 
