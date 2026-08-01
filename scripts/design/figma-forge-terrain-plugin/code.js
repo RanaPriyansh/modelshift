@@ -1996,8 +1996,21 @@ async function build() {
   createCoverageIndex(pages["09 Archive"]);
   createArchive(pages["09 Archive"]);
 
+  const coverageReceipt = Object.fromEntries(
+    Object.entries(CANONICAL_COVERAGE).map(([family, items]) => [
+      family,
+      items.map(([id, route, title]) => ({
+        id,
+        route,
+        title,
+        editable: REPRESENTATIVE_IDS.has(id),
+      })),
+    ]),
+  );
+
   figma.root.setPluginData("forge.terrain.version", FORGE_VERSION);
   figma.root.setPluginData("forge.terrain.receipt", JSON.stringify(RECEIPT));
+  figma.root.setPluginData("forge.terrain.coverage", JSON.stringify(coverageReceipt));
   await figma.setCurrentPageAsync(pages["00 Cover"]);
   const cover = pages["00 Cover"].children.find((node) => node.name === "FORGE Terrain / Cover");
   if (cover) figma.viewport.scrollAndZoomIntoView([cover]);

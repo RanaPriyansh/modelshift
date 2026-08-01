@@ -203,6 +203,7 @@ const message = await closed;
 assert.doesNotMatch(message, /stopped/i);
 
 const receipt = JSON.parse(root.getPluginData("forge.terrain.receipt"));
+const coverage = JSON.parse(root.getPluginData("forge.terrain.coverage"));
 const expectedCounts = {
   pages: 10,
   collections: 3,
@@ -217,6 +218,39 @@ const expectedCounts = {
 for (const [key, count] of Object.entries(expectedCounts)) {
   assert.equal(receipt[key].length, count, `${key} count`);
 }
+
+const expectedFamilyCounts = {
+  public: 11,
+  app: 14,
+  focus: 3,
+  ios: 18,
+};
+
+for (const [family, count] of Object.entries(expectedFamilyCounts)) {
+  assert.equal(coverage[family].length, count, `${family} coverage count`);
+}
+
+const coverageIds = Object.values(coverage)
+  .flat()
+  .map((item) => item.id);
+assert.equal(new Set(coverageIds).size, 46, "canonical coverage identifier count");
+assert.equal(
+  Object.values(coverage).flat().filter((item) => item.editable).length,
+  21,
+  "representative editable identifier count",
+);
+
+const atlasSource = fs.readFileSync(
+  new URL("../../src/components/forge/design-lab/ProductDesignAtlas.tsx", import.meta.url),
+  "utf8",
+);
+const atlasIds = [...atlasSource.matchAll(/\bid:\s*"(PUB|APP|FOCUS|IOS)-\d+"/g)]
+  .map((match) => match[0].match(/"(.*?)"/)[1]);
+assert.deepEqual(
+  [...coverageIds].sort(),
+  [...atlasIds].sort(),
+  "Figma coverage identifiers must match the coded atlas",
+);
 
 for (const pageName of [
   "03 Public Site",

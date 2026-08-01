@@ -56,6 +56,8 @@ The plugin makes no network request.
 - The plugin manifest is valid JSON.
 - The plugin JavaScript passes `node --check`.
 - The mock Figma run creates 10 pages, 86 variables, 17 components, and 28 frames.
+- The 46 Figma coverage identifiers match the complete coded atlas.
+- The checker verifies 21 representative editable identifiers.
 - The token build check passes.
 - Repository lint and type checks pass.
 - 109 source and evaluation test files pass.
