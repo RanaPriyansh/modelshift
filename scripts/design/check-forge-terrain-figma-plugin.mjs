@@ -17,7 +17,6 @@ class NodeMock {
     this.y = 0;
     this.fills = [];
     this.strokes = [];
-    this.boundVariables = {};
   }
 
   appendChild(node) {
@@ -49,11 +48,6 @@ class NodeMock {
 
   getPluginData(key) {
     return this.pluginData[key] || "";
-  }
-
-  setBoundVariable(field, variable) {
-    assert.ok(variable && variable.id, `Invalid variable binding for ${this.name}`);
-    this.boundVariables[field] = variable.id;
   }
 
   async loadAsync() {}
@@ -180,17 +174,27 @@ function createMockFigma(resolveClose) {
       createVariableAlias(variable) {
         return { type: "VARIABLE_ALIAS", id: variable.id };
       },
+      setBoundVariableForPaint(paint, field, variable) {
+        assert.ok(paint && variable && variable.id, "Invalid paint variable binding");
+        return {
+          ...paint,
+          boundVariables: {
+            ...(paint.boundVariables || {}),
+            [field]: { type: "VARIABLE_ALIAS", id: variable.id },
+          },
+        };
+      },
     },
   };
 
-  return { figma, root, collections, variables };
+  return { figma, root, collections, variables, textStyles };
 }
 
 let resolveClose;
 const closed = new Promise((resolve) => {
   resolveClose = resolve;
 });
-const { figma, root, collections, variables } = createMockFigma(resolveClose);
+const { figma, root, collections, variables, textStyles } = createMockFigma(resolveClose);
 const source = fs.readFileSync(
   new URL("./figma-forge-terrain-plugin/code.js", import.meta.url),
   "utf8",
@@ -224,6 +228,14 @@ const expectedCounts = {
 for (const [key, count] of Object.entries(expectedCounts)) {
   assert.equal(receipt[key].length, count, `${key} count`);
 }
+const iosPreviewStyles = textStyles.filter(
+  (style) => style.name.startsWith("iOS/") && style.name !== "iOS/Technical",
+);
+assert.ok(
+  iosPreviewStyles.length > 0
+    && iosPreviewStyles.every((style) => ["Inter", "Geist"].includes(style.fontName?.family)),
+  "Figma iOS preview faces must use Inter or Geist, not SF Pro",
+);
 
 assert.equal(receipt.aliases.length, 32, "semantic alias count");
 const collectionById = new Map(collections.map((collection) => [collection.id, collection]));
@@ -289,7 +301,11 @@ for (const binding of receipt.bindings) {
   const variable = variableById.get(binding.variableId);
   assert.ok(node, `Missing bound node ${binding.nodeId}`);
   assert.ok(variable, `Missing bound variable ${binding.variableId}`);
-  assert.equal(node.boundVariables[binding.field], binding.variableId, `Binding field for ${binding.nodeName}`);
+  const boundPaint = (node[binding.field] || []).find(
+    (paint) => paint.boundVariables?.color?.id === binding.variableId,
+  );
+  assert.ok(boundPaint, `Missing paint binding for ${binding.nodeName}`);
+  assert.equal(boundPaint.boundVariables?.color?.id, binding.variableId, `Paint color binding for ${binding.nodeName}`);
   assert.equal(variable.resolvedType, "COLOR", `Binding type for ${binding.variableName}`);
   const collection = collectionById.get(variable.variableCollectionId);
   assert.ok(collection, `Missing binding collection for ${binding.variableName}`);

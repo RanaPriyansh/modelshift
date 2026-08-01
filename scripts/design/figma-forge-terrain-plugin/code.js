@@ -294,7 +294,7 @@ function semanticNameForColor(color, mode) {
   return match ? match[0] : null;
 }
 
-function bindPaintIfSemantic(node, field, paint, mode, componentName) {
+function bindPaintIfSemantic(node, field, paint, paintIndex, mode, componentName) {
   if (!paint || paint.type !== "SOLID" || paint.opacity !== 1) return false;
   const semanticName = semanticNameForColor(paint.color, mode);
   if (!semanticName) return false;
@@ -302,10 +302,16 @@ function bindPaintIfSemantic(node, field, paint, mode, componentName) {
   if (!variable) {
     throw new Error(`Missing ${mode} semantic variable for ${semanticName}`);
   }
-  if (typeof node.setBoundVariable !== "function") {
-    throw new Error(`Figma node bindings are unavailable for ${componentName}`);
+  if (typeof figma.variables?.setBoundVariableForPaint !== "function") {
+    throw new Error(`Figma paint bindings are unavailable for ${componentName}`);
   }
-  node.setBoundVariable(field, variable);
+  const boundPaint = figma.variables.setBoundVariableForPaint(paint, "color", variable);
+  if (boundPaint?.boundVariables?.color?.id !== variable.id) {
+    throw new Error(`Figma paint binding failed for ${componentName}`);
+  }
+  node[field] = (node[field] || []).map((candidate, index) => (
+    index === paintIndex ? boundPaint : candidate
+  ));
   RECEIPT.bindings.push({
     nodeId: node.id,
     nodeName: node.name,
@@ -329,11 +335,11 @@ function bindComponentTrees() {
     };
     const visit = (child) => {
       for (const field of ["fills", "strokes"]) {
-        for (const paint of child[field] || []) {
+        for (const [paintIndex, paint] of (child[field] || []).entries()) {
           if (paint.type !== "SOLID" || paint.opacity !== 1) continue;
           if (!semanticNameForColor(paint.color, mode)) continue;
           summary.semanticPaints += 1;
-          if (bindPaintIfSemantic(child, field, paint, mode, node.name)) summary.boundPaints += 1;
+          if (bindPaintIfSemantic(child, field, paint, paintIndex, mode, node.name)) summary.boundPaints += 1;
         }
       }
       for (const grandchild of child.children || []) visit(grandchild);
@@ -386,9 +392,12 @@ async function loadFonts() {
     display: await resolveFont(available, ["Geist", "Inter"], ["Medium", "Semi Bold", "Semibold", "Regular"]),
     mono: await resolveFont(available, ["Geist Mono", "SF Mono", "Roboto Mono"], ["Regular"]),
     reflection: await resolveFont(available, ["Libre Baskerville", "Georgia", "Inter"], ["Regular"]),
-    ios: await resolveFont(available, ["SF Pro", "SF Pro Text", "Inter"], ["Regular"]),
-    iosMedium: await resolveFont(available, ["SF Pro", "SF Pro Text", "Inter"], ["Semibold", "Semi Bold", "Medium", "Regular"]),
-    iosDisplay: await resolveFont(available, ["SF Pro Display", "SF Pro", "Inter"], ["Semibold", "Semi Bold", "Medium", "Regular"]),
+    // Figma can list local SF Pro faces that become unavailable when the file
+    // renders on another client. Use the file-safe preview face here. Native
+    // SwiftUI continues to use the system font through the iOS handoff.
+    ios: await resolveFont(available, ["Inter", "Geist"], ["Regular"]),
+    iosMedium: await resolveFont(available, ["Inter", "Geist"], ["Semi Bold", "Semibold", "Medium", "Regular"]),
+    iosDisplay: await resolveFont(available, ["Inter", "Geist"], ["Semi Bold", "Semibold", "Medium", "Regular"]),
   };
 }
 
