@@ -52,6 +52,33 @@
   color: var(--forge-ink);
 }
 
+.workspaceLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 16px;
+  padding: 8px 12px;
+  border: 1px solid var(--forge-line-strong);
+  color: var(--forge-cyan-deep);
+  font-family: var(--forge-mono);
+  font-size: 11px;
+  font-weight: 760;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.workspaceLink:hover {
+  border-color: var(--forge-cyan-deep);
+}
+
+.workspaceLink:focus-visible {
+  outline: 3px solid var(--forge-cyan-deep);
+  outline-offset: 3px;
+}
+
 .boundary {
   display: flex;
   flex-wrap: wrap;
@@ -307,6 +334,10 @@
     padding-left: 0;
   }
 
+  .workspaceLink {
+    align-self: start;
+  }
+
   .hero,
   .outcomes,
   .unknowns,
@@ -364,5 +395,14 @@
   .conceptIndex,
   .authority dt {
     color: CanvasText;
+  }
+
+  .workspaceLink {
+    border-color: CanvasText;
+    color: LinkText;
+  }
+
+  .workspaceLink:focus-visible {
+    outline-color: Highlight;
   }
 }

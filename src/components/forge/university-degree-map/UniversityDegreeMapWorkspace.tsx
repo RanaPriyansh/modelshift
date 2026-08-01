@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import styles from "./UniversityDegreeMapWorkspace.module.css";
 
 export interface UniversityDegreeMapPresentation {
@@ -58,10 +60,20 @@ export function UniversityDegreeMapWorkspace({
         <p className={styles.status}>{presentation.statusLabel}</p>
       </header>
 
+      <Link
+        className={styles.workspaceLink}
+        href="/internal/university-command-center"
+        prefetch={false}
+      >
+        Open university workspaces
+      </Link>
+
       <aside className={styles.boundary} aria-label="Inspection boundary">
         <strong>Synthetic adult fixture</strong>
         <span>No rank or recommendation</span>
-        <span>No save, network, or event</span>
+        <span>
+          No automatic network request. Explicit internal navigation only.
+        </span>
       </aside>
 
       <section className={styles.introduction}>

@@ -40,10 +40,18 @@ describe("UniversityDegreeMapWorkspace", () => {
     expect(screen.getByRole("complementary", {
       name: "Inspection boundary",
     })).toHaveTextContent("No rank or recommendation");
+    expect(screen.getByRole("complementary", {
+      name: "Inspection boundary",
+    })).toHaveTextContent(
+      "No automatic network request. Explicit internal navigation only.",
+    );
     expect(article).toHaveTextContent("self-attested learner declaration");
     expect(article).not.toHaveTextContent("learner-managed declaration");
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.getByRole("link", {
+      name: "Open university workspaces",
+    })).toHaveAttribute("href", "/internal/university-command-center");
     expect(screen.queryByRole("form")).not.toBeInTheDocument();
 
     expect(presentation.courses.length).toBeLessThanOrEqual(8);
@@ -76,6 +84,22 @@ describe("UniversityDegreeMapWorkspace", () => {
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
     expect(css).toContain("@media (forced-colors: active)");
     expect(css).toContain("grid-template-columns: minmax(0, 1fr)");
+    expect(css).toContain("min-height: 44px");
+    expect(css).toContain(".workspaceLink:focus-visible");
+    expect(css).toContain("outline: 3px solid var(--forge-cyan-deep)");
+
+    const workspace = readFileSync(
+      resolve(
+        process.cwd(),
+        "src/components/forge/university-degree-map/UniversityDegreeMapWorkspace.tsx",
+      ),
+      "utf8",
+    );
+    expect(workspace).toContain('href="/internal/university-command-center"');
+    expect(workspace).toContain("prefetch={false}");
+    expect(workspace).toContain(
+      "No automatic network request. Explicit internal navigation only.",
+    );
 
     const page = readFileSync(
       resolve(

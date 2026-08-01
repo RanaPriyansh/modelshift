@@ -61,7 +61,14 @@ describe("UniversityLearningMapWorkspace", () => {
       { label: "Source state", value: "Unverified" },
       { label: "Learning assessment", value: "Not made" },
       { label: "Persistence", value: "None" },
-      { label: "Network", value: "None" },
+      {
+        label: "Automatic network effect",
+        value: "Absent",
+      },
+      {
+        label: "Permitted network effect",
+        value: "Explicit internal navigation only",
+      },
       { label: "External action", value: "None" },
     ]);
   });
@@ -99,11 +106,17 @@ describe("UniversityLearningMapWorkspace", () => {
     expect(screen.getByRole("note")).toHaveTextContent(
       "Concept-reference order; not priority or study sequence",
     );
+    expect(screen.getByRole("note")).toHaveTextContent(
+      "No automatic network request. Explicit internal navigation only.",
+    );
     expect(container.textContent).not.toMatch(
       /declaration order|concept path|follows declared prerequisites/i,
     );
 
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.getByRole("link", {
+      name: "Open university workspaces",
+    })).toHaveAttribute("href", "/internal/university-command-center");
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.queryByRole("form")).not.toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
@@ -175,9 +188,16 @@ describe("UniversityLearningMapWorkspace", () => {
     expect(workspace).not.toMatch(
       /["']use client["']|useEffect|useLayoutEffect|fetch\(|localStorage|sessionStorage/,
     );
+    expect(workspace).toContain('href="/internal/university-command-center"');
+    expect(workspace).toContain("prefetch={false}");
+    expect(workspace).toContain(
+      "No automatic network request. Explicit internal navigation only.",
+    );
     expect(css).toContain("@media (max-width: 360px)");
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
     expect(css).toContain("@media (forced-colors: active)");
     expect(css).toContain("overflow-wrap: anywhere");
+    expect(css).toContain("min-height: 44px");
+    expect(css).toContain(".workspaceLink:focus-visible");
   });
 });

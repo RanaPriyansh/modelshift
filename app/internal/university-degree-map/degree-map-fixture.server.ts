@@ -135,7 +135,14 @@ Readonly<UniversityDegreeMapPresentation> {
       { label: "Rank", value: "Not allowed" },
       { label: "Recommendation", value: "Not allowed" },
       { label: "Save", value: "Not allowed" },
-      { label: "Network", value: "Not allowed" },
+      {
+        label: "Automatic network effect",
+        value: "Absent",
+      },
+      {
+        label: "Permitted network effect",
+        value: "Explicit internal navigation only",
+      },
       { label: "Event", value: "Not allowed" },
     ],
   });

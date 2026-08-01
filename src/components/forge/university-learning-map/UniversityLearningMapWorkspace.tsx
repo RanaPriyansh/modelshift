@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type {
   UniversityLearningMapPresentation,
 } from "./presentation";
@@ -22,10 +24,21 @@ export function UniversityLearningMapWorkspace({
         <p className={styles.status}>{presentation.statusLabel}</p>
       </header>
 
+      <Link
+        className={styles.workspaceLink}
+        href="/internal/university-command-center"
+        prefetch={false}
+      >
+        Open university workspaces
+      </Link>
+
       <div className={styles.boundary} role="note">
         <strong>{presentation.course.ownershipLabel}</strong>
         <span>{presentation.course.sourceLabel}</span>
         <span>Concept-reference order; not priority or study sequence</span>
+        <span>
+          No automatic network request. Explicit internal navigation only.
+        </span>
       </div>
 
       <section className={styles.hero}>

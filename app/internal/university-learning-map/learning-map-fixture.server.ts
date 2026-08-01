@@ -255,7 +255,14 @@ export function universityLearningMapFixture(): UniversityLearningMapPresentatio
       { label: "Source state", value: "Unverified" },
       { label: "Learning assessment", value: "Not made" },
       { label: "Persistence", value: "None" },
-      { label: "Network", value: "None" },
+      {
+        label: "Automatic network effect",
+        value: "Absent",
+      },
+      {
+        label: "Permitted network effect",
+        value: "Explicit internal navigation only",
+      },
       { label: "External action", value: "None" },
     ],
   });
