@@ -41,9 +41,24 @@ const WORKSPACES = Object.freeze([
     description: "Scan a synthetic term and choose one course to inspect.",
   },
   {
+    name: "Semester loop",
+    href: "/internal/university-semester-loop",
+    description: "Inspect one bounded semester learning-loop scenario.",
+  },
+  {
+    name: "Semester overview",
+    href: "/internal/university-semester-overview",
+    description: "Inspect one synthetic term overview without a priority claim.",
+  },
+  {
     name: "Source review",
     href: "/internal/university-source-review",
     description: "Inspect copied-source disagreement without declaring truth.",
+  },
+  {
+    name: "Today",
+    href: "/internal/university-today",
+    description: "Inspect one bounded study action without automatic planning.",
   },
 ] as const);
 
@@ -70,7 +85,7 @@ export function UniversityCommandCenterWorkspace() {
       </div>
 
       <section className={styles.introduction}>
-        <p className={styles.index} aria-hidden="true">08</p>
+        <p className={styles.index} aria-hidden="true">11</p>
         <div>
           <p className={styles.eyebrow}>Explicit learner or operator choice</p>
           <h1 id="university-command-center-title">

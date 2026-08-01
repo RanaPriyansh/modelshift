@@ -12,28 +12,42 @@ afterEach(() => {
 });
 
 describe("UniversityCommandCenterWorkspace", () => {
-  it("exposes eight equal, explicit links with no default priority", () => {
+  it("exposes every workspace as an ordered native link with no default priority", () => {
     render(<UniversityCommandCenterWorkspace />);
     const navigation = screen.getByRole("navigation", {
       name: "University workspaces",
     });
     const list = within(navigation).getByRole("list");
+    const listItems = within(list).getAllByRole("listitem");
     const links = within(navigation).getAllByRole("link");
+    const expectedLinks = [
+      ["Open Degree map", "/internal/university-degree-map"],
+      ["Open Learning map", "/internal/university-learning-map"],
+      ["Open Post-attempt repair", "/internal/university-post-attempt-repair"],
+      ["Open Protected study", "/internal/university-protected-study"],
+      ["Open Recovery", "/internal/university-recovery"],
+      ["Open Research readiness", "/internal/university-research-readiness"],
+      ["Open Semester desk", "/internal/university-semester-desk"],
+      ["Open Semester loop", "/internal/university-semester-loop"],
+      ["Open Semester overview", "/internal/university-semester-overview"],
+      ["Open Source review", "/internal/university-source-review"],
+      ["Open Today", "/internal/university-today"],
+    ] as const;
 
     expect(list).toHaveAttribute("role", "list");
-    expect(links.map((link) => link.getAttribute("href"))).toEqual([
-      "/internal/university-degree-map",
-      "/internal/university-learning-map",
-      "/internal/university-post-attempt-repair",
-      "/internal/university-protected-study",
-      "/internal/university-recovery",
-      "/internal/university-research-readiness",
-      "/internal/university-semester-desk",
-      "/internal/university-source-review",
-    ]);
-    expect(navigation).toHaveTextContent("Degree map");
-    expect(navigation).toHaveTextContent("Learning map");
-    expect(navigation).toHaveTextContent("Post-attempt repair");
+    expect(listItems).toHaveLength(expectedLinks.length);
+    expect(
+      links.map((link) => [
+        link.textContent,
+        link.getAttribute("href"),
+      ]),
+    ).toEqual(expectedLinks);
+
+    expectedLinks.forEach(([name, href]) => {
+      expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
+      expect(screen.getByRole("link", { name }).tagName).toBe("A");
+    });
+
     expect(screen.getByText("Alphabetical order / not priority"))
       .toBeInTheDocument();
     expect(screen.getByText(/Nothing is selected before you act/))
