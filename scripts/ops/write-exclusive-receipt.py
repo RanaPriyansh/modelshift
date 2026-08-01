@@ -178,7 +178,7 @@ def require_descriptor_support() -> None:
     supports_follow_symlinks = getattr(os, "supports_follow_symlinks", set())
     if (
         os.open not in supports_dir_fd
-        or os.listdir not in getattr(os, "supports_fd", set())
+        or os.scandir not in getattr(os, "supports_fd", set())
         or os.stat not in supports_dir_fd
         or os.link not in supports_dir_fd
         or os.unlink not in supports_dir_fd
@@ -208,6 +208,16 @@ def valid_temporary_basename(basename: str, prefix: str) -> bool:
     )
 
 
+def bounded_cleanup_names(directory_fd: int) -> List[str]:
+    names: List[str] = []
+    with os.scandir(directory_fd) as entries:
+        for entry in entries:
+            if len(names) >= MAX_CLEANUP_ENTRIES:
+                raise OSError("temporary cleanup directory exceeded its bound")
+            names.append(entry.name)
+    return names
+
+
 def cleanup_temporary_receipts(
     directory_fd: int,
     expected_dev: int,
@@ -217,14 +227,11 @@ def cleanup_temporary_receipts(
     directory = os.fstat(directory_fd)
     if not is_directory(directory) or identity(directory) != (expected_dev, expected_ino):
         raise OSError("trusted directory identity changed during temporary cleanup")
-    names = os.listdir(directory_fd)
-    if len(names) > MAX_CLEANUP_ENTRIES:
-        raise OSError("temporary cleanup directory exceeded its bound")
-    candidates = [name for name in names if name.startswith(prefix)]
-    if len(candidates) > MAX_CLEANUP_ENTRIES:
-        raise OSError("temporary cleanup entries exceeded their bound")
+    names = bounded_cleanup_names(directory_fd)
     removed = 0
-    for basename in candidates:
+    for basename in names:
+        if not basename.startswith(prefix):
+            continue
         if not valid_temporary_basename(basename, prefix):
             raise OSError("temporary cleanup entry name was not accepted")
         entry_before = relative_entry_stat(basename, directory_fd)
