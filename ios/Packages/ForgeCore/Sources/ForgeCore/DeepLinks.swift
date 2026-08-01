@@ -2,33 +2,24 @@ import Foundation
 
 public enum ForgeDeepLink {
   public static func destination(for url: URL) -> ForgeDestination? {
-    if url.scheme?.lowercased() == "forge" {
-      let route = url.host ?? url.pathComponents.dropFirst().first
-      return destination(forRoute: route)
-    }
-
-    guard url.scheme == "https" || url.scheme == "http" else {
+    guard
+      url.scheme?.lowercased() == "forge",
+      url.user == nil,
+      url.password == nil,
+      url.port == nil,
+      url.query == nil,
+      url.fragment == nil,
+      let route = url.host,
+      !route.isEmpty,
+      url.path.isEmpty,
+      let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+      components.percentEncodedHost == route,
+      url.absoluteString.lowercased() == "forge://\(route.lowercased())"
+    else {
       return nil
     }
 
-    let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-
-    switch path {
-    case "app", "app/today":
-      return .today
-    case "app/path", "app/paths":
-      return .path
-    case "app/evidence":
-      return .evidence
-    case "app/returns":
-      return .returns
-    case let value where value.hasPrefix("app/study"):
-      return .focus
-    case "app/settings":
-      return .settings
-    default:
-      return nil
-    }
+    return destination(forRoute: route)
   }
 
   private static func destination(forRoute route: String?) -> ForgeDestination? {

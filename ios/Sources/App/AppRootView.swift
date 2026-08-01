@@ -45,6 +45,9 @@ struct AppRootView: View {
       .accessibilityIdentifier("tab.evidence")
       .tag(AppTab.evidence)
     }
+    .tint(ForgeDesign.tabSelection)
+    .toolbarBackground(ForgeDesign.canvas, for: .tabBar)
+    .toolbarBackgroundVisibility(.visible, for: .tabBar)
     .sheet(isPresented: $model.isOnboardingPresented) {
       OnboardingView(model: model)
     }

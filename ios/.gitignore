@@ -1,4 +1,7 @@
 .build/
 DerivedData/
+DerivedDataMCP/
+/build/
+/Packages/ForgeCore/build/
 *.xcuserstate
 xcuserdata/

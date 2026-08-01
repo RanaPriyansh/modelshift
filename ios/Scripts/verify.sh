@@ -2,7 +2,14 @@
 
 set -euo pipefail
 
-script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+script_path="${BASH_SOURCE[0]}"
+if [[ "$script_path" == */* ]]; then
+  script_dir="${script_path%/*}"
+else
+  script_dir="."
+fi
+
+script_dir="$(cd -- "$script_dir" && pwd -P)"
 ios_root="$(cd -- "$script_dir/.." && pwd -P)"
 repo_root="$(cd -- "$ios_root/.." && pwd -P)"
 verify_mode="full"
@@ -32,8 +39,11 @@ required_tools=(
 
 if [[ "$verify_mode" == "full" ]]; then
   required_tools+=(
+    cat
     grep
+    mkdir
     mktemp
+    rm
     swift
     xcodebuild
   )
@@ -85,7 +95,12 @@ for file in "${required_files[@]}"; do
 done
 
 step "Check shell syntax and repository whitespace"
-bash -n "$script_dir/verify.sh"
+if [[ -z "${BASH:-}" || ! -x "$BASH" ]]; then
+  printf 'Cannot find the Bash interpreter for the shell syntax check.\n' >&2
+  exit 1
+fi
+
+"$BASH" -n "$script_dir/verify.sh"
 git -C "$repo_root" diff --check -- ios .github/workflows/ios-quality.yml
 
 step "Validate Apple property lists and JSON files"
@@ -110,15 +125,20 @@ if [[ -z "$temp_base" || "$temp_base" != /* ]]; then
   exit 1
 fi
 
-scratch_root="$(mktemp -d "$temp_base/forge-ios-verify.XXXXXX")"
-module_cache="$scratch_root/ModuleCache"
-package_cache="$scratch_root/PackageCache"
-task_cache="$scratch_root/Cache"
-mkdir -p "$module_cache" "$package_cache" "$task_cache"
+if [[ ! -d "$temp_base" ]]; then
+  printf 'The temporary directory does not exist: %s\n' "$temp_base" >&2
+  exit 1
+fi
 
-export CLANG_MODULE_CACHE_PATH="$module_cache"
-export SWIFTPM_MODULECACHE_OVERRIDE="$module_cache"
-export XDG_CACHE_HOME="$task_cache"
+if [[ ! -w "$temp_base" ]]; then
+  printf 'The temporary directory is not writable: %s\n' "$temp_base" >&2
+  exit 1
+fi
+
+if ! scratch_root="$(mktemp -d "$temp_base/forge-ios-verify.XXXXXX")"; then
+  printf 'Cannot create the verification temporary directory in: %s\n' "$temp_base" >&2
+  exit 1
+fi
 
 cleanup() {
   case "$scratch_root" in
@@ -134,6 +154,27 @@ cleanup() {
 
 trap cleanup EXIT
 
+module_cache="$scratch_root/ModuleCache"
+package_cache="$scratch_root/PackageCache"
+task_cache="$scratch_root/Cache"
+if ! mkdir -p "$module_cache" "$package_cache" "$task_cache"; then
+  printf 'Cannot create verification cache directories in: %s\n' "$scratch_root" >&2
+  exit 1
+fi
+
+export CLANG_MODULE_CACHE_PATH="$module_cache"
+export SWIFTPM_MODULECACHE_OVERRIDE="$module_cache"
+export XDG_CACHE_HOME="$task_cache"
+
+step "Check iOS device SDK"
+iphoneos_sdk_log="$scratch_root/iphoneos-sdk.log"
+if ! xcodebuild -sdk iphoneos -version >"$iphoneos_sdk_log" 2>&1; then
+  printf 'The required iOS device SDK is not available.\n' >&2
+  printf 'Select an Xcode installation with the iphoneos SDK.\n' >&2
+  cat "$iphoneos_sdk_log" >&2
+  exit 1
+fi
+
 step "Run ForgeCore tests"
 swift test \
   --disable-sandbox \
@@ -141,13 +182,18 @@ swift test \
   --scratch-path "$scratch_root/ForgeCore"
 
 step "Read the Xcode project"
-xcodebuild \
+project_list="$scratch_root/project-list.json"
+if ! xcodebuild \
   -project "$ios_root/FORGE.xcodeproj" \
   -packageCachePath "$package_cache" \
   -list \
-  -json >"$scratch_root/project-list.json"
+  -json >"$project_list" 2>&1; then
+  printf 'Cannot read the Xcode project: %s\n' "$ios_root/FORGE.xcodeproj" >&2
+  cat "$project_list" >&2
+  exit 1
+fi
 
-if ! grep -q '"FORGE"' "$scratch_root/project-list.json"; then
+if ! grep -q '"FORGE"' "$project_list"; then
   printf 'The FORGE scheme is not available.\n' >&2
   exit 1
 fi
@@ -167,6 +213,13 @@ build_arguments=(
   -quiet
 )
 
+asset_build_needs_simulator_runtime() {
+  grep -Eqi \
+    'No available simulator runtimes|Unable to find a simulator runtime|Failed to locate any simulator runtime' \
+    "$1"
+}
+
+asset_fallback_announced=0
 for configuration in Debug Release; do
   step "Build the unsigned arm64 $configuration iOS device target"
   build_log="$scratch_root/xcodebuild-$configuration.log"
@@ -175,14 +228,25 @@ for configuration in Debug Release; do
     "${build_arguments[@]}" \
     -configuration "$configuration" \
     build >"$build_log" 2>&1; then
-    if ! grep -q "No available simulator runtimes" "$build_log"; then
+    if ! asset_build_needs_simulator_runtime "$build_log"; then
+      printf 'The unsigned arm64 %s iOS device build failed.\n' "$configuration" >&2
       cat "$build_log" >&2
       exit 1
     fi
 
     if [[ "${FORGE_REQUIRE_ASSET_BUILD:-0}" == "1" ]]; then
+      printf 'The full asset build requires an installed iOS Simulator runtime.\n' >&2
+      printf 'No source-only fallback is permitted when FORGE_REQUIRE_ASSET_BUILD=1.\n' >&2
       cat "$build_log" >&2
       exit 1
+    fi
+
+    if [[ "$asset_fallback_announced" -eq 0 ]]; then
+      printf '%s\n' \
+        "No iOS Simulator runtime is installed. The script will continue with source-only builds."
+      printf '%s\n' \
+        "Set FORGE_REQUIRE_ASSET_BUILD=1 to make this condition fail."
+      asset_fallback_announced=1
     fi
 
     cat "$build_log"

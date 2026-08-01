@@ -3,7 +3,7 @@ import SwiftUI
 
 struct SettingsView: View {
   @Environment(AppModel.self) private var model
-  @State private var isClearDataConfirmationPresented = false
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   var body: some View {
     Form {
@@ -43,79 +43,79 @@ struct SettingsView: View {
 
         if let status = model.reminderStatusMessage {
           Text(status)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(ForgeDesign.secondaryText)
         }
       } header: {
         Text("Return reminders")
+          .foregroundStyle(ForgeDesign.secondaryText)
       } footer: {
         Text(model.reminderBoundaryText)
+          .foregroundStyle(ForgeDesign.secondaryText)
       }
 
-      Section("Privacy") {
+      Section {
+        NavigationLink {
+          PrivacySupportView()
+        } label: {
+          Label("Privacy and Support", systemImage: "hand.raised")
+        }
+        .accessibilityHint(
+          "Opens device data, privacy, support, and local deletion information."
+        )
+        .accessibilityIdentifier("settings.privacy-support")
+
         LabeledContent("Learner mode") {
           Text(model.snapshot.mode.title)
         }
 
-        Label(model.snapshot.mode.dataBoundary, systemImage: "lock.shield")
+        learnerModeDataBoundary
 
         LabeledContent("Cloud sync", value: "Off")
         LabeledContent("Analytics", value: "Off")
         LabeledContent("Lock Screen details", value: "Hidden")
 
-        Text("FORGE stores learning data in the private app group on this device.")
-          .foregroundStyle(.secondary)
+        Text("FORGE stores learning data in a device-local app group.")
+          .foregroundStyle(ForgeDesign.secondaryText)
+          .accessibilityIdentifier("settings.storage-boundary-visual")
+      } header: {
+        Text("Privacy")
+          .foregroundStyle(ForgeDesign.secondaryText)
       }
 
-      Section("Learning setup") {
+      Section {
         Button("Review onboarding") {
           model.reviewOnboarding()
         }
         .accessibilityIdentifier("settings.review-onboarding")
+      } header: {
+        Text("Learning setup")
+          .foregroundStyle(ForgeDesign.secondaryText)
+          .accessibilityIdentifier("settings.learning-setup-header-visual")
       }
+
+      LocalDataDeletionSection(identifierPrefix: "settings")
 
       Section {
-        Button("Clear local learning data", role: .destructive) {
-          isClearDataConfirmationPresented = true
-        }
-        .disabled(
-          model.isLocalDataResetRunning
-            || model.isReminderOperationRunning
-        )
-        .accessibilityHint(
-          "Shows a confirmation before local learning data is deleted."
-        )
-        .accessibilityIdentifier("settings.clear-local-data")
-
-        if model.isLocalDataResetRunning {
-          ProgressView("Clearing local data")
-        }
-      } header: {
-        Text("Local data")
-      } footer: {
-        Text(
-          "This deletes the goal, setup, path, local evidence, pending route, and reminder preference from this device."
-        )
-      }
-
-      Section("Evidence boundary") {
         Text("Privacy settings cannot create, upgrade, or share evidence.")
-          .foregroundStyle(.secondary)
+          .foregroundStyle(ForgeDesign.secondaryText)
+          .accessibilityIdentifier("settings.evidence-boundary-visual")
+      } header: {
+        Text("Evidence boundary")
+          .foregroundStyle(ForgeDesign.secondaryText)
+          .accessibilityIdentifier("settings.evidence-boundary-header-visual")
       }
     }
     .navigationTitle("Settings")
-    .alert(
-      "Clear local learning data?",
-      isPresented: $isClearDataConfirmationPresented
-    ) {
-      Button("Cancel", role: .cancel) {}
-      Button("Clear data", role: .destructive) {
-        model.clearLocalData()
-      }
-      .accessibilityIdentifier("settings.confirm-clear-local-data")
-    } message: {
-      Text(
-        "This action deletes local learning data and scheduled reminders. You cannot undo this action."
-      )
+  }
+
+  @ViewBuilder
+  private var learnerModeDataBoundary: some View {
+    if dynamicTypeSize.isAccessibilitySize {
+      Text(model.snapshot.mode.dataBoundary)
+        .fixedSize(horizontal: false, vertical: true)
+    } else {
+      Label(model.snapshot.mode.dataBoundary, systemImage: "lock.shield")
+        .fixedSize(horizontal: false, vertical: true)
     }
   }
 }

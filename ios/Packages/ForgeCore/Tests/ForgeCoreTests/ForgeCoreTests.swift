@@ -4,6 +4,43 @@ import Testing
 @testable import ForgeCore
 
 struct ForgeCoreTests {
+  @Test(
+    arguments: [
+      "https://forgelearning.org/privacy",
+      "https://forgelearning.org/support",
+      "https://support.forgelearning.org/help?language=en",
+    ]
+  )
+  func publicWebURLAcceptsPublicHTTPSValues(value: String) {
+    #expect(ForgePublicWebURL.validated(value)?.absoluteString == value)
+  }
+
+  @Test(
+    arguments: [
+      "",
+      "http://forgelearning.org/privacy",
+      "https://user:secret@forgelearning.org/privacy",
+      "https://forgelearning.org:443/privacy",
+      "https://example.com/privacy",
+      "https://forgelearning.org./privacy",
+      "https://localhost/privacy",
+      "https://forge.local/privacy",
+      "https://127.0.0.1/privacy",
+      "https://10.0.0.1/privacy",
+      "https://192.168.1.2/privacy",
+      "https://[::1]/privacy",
+      "https://.forgelearning.org/privacy",
+      "https://forge..org/privacy",
+      "https://127.1/privacy",
+      "https://2130706433/privacy",
+      "https://0x7f.0x0.0x0.0x1/privacy",
+      "https://0177.0.0.0x1/privacy",
+    ]
+  )
+  func publicWebURLRejectsNonpublicValues(value: String) {
+    #expect(ForgePublicWebURL.validated(value) == nil)
+  }
+
   @Test
   func onboardingRequiresMeaningfulGoalAndGrownUpForChildMode() {
     var draft = OnboardingDraft(
@@ -25,8 +62,10 @@ struct ForgeCoreTests {
       ("forge://today", ForgeDestination.today),
       ("forge://path", ForgeDestination.path),
       ("forge://evidence", ForgeDestination.evidence),
-      ("https://example.com/app/returns", ForgeDestination.returns),
-      ("https://example.com/app/study/session-1", ForgeDestination.focus),
+      ("forge://returns", ForgeDestination.returns),
+      ("forge://focus", ForgeDestination.focus),
+      ("forge://settings", ForgeDestination.settings),
+      ("FORGE://TODAY", ForgeDestination.today),
     ]
   )
   func deepLinksResolveKnownRoutes(
@@ -45,9 +84,21 @@ struct ForgeCoreTests {
       "ftp://example.com/app/today",
       "https://example.com/today",
       "https://example.com/app/today/extra",
+      "https://example.com/app/study/session-1",
+      "forge://today/extra",
+      "forge://focus?record=1",
+      "forge://settings#privacy",
+      "forge://user:secret@today",
+      "forge://today:443",
+      "forge://today.",
+      "forge:today",
+      "forge:/today",
+      "forge:///today",
+      "forge://today/",
+      "forge://today//",
     ]
   )
-  func deepLinksRejectUnknownRoutesAndUnsupportedSchemes(value: String) throws {
+  func deepLinksRejectNoncanonicalAndUnsupportedValues(value: String) throws {
     let url = try #require(URL(string: value))
     #expect(ForgeDeepLink.destination(for: url) == nil)
   }

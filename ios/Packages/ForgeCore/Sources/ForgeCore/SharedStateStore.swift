@@ -9,6 +9,16 @@ public struct ForgeSharedStateStore {
     static let onboardingDismissed = "forge.onboarding-dismissed.v1"
     static let pendingDestination = "forge.pending-destination.v1"
     static let remindersEnabled = "forge.reminders-enabled.v1"
+    static let grownUpManagesReminders = "forge.grown-up-manages-reminders.v1"
+
+    static let all = [
+      snapshot,
+      onboarding,
+      onboardingDismissed,
+      pendingDestination,
+      remindersEnabled,
+      grownUpManagesReminders,
+    ]
   }
 
   private let defaults: UserDefaults
@@ -78,10 +88,8 @@ public struct ForgeSharedStateStore {
   }
 
   public func clearAll() {
-    defaults.removeObject(forKey: Key.snapshot)
-    defaults.removeObject(forKey: Key.onboarding)
-    defaults.removeObject(forKey: Key.onboardingDismissed)
-    defaults.removeObject(forKey: Key.pendingDestination)
-    defaults.removeObject(forKey: Key.remindersEnabled)
+    for key in Key.all {
+      defaults.removeObject(forKey: key)
+    }
   }
 }

@@ -3,6 +3,8 @@ import SwiftUI
 
 struct TodayView: View {
   @Environment(AppModel.self) private var model
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @ScaledMetric(relativeTo: .body) private var bottomContentClearance: CGFloat = 88
 
   var body: some View {
     ScrollView {
@@ -22,9 +24,23 @@ struct TodayView: View {
       .padding(.vertical, ForgeDesign.Spacing.large)
       .frame(maxWidth: .infinity)
     }
+    .contentMargins(.bottom, bottomContentClearance, for: .scrollContent)
     .background(ForgeDesign.canvas)
     .navigationTitle("Today")
     .toolbar {
+      if dynamicTypeSize.isAccessibilitySize {
+        ToolbarItem(placement: .topBarLeading) {
+          Button {
+            model.reviewOnboarding()
+          } label: {
+            Image(systemName: "arrow.triangle.branch")
+          }
+          .accessibilityLabel("Change direction")
+          .accessibilityHint("Opens the local learning setup for review.")
+          .accessibilityIdentifier("today.change-direction")
+        }
+      }
+
       SettingsToolbar()
     }
   }
@@ -53,7 +69,7 @@ struct TodayView: View {
   private var activeGoalLabel: some View {
     Label("Active goal", systemImage: "scope")
       .font(.caption.weight(.semibold))
-      .foregroundStyle(.secondary)
+      .foregroundStyle(ForgeDesign.secondaryText)
       .textCase(.uppercase)
       .tracking(0.8)
   }
@@ -61,7 +77,7 @@ struct TodayView: View {
   private var deviceOnlyLabel: some View {
     Label("Device-only", systemImage: "lock.fill")
       .font(.caption)
-      .foregroundStyle(.secondary)
+      .foregroundStyle(ForgeDesign.secondaryText)
       .accessibilityElement(children: .combine)
   }
 
@@ -76,7 +92,7 @@ struct TodayView: View {
 
         Text("\(model.snapshot.nextAction.durationMinutes) min")
           .font(.subheadline.weight(.medium))
-          .foregroundStyle(.secondary)
+          .foregroundStyle(ForgeDesign.secondaryText)
           .monospacedDigit()
       }
 
@@ -86,7 +102,7 @@ struct TodayView: View {
 
       Text(model.snapshot.nextAction.rationale)
         .font(.body)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(ForgeDesign.secondaryText)
 
       Divider()
 
@@ -101,9 +117,23 @@ struct TodayView: View {
         .frame(maxWidth: .infinity)
       }
       .buttonStyle(.borderedProminent)
+      .tint(Color.accentColor)
       .controlSize(.large)
+      .foregroundStyle(ForgeDesign.primaryActionForeground)
       .accessibilityHint("Opens a full-screen preview. It records no evidence.")
       .accessibilityIdentifier("today.open-focus")
+
+      if !dynamicTypeSize.isAccessibilitySize {
+        Button {
+          model.reviewOnboarding()
+        } label: {
+          Label("Change direction", systemImage: "arrow.triangle.branch")
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(ForgeSecondaryButtonStyle())
+        .accessibilityHint("Opens the local learning setup for review.")
+        .accessibilityIdentifier("today.change-direction")
+      }
     }
     .padding(ForgeDesign.Spacing.large)
     .background(ForgeDesign.raisedSurface)
@@ -129,15 +159,22 @@ struct TodayView: View {
           .accessibilityHidden(true)
 
         VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
-          Text("Delayed return")
+          Text("Review due return")
             .font(.headline)
 
           Text(dueReturn.dueAt, format: .dateTime.day().month().hour().minute())
-            .font(.subheadline)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Color.primary)
+            .padding(.horizontal, ForgeDesign.Spacing.small)
+            .padding(.vertical, ForgeDesign.Spacing.tight)
+            .accessibilityIdentifier("today.return-date-visual")
+            .accessibilityHidden(true)
 
           Text(dueReturn.status)
             .font(.footnote)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(ForgeDesign.secondaryText)
+            .accessibilityIdentifier("today.return-status-visual")
+            .accessibilityHidden(true)
         }
 
         Spacer(minLength: ForgeDesign.Spacing.small)
@@ -151,12 +188,13 @@ struct TodayView: View {
       .frame(maxWidth: .infinity, alignment: .leading)
     }
     .buttonStyle(.plain)
-    .background(ForgeDesign.surface)
+    .background(ForgeDesign.raisedSurface)
     .clipShape(
       RoundedRectangle(cornerRadius: ForgeDesign.Radius.inset, style: .continuous)
     )
-    .accessibilityLabel(
-      "Delayed return, \(dueReturn.status), due \(dueReturn.dueAt.formatted(date: .long, time: .shortened))"
+    .accessibilityLabel("Review due return")
+    .accessibilityValue(
+      "Due \(dueReturn.dueAt.formatted(date: .long, time: .shortened)). \(dueReturn.status)"
     )
     .accessibilityHint("Opens the read-only focus preview.")
     .accessibilityIdentifier("today.open-return")
@@ -170,10 +208,11 @@ struct TodayView: View {
 
       Text("FORGE proposes the next action. Only your accepted path gives it authority.")
         .font(.subheadline)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(ForgeDesign.secondaryText)
+        .accessibilityIdentifier("today.boundary-copy-visual")
     }
     .padding(ForgeDesign.Spacing.regular)
-    .background(ForgeDesign.surface)
+    .background(ForgeDesign.raisedSurface)
     .clipShape(
       RoundedRectangle(cornerRadius: ForgeDesign.Radius.inset, style: .continuous)
     )
@@ -188,8 +227,9 @@ struct TodayView: View {
       "Updated \(model.snapshot.updatedAt, format: .relative(presentation: .named))"
     )
     .font(.footnote)
-    .foregroundStyle(.secondary)
+    .foregroundStyle(ForgeDesign.secondaryText)
     .frame(maxWidth: .infinity, alignment: .trailing)
+    .accessibilityIdentifier("today.updated-at-visual")
     .accessibilityLabel(
       "Updated \(model.snapshot.updatedAt.formatted(date: .long, time: .shortened))"
     )

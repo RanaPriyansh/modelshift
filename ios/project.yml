@@ -35,6 +35,8 @@ targets:
           - CFBundleURLName: com.forgelearning.app
             CFBundleURLSchemes:
               - forge
+        FORGEPrivacyPolicyURL: ""
+        FORGESupportURL: ""
         ITSAppUsesNonExemptEncryption: false
         LSApplicationCategoryType: public.app-category.education
         UILaunchScreen: {}
@@ -64,7 +66,6 @@ targets:
     platform: iOS
     sources:
       - path: Sources/Widgets
-      - path: Sources/SystemIntegration
       - path: Resources/PrivacyInfo.xcprivacy
         buildPhase: resources
     info:

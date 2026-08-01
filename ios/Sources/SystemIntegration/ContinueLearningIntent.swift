@@ -4,7 +4,7 @@ import ForgeCore
 struct ContinueLearningIntent: AppIntent {
   static let title: LocalizedStringResource = "Continue Learning"
   static let description = IntentDescription(
-    "Open FORGE to continue learning."
+    "Open the FORGE focus preview."
   )
 
   @available(iOS, introduced: 16.0, obsoleted: 26.0)
@@ -15,9 +15,9 @@ struct ContinueLearningIntent: AppIntent {
     [.foreground(.deferred)]
   }
 
-  func perform() async throws -> some IntentResult {
+  func perform() async throws -> some IntentResult & ProvidesDialog {
     ForgeSharedStateStore().setPendingDestination(.focus)
-    return .result()
+    return .result(dialog: "Opening the FORGE focus preview.")
   }
 }
 

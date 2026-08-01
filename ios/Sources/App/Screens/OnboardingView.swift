@@ -3,6 +3,30 @@ import SwiftUI
 
 struct OnboardingView: View {
   @Bindable var model: AppModel
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+  private static let safeSampleGoal = "Test AI claims against reliable sources"
+
+  private static let goalChoices: [GoalChoice] = [
+    GoalChoice(
+      id: "question-a-claim",
+      title: "Question a claim",
+      detail: "Compare a claim with reliable sources.",
+      goal: "Test a claim against reliable sources."
+    ),
+    GoalChoice(
+      id: "understand-an-idea",
+      title: "Understand an idea",
+      detail: "Make a difficult idea clear enough to explain.",
+      goal: "Understand a difficult idea well enough to explain it."
+    ),
+    GoalChoice(
+      id: "prepare-for-a-task",
+      title: "Prepare for a task",
+      detail: "Build a practical path for a project or assessment.",
+      goal: "Prepare for a project or assessment."
+    ),
+  ]
 
   var body: some View {
     NavigationStack {
@@ -13,25 +37,61 @@ struct OnboardingView: View {
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets())
 
-        Section("Your goal") {
+        Section {
+          Text("Choose your goal")
+            .font(.headline)
+            .foregroundStyle(.primary)
+            .accessibilityAddTraits(.isHeader)
+
+          Text("Select a starting point, or write a goal in your own words.")
+            .font(.subheadline)
+            .foregroundStyle(ForgeDesign.secondaryText)
+
+          Button {
+            model.onboardingDraft.goal = Self.safeSampleGoal
+          } label: {
+            HStack(alignment: .top, spacing: ForgeDesign.Spacing.small) {
+              Image(systemName: "checkmark.seal")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.tint)
+                .accessibilityHidden(true)
+
+              Text("Use a safe sample goal")
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .accessibilityHint("Fills the goal field with a device-only example. You can edit it.")
+          .accessibilityIdentifier("onboarding.safe-sample")
+
+          ForEach(Self.goalChoices) { choice in
+            goalChoice(choice)
+          }
+
+          Text("Or write a different goal")
+            .font(.subheadline.weight(.semibold))
+            .accessibilityIdentifier("onboarding.custom-goal-heading-visual")
+
           TextField(
             "For example, test AI claims against sources",
             text: $model.onboardingDraft.goal,
             axis: .vertical
           )
-          .lineLimit(3...6)
+          .lineLimit(3...)
           .textInputAutocapitalization(.sentences)
           .accessibilityLabel("Learning goal")
-          .accessibilityHint("Enter at least eight characters.")
+          .accessibilityHint(
+            "Enter at least eight characters. "
+              + "FORGE stores this goal on this device."
+          )
           .accessibilityIdentifier("onboarding.goal")
 
-          Button("Use a safe sample goal") {
-            model.onboardingDraft.goal = "Test AI claims against reliable sources"
-          }
-          .accessibilityHint("Fills the goal field with a device-only example.")
-          .accessibilityIdentifier("onboarding.safe-sample")
-
           goalReadiness
+        } footer: {
+          Text("Your choice sets a starting direction. You can change it before you start.")
         }
 
         Section {
@@ -42,6 +102,9 @@ struct OnboardingView: View {
             }
           }
           .pickerStyle(.navigationLink)
+          .frame(minHeight: 44)
+          .accessibilityLabel("Learner mode")
+          .accessibilityHint("Choose who will use this path. Child mode needs a grown-up check.")
           .accessibilityIdentifier("onboarding.learner-mode")
 
           Picker("Path depth", selection: $model.onboardingDraft.depth) {
@@ -51,6 +114,9 @@ struct OnboardingView: View {
             }
           }
           .pickerStyle(.navigationLink)
+          .frame(minHeight: 44)
+          .accessibilityLabel("Path depth")
+          .accessibilityHint("Choose the type of learning path to review.")
           .accessibilityIdentifier("onboarding.path-depth")
 
           Picker(
@@ -62,26 +128,36 @@ struct OnboardingView: View {
                 .tag(minutes)
             }
           }
-          .pickerStyle(.segmented)
+          .pickerStyle(.navigationLink)
+          .frame(minHeight: 44)
           .accessibilityLabel("Time available")
+          .accessibilityHint("Choose the time available for the first learning action.")
           .accessibilityIdentifier("onboarding.time")
         } header: {
           Text("Shape the path")
+            .font(.headline)
+            .foregroundStyle(ForgeDesign.secondaryText)
         } footer: {
           Text("Choose what changes the first useful action. You can revise these choices.")
         }
 
         if model.onboardingDraft.mode == .childWithAdult {
-          Section("Grown-up check") {
+          Section {
             Toggle(
               "A grown-up is present",
               isOn: $model.onboardingDraft.grownUpPresent
             )
+            .frame(minHeight: 44)
+            .accessibilityHint("Confirm only when a grown-up is present in this local setup.")
             .accessibilityIdentifier("onboarding.grown-up-present")
 
             Text("This check applies only to this local setup.")
               .font(.footnote)
-              .foregroundStyle(.secondary)
+              .foregroundStyle(ForgeDesign.secondaryText)
+          } header: {
+            Text("Grown-up check")
+              .font(.headline)
+              .foregroundStyle(ForgeDesign.secondaryText)
           }
         }
 
@@ -97,14 +173,18 @@ struct OnboardingView: View {
 
               Text(model.onboardingDraft.mode.dataBoundary)
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ForgeDesign.secondaryText)
 
               Text("FORGE stores your goal on this device.")
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ForgeDesign.secondaryText)
             }
           }
           .padding(.vertical, ForgeDesign.Spacing.tight)
+          .accessibilityElement(children: .combine)
+          .accessibilityLabel(
+            "Private by default. \(model.onboardingDraft.mode.dataBoundary) FORGE stores your goal on this device."
+          )
         }
         .listRowBackground(ForgeDesign.accentWash)
       }
@@ -120,6 +200,7 @@ struct OnboardingView: View {
           Button("Close") {
             model.skipOnboarding()
           }
+          .accessibilityHint("Closes setup without saving a goal.")
           .accessibilityIdentifier("onboarding.close")
         }
       }
@@ -127,70 +208,193 @@ struct OnboardingView: View {
   }
 
   private var onboardingHeader: some View {
-    HStack(alignment: .top, spacing: ForgeDesign.Spacing.regular) {
-      Image(systemName: "scope")
-        .font(.title2.weight(.semibold))
-        .foregroundStyle(.tint)
-        .frame(width: 48, height: 48)
-        .background(ForgeDesign.accentWash, in: Circle())
-        .accessibilityHidden(true)
-
-      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
-        Text("FORGE")
-          .font(.caption.weight(.semibold))
-          .foregroundStyle(.secondary)
-          .tracking(1.4)
-
-        Text("Start with one real goal.")
-          .font(.title2.weight(.semibold))
-          .accessibilityAddTraits(.isHeader)
-
-        Text("FORGE will shape a path for your review. Nothing starts without your choice.")
-          .foregroundStyle(.secondary)
+    Group {
+      if dynamicTypeSize.isAccessibilitySize {
+        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+          onboardingSymbol
+          onboardingHeaderCopy
+        }
+      } else {
+        HStack(alignment: .top, spacing: ForgeDesign.Spacing.regular) {
+          onboardingSymbol
+          onboardingHeaderCopy
+        }
       }
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .fixedSize(horizontal: false, vertical: true)
     .padding(.vertical, ForgeDesign.Spacing.regular)
+  }
+
+  private var onboardingSymbol: some View {
+    Image(systemName: "scope")
+      .font(.title2.weight(.semibold))
+      .foregroundStyle(.tint)
+      .frame(width: 48, height: 48)
+      .background(ForgeDesign.accentWash, in: Circle())
+      .accessibilityHidden(true)
+  }
+
+  private var onboardingHeaderCopy: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
+      Text("FORGE")
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(ForgeDesign.secondaryText)
+        .tracking(1.4)
+
+      Text("Start with one real goal.")
+        .font(.title2.weight(.semibold))
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityAddTraits(.isHeader)
+
+      Text("Turn one goal into a learning path you can review. You choose what starts.")
+        .foregroundStyle(ForgeDesign.secondaryText)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .fixedSize(horizontal: false, vertical: true)
+    .layoutPriority(1)
+  }
+
+  private func goalChoice(_ choice: GoalChoice) -> some View {
+    let isSelected = model.onboardingDraft.normalizedGoal == choice.goal
+
+    return Button {
+      model.onboardingDraft.goal = choice.goal
+    } label: {
+      HStack(alignment: .top, spacing: ForgeDesign.Spacing.small) {
+        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+          .font(.body.weight(.semibold))
+          .foregroundStyle(isSelected ? Color.accentColor : ForgeDesign.secondaryText)
+          .accessibilityHidden(true)
+
+        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
+          Text(choice.title)
+            .font(.body.weight(.semibold))
+
+          Text(choice.detail)
+            .font(.subheadline)
+            .foregroundStyle(ForgeDesign.secondaryText)
+        }
+      }
+      .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("\(choice.title). \(choice.detail)")
+    .accessibilityValue(isSelected ? "Selected" : "Not selected")
+    .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    .accessibilityHint("Sets the learning goal. You can edit it in the goal field.")
+    .accessibilityIdentifier("onboarding.goal-choice.\(choice.id)")
+    .listRowBackground(isSelected ? ForgeDesign.accentWash : ForgeDesign.raisedSurface)
   }
 
   @ViewBuilder
   private var goalReadiness: some View {
     if model.onboardingDraft.normalizedGoal.count >= 8 {
-      Label("Ready for path review", systemImage: "checkmark.circle.fill")
-        .font(.footnote)
-        .foregroundStyle(.green)
+      HStack(alignment: .firstTextBaseline, spacing: ForgeDesign.Spacing.tight) {
+        Image(systemName: "checkmark.circle.fill")
+          .accessibilityHidden(true)
+
+        Text("Ready for path review")
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .font(.footnote)
+      .foregroundStyle(ForgeDesign.successText)
+      .accessibilityElement(children: .combine)
+      .accessibilityLabel("Goal ready for path review")
     } else {
       Label(
         "Add a specific outcome or capability.",
         systemImage: "lightbulb"
       )
       .font(.footnote)
-      .foregroundStyle(.secondary)
+      .foregroundStyle(ForgeDesign.secondaryText)
+      .accessibilityLabel("Goal needed. Add a specific outcome or capability.")
     }
   }
 
   private var onboardingAction: some View {
     VStack(spacing: ForgeDesign.Spacing.tight) {
-      Button {
-        model.completeOnboarding()
-      } label: {
-        Text("Review my setup")
-          .frame(maxWidth: .infinity)
+      if model.onboardingDraft.isReady {
+        Button {
+          model.completeOnboarding()
+        } label: {
+          Text("Start my path")
+            .frame(maxWidth: .infinity, minHeight: 48)
+        }
+        .buttonStyle(OnboardingActionButtonStyle())
+        .controlSize(.large)
+        .accessibilityHint(
+          "Saves this setup on the device and opens Today. "
+            + "No network connection is used."
+        )
+        .accessibilityIdentifier("onboarding.continue")
+      } else {
+        Text("Start my path")
+          .frame(maxWidth: .infinity, minHeight: 48)
+          .foregroundStyle(Color.primary)
+          .background(
+            RoundedRectangle(
+              cornerRadius: ForgeDesign.Radius.inset,
+              style: .continuous
+            )
+            .fill(ForgeDesign.canvas)
+          )
+          .overlay {
+            RoundedRectangle(
+              cornerRadius: ForgeDesign.Radius.inset,
+              style: .continuous
+            )
+            .stroke(Color.primary, lineWidth: 2)
+          }
+          .accessibilityLabel("Start my path")
+          .accessibilityValue("Setup incomplete")
+          .accessibilityRemoveTraits(.isButton)
       }
-      .buttonStyle(.borderedProminent)
-      .controlSize(.large)
-      .disabled(!model.onboardingDraft.isReady)
-      .accessibilityHint("Saves this setup on the device and opens Today.")
-      .accessibilityIdentifier("onboarding.continue")
 
       if !model.onboardingDraft.isReady {
-        Text("Complete the required choices to continue.")
+        Text(onboardingReadinessMessage)
           .font(.footnote)
-          .foregroundStyle(.secondary)
+          .foregroundStyle(ForgeDesign.secondaryText)
+          .accessibilityLabel("Setup status. \(onboardingReadinessMessage)")
       }
     }
     .padding(.horizontal, ForgeDesign.Spacing.regular)
     .padding(.vertical, ForgeDesign.Spacing.small)
     .background(.bar)
+  }
+
+  private struct OnboardingActionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+      configuration.label
+        .foregroundStyle(ForgeDesign.primaryActionForeground)
+        .background(
+          RoundedRectangle(
+            cornerRadius: ForgeDesign.Radius.inset,
+            style: .continuous
+          )
+          .fill(ForgeDesign.tabSelection)
+        )
+        .opacity(configuration.isPressed ? 0.82 : 1)
+    }
+  }
+
+  private var onboardingReadinessMessage: String {
+    if model.onboardingDraft.mode == .childWithAdult,
+      !model.onboardingDraft.grownUpPresent
+    {
+      return "Confirm that a grown-up is present to continue."
+    }
+
+    return "Choose or write a goal to continue."
+  }
+
+  private struct GoalChoice: Identifiable, Sendable {
+    let id: String
+    let title: String
+    let detail: String
+    let goal: String
   }
 }
 

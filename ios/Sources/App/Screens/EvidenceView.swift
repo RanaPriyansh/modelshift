@@ -3,14 +3,41 @@ import SwiftUI
 
 struct EvidenceView: View {
   @Environment(AppModel.self) private var model
+  @ScaledMetric(relativeTo: .body) private var recordMinimumHeight: CGFloat = 44
 
   var body: some View {
     List {
+      Section {
+        EvidenceBoundaryRow(
+          title: "Local fixture records",
+          detail:
+            "This screen shows local fixture records only. It does not show verified evidence or provider evidence.",
+          systemImage: "doc.text"
+        )
+
+        EvidenceBoundaryRow(
+          title: "No authority or efficacy proof",
+          detail:
+            "A local fixture cannot prove a participant action, a signed receipt, release approval, production status, or learning efficacy.",
+          systemImage: "hand.raised"
+        )
+
+        EvidenceBoundaryRow(
+          title: "Device-local and read-only",
+          detail:
+            "This build stores these records on this device. This screen does not share, publish, or upgrade them.",
+          systemImage: "lock"
+        )
+      } header: {
+        Text("Evidence boundary")
+          .foregroundStyle(ForgeDesign.secondaryText)
+      }
+
       if model.snapshot.evidence.isEmpty {
         ContentUnavailableView(
-          "No evidence yet",
+          "No local fixture records",
           systemImage: "doc.text.magnifyingglass",
-          description: Text("Completed work does not create evidence automatically.")
+          description: Text("Completed work does not create verified evidence automatically.")
         )
       } else {
         Section {
@@ -20,25 +47,28 @@ struct EvidenceView: View {
             } label: {
               EvidenceRecordRow(record: record)
             }
-            .accessibilityHint("Opens the read-only record details.")
+            .frame(minHeight: recordMinimumHeight)
+            .contentShape(Rectangle())
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(record.title)
+            .accessibilityValue(
+              "Local fixture. \(record.status). Recorded \(record.recordedAt.formatted(date: .long, time: .omitted))"
+            )
+            .accessibilityHint(
+              "Opens local record details. This record is not verified or provider evidence."
+            )
+            .privacySensitive()
           }
         } header: {
-          Text("Bounded records")
+          Text("Local fixture records")
+            .foregroundStyle(ForgeDesign.secondaryText)
         } footer: {
-          Text("Each record states what remains untested.")
+          Text(
+            "Each record states what remains untested. A local fixture does not prove a verified result."
+          )
+          .foregroundStyle(ForgeDesign.secondaryText)
+          .accessibilityIdentifier("evidence.records-footer-visual")
         }
-      }
-
-      Section("Evidence boundary") {
-        Label(
-          "Evidence can support a claim. It cannot make a consequential decision.",
-          systemImage: "hand.raised"
-        )
-
-        Label(
-          "This build stores records on this device. This view does not share or publish them.",
-          systemImage: "lock"
-        )
       }
     }
     .navigationTitle("Evidence")
@@ -49,26 +79,44 @@ struct EvidenceView: View {
 }
 
 private struct EvidenceRecordRow: View {
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
   let record: ForgeEvidenceRecord
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
       Text(record.title)
         .font(.headline)
+        .fixedSize(horizontal: false, vertical: true)
+
+      localFixtureLabel
 
       Text(record.status)
         .font(.subheadline.weight(.semibold))
+        .foregroundStyle(ForgeDesign.secondaryText)
+        .fixedSize(horizontal: false, vertical: true)
 
       Text(record.recordedAt, format: .dateTime.day().month().year())
         .font(.caption)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(ForgeDesign.secondaryText)
+        .fixedSize(horizontal: false, vertical: true)
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
     .privacySensitive()
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel(record.title)
-    .accessibilityValue(
-      "\(record.status). Recorded \(record.recordedAt.formatted(date: .long, time: .omitted))"
-    )
+  }
+
+  @ViewBuilder
+  private var localFixtureLabel: some View {
+    Group {
+      if dynamicTypeSize.isAccessibilitySize {
+        Text("Local fixture")
+      } else {
+        Label("Local fixture", systemImage: "doc.text")
+      }
+    }
+    .font(.caption.weight(.semibold))
+    .foregroundStyle(ForgeDesign.secondaryText)
+    .fixedSize(horizontal: false, vertical: true)
   }
 }
 
@@ -77,41 +125,106 @@ private struct EvidenceRecordView: View {
 
   var body: some View {
     List {
-      Section("Record") {
+      Section {
         Text(record.title)
           .font(.headline)
+          .fixedSize(horizontal: false, vertical: true)
           .privacySensitive()
           .accessibilityAddTraits(.isHeader)
 
-        EvidenceField(label: "Outcome", value: record.status)
+        EvidenceField(label: "Record type", value: "Local fixture")
+          .privacySensitive()
+
+        EvidenceField(label: "Local status", value: record.status)
           .privacySensitive()
 
         EvidenceField(
-          label: "Recorded",
+          label: "Recorded on this device",
           value: record.recordedAt.formatted(date: .long, time: .omitted)
         )
         .privacySensitive()
+      } header: {
+        Text("Record")
+          .foregroundStyle(ForgeDesign.secondaryText)
       }
 
-      Section("Limits") {
+      Section {
         Text(record.limitation)
+          .fixedSize(horizontal: false, vertical: true)
           .privacySensitive()
+      } header: {
+        Text("Limits")
+          .foregroundStyle(ForgeDesign.secondaryText)
       }
 
-      Section("Privacy and authority") {
-        Label(
-          "This view is read-only. It does not upgrade or publish evidence.",
+      Section {
+        EvidenceBoundaryRow(
+          title: "Not verified or provider evidence",
+          detail:
+            "This local fixture does not show a provider event, participant activity, a signed receipt, release approval, production status, or learning efficacy.",
+          systemImage: "hand.raised"
+        )
+
+        EvidenceBoundaryRow(
+          title: "Read-only local record",
+          detail:
+            "This view does not upgrade, publish, or make a decision from this local fixture.",
           systemImage: "lock"
         )
-
-        Label(
-          "This build keeps the record on this device.",
-          systemImage: "iphone"
-        )
+      } header: {
+        Text("Evidence boundary")
+          .foregroundStyle(ForgeDesign.secondaryText)
       }
     }
     .navigationTitle("Evidence record")
     .navigationBarTitleDisplayMode(.inline)
+  }
+}
+
+private struct EvidenceBoundaryRow: View {
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+  let title: String
+  let detail: String
+  let systemImage: String
+
+  var body: some View {
+    Group {
+      if dynamicTypeSize.isAccessibilitySize {
+        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
+          boundaryIcon
+          boundaryCopy
+        }
+      } else {
+        HStack(alignment: .top, spacing: ForgeDesign.Spacing.small) {
+          boundaryIcon
+          boundaryCopy
+        }
+      }
+    }
+    .accessibilityElement(children: .combine)
+  }
+
+  private var boundaryIcon: some View {
+    Image(systemName: systemImage)
+      .font(.title3)
+      .foregroundStyle(.tint)
+      .frame(width: 28, height: 44)
+      .accessibilityHidden(true)
+  }
+
+  private var boundaryCopy: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
+      Text(title)
+        .font(.subheadline.weight(.semibold))
+        .fixedSize(horizontal: false, vertical: true)
+
+      Text(detail)
+        .font(.footnote)
+        .foregroundStyle(ForgeDesign.secondaryText)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
 
@@ -123,10 +236,11 @@ private struct EvidenceField: View {
     VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
       Text(label)
         .font(.caption.weight(.semibold))
-        .foregroundStyle(.secondary)
+        .foregroundStyle(ForgeDesign.secondaryText)
 
       Text(value)
         .font(.body)
+        .fixedSize(horizontal: false, vertical: true)
     }
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(label)

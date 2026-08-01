@@ -12,39 +12,39 @@ struct FocusPreviewView: View {
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(alignment: .leading, spacing: 20) {
-          Label("Preview only", systemImage: "eye")
+        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.large) {
+          Label("Local preview only", systemImage: "eye")
             .font(.headline)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(ForgeDesign.secondaryText)
 
-          VStack(alignment: .leading, spacing: 8) {
+          VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
             Text(snapshot.nextAction.title)
               .font(.title2.weight(.bold))
+              .fixedSize(horizontal: false, vertical: true)
               .privacySensitive()
               .accessibilityAddTraits(.isHeader)
 
             Text(snapshot.nextAction.rationale)
               .font(.body)
-              .foregroundStyle(.secondary)
+              .foregroundStyle(ForgeDesign.secondaryText)
+              .fixedSize(horizontal: false, vertical: true)
               .privacySensitive()
 
             Label(
-              "\(snapshot.nextAction.durationMinutes) minutes",
+              "Suggested time: \(snapshot.nextAction.durationMinutes) minutes",
               systemImage: "clock"
             )
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(ForgeDesign.secondaryText)
+            .fixedSize(horizontal: false, vertical: true)
+            .monospacedDigit()
           }
           .privacySensitive()
 
-          GroupBox("Session boundary") {
-            Text(
-              "This preview does not ask for or store a learner response. It records no completion, proof, or evidence."
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-          }
-          .accessibilityElement(children: .combine)
+          previewBoundary
 
-          DisclosureGroup("Source, safety, and access", isExpanded: $showsSupport) {
-            VStack(alignment: .leading, spacing: 12) {
+          DisclosureGroup(isExpanded: $showsSupport) {
+            VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
               Label(
                 "Use only the reviewed World and version.",
                 systemImage: "doc.badge.checkmark"
@@ -58,7 +58,11 @@ struct FocusPreviewView: View {
                 systemImage: "accessibility"
               )
             }
-            .padding(.top, 8)
+            .padding(.top, ForgeDesign.Spacing.small)
+          } label: {
+            Text("Source, safety, and access")
+              .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+              .fixedSize(horizontal: false, vertical: true)
           }
           .accessibilityHint(
             showsSupport
@@ -72,36 +76,76 @@ struct FocusPreviewView: View {
               isPaused ? "Continue preview" : "Pause preview",
               systemImage: isPaused ? "play.fill" : "pause.fill"
             )
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .fixedSize(horizontal: false, vertical: true)
+            .multilineTextAlignment(.center)
           }
           .buttonStyle(.borderedProminent)
+          .tint(Color.accentColor)
           .controlSize(.large)
-          .accessibilityValue(isPaused ? "Paused" : "Active")
+          .foregroundStyle(ForgeDesign.primaryActionForeground)
+          .accessibilityValue(isPaused ? "Preview paused" : "Preview open")
           .accessibilityHint(
-            "Changes only this preview. It does not record progress."
+            "Changes only this local preview. It does not time work, measure learning, or record progress."
           )
           .accessibilityIdentifier("focus.pause")
 
           Button("End preview", role: .cancel, action: endPreview)
-            .frame(maxWidth: .infinity)
+            .buttonStyle(ForgeSecondaryButtonStyle())
             .accessibilityHint("Closes the preview without recording progress.")
             .accessibilityIdentifier("focus.end")
         }
-        .frame(maxWidth: 680, alignment: .leading)
-        .padding()
+        .frame(maxWidth: ForgeDesign.Layout.contentMaxWidth, alignment: .leading)
+        .padding(.horizontal, ForgeDesign.Spacing.regular)
+        .padding(.vertical, ForgeDesign.Spacing.large)
         .frame(maxWidth: .infinity)
       }
+      .background(ForgeDesign.canvas)
       .navigationTitle(isPaused ? "Preview paused" : "Focus preview")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("Close", action: endPreview)
+            .frame(minWidth: 44, minHeight: 44)
             .accessibilityHint("Closes the preview without recording progress.")
             .accessibilityIdentifier("focus.close")
         }
       }
     }
     .interactiveDismissDisabled()
+  }
+
+  private var previewBoundary: some View {
+    HStack(alignment: .top, spacing: ForgeDesign.Spacing.small) {
+      Image(systemName: "lock.fill")
+        .foregroundStyle(.tint)
+        .accessibilityHidden(true)
+
+      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
+        Text("Preview boundary")
+          .font(.headline)
+          .fixedSize(horizontal: false, vertical: true)
+
+        Text(
+          "This local preview does not run or time a session. It does not ask for or store a learner response. It does not record completion, proof, or evidence. It cannot show that learning occurred."
+        )
+        .font(.subheadline)
+        .foregroundStyle(ForgeDesign.secondaryText)
+        .fixedSize(horizontal: false, vertical: true)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(ForgeDesign.Spacing.regular)
+    .background(ForgeDesign.surface)
+    .clipShape(
+      RoundedRectangle(cornerRadius: ForgeDesign.Radius.inset, style: .continuous)
+    )
+    .overlay {
+      RoundedRectangle(cornerRadius: ForgeDesign.Radius.inset, style: .continuous)
+        .stroke(ForgeDesign.hairline, lineWidth: 1)
+    }
+    .accessibilityElement(children: .combine)
   }
 
   private func togglePause() {

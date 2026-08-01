@@ -16,7 +16,12 @@ enum AppRoute: Hashable {
 @MainActor
 @Observable
 final class AppModel {
+  private enum ReminderPreferenceKey {
+    static let grownUpManagesReminders = "forge.grown-up-manages-reminders.v1"
+  }
+
   @ObservationIgnored private let store: ForgeSharedStateStore
+  @ObservationIgnored private let reminderPreferences: UserDefaults
   @ObservationIgnored private let notificationCoordinator: NotificationCoordinator
   @ObservationIgnored private var reminderOperation: Task<Void, Never>?
   @ObservationIgnored private var localDataResetOperation: Task<Void, Never>?
@@ -42,14 +47,23 @@ final class AppModel {
     store: ForgeSharedStateStore = ForgeSharedStateStore(),
     notificationCoordinator suppliedNotificationCoordinator: NotificationCoordinator? = nil,
     snapshot suppliedSnapshot: ForgeSnapshot? = nil,
-    onboarding suppliedOnboarding: OnboardingDraft? = nil
+    onboarding suppliedOnboarding: OnboardingDraft? = nil,
+    reminderPreferences suppliedReminderPreferences: UserDefaults? = nil
   ) {
     self.store = store
+    reminderPreferences =
+      suppliedReminderPreferences
+      ?? UserDefaults(suiteName: ForgeSharedStateStore.appGroupIdentifier)
+      ?? .standard
     notificationCoordinator =
       suppliedNotificationCoordinator ?? NotificationCoordinator()
 
     let savedOnboarding = suppliedOnboarding ?? store.loadOnboarding()
     let loadedSnapshot = suppliedSnapshot ?? store.loadSnapshot() ?? .sample()
+    let savedGrownUpReminderPreference =
+      reminderPreferences.object(
+        forKey: ReminderPreferenceKey.grownUpManagesReminders
+      ) as? Bool
 
     snapshot = loadedSnapshot
     onboardingDraft =
@@ -60,7 +74,9 @@ final class AppModel {
       )
     isOnboardingPresented = savedOnboarding == nil && !store.onboardingDismissed
     remindersEnabled = store.remindersEnabled
-    grownUpManagesReminders = savedOnboarding?.grownUpPresent ?? false
+    grownUpManagesReminders =
+      loadedSnapshot.mode == .childWithAdult
+      && (savedGrownUpReminderPreference ?? savedOnboarding?.grownUpPresent ?? false)
   }
 
   deinit {
@@ -100,9 +116,13 @@ final class AppModel {
       updatedAt: .now
     )
 
+    let savedGrownUpReminderPreference =
+      reminderPreferences.object(
+        forKey: ReminderPreferenceKey.grownUpManagesReminders
+      ) as? Bool
     grownUpManagesReminders =
       onboardingDraft.mode == .childWithAdult
-      && onboardingDraft.grownUpPresent
+      && (savedGrownUpReminderPreference ?? onboardingDraft.grownUpPresent)
     try? store.save(snapshot: snapshot)
     try? store.save(onboarding: onboardingDraft)
     store.onboardingDismissed = true
@@ -161,13 +181,17 @@ final class AppModel {
   }
 
   func setGrownUpManagesReminders(_ isManaged: Bool) {
-    guard !isLocalDataResetRunning else {
+    guard !isLocalDataResetRunning, snapshot.mode == .childWithAdult else {
       return
     }
 
     grownUpManagesReminders = isManaged
+    reminderPreferences.set(
+      isManaged,
+      forKey: ReminderPreferenceKey.grownUpManagesReminders
+    )
 
-    if !isManaged, snapshot.mode == .childWithAdult, remindersEnabled {
+    if !isManaged, remindersEnabled {
       setRemindersEnabled(false)
     }
   }
@@ -253,6 +277,9 @@ final class AppModel {
       }
 
       store.clearAll()
+      reminderPreferences.removeObject(
+        forKey: ReminderPreferenceKey.grownUpManagesReminders
+      )
       WidgetCenter.shared.reloadAllTimelines()
 
       snapshot = .sample()
@@ -288,7 +315,8 @@ extension AppModel {
       store: ForgeSharedStateStore(defaults: defaults),
       notificationCoordinator: NotificationCoordinator(),
       snapshot: snapshot,
-      onboarding: onboarding
+      onboarding: onboarding,
+      reminderPreferences: defaults
     )
   }
 }
