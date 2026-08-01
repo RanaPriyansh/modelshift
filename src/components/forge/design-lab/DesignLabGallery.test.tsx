@@ -61,7 +61,7 @@ describe("DesignLabGallery", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Color theme" })).toBeInTheDocument();
     expect(
-      screen.getByRole("region", { name: "Evidence Atelier display-only design preview" }),
+      screen.getByRole("region", { name: "Evidence Atelier internal audit fixture" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/does not change learning logic/i)).toBeInTheDocument();
   });

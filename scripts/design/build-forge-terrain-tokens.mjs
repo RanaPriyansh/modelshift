@@ -81,7 +81,7 @@ const semanticColors = [
     css: "--forge-dim",
     swift: "textDim",
     meaning: "Secondary metadata",
-    light: "#68766E",
+    light: "#66746C",
     dark: "#82958B",
   },
   {
@@ -121,7 +121,7 @@ const semanticColors = [
     css: "--forge-cyan",
     swift: "testedEvidence",
     meaning: "Tested consequence",
-    light: "#2C8A61",
+    light: "#247A53",
     dark: "#79C995",
   },
   {
@@ -216,6 +216,73 @@ function colorValue(hex) {
     alpha: 1,
     hex: `#${normalized}`,
   };
+}
+
+function relativeLuminance(hex) {
+  const normalized = hex.replace("#", "");
+  const channels = [0, 2, 4].map((offset) => {
+    const value = Number.parseInt(normalized.slice(offset, offset + 2), 16) / 255;
+    return value <= 0.04045
+      ? value / 12.92
+      : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return (
+    (channels[0] * 0.2126)
+    + (channels[1] * 0.7152)
+    + (channels[2] * 0.0722)
+  );
+}
+
+function contrastRatio(first, second) {
+  const firstLuminance = relativeLuminance(first);
+  const secondLuminance = relativeLuminance(second);
+  return (
+    (Math.max(firstLuminance, secondLuminance) + 0.05)
+    / (Math.min(firstLuminance, secondLuminance) + 0.05)
+  );
+}
+
+function semanticColor(cssName) {
+  const item = semanticColors.find((candidate) => candidate.css === cssName);
+  if (!item) throw new Error(`Missing semantic color ${cssName}.`);
+  return item;
+}
+
+function validateSemanticContrast() {
+  const foregroundRoles = [
+    "--forge-ink",
+    "--forge-muted",
+    "--forge-dim",
+    "--forge-amber-deep",
+    "--forge-violet",
+    "--forge-violet-deep",
+    "--forge-cyan",
+    "--forge-cyan-deep",
+    "--forge-focus",
+  ];
+
+  for (const mode of ["light", "dark"]) {
+    const background = semanticColor("--forge-bg")[mode];
+    for (const role of foregroundRoles) {
+      const ratio = contrastRatio(semanticColor(role)[mode], background);
+      if (ratio < 4.5) {
+        throw new Error(`${role} has ${ratio.toFixed(2)}:1 contrast in ${mode} mode.`);
+      }
+    }
+
+    const actionLabel = mode === "light"
+      ? semanticColor("--forge-ink").light
+      : semanticColor("--forge-bg").dark;
+    const actionRatio = contrastRatio(
+      actionLabel,
+      semanticColor("--forge-amber")[mode],
+    );
+    if (actionRatio < 4.5) {
+      throw new Error(
+        `Learner action label has ${actionRatio.toFixed(2)}:1 contrast in ${mode} mode.`,
+      );
+    }
+  }
 }
 
 function setNestedToken(document, path, value) {
@@ -401,6 +468,7 @@ if (JSON.stringify(lightNames) !== JSON.stringify(darkNames)) {
 }
 
 validateFigmaCoreTokens(coreTokens);
+validateSemanticContrast();
 
 console.log(
   `FORGE Terrain token handoff verified: ${semanticColors.length} semantic colors, ${lightNames.length} matched mode tokens, and ${outputDocuments.size} output files.`,

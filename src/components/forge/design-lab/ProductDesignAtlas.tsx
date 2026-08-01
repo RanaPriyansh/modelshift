@@ -1858,7 +1858,7 @@ function FoundationStrip() {
         <article className={styles.colorSpecimen}>
           <span>Semantic color</span>
           <div><i data-color="cobalt" /><b>AI contribution</b><code>#2F66D8</code></div>
-          <div><i data-color="alpine" /><b>Tested evidence</b><code>#2C8A61</code></div>
+          <div><i data-color="alpine" /><b>Tested evidence</b><code>#247A53</code></div>
           <div><i data-color="orange" /><b>Learner commitment</b><code>#F0643B</code></div>
           <div><i data-color="ivory" /><b>Quiet work</b><code>#F4F7F1</code></div>
         </article>

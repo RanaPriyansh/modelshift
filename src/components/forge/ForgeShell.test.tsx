@@ -29,4 +29,22 @@ describe("ForgeShell", () => {
     expect(within(primary).queryByRole("link", { name: "Explore" })).not.toBeInTheDocument();
     expect(within(primary).queryByRole("link", { name: "Profile" })).not.toBeInTheDocument();
   });
+
+  it("uses the shared public shell with all required navigation", () => {
+    render(
+      <ForgeShell active="trust" surface="public">
+        <main id="forge-main">Trust content</main>
+      </ForgeShell>,
+    );
+
+    const expected = ["Paths", "How FORGE works", "Evidence and trust", "Start learning"];
+    const primary = screen.getByRole("navigation", { name: "Public navigation" });
+    const mobile = screen.getByRole("navigation", { name: "Public mobile navigation" });
+
+    expect(within(primary).getAllByRole("link").map((link) => link.textContent)).toEqual(expected);
+    expect(within(mobile).getAllByRole("link").map((link) => link.textContent)).toEqual(expected);
+    expect(screen.getByLabelText("Learner acts • AI assists • Evidence decides")).toBeInTheDocument();
+    expect(screen.getByLabelText("Color theme")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Public footer navigation" })).toBeInTheDocument();
+  });
 });

@@ -115,7 +115,7 @@ function ReviewCandidate({
         <ForgeStatus tone={reviewed ? "evidence" : "human"}>
           {reviewed ? "Reviewed World match · acceptance required" : "Coverage gap · not executable"}
         </ForgeStatus>
-        <h2 id="candidate-path-title">{compiled.revision.title}</h2>
+        <h2 id="candidate-path-title" tabIndex={-1}>{compiled.revision.title}</h2>
         <blockquote>{learnerWords}</blockquote>
         <p>
           {reviewed
@@ -191,7 +191,9 @@ export function ForgeStart({ initialGoal = "" }: { initialGoal?: string }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const requestRef = useRef<AbortController | null>(null);
+  const mainRef = useRef<HTMLElement | null>(null);
   const mountedRef = useRef(false);
+  const stepFocusReadyRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -209,6 +211,20 @@ export function ForgeStart({ initialGoal = "" }: { initialGoal?: string }) {
       requestRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (!stepFocusReadyRef.current) {
+      stepFocusReadyRef.current = true;
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      mainRef.current
+        ?.querySelector<HTMLElement>(".forge-start-form__heading h2, #candidate-path-title")
+        ?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [step]);
 
   function nextFromGoal(event: FormEvent) {
     event.preventDefault();
@@ -416,7 +432,7 @@ export function ForgeStart({ initialGoal = "" }: { initialGoal?: string }) {
   }
 
   return (
-    <main className="forge-start-page" id="forge-main" tabIndex={-1}>
+    <main className="forge-start-page" id="forge-main" ref={mainRef} tabIndex={-1}>
       <header className="forge-start-page__hero">
         <ForgeKicker>Guest-first · saved only after your decision</ForgeKicker>
         <h1>Turn a goal into a credible first path.</h1>
@@ -443,13 +459,12 @@ export function ForgeStart({ initialGoal = "" }: { initialGoal?: string }) {
         <form className="forge-start-form" onSubmit={nextFromGoal}>
           <div className="forge-start-form__heading">
             <span>Question 1 of 3</span>
-            <h2>What do you want to understand, make, or become able to do?</h2>
+            <h2 tabIndex={-1}>What do you want to understand, make, or become able to do?</h2>
             <p>A topic, project, profession, decision, or honest “I do not know where to begin” all work.</p>
           </div>
           <label className="forge-start-primary-field">
             <span>Your words</span>
             <textarea
-              autoFocus
               maxLength={600}
               onChange={(event) => setGoal(event.target.value)}
               placeholder="I want to…"
@@ -470,13 +485,12 @@ export function ForgeStart({ initialGoal = "" }: { initialGoal?: string }) {
         <form className="forge-start-form" onSubmit={nextFromOutcome}>
           <div className="forge-start-form__heading">
             <span>Question 2 of 3</span>
-            <h2>What should you be able to do when this becomes useful?</h2>
+            <h2 tabIndex={-1}>What should you be able to do when this becomes useful?</h2>
             <p>This keeps the path aimed at capability instead of passive completion.</p>
           </div>
           <label className="forge-start-primary-field">
             <span>Meaningful outcome</span>
             <textarea
-              autoFocus
               maxLength={280}
               onChange={(event) => setDesiredOutcome(event.target.value)}
               placeholder="For example: build, explain, decide, repair, investigate, or perform…"
@@ -518,7 +532,7 @@ export function ForgeStart({ initialGoal = "" }: { initialGoal?: string }) {
         <form className="forge-start-form" onSubmit={requestCandidate}>
           <div className="forge-start-form__heading">
             <span>Question 3 of 3</span>
-            <h2>What constraints materially change the route?</h2>
+            <h2 tabIndex={-1}>What constraints materially change the route?</h2>
             <p>These settings choose safe reviewed options. They do not diagnose a learning style or permanent level.</p>
           </div>
           <div className="forge-start-context-grid">

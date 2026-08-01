@@ -16,12 +16,13 @@ struct ForgeScreenHeader: View {
             Text(context.uppercased())
                 .font(.caption.weight(.semibold))
                 .tracking(1.2)
-                .foregroundStyle(Color.forgeEvidence)
+                .foregroundStyle(ForgeTerrainColor.testedEvidence)
 
             Text(title)
                 .font(.largeTitle.bold())
                 .tracking(-0.8)
                 .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
 
             if let detail {
                 Text(detail)
@@ -30,7 +31,6 @@ struct ForgeScreenHeader: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .accessibilityElement(children: .combine)
     }
 }
 
@@ -43,40 +43,59 @@ struct ForgeCard<Content: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(ForgeSpacing.standard)
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 16))
+        .background(ForgeTerrainColor.surface, in: RoundedRectangle(cornerRadius: 16))
         .overlay {
             RoundedRectangle(cornerRadius: 16)
-                .stroke(.separator.opacity(0.7), lineWidth: 1)
+                .stroke(ForgeTerrainColor.border, lineWidth: 1)
         }
     }
 }
 
 struct ForgeStatus: View {
     let label: String
-    var color: Color = .forgeEvidence
+    var color: Color = ForgeTerrainColor.testedEvidence
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        Text(label)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(color)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(color.opacity(0.11), in: Capsule())
+        Label {
+            Text(label)
+        } icon: {
+            Image(systemName: differentiateWithoutColor ? "diamond.fill" : "circle.fill")
+                .accessibilityHidden(true)
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(color)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            reduceTransparency ? ForgeTerrainColor.surfaceStrong : color.opacity(0.11),
+            in: Capsule()
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label) status")
     }
 }
 
 struct ForgePrimaryButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 52)
-            .foregroundStyle(.white)
+            .foregroundStyle(ForgeTerrainColor.onLearnerAction)
             .background(
-                configuration.isPressed ? Color.forgeOrange.opacity(0.82) : .forgeOrange,
+                reduceTransparency
+                    ? ForgeTerrainColor.learnerAction
+                    : (configuration.isPressed
+                        ? ForgeTerrainColor.learnerAction.opacity(0.82)
+                        : ForgeTerrainColor.learnerAction),
                 in: RoundedRectangle(cornerRadius: 12)
             )
-            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.985 : 1)
     }
 }
 
@@ -95,28 +114,66 @@ struct ForgePage<Content: View>: View {
             .padding(.bottom, 48)
             .frame(maxWidth: .infinity)
         }
-        .background(Color(uiColor: .systemBackground))
+        .background(ForgeTerrainColor.background)
+        .foregroundStyle(ForgeTerrainColor.text)
+        .safeAreaPadding(.bottom, ForgeSpacing.standard)
         .accessibilityIdentifier(screenID)
     }
 }
 
 struct ForgeRow: View {
     let model: ForgeRowModel
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var stacksAtAccessibilitySize: Bool {
+        switch dynamicTypeSize {
+        case .accessibility1, .accessibility2, .accessibility3, .accessibility4, .accessibility5:
+            true
+        default:
+            false
+        }
+    }
+
+    @ViewBuilder
+    private var rowText: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(model.title)
+                .font(.headline)
+            Text(model.detail)
+                .font(.subheadline)
+                .foregroundStyle(ForgeTerrainColor.textMuted)
+        }
+    }
 
     var body: some View {
-        HStack(alignment: .top, spacing: ForgeSpacing.standard) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text(model.title)
-                    .font(.headline)
-                Text(model.detail)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+        Group {
+            if stacksAtAccessibilitySize {
+                VStack(alignment: .leading, spacing: ForgeSpacing.compact) {
+                    rowText
+                    ForgeStatus(label: model.state)
+                }
+            } else {
+                HStack(alignment: .top, spacing: ForgeSpacing.standard) {
+                    rowText
+                    Spacer(minLength: ForgeSpacing.compact)
+                    ForgeStatus(label: model.state)
+                }
             }
-            Spacer(minLength: ForgeSpacing.compact)
-            ForgeStatus(label: model.state)
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(model.title). \(model.state). \(model.detail)")
+    }
+}
+
+struct ForgeOperationStatus: View {
+    let state: ForgeOperationState
+
+    var body: some View {
+        Label(state.label, systemImage: state.symbolName)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(state.color)
+            .accessibilityElement(children: .combine)
     }
 }
 
@@ -127,7 +184,7 @@ struct ForgeRouteModifier: ViewModifier {
             case .actionBrief: ActionBriefView()
             case .attempt: AttemptView()
             case .repair: RepairView()
-            case .protectedProof: ProtectedProofView()
+            case .proof: ProtectedProofView()
             case .pathDetail: PathDetailView()
             case .evidenceDetail: EvidenceDetailView()
             case .returnQueue: ReturnQueueView()

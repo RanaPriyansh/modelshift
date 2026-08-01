@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ForgePathCommand } from "./ForgePathCommand";
 import { ForgeTrustLine } from "./ForgePrimitives";
 import { ForgeThemeControl } from "./ForgeThemeControl";
+import { PublicShell } from "./refoundation/public/PublicShell";
 
 export type ForgeSection =
   | "home"
@@ -208,6 +209,14 @@ export function ForgeShell({
   children: ReactNode;
   surface?: ForgeSurface;
 }) {
+  if (surface === "public") {
+    return (
+      <PublicShell active={active} shellClassName="forge-shell">
+        {children}
+      </PublicShell>
+    );
+  }
+
   const items = navItemsFor(surface);
   const mobileItems = surface === "legacy"
     ? [{ href: "/", label: "Home", section: "home" as const }, ...items]

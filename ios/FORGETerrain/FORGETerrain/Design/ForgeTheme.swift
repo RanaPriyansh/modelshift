@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum ForgeAppearance: String, CaseIterable, Identifiable {
     case system
@@ -24,14 +25,36 @@ enum ForgeAppearance: String, CaseIterable, Identifiable {
     }
 }
 
-extension Color {
-    static let forgeCobalt = Color(red: 17 / 255, green: 79 / 255, blue: 207 / 255)
-    static let forgeAlpine = Color(red: 23 / 255, green: 100 / 255, blue: 60 / 255)
-    static let forgeOrange = Color(red: 240 / 255, green: 100 / 255, blue: 59 / 255)
-    static let forgeMidnight = Color(red: 7 / 255, green: 23 / 255, blue: 34 / 255)
-    static let forgeEvidence = Color(red: 44 / 255, green: 138 / 255, blue: 97 / 255)
-    static let forgeAI = Color(red: 47 / 255, green: 102 / 255, blue: 216 / 255)
-    static let forgeIvory = Color(red: 244 / 255, green: 247 / 255, blue: 241 / 255)
+enum ForgeTerrainColor {
+    static let background = adaptive(light: 0xF4F7F1, dark: 0x071722)
+    static let backgroundDeep = adaptive(light: 0xEEF3ED, dark: 0x06131D)
+    static let surface = adaptive(light: 0xFBFDF8, dark: 0x0D202B)
+    static let surfaceStrong = adaptive(light: 0xE4EBE4, dark: 0x142A35)
+    static let border = adaptive(light: 0xCDD9D0, dark: 0x29414B)
+    static let borderStrong = adaptive(light: 0x98AA9E, dark: 0x44606A)
+    static let text = adaptive(light: 0x102019, dark: 0xF3F7F0)
+    static let textMuted = adaptive(light: 0x56645D, dark: 0xA8B9B1)
+    static let textDim = adaptive(light: 0x66746C, dark: 0x82958B)
+    static let learnerAction = adaptive(light: 0xF0643B, dark: 0xFF8059)
+    static let learnerActionStrong = adaptive(light: 0xA93C20, dark: 0xFF9B7B)
+    static let onLearnerAction = adaptive(light: 0x102019, dark: 0x071722)
+    static let aiContribution = adaptive(light: 0x2F66D8, dark: 0x85AAFF)
+    static let aiContributionStrong = adaptive(light: 0x174EAE, dark: 0x6F96EE)
+    static let testedEvidence = adaptive(light: 0x247A53, dark: 0x79C995)
+    static let testedEvidenceStrong = adaptive(light: 0x185F43, dark: 0x67BD84)
+    static let focus = adaptive(light: 0x145BD7, dark: 0x8FB0FF)
+
+    private static func adaptive(light: UInt32, dark: UInt32) -> Color {
+        Color(uiColor: UIColor { traits in
+            let value = traits.userInterfaceStyle == .dark ? dark : light
+            return UIColor(
+                red: CGFloat((value >> 16) & 0xFF) / 255,
+                green: CGFloat((value >> 8) & 0xFF) / 255,
+                blue: CGFloat(value & 0xFF) / 255,
+                alpha: 1
+            )
+        })
+    }
 }
 
 enum ForgeSpacing {

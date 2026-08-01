@@ -5,12 +5,14 @@
   --public-muted: #56645d;
   --public-line: rgba(16, 32, 25, 0.16);
   --public-gold: #f0643b;
+  --public-gold-strong: #a93c20;
   --public-cyan: #145bd7;
-  --public-green: #174d36;
-  --public-violet: #285fcb;
-  --forge-display: "Avenir Next", "Helvetica Neue", "Segoe UI", sans-serif;
-  --forge-sans: "Avenir Next", "Helvetica Neue", "Segoe UI", sans-serif;
-  --forge-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --public-green: #247a53;
+  --public-violet: #2f66d8;
+  --forge-reflection: var(--font-forge-reflection), "Libre Baskerville", serif;
+  --forge-display: var(--font-geist-sans), "Geist", sans-serif;
+  --forge-sans: var(--font-geist-sans), "Geist", sans-serif;
+  --forge-mono: var(--font-geist-mono), "Geist Mono", monospace;
   min-height: 100vh;
   overflow: clip;
   color: var(--public-ink);
@@ -26,9 +28,10 @@
   --public-muted: #a8b9b1;
   --public-line: rgba(231, 242, 235, 0.18);
   --public-gold: #ff8059;
-  --public-cyan: #7fabff;
+  --public-gold-strong: #ff9b7b;
+  --public-cyan: #8fb0ff;
   --public-green: #79c995;
-  --public-violet: #8fb0ff;
+  --public-violet: #85aaff;
   color-scheme: dark;
 }
 
@@ -40,9 +43,10 @@
     --public-muted: #a8b9b1;
     --public-line: rgba(231, 242, 235, 0.18);
     --public-gold: #ff8059;
-    --public-cyan: #7fabff;
+    --public-gold-strong: #ff9b7b;
+    --public-cyan: #8fb0ff;
     --public-green: #79c995;
-    --public-violet: #8fb0ff;
+    --public-violet: #85aaff;
     color-scheme: dark;
   }
 }
@@ -241,8 +245,8 @@
 .pageEyebrow,
 .statusLabel {
   margin: 0;
-  color: var(--public-gold);
-  font-family: var(--forge-mono, ui-monospace, SFMono-Regular, monospace);
+  color: var(--public-gold-strong);
+  font-family: var(--forge-mono, "Geist Mono", monospace);
   font-size: 10px;
   font-weight: 820;
   letter-spacing: 0.16em;
@@ -513,7 +517,7 @@
 .milestoneSection > ol > li > span,
 .pricingPrinciples li > span,
 .directionIndex {
-  color: var(--public-gold);
+  color: var(--public-gold-strong);
   font-family: var(--forge-mono, ui-monospace, monospace);
   font-size: 10px;
   font-weight: 820;

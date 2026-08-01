@@ -2,32 +2,36 @@ import SwiftUI
 
 struct ForgeTabShell: View {
     @State private var selectedTab: ForgeTab = .today
+    @State private var todayPath: [ForgeRoute] = []
+    @State private var pathsPath: [ForgeRoute] = []
+    @State private var projectsPath: [ForgeRoute] = []
+    @State private var evidencePath: [ForgeRoute] = []
     let onRestartEntry: () -> Void
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            NavigationStack {
+            NavigationStack(path: $todayPath) {
                 TodayView()
                     .forgeRoutes()
             }
             .tabItem { Label("Today", systemImage: "sun.max") }
             .tag(ForgeTab.today)
 
-            NavigationStack {
+            NavigationStack(path: $pathsPath) {
                 PathCollectionView()
                     .forgeRoutes()
             }
             .tabItem { Label("Paths", systemImage: "point.topleft.down.to.point.bottomright.curvepath") }
             .tag(ForgeTab.paths)
 
-            NavigationStack {
+            NavigationStack(path: $projectsPath) {
                 ProjectCollectionView()
                     .forgeRoutes()
             }
             .tabItem { Label("Projects", systemImage: "folder") }
             .tag(ForgeTab.projects)
 
-            NavigationStack {
+            NavigationStack(path: $evidencePath) {
                 EvidenceCollectionView()
                     .forgeRoutes()
             }

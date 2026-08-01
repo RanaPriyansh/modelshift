@@ -17,6 +17,7 @@ class NodeMock {
     this.y = 0;
     this.fills = [];
     this.strokes = [];
+    this.boundVariables = {};
   }
 
   appendChild(node) {
@@ -48,6 +49,11 @@ class NodeMock {
 
   getPluginData(key) {
     return this.pluginData[key] || "";
+  }
+
+  setBoundVariable(field, variable) {
+    assert.ok(variable && variable.id, `Invalid variable binding for ${this.name}`);
+    this.boundVariables[field] = variable.id;
   }
 
   async loadAsync() {}
@@ -177,14 +183,14 @@ function createMockFigma(resolveClose) {
     },
   };
 
-  return { figma, root };
+  return { figma, root, collections, variables };
 }
 
 let resolveClose;
 const closed = new Promise((resolve) => {
   resolveClose = resolve;
 });
-const { figma, root } = createMockFigma(resolveClose);
+const { figma, root, collections, variables } = createMockFigma(resolveClose);
 const source = fs.readFileSync(
   new URL("./figma-forge-terrain-plugin/code.js", import.meta.url),
   "utf8",
@@ -211,12 +217,93 @@ const expectedCounts = {
   textStyles: 18,
   paintStyles: 7,
   effectStyles: 2,
-  components: 17,
+  components: 33,
   frames: 28,
 };
 
 for (const [key, count] of Object.entries(expectedCounts)) {
   assert.equal(receipt[key].length, count, `${key} count`);
+}
+
+assert.equal(receipt.aliases.length, 32, "semantic alias count");
+const collectionById = new Map(collections.map((collection) => [collection.id, collection]));
+const variableById = new Map(variables.map((variable) => [variable.id, variable]));
+const primitiveCollection = collections.find((collection) => collection.name === "FORGE / Primitive");
+assert.ok(primitiveCollection, "Missing primitive collection");
+for (const alias of receipt.aliases) {
+  const semantic = variableById.get(alias.semanticVariableId);
+  const target = variableById.get(alias.targetVariableId);
+  assert.ok(semantic, `Missing semantic variable ${alias.semanticVariableName}`);
+  assert.ok(target, `Missing alias target ${alias.targetVariableName}`);
+  assert.equal(semantic.name, alias.semanticVariableName, "Semantic alias name");
+  assert.equal(semantic.variableCollectionId, alias.semanticCollectionId, "Semantic alias collection");
+  assert.equal(target.variableCollectionId, primitiveCollection.id, "Alias target collection");
+  assert.equal(target.name, alias.targetVariableName, "Alias target name");
+  assert.match(target.name, new RegExp(`^color/primitive/${alias.mode}/`), "Alias target mode");
+  const semanticCollection = collectionById.get(alias.semanticCollectionId);
+  assert.ok(semanticCollection, `Missing semantic collection ${alias.semanticCollectionId}`);
+  assert.deepEqual(
+    semantic.values[semanticCollection.defaultModeId],
+    { type: "VARIABLE_ALIAS", id: target.id },
+    `Alias target value for ${alias.semanticVariableName}`,
+  );
+}
+
+const nodesById = new Map();
+const collectNodes = (node) => {
+  nodesById.set(node.id, node);
+  for (const child of node.children || []) collectNodes(child);
+};
+collectNodes(root);
+const relativeLuminance = (color) => {
+  const channels = [color.r, color.g, color.b].map((channel) =>
+    channel <= 0.03928
+      ? channel / 12.92
+      : ((channel + 0.055) / 1.055) ** 2.4,
+  );
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+};
+const contrastRatio = (first, second) => {
+  const firstLuminance = relativeLuminance(first);
+  const secondLuminance = relativeLuminance(second);
+  return (
+    (Math.max(firstLuminance, secondLuminance) + 0.05)
+    / (Math.min(firstLuminance, secondLuminance) + 0.05)
+  );
+};
+for (const nodeName of ["Intent=Primary, State=Default", "Primary action"]) {
+  const action = [...nodesById.values()].find((node) => node.name === nodeName);
+  assert.ok(action, `Missing contrast target: ${nodeName}`);
+  const label = (action.children || []).find((node) => node.type === "TEXT");
+  const background = action.fills.find((paint) => paint.type === "SOLID");
+  const foreground = label?.fills.find((paint) => paint.type === "SOLID");
+  assert.ok(background && foreground, `Missing button paints: ${nodeName}`);
+  assert.ok(
+    contrastRatio(background.color, foreground.color) >= 4.5,
+    `Primary action contrast is below 4.5:1: ${nodeName}`,
+  );
+}
+assert.ok(receipt.bindings.length > 0, "No component variable bindings recorded");
+for (const binding of receipt.bindings) {
+  const node = nodesById.get(binding.nodeId);
+  const variable = variableById.get(binding.variableId);
+  assert.ok(node, `Missing bound node ${binding.nodeId}`);
+  assert.ok(variable, `Missing bound variable ${binding.variableId}`);
+  assert.equal(node.boundVariables[binding.field], binding.variableId, `Binding field for ${binding.nodeName}`);
+  assert.equal(variable.resolvedType, "COLOR", `Binding type for ${binding.variableName}`);
+  const collection = collectionById.get(variable.variableCollectionId);
+  assert.ok(collection, `Missing binding collection for ${binding.variableName}`);
+  assert.match(collection.name, /^FORGE \/ Semantic \/ (Light|Dark)$/);
+}
+const componentRecords = receipt.components.filter((item) => item.type === "COMPONENT");
+assert.equal(receipt.componentBindings.length, componentRecords.length, "Component binding record count");
+for (const componentBinding of receipt.componentBindings) {
+  assert.ok(componentBinding.semanticPaints > 0, `No semantic paints in ${componentBinding.componentName}`);
+  assert.equal(
+    componentBinding.boundPaints,
+    componentBinding.semanticPaints,
+    `Unbound semantic paint in ${componentBinding.componentName}`,
+  );
 }
 
 const expectedFamilyCounts = {

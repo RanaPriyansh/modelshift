@@ -10,12 +10,12 @@ struct TodayView: View {
             )
 
             ForgeCard {
-                ForgeStatus(label: "Ready now", color: .forgeAI)
+                ForgeStatus(label: "Ready now", color: ForgeTerrainColor.aiContribution)
                 Text("Compare support and contradiction.")
                     .font(.title2.bold())
                 Text("Use two reviewed sources. Record the condition that could change your conclusion.")
                     .foregroundStyle(.secondary)
-                NavigationLink(value: ForgeRoute.actionBrief) {
+                NavigationLink(value: ForgeRoute.actionBrief(id: "support-contradiction")) {
                     Text("Open action brief")
                 }
                 .buttonStyle(ForgePrimaryButtonStyle())
@@ -23,7 +23,7 @@ struct TodayView: View {
 
             NavigationLink(value: ForgeRoute.returnQueue) {
                 ForgeCard {
-                    ForgeStatus(label: "Due tomorrow", color: .forgeOrange)
+                    ForgeStatus(label: "Due tomorrow", color: ForgeTerrainColor.learnerAction)
                     Text("Can you use the distinction without the lesson?")
                         .font(.headline)
                     Text("About 8 minutes. No instructional help.")
@@ -58,7 +58,7 @@ struct PathCollectionView: View {
         List {
             Section {
                 ForEach(ForgeSamples.paths) { path in
-                    NavigationLink(value: ForgeRoute.pathDetail) {
+                    NavigationLink(value: ForgeRoute.pathDetail(id: path.id)) {
                         ForgeRow(model: path)
                     }
                 }
@@ -88,7 +88,7 @@ struct PathDetailView: View {
                 LabeledContent("Known limit", value: "One claim remains untested")
             }
 
-            NavigationLink(value: ForgeRoute.actionBrief) {
+            NavigationLink(value: ForgeRoute.actionBrief(id: "support-contradiction")) {
                 Text("Start next action")
             }
             .buttonStyle(ForgePrimaryButtonStyle())
@@ -101,7 +101,7 @@ struct PathDetailView: View {
 struct ProjectCollectionView: View {
     var body: some View {
         List(ForgeSamples.projects) { project in
-            NavigationLink(value: ForgeRoute.projectWorkspace) {
+            NavigationLink(value: ForgeRoute.projectWorkspace(id: project.id)) {
                 ForgeRow(model: project)
             }
         }
@@ -113,6 +113,7 @@ struct ProjectCollectionView: View {
 
 struct ProjectWorkspaceView: View {
     @State private var revision = ""
+    @State private var operationState = ForgeOperationState.ready
 
     var body: some View {
         ForgePage(screenID: "IOS-16") {
@@ -129,22 +130,44 @@ struct ProjectWorkspaceView: View {
             }
 
             TextField("Write the bounded revision.", text: $revision, axis: .vertical)
-                .lineLimit(4...8)
+                .lineLimit(nil)
                 .padding(ForgeSpacing.standard)
-                .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
+                .background(ForgeTerrainColor.surface, in: RoundedRectangle(cornerRadius: 12))
+                .accessibilityLabel("Bounded revision")
 
-            Button("Save revision") {}
+            ForgeOperationStatus(state: operationState)
+
+            if case .failed = operationState {
+                Button("Try again") {
+                    operationState = .ready
+                }
+                .accessibilityIdentifier("ios.IOS-16.secondary")
+            }
+
+            Button(operationState == .saved ? "Saved on this device" : "Save revision") {
+                saveRevision()
+            }
                 .buttonStyle(ForgePrimaryButtonStyle())
+                .accessibilityIdentifier("ios.IOS-16.primary")
+                .disabled(operationState == .saving || operationState == .saved)
         }
         .navigationTitle("Verification memo")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func saveRevision() {
+        guard !revision.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            operationState = .failed("Write a revision before saving.")
+            return
+        }
+        operationState = .saved
     }
 }
 
 struct EvidenceCollectionView: View {
     var body: some View {
         List(ForgeSamples.evidence) { evidence in
-            NavigationLink(value: ForgeRoute.evidenceDetail) {
+            NavigationLink(value: ForgeRoute.evidenceDetail(id: evidence.id)) {
                 ForgeRow(model: evidence)
             }
         }
@@ -155,6 +178,8 @@ struct EvidenceCollectionView: View {
 }
 
 struct EvidenceDetailView: View {
+    @State private var operationState = ForgeOperationState.ready
+
     var body: some View {
         ForgePage(screenID: "IOS-12") {
             ForgeScreenHeader(
@@ -170,8 +195,21 @@ struct EvidenceDetailView: View {
                 LabeledContent("Limit", value: "No independent transfer claim")
             }
 
-            Button("Inspect source") {}
+            ForgeOperationStatus(state: operationState)
+
+            if case .failed = operationState {
+                Button("Try again") {
+                    operationState = .ready
+                }
+                .accessibilityIdentifier("ios.IOS-12.secondary")
+            }
+
+            Button(operationState == .saved ? "Source receipt opened" : "Inspect source") {
+                operationState = .saved
+            }
                 .buttonStyle(ForgePrimaryButtonStyle())
+                .accessibilityIdentifier("ios.IOS-12.primary")
+                .disabled(operationState == .saved)
         }
         .navigationTitle("Evidence detail")
         .navigationBarTitleDisplayMode(.inline)

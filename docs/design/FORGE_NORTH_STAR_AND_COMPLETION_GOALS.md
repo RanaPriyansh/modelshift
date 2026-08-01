@@ -138,10 +138,10 @@ No visual reward can replace useful learning feedback or independent evidence.
 
 | Gate | Current state |
 | --- | --- |
-| Editable source | Figma desktop source, build receipt, variables, styles, components, and boards pass the recorded audit. |
+| Editable source | The pre-fix Figma source is audited. The current 33-component generator requires a new Figma run. |
 | Page inventory | Complete for public, web, focus, and iOS families. |
 | Visual fidelity | All canonical public, web, and iOS families are reviewed at desktop and 320 CSS pixels. |
-| Design-system integrity | Token, count, coverage-index, generator, and Figma visual audits pass. Durable semantic alias readback remains open. |
+| Design-system integrity | Current local alias and binding checks pass. A new Figma receipt and binding audit remain open. |
 | Web implementation | All public and web families have coded boards. Public Home, Today, and focus families use the direction in routes. |
 | Responsive behavior | Atlas and canonical route audits have no horizontal overflow at desktop or 320 CSS pixels. |
 | Themes | Light and Dark boards exist. One theme choice persists across public and application routes. |

@@ -330,7 +330,7 @@ Use FORGE semantic colors for product authority.
 | Main text | `#102019` | `#F3F7F0` | `ForgeTerrainColor.text` |
 | Learner commitment | `#F0643B` | `#FF8059` | `ForgeTerrainColor.learnerAction` |
 | AI contribution | `#2F66D8` | `#85AAFF` | `ForgeTerrainColor.aiContribution` |
-| Tested evidence | `#2C8A61` | `#79C995` | `ForgeTerrainColor.testedEvidence` |
+| Tested evidence | `#247A53` | `#79C995` | `ForgeTerrainColor.testedEvidence` |
 
 Do not use green to mean permanent mastery.
 

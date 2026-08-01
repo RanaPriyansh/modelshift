@@ -12,7 +12,7 @@ Primary editable target:
 - File: `FORGE Terrain Product Design System`
 - Key: `qzdsINs69QK44KiorK9plj`
 - URL: <https://www.figma.com/design/qzdsINs69QK44KiorK9plj/FORGE-Terrain-Product-Design-System>
-- Status: Editable source created. Desktop visual audit passed. Semantic alias trace remains open.
+- Status: Local generator integrity passes. Figma source rerun required.
 - Evidence: `docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json`
 
 Secondary editable source:
@@ -159,12 +159,12 @@ The iOS application uses native Apple structure and behavior.
 | `color/border/strong` | `--forge-line-strong` | `#98AA9E` | `#44606A` | Strong boundary |
 | `color/text/default` | `--forge-ink` | `#102019` | `#F3F7F0` | Main text |
 | `color/text/muted` | `--forge-muted` | `#56645D` | `#A8B9B1` | Supporting text |
-| `color/text/dim` | `--forge-dim` | `#68766E` | `#82958B` | Secondary metadata |
+| `color/text/dim` | `--forge-dim` | `#66746C` | `#82958B` | Secondary metadata |
 | `color/action/learner` | `--forge-amber` | `#F0643B` | `#FF8059` | Learner commitment |
 | `color/action/learner-strong` | `--forge-amber-deep` | `#A93C20` | `#FF9B7B` | Strong learner state |
 | `color/contribution/ai` | `--forge-violet` | `#2F66D8` | `#85AAFF` | Disclosed AI contribution |
 | `color/contribution/ai-strong` | `--forge-violet-deep` | `#174EAE` | `#6F96EE` | Strong AI state |
-| `color/evidence/tested` | `--forge-cyan` | `#2C8A61` | `#79C995` | Tested consequence |
+| `color/evidence/tested` | `--forge-cyan` | `#247A53` | `#79C995` | Tested consequence |
 | `color/evidence/tested-strong` | `--forge-cyan-deep` | `#185F43` | `#67BD84` | Strong tested state |
 | `color/focus` | `--forge-focus` | `#145BD7` | `#8FB0FF` | Keyboard focus |
 
@@ -488,13 +488,19 @@ The current Starter-compatible structure uses:
 - `FORGE / Semantic / Light`
 - `FORGE / Semantic / Dark`
 
-The audited Figma source contains 86 variables across these three single-mode collections.
+The local generator creates 86 variables across these three single-mode collections.
+
+The local generator creates 33 component records.
+
+The local checker verifies 32 semantic alias targets and eligible token-matched component paint bindings.
 
 The Phase 1 build sequence is in `docs/design/FIGMA_PHASE_1_EXECUTION_PLAN.md`.
 
 The local generator is in `scripts/design/figma-forge-terrain-plugin`.
 
-Run the generator again only after the generator or source requirements change.
+Run the updated generator in Figma before the next editable-source review.
+
+Confirm aliases and eligible token-matched component bindings in the `09 Archive` receipt and the variable editor.
 
 The native iOS interaction contract is in `docs/design/FORGE_IOS_NATIVE_HANDOFF.md`.
 

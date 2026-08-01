@@ -7,13 +7,13 @@
   --atlas-ink: var(--forge-ink, #102019);
   --atlas-muted: var(--forge-muted, #56645d);
   --atlas-blue: var(--forge-violet, #2f66d8);
-  --atlas-green: var(--forge-cyan, #2c8a61);
+  --atlas-green: var(--forge-cyan, #247a53);
   --atlas-orange: var(--forge-amber, #f0643b);
   --atlas-midnight: #071722;
   --atlas-ivory: #f4f7f1;
   background: var(--atlas-bg);
   color: var(--atlas-ink);
-  font-family: Geist, "Avenir Next", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-geist-sans), "Geist", ui-sans-serif, system-ui, sans-serif;
 }
 
 .atlas *,
@@ -59,7 +59,7 @@
 .atlasHeader span,
 .foundationGrid > article > span {
   color: var(--atlas-muted);
-  font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.66rem;
   font-weight: 760;
   letter-spacing: 0.1em;
@@ -125,7 +125,7 @@
   margin-top: auto;
   padding-top: 36px;
   color: var(--atlas-green);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.65rem;
   font-weight: 760;
   letter-spacing: 0.11em;
@@ -159,7 +159,7 @@
 }
 
 .colorSpecimen i[data-color="cobalt"] { background: #2f66d8; }
-.colorSpecimen i[data-color="alpine"] { background: #2c8a61; }
+.colorSpecimen i[data-color="alpine"] { background: #247a53; }
 .colorSpecimen i[data-color="orange"] { background: #f0643b; }
 .colorSpecimen i[data-color="ivory"] { background: #f4f7f1; }
 
@@ -169,7 +169,7 @@
 
 .colorSpecimen code {
   color: var(--atlas-muted);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.62rem;
 }
 
@@ -197,7 +197,7 @@
 .shapeSpecimen i[data-size="12"] { border-radius: 12px; }
 
 .shapeSpecimen b {
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.72rem;
 }
 
@@ -232,7 +232,7 @@
   margin: 0;
   border: 1px solid currentColor;
   padding: 14px 18px;
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.7rem;
   font-weight: 760;
   letter-spacing: 0.04em;
@@ -273,7 +273,7 @@
 .screenMeta span,
 .screenMeta code {
   color: var(--atlas-muted);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.63rem;
   font-weight: 760;
   letter-spacing: 0.08em;
@@ -301,10 +301,10 @@
   --screen-line-strong: #98aa9e;
   --screen-ink: #102019;
   --screen-muted: #56645d;
-  --screen-dim: #68766e;
+  --screen-dim: #66746c;
   --screen-orange: #f0643b;
   --screen-blue: #2f66d8;
-  --screen-green: #2c8a61;
+  --screen-green: #247a53;
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--atlas-line-strong);
@@ -349,7 +349,7 @@
 .browserBar small {
   margin-left: 8px;
   color: var(--screen-dim);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.48rem;
 }
 
@@ -445,7 +445,7 @@
 .scaffoldCard > span,
 .proofPhone section > span,
 .returnPhone section > span {
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: clamp(0.5rem, 0.8vw, 0.7rem);
   font-weight: 760;
   letter-spacing: 0.11em;
@@ -542,7 +542,7 @@
 
 .storyThresholdCopy > span {
   color: #17643c;
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: clamp(0.5rem, 0.8vw, 0.7rem);
   font-weight: 760;
   letter-spacing: 0.11em;
@@ -581,7 +581,7 @@
 
 .startLayout > aside > span {
   color: var(--screen-green);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.58rem;
   font-weight: 760;
 }
@@ -621,7 +621,7 @@
 
 .startLayout > section > span {
   color: var(--screen-green);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.6rem;
   font-weight: 760;
   letter-spacing: 0.08em;
@@ -755,13 +755,13 @@
 
 .pathRows article > span {
   color: var(--screen-dim);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.58rem;
 }
 
 .pathRows small {
   color: var(--screen-green);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.5rem;
   font-weight: 760;
   text-transform: uppercase;
@@ -842,7 +842,7 @@
 .detailBody li small,
 .detailBody aside > span {
   color: var(--screen-muted);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.53rem;
   text-transform: uppercase;
 }
@@ -898,7 +898,7 @@
 
 .methodSteps span {
   color: var(--screen-green);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.54rem;
 }
 
@@ -953,7 +953,7 @@
 
 .trustGrid article > span {
   color: #79c995;
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.52rem;
 }
 
@@ -1005,7 +1005,7 @@
   display: flex;
   justify-content: space-between;
   color: var(--screen-green);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.55rem;
   text-transform: uppercase;
 }
@@ -1041,7 +1041,7 @@
 .nextAction dt,
 .briefGrid dt {
   color: var(--screen-muted);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.5rem;
   text-transform: uppercase;
 }
@@ -1076,7 +1076,7 @@
 .projectLayout section > span,
 .projectLayout aside > span {
   color: var(--screen-green);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.5rem;
   font-weight: 760;
   text-transform: uppercase;
@@ -1120,7 +1120,7 @@
 .pathWorkspace li > span,
 .pathWorkspace li small {
   color: var(--screen-muted);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.52rem;
   text-transform: uppercase;
 }
@@ -1145,7 +1145,7 @@
 
 .pathWorkspace aside > span {
   color: var(--screen-green);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.52rem;
   font-weight: 760;
   text-transform: uppercase;
@@ -1217,7 +1217,7 @@
 
 .evidenceRows span {
   color: var(--screen-green);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.52rem;
   font-weight: 760;
   text-transform: uppercase;
@@ -1252,7 +1252,7 @@
 
 .returnRows article > span {
   color: var(--screen-muted);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.52rem;
   font-weight: 760;
   text-transform: uppercase;
@@ -1293,7 +1293,7 @@
 
 .projectHead > b {
   color: var(--screen-orange);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.55rem;
   text-transform: uppercase;
 }
@@ -1356,7 +1356,7 @@
 
 .memo small {
   color: var(--screen-green);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.49rem;
 }
 
@@ -1416,7 +1416,7 @@
 
 .focusDesktopBar > b {
   color: var(--screen-green);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.52rem;
   letter-spacing: 0.1em;
 }
@@ -1438,7 +1438,7 @@
 .worldFocusBody section > span,
 .worldFocusBody aside > span {
   color: var(--screen-green);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.51rem;
   font-weight: 760;
   letter-spacing: 0.1em;
@@ -1469,14 +1469,14 @@
 
 .focusDesktopPrompt > div > span {
   color: var(--screen-blue);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.48rem;
   text-transform: uppercase;
 }
 
 .focusDesktopPrompt > div p {
   margin: 12px 0 0;
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--font-forge-reflection), "Libre Baskerville", serif;
   font-size: 0.76rem;
   line-height: 1.54;
 }
@@ -1498,7 +1498,7 @@
 .focusDesktopWork > p {
   margin: 34px 0 0;
   color: var(--screen-dim);
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--font-forge-reflection), "Libre Baskerville", serif;
   font-size: clamp(1.1rem, 2.4vw, 2.1rem);
   line-height: 1.45;
 }
@@ -1506,7 +1506,7 @@
 .focusDesktopWork > small {
   margin-top: auto;
   color: var(--screen-green);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.5rem;
 }
 
@@ -1618,7 +1618,7 @@
 
 .modelShiftDesktop li b {
   color: var(--screen-blue);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.5rem;
 }
 
@@ -1804,7 +1804,7 @@
 
 .worldFocusBody dt {
   color: var(--screen-muted);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.48rem;
   text-transform: uppercase;
 }
@@ -1855,10 +1855,10 @@
   --screen-line-strong: #98aa9e;
   --screen-ink: #102019;
   --screen-muted: #56645d;
-  --screen-dim: #68766e;
+  --screen-dim: #66746c;
   --screen-orange: #f0643b;
   --screen-blue: #2f66d8;
-  --screen-green: #2c8a61;
+  --screen-green: #247a53;
   width: min(100%, 326px);
   border: 8px solid #102019;
   border-radius: 46px;
@@ -2016,7 +2016,7 @@
 .proofSupport > span,
 .returnMarker > span,
 .returnPhone section > span {
-  font-family: "SFMono-Regular", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.48rem;
   font-weight: 760;
   letter-spacing: 0.08em;
@@ -2211,7 +2211,7 @@
 
 .sourceExcerpt p {
   margin: 11px 0 0;
-  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-family: var(--font-forge-reflection), "Libre Baskerville", serif;
   font-size: 0.75rem;
   line-height: 1.5;
 }
@@ -2405,7 +2405,7 @@
 
 .phoneRows span {
   color: var(--screen-green);
-  font-family: "SFMono-Regular", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.45rem;
   font-weight: 760;
   letter-spacing: 0.06em;
@@ -2478,7 +2478,7 @@
 
 .stateGrid span {
   color: var(--atlas-muted);
-  font-family: "Geist Mono", ui-monospace, monospace;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-size: 0.58rem;
 }
 

@@ -195,10 +195,10 @@ Add a label, number, icon, shape, or text explanation.
 | Strong line | `--forge-line-strong` | `#98AA9E` |
 | Ink | `--forge-ink` | `#102019` |
 | Muted ink | `--forge-muted` | `#56645D` |
-| Dim ink | `--forge-dim` | `#68766E` |
+| Dim ink | `--forge-dim` | `#66746C` |
 | Learner action | `--forge-amber` | `#F0643B` |
 | AI contribution | `--forge-violet` | `#2F66D8` |
-| Tested evidence | `--forge-cyan` | `#2C8A61` |
+| Tested evidence | `--forge-cyan` | `#247A53` |
 | Focus | `--forge-focus` | `#145BD7` |
 
 ### 5.2 Current dark implementation anchors

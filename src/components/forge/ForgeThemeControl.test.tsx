@@ -32,13 +32,19 @@ describe("ForgeThemeControl", () => {
     expect(document.documentElement).toHaveAttribute(THEME_ATTRIBUTE, "dark");
   });
 
-  it("stores and applies a selected light preference", () => {
+  it("keeps a fast selected preference after the initialization frame", async () => {
     render(<ForgeThemeControl />);
 
-    fireEvent.change(screen.getByRole("combobox", { name: "Color theme" }), {
+    const control = screen.getByRole("combobox", { name: "Color theme" });
+    fireEvent.change(control, {
       target: { value: "light" },
     });
 
+    await new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+    });
+
+    expect(control).toHaveValue("light");
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
     expect(document.documentElement).toHaveAttribute(THEME_ATTRIBUTE, "light");
   });

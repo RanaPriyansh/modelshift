@@ -8,17 +8,61 @@ enum ForgeTab: Hashable {
 }
 
 enum ForgeRoute: Hashable {
-    case actionBrief
-    case attempt
-    case repair
-    case protectedProof
-    case pathDetail
-    case evidenceDetail
+    case actionBrief(id: String)
+    case attempt(id: String)
+    case repair(id: String)
+    case proof(id: String)
+    case pathDetail(id: String)
+    case evidenceDetail(id: String)
     case returnQueue
-    case protectedReturn
-    case projectWorkspace
+    case protectedReturn(id: String)
+    case projectWorkspace(id: String)
     case library
     case settings
+}
+
+enum ForgeOperationState: Equatable {
+    case ready
+    case saving
+    case saved
+    case submitted
+    case exportReady
+    case deleted
+    case failed(String)
+
+    var label: String {
+        switch self {
+        case .ready: "Ready"
+        case .saving: "Saving locally"
+        case .saved: "Saved on this device"
+        case .submitted: "Submitted locally"
+        case .exportReady: "Export ready"
+        case .deleted: "Local sample deleted"
+        case .failed(let message): message
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .ready: "pencil.line"
+        case .saving: "arrow.triangle.2.circlepath"
+        case .saved: "checkmark.circle"
+        case .submitted: "checkmark.seal"
+        case .exportReady: "square.and.arrow.up"
+        case .deleted: "trash"
+        case .failed: "exclamationmark.triangle"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .failed: ForgeTerrainColor.learnerActionStrong
+        case .submitted, .saved, .exportReady: ForgeTerrainColor.testedEvidence
+        case .deleted: ForgeTerrainColor.textMuted
+        case .saving: ForgeTerrainColor.aiContribution
+        case .ready: ForgeTerrainColor.textMuted
+        }
+    }
 }
 
 struct ForgeRowModel: Identifiable, Hashable {

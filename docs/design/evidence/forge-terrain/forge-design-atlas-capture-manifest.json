@@ -1,7 +1,7 @@
 {
   "status": "captured",
-  "source": "http://localhost:3035/internal/design-lab",
-  "capturedAt": "2026-08-01T04:16:55.931Z",
+  "source": "http://localhost:3047/internal/design-lab",
+  "capturedAt": "2026-08-01T07:37:17.855Z",
   "viewports": {
     "desktop": {
       "width": 1440,
@@ -17,55 +17,55 @@
       "filename": "forge-public-complete-atlas.png",
       "width": 1440,
       "height": 13487,
-      "sha256": "cb1c48c296cbe9fb9913ba858fe1aa727fde957887b5528b644199932b58659c"
+      "sha256": "aa6c8fa640a09607b20237772e9668d844393435bfefc8b68fe06953bdbe18b0"
     },
     {
       "filename": "forge-web-complete-atlas.png",
       "width": 1440,
-      "height": 16531,
-      "sha256": "17f267078adb9a4cd5a7b69db136f52ad7320f3f93704b13d87c40d8623f8866"
+      "height": 16679,
+      "sha256": "1aa0d88e48a7822e7ec48a02300f41e79ae03b7a9b3badf23b2e19947cd8b722"
     },
     {
       "filename": "forge-focus-mode-atlas.png",
       "width": 1440,
-      "height": 3987,
-      "sha256": "026492361b1cb8a6309f7bad30dbef84005a450810eba1b94c38bb2cb6db629a"
+      "height": 3988,
+      "sha256": "980f146791a22443d5c4498b705ab404651e07be1d04d1696710f7dafc69d13a"
     },
     {
       "filename": "forge-ios-complete-atlas.png",
       "width": 1440,
-      "height": 6499,
-      "sha256": "a264775b83842d03c040dc479f681f213c229cee9696b47a8db554f4b0047efe"
+      "height": 6498,
+      "sha256": "d8b25a50b42d9debda74452014ca1a4f1fca189edabe4d8ab5a0a8a59ded6674"
     },
     {
       "filename": "forge-public-complete-atlas-320.png",
       "width": 320,
-      "height": 15006,
-      "sha256": "b4697b5337e72ad0f3212eac089c028a4f507646367359d7e4bf26b0f1b0abcd"
+      "height": 15005,
+      "sha256": "fffcfa272841b3a3006deb9c6e1b260299a75e7c0f0209a324ccc9aa9d00cf8a"
     },
     {
       "filename": "forge-web-complete-atlas-320.png",
       "width": 320,
-      "height": 17452,
-      "sha256": "7c2ae95109ab3cb4305cb9db6c4798a6cfe9d3ee7ba017af33b76d1accdc99c1"
+      "height": 17448,
+      "sha256": "a48492603ab79e09144af0e444a247996ebebf35494013bacde7f8ef25b414fe"
     },
     {
       "filename": "forge-focus-mode-atlas-320.png",
       "width": 320,
-      "height": 4851,
-      "sha256": "9aa85592a05b28907dbdd988f3b1b27791382e4f67129f861dd7c4ecb6d92727"
+      "height": 4843,
+      "sha256": "9c420172394052061f3f0f4dcf5427fd8c8ed6df496f0994464fd57142c99c07"
     },
     {
       "filename": "forge-ios-complete-atlas-320-a.png",
       "width": 320,
-      "height": 9016,
-      "sha256": "a3ad4867e209765a65b38f510e886a18c1ee0bd9e4a1045936cbddd17afaf08e"
+      "height": 9085,
+      "sha256": "f34ab6b1b6c22a85de74b1f98d4f85e931d26b13f00c18f2dea7777bdb8a1709"
     },
     {
       "filename": "forge-ios-complete-atlas-320-b.png",
       "width": 320,
-      "height": 8670,
-      "sha256": "6e0cefcbb5f790cf31cf31f8d6454eb2f59c530ed9fc5508b381ee3cb206ffcb"
+      "height": 8651,
+      "sha256": "b4141f4188179ac3715305ee5a6ca0a3d3c2186c828d2392b8f5bb95a7f87c62"
     }
   ]
 }

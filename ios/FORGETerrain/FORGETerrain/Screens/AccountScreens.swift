@@ -37,7 +37,10 @@ struct SettingsDataView: View {
     @AppStorage("forge.haptics") private var hapticsEnabled = true
     @Environment(\.forgeRestartEntry) private var restartEntry
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
     @State private var showDeleteConfirmation = false
+    @State private var localDataState = ForgeOperationState.ready
 
     var body: some View {
         Form {
@@ -50,6 +53,8 @@ struct SettingsDataView: View {
 
                 Toggle("Haptics", isOn: $hapticsEnabled)
                 LabeledContent("Reduce Motion", value: reduceMotion ? "On" : "Off")
+                LabeledContent("Reduce Transparency", value: reduceTransparency ? "On" : "Off")
+                LabeledContent("Differentiate Without Color", value: differentiateWithoutColor ? "On" : "Off")
             }
 
             Section("Resources") {
@@ -60,10 +65,16 @@ struct SettingsDataView: View {
 
             Section("Local data") {
                 Button("Restart goal entry", action: restartEntry)
-                Button("Export local sample") {}
+                    .accessibilityIdentifier("ios.IOS-18.secondary")
+                Button("Export local sample") {
+                    localDataState = .exportReady
+                }
+                .accessibilityIdentifier("ios.IOS-18.secondary")
                 Button("Delete local sample", role: .destructive) {
                     showDeleteConfirmation = true
                 }
+                .accessibilityIdentifier("ios.IOS-18.primary")
+                ForgeOperationStatus(state: localDataState)
             }
 
             Section {
@@ -76,7 +87,9 @@ struct SettingsDataView: View {
         .accessibilityIdentifier("IOS-18")
         .alert("Delete the local sample?", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {}
+            Button("Delete", role: .destructive) {
+                localDataState = .deleted
+            }
         } message: {
             Text("This action cannot be undone.")
         }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import styles from "./ForgeThemeControl.module.css";
 
@@ -23,6 +23,7 @@ function applyThemePreference(preference: ForgeThemePreference) {
 export function ForgeThemeControl({ overlay = false }: { overlay?: boolean }) {
   const id = useId();
   const [preference, setPreference] = useState<ForgeThemePreference>("system");
+  const initializationFrame = useRef<number | null>(null);
 
   useEffect(() => {
     let storedPreference: string | null = null;
@@ -32,14 +33,24 @@ export function ForgeThemeControl({ overlay = false }: { overlay?: boolean }) {
       storedPreference = null;
     }
     const nextPreference = isThemePreference(storedPreference) ? storedPreference : "system";
-    const frame = window.requestAnimationFrame(() => {
+    initializationFrame.current = window.requestAnimationFrame(() => {
+      initializationFrame.current = null;
       setPreference(nextPreference);
       applyThemePreference(nextPreference);
     });
-    return () => window.cancelAnimationFrame(frame);
+    return () => {
+      if (initializationFrame.current !== null) {
+        window.cancelAnimationFrame(initializationFrame.current);
+        initializationFrame.current = null;
+      }
+    };
   }, []);
 
   function updatePreference(nextPreference: ForgeThemePreference) {
+    if (initializationFrame.current !== null) {
+      window.cancelAnimationFrame(initializationFrame.current);
+      initializationFrame.current = null;
+    }
     setPreference(nextPreference);
     applyThemePreference(nextPreference);
     try {

@@ -16,10 +16,11 @@ struct ActionBriefView: View {
                 LabeledContent("Evidence", value: "No record before submission")
             }
 
-            NavigationLink(value: ForgeRoute.attempt) {
+            NavigationLink(value: ForgeRoute.attempt(id: "support-contradiction")) {
                 Text("Start attempt")
             }
             .buttonStyle(ForgePrimaryButtonStyle())
+            .accessibilityIdentifier("ios.IOS-07.primary")
         }
         .navigationTitle("Action brief")
         .navigationBarTitleDisplayMode(.inline)
@@ -28,6 +29,7 @@ struct ActionBriefView: View {
 
 struct AttemptView: View {
     @State private var response = ""
+    @State private var operationState = ForgeOperationState.ready
 
     var body: some View {
         ForgePage(screenID: "IOS-08") {
@@ -38,25 +40,51 @@ struct AttemptView: View {
             )
 
             ForgeCard {
-                ForgeStatus(label: "Reviewed source", color: .forgeAI)
+                ForgeStatus(label: "Reviewed source", color: ForgeTerrainColor.aiContribution)
                 Text("The reported result applies to the tested population and conditions.")
                     .font(.body)
             }
 
             TextField("Explain the result and its condition.", text: $response, axis: .vertical)
-                .lineLimit(6...12)
+                .lineLimit(nil)
                 .padding(ForgeSpacing.standard)
-                .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
+                .background(ForgeTerrainColor.surface, in: RoundedRectangle(cornerRadius: 12))
                 .accessibilityLabel("Learner attempt")
 
-            NavigationLink(value: ForgeRoute.repair) {
-                Text("Commit attempt")
+            ForgeOperationStatus(state: operationState)
+
+            if case .failed = operationState {
+                Button("Try again") {
+                    operationState = .ready
+                }
+                .accessibilityIdentifier("ios.IOS-08.secondary")
+            }
+
+            Button(operationState == .saved ? "Attempt saved" : "Commit attempt") {
+                commitAttempt()
             }
             .buttonStyle(ForgePrimaryButtonStyle())
+            .accessibilityIdentifier("ios.IOS-08.primary")
+            .disabled(operationState == .saving || operationState == .saved)
+
+            if operationState == .saved {
+                NavigationLink(value: ForgeRoute.repair(id: "support-contradiction")) {
+                    Text("Continue to repair")
+                }
+                .accessibilityIdentifier("ios.IOS-08.secondary")
+            }
         }
         .navigationTitle("Attempt")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+    }
+
+    private func commitAttempt() {
+        guard !response.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            operationState = .failed("Write an attempt before committing.")
+            return
+        }
+        operationState = .saved
     }
 }
 
@@ -70,20 +98,21 @@ struct RepairView: View {
             )
 
             ForgeCard {
-                ForgeStatus(label: "Smallest useful scaffold", color: .forgeAI)
+                ForgeStatus(label: "Smallest useful scaffold", color: ForgeTerrainColor.aiContribution)
                 Text("Compare these two statements.")
                     .font(.headline)
                 Text("The tested group showed the result.")
                 Text("All learners will show the result.")
                 Text("Name the unsupported change in scope.")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.forgeAI)
+                    .foregroundStyle(ForgeTerrainColor.aiContribution)
             }
 
-            NavigationLink(value: ForgeRoute.protectedProof) {
+            NavigationLink(value: ForgeRoute.proof(id: "support-contradiction")) {
                 Text("Revise my answer")
             }
             .buttonStyle(ForgePrimaryButtonStyle())
+            .accessibilityIdentifier("ios.IOS-09.primary")
         }
         .navigationTitle("Repair")
         .navigationBarTitleDisplayMode(.inline)
@@ -93,6 +122,7 @@ struct RepairView: View {
 
 struct ProtectedProofView: View {
     @State private var response = ""
+    @State private var operationState = ForgeOperationState.ready
 
     var body: some View {
         ForgePage(screenID: "IOS-10") {
@@ -103,22 +133,50 @@ struct ProtectedProofView: View {
             )
 
             ForgeCard {
-                ForgeStatus(label: "Fresh case", color: .forgeOrange)
+                ForgeStatus(label: "Fresh case", color: ForgeTerrainColor.learnerAction)
                 Text("One source reports a result. A second source tests a different condition.")
                     .font(.headline)
             }
 
             TextField("Write your independent response.", text: $response, axis: .vertical)
-                .lineLimit(6...12)
+                .lineLimit(nil)
                 .padding(ForgeSpacing.standard)
-                .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
+                .background(ForgeTerrainColor.surface, in: RoundedRectangle(cornerRadius: 12))
+                .accessibilityLabel("Independent proof response")
 
-            Button("Submit proof") {}
+            ForgeOperationStatus(state: operationState)
+
+            if case .failed = operationState {
+                Button("Try again") {
+                    operationState = .ready
+                }
+                .accessibilityIdentifier("ios.IOS-10.secondary")
+            }
+
+            Button(operationState == .submitted ? "Proof submitted" : "Submit proof") {
+                submitProof()
+            }
                 .buttonStyle(ForgePrimaryButtonStyle())
+                .accessibilityIdentifier("ios.IOS-10.primary")
+                .disabled(operationState == .saving || operationState == .submitted)
+
+            if operationState == .submitted {
+                Text("Saved locally. This reference does not create canonical evidence.")
+                    .font(.footnote)
+                    .foregroundStyle(ForgeTerrainColor.textMuted)
+            }
         }
         .navigationTitle("Proof")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+    }
+
+    private func submitProof() {
+        guard !response.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            operationState = .failed("Write an independent response before submitting.")
+            return
+        }
+        operationState = .submitted
     }
 }
 
@@ -131,9 +189,9 @@ struct ReturnQueueView: View {
                 detail: "Each return uses a fresh case and keeps prior help unavailable."
             )
 
-            NavigationLink(value: ForgeRoute.protectedReturn) {
+            NavigationLink(value: ForgeRoute.protectedReturn(id: "claim-source")) {
                 ForgeCard {
-                    ForgeStatus(label: "Due tomorrow", color: .forgeOrange)
+                    ForgeStatus(label: "Due tomorrow", color: ForgeTerrainColor.learnerAction)
                     Text("Claim and source")
                         .font(.headline)
                     Text("About 8 minutes. Fresh case.")
@@ -156,6 +214,8 @@ struct ReturnQueueView: View {
 }
 
 struct ProtectedReturnView: View {
+    @State private var operationState = ForgeOperationState.ready
+
     var body: some View {
         ForgePage(screenID: "IOS-14") {
             ForgeScreenHeader(
@@ -170,8 +230,14 @@ struct ProtectedReturnView: View {
                 LabeledContent("Result", value: "One bounded record")
             }
 
-            Button("Start protected return") {}
+            ForgeOperationStatus(state: operationState)
+
+            Button(operationState == .saved ? "Protected return ready" : "Start protected return") {
+                operationState = .saved
+            }
                 .buttonStyle(ForgePrimaryButtonStyle())
+                .accessibilityIdentifier("ios.IOS-14.primary")
+                .disabled(operationState == .saved)
         }
         .navigationTitle("Protected return")
         .navigationBarTitleDisplayMode(.inline)

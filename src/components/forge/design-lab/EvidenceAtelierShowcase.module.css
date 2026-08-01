@@ -24,8 +24,7 @@
   color-scheme: light;
   font-family:
     var(--font-geist-sans),
-    "Avenir Next",
-    "Segoe UI",
+    "Geist",
     ui-sans-serif,
     system-ui,
     sans-serif;
@@ -96,17 +95,45 @@
   display: flex;
   min-height: 38px;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 16px;
   border-bottom: 1px solid var(--ea-line);
   background: var(--ea-raised);
   color: var(--ea-muted);
   padding: 8px 18px;
   font-size: 13px;
+  flex-wrap: wrap;
 }
 
 .previewNotice strong {
   color: var(--ea-ink);
+}
+
+.fixtureNoticeCopy {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.fixtureNoticeCopy span {
+  overflow-wrap: anywhere;
+}
+
+.resetAction {
+  min-height: 36px;
+  flex: 0 0 auto;
+  border: 1px solid var(--ea-line);
+  border-radius: 7px;
+  background: var(--ea-surface);
+  color: var(--ea-ink);
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.resetAction:hover {
+  background: var(--ea-canvas);
 }
 
 .atelierRail {
@@ -134,7 +161,7 @@
   border: 1px solid var(--ea-cobalt);
   border-radius: 50%;
   color: var(--ea-cobalt);
-  font-family: "Times New Roman", serif;
+  font-family: var(--font-forge-reflection), "Libre Baskerville", serif;
   font-size: 24px;
   font-style: italic;
 }
@@ -194,7 +221,7 @@
 
 .stageRail ol {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   max-width: 980px;
   margin: 0 auto;
   padding: 0;
@@ -240,6 +267,15 @@
   transform: scaleX(1);
 }
 
+.stageRail button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.stageRail button:disabled:hover {
+  color: var(--ea-muted);
+}
+
 .stageNumber,
 .stateLabel,
 .localSeal,
@@ -248,9 +284,8 @@
 .contextRail dt,
 .proofConditions dt {
   font-family:
-    "IBM Plex Mono",
-    "SFMono-Regular",
-    Consolas,
+    var(--font-geist-mono),
+    "Geist Mono",
     monospace;
 }
 
@@ -276,7 +311,8 @@
 }
 
 .screenViewport:focus {
-  outline: none;
+  outline: 2px solid var(--ea-focus);
+  outline-offset: -2px;
 }
 
 .todayScreen,
@@ -344,9 +380,8 @@
   max-width: 11.5em;
   margin: 0;
   font-family:
-    "Instrument Serif",
-    "Iowan Old Style",
-    Georgia,
+    var(--font-forge-reflection),
+    "Libre Baskerville",
     serif;
   font-size: clamp(40px, 5vw, 64px);
   font-weight: 400;
@@ -444,6 +479,30 @@
   border-left: 1px solid var(--ea-line);
 }
 
+.fixtureSummary {
+  margin-top: 18px;
+  border-left: 4px solid var(--ea-forest);
+  background: var(--ea-surface);
+  padding: 22px clamp(20px, 4vw, 34px);
+}
+
+.fixtureSummary h3 {
+  margin: 0;
+  font-size: clamp(20px, 2.5vw, 28px);
+  letter-spacing: -0.025em;
+}
+
+.fixtureSummary p:not(.stateLabel) {
+  max-width: 650px;
+  margin: 8px 0 0;
+  color: var(--ea-muted);
+  font-size: 15px;
+}
+
+.fixtureSummary .actionRow {
+  margin-top: 18px;
+}
+
 .todayDetails dt,
 .contextRail dt,
 .proofConditions dt,
@@ -470,6 +529,16 @@
   grid-template-columns: minmax(0, 1fr) minmax(240px, 290px);
   gap: clamp(24px, 4vw, 52px);
   align-items: start;
+}
+
+.workScreen > .contextRail {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.workScreen > .workPlateOuter {
+  grid-column: 1;
+  grid-row: 1;
 }
 
 .workPlateOuter,
@@ -512,9 +581,8 @@
   max-width: 20ch;
   margin: 0;
   font-family:
-    "Instrument Serif",
-    "Iowan Old Style",
-    Georgia,
+    var(--font-forge-reflection),
+    "Libre Baskerville",
     serif;
   font-size: clamp(34px, 4.2vw, 52px);
   font-weight: 400;
@@ -547,6 +615,39 @@
   padding: 18px;
   font-size: 17px;
   line-height: 1.6;
+}
+
+.taskError {
+  margin: 15px 0 0;
+  color: var(--ea-orange);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.repairEditor {
+  margin-top: 34px;
+  border-left: 4px solid var(--ea-forest);
+  background: var(--ea-surface);
+  padding: clamp(24px, 4vw, 38px);
+}
+
+.repairEditor textarea,
+.proofResponse {
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  border: 1px solid var(--ea-line);
+  border-radius: 8px;
+  background: var(--ea-canvas);
+  color: var(--ea-ink);
+  padding: 18px;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.proofResponse {
+  display: block;
+  margin-top: 9px;
 }
 
 .actionRow {
@@ -624,9 +725,8 @@
 .calibrationSheet section > span {
   color: var(--ea-orange);
   font-family:
-    "IBM Plex Mono",
-    "SFMono-Regular",
-    Consolas,
+    var(--font-geist-mono),
+    "Geist Mono",
     monospace;
   font-size: 12px;
 }
@@ -694,9 +794,8 @@
   max-width: 16ch;
   margin: 0;
   font-family:
-    "Instrument Serif",
-    "Iowan Old Style",
-    Georgia,
+    var(--font-forge-reflection),
+    "Libre Baskerville",
     serif;
   font-size: clamp(36px, 5vw, 58px);
   font-weight: 400;
@@ -796,6 +895,47 @@
   border-left: 1px solid var(--ea-line);
 }
 
+.fixtureReceipt {
+  margin-top: 20px;
+  border-top: 1px solid var(--ea-line);
+  border-bottom: 1px solid var(--ea-line);
+  background: var(--ea-surface);
+  padding: 24px clamp(18px, 4vw, 34px);
+}
+
+.fixtureReceipt h3 {
+  margin: 0;
+  font-size: clamp(20px, 2.4vw, 28px);
+  letter-spacing: -0.025em;
+}
+
+.fixtureReceipt dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 20px 0 0;
+  border-top: 1px solid var(--ea-line);
+  border-left: 1px solid var(--ea-line);
+}
+
+.fixtureReceipt dl > div {
+  min-width: 0;
+  border-right: 1px solid var(--ea-line);
+  border-bottom: 1px solid var(--ea-line);
+  padding: 14px;
+}
+
+.fixtureReceipt dd {
+  overflow-wrap: anywhere;
+}
+
+.fixtureReceipt code {
+  font-family:
+    var(--font-geist-mono),
+    "Geist Mono",
+    monospace;
+  font-size: 12px;
+}
+
 .liveMessage {
   min-height: 38px;
   margin: 0;
@@ -810,6 +950,16 @@
 @media (max-width: 820px) {
   .workScreen {
     grid-template-columns: 1fr;
+  }
+
+  .workScreen > .contextRail {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .workScreen > .workPlateOuter {
+    grid-column: 1;
+    grid-row: 2;
   }
 
   .contextRail {
@@ -862,7 +1012,17 @@
   .previewNotice {
     align-items: flex-start;
     flex-direction: column;
-    gap: 1px;
+    gap: 10px;
+  }
+
+  .fixtureNoticeCopy {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .resetAction {
+    width: 100%;
   }
 
   .atelierRail {
@@ -990,6 +1150,10 @@
     grid-template-columns: 1fr;
   }
 
+  .fixtureReceipt dl {
+    grid-template-columns: 1fr;
+  }
+
   .actionRow {
     align-items: stretch;
     flex-direction: column;
@@ -1058,6 +1222,10 @@
     border-left: 0;
     padding: 12px 0;
   }
+
+  .fixtureReceipt dl > div {
+    border-left: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1083,11 +1251,14 @@
   .previewNotice,
   .atelierRail,
   .stageRail,
-  .screenViewport,
-  .workPlate,
-  .proofBoundary,
-  .freshCase,
-  .liveMessage {
+    .screenViewport,
+    .workPlate,
+    .proofBoundary,
+    .freshCase,
+    .fixtureSummary,
+    .fixtureReceipt,
+    .repairEditor,
+    .liveMessage {
     background: Canvas;
     color: CanvasText;
   }
@@ -1102,10 +1273,11 @@
   .workPlateOuter,
   .proofOuter,
   .workPlate,
-  .proofBoundary,
-  .themeControl,
-  .quietAction,
-  .primaryAction {
+    .proofBoundary,
+    .themeControl,
+    .resetAction,
+    .quietAction,
+    .primaryAction {
     border: 1px solid CanvasText;
   }
 

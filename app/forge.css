@@ -1,27 +1,29 @@
 .forge-shell,
 .forge-world-frame {
-  --forge-bg: #071019;
-  --forge-bg-deep: #050c13;
-  --forge-surface: #0d1821;
-  --forge-surface-strong: #12212c;
-  --forge-line: #263844;
-  --forge-line-strong: #3a505e;
-  --forge-ink: #f2eee6;
-  --forge-muted: #9eabb3;
-  --forge-dim: #6f808a;
-  --forge-amber: #e4aa4f;
-  --forge-amber-deep: #8b5d22;
-  --forge-violet: #a493ff;
-  --forge-violet-deep: #6552c7;
-  --forge-cyan: #62d0e6;
-  --forge-cyan-deep: #1e8296;
-  --forge-paper: #ebe6dc;
-  --forge-paper-line: #c9c0af;
-  --forge-paper-ink: #16232b;
-  --forge-serif: Georgia, Cambria, "Times New Roman", serif;
-  --forge-display: "Avenir Next", Avenir, "Helvetica Neue", "Segoe UI", sans-serif;
-  --forge-sans: "Avenir Next", Avenir, "Helvetica Neue", "Segoe UI", sans-serif;
-  --forge-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --forge-bg: #f4f7f1;
+  --forge-bg-deep: #eef3ed;
+  --forge-surface: #fbfdf8;
+  --forge-surface-strong: #e4ebe4;
+  --forge-line: #cdd9d0;
+  --forge-line-strong: #98aa9e;
+  --forge-ink: #102019;
+  --forge-muted: #56645d;
+  --forge-dim: #66746c;
+  --forge-amber: #f0643b;
+  --forge-amber-deep: #a93c20;
+  --forge-violet: #2f66d8;
+  --forge-violet-deep: #174eae;
+  --forge-cyan: #247a53;
+  --forge-cyan-deep: #185f43;
+  --forge-paper: #f4f7f1;
+  --forge-paper-line: #cdd9d0;
+  --forge-paper-ink: #102019;
+  --forge-focus: #145bd7;
+  --forge-reflection: var(--font-forge-reflection), "Libre Baskerville", serif;
+  --forge-serif: var(--forge-reflection);
+  --forge-display: var(--font-geist-sans), "Geist", sans-serif;
+  --forge-sans: var(--font-geist-sans), "Geist", sans-serif;
+  --forge-mono: var(--font-geist-mono), "Geist Mono", monospace;
   min-height: 100vh;
   background: var(--forge-bg);
   color: var(--forge-ink);
@@ -257,7 +259,7 @@
 .forge-hero-heading h1 {
   max-width: 520px;
   margin: 0;
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: clamp(50px, 6.4vw, 92px);
   font-weight: 500;
   line-height: 0.94;
@@ -306,7 +308,7 @@
   background: var(--forge-surface);
   color: var(--forge-ink);
   padding: 22px 64px 18px 20px;
-  font-family: var(--forge-serif);
+  font-family: var(--forge-reflection);
   font-size: clamp(24px, 2.7vw, 38px);
   line-height: 1.18;
 }
@@ -365,7 +367,7 @@
 }
 
 .forge-choice-group label.is-selected {
-  border-color: var(--forge-amber);
+  border-color: var(--forge-amber-deep);
   background: #181b1b;
 }
 
@@ -409,7 +411,7 @@
   width: 16px;
   height: 16px;
   margin: 2px 0 0;
-  accent-color: var(--forge-amber);
+  accent-color: var(--forge-amber-deep);
 }
 
 .forge-guardian-check span {
@@ -505,7 +507,7 @@
 
 .forge-plan-result h3 {
   margin: 8px 0 0;
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: 24px;
   font-weight: 500;
   line-height: 1.15;
@@ -574,7 +576,7 @@
 }
 
 .forge-plan-result--restricted {
-  border-left-color: var(--forge-amber);
+  border-left-color: var(--forge-amber-deep);
 }
 
 .forge-loop-line {
@@ -591,7 +593,7 @@
 }
 
 .forge-loop-line span:nth-of-type(1) {
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
 }
 
 .forge-loop-line span:nth-of-type(2) {
@@ -634,7 +636,7 @@
 .forge-evidence-rules h2,
 .forge-world-placeholder h1 {
   margin: 0;
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-weight: 500;
   line-height: 1.02;
   letter-spacing: -0.042em;
@@ -702,7 +704,7 @@
 
 .forge-world-copy h3 {
   margin: 0;
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: clamp(27px, 3vw, 40px);
   font-weight: 500;
   letter-spacing: -0.025em;
@@ -782,7 +784,7 @@
 
 .forge-continuity-actions strong {
   max-width: 250px;
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: 25px;
   font-weight: 500;
   line-height: 1.1;
@@ -823,7 +825,7 @@
 }
 
 .forge-contract-statement h2 em {
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
 }
 
 .forge-contract-statement h2 i {
@@ -866,7 +868,7 @@
 }
 
 .forge-contract li strong {
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: 19px;
   font-weight: 600;
 }
@@ -900,14 +902,14 @@
 }
 
 .forge-frontier-rail > span {
-  color: var(--forge-amber) !important;
+  color: var(--forge-amber-deep) !important;
 }
 
 .forge-two-rails h3,
 .forge-projects h3 {
   max-width: 500px;
   margin: 0;
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: clamp(28px, 3vw, 42px);
   font-weight: 500;
   line-height: 1.08;
@@ -960,7 +962,7 @@
 }
 
 .forge-projects article > span {
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
 }
 
 .forge-projects p {
@@ -983,7 +985,7 @@
 }
 
 .forge-projects dt {
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
   font-family: var(--forge-mono);
   font-size: 9px;
   letter-spacing: 0.08em;
@@ -1103,7 +1105,7 @@
 }
 
 .forge-world-entry-gate > span {
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
   font-family: var(--forge-mono);
   font-size: 10px;
   font-weight: 800;
@@ -1113,7 +1115,7 @@
 
 .forge-world-entry-gate h1 {
   margin: 0;
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: clamp(46px, 7vw, 78px);
   font-weight: 500;
   line-height: 0.98;
@@ -1311,7 +1313,7 @@
 }
 
 .forge-trail-map li strong {
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: 21px;
 }
 
@@ -1361,7 +1363,7 @@
 .forge-example-record > div > p {
   margin: 0;
   color: var(--forge-muted);
-  font-family: var(--forge-serif);
+  font-family: var(--forge-reflection);
   font-size: 20px;
   line-height: 1.5;
 }
@@ -1429,7 +1431,7 @@
 
 .forge-proof-sheet h2 {
   margin: 0;
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: clamp(35px, 4vw, 55px);
   font-weight: 500;
   letter-spacing: -0.035em;
@@ -1469,7 +1471,7 @@
 
 .forge-proof-sheet dd {
   margin: 0;
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: 18px;
   line-height: 1.45;
 }
@@ -1503,7 +1505,7 @@
 }
 
 .forge-evidence-rules strong {
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: 18px;
 }
 
@@ -1546,7 +1548,7 @@
 
 .forge-live-ledger h2 {
   margin: 0;
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: clamp(30px, 4vw, 52px);
   font-weight: 500;
   letter-spacing: -0.035em;
@@ -1575,7 +1577,7 @@
 }
 
 .forge-ledger-empty strong {
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: 23px;
 }
 
@@ -1615,7 +1617,7 @@
 .forge-ledger-record-heading > span {
   display: block;
   margin-bottom: 8px;
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
   font-family: var(--forge-mono);
   font-size: 10px;
   font-weight: 800;
@@ -1625,7 +1627,7 @@
 
 .forge-ledger-record-heading h3 {
   margin: 0;
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: 22px;
   font-weight: 500;
   line-height: 1.25;
@@ -1716,8 +1718,8 @@
 }
 
 .forge-ledger-confirm button:first-of-type {
-  border-color: var(--forge-amber);
-  color: var(--forge-amber);
+  border-color: var(--forge-amber-deep);
+  color: var(--forge-amber-deep);
 }
 
 .forge-ledger-controls {
@@ -1797,7 +1799,7 @@
 .forge-placeholder-sequence span {
   display: block;
   margin-bottom: 28px;
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
   font-family: var(--forge-mono);
   font-size: 9px;
   font-weight: 700;
@@ -1814,7 +1816,7 @@
 }
 
 .forge-placeholder-sequence strong {
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: 23px;
   line-height: 1.25;
 }

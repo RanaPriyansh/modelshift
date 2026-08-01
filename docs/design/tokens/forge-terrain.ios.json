@@ -106,7 +106,7 @@
         "role": "Supporting text"
       },
       "textDim": {
-        "hex": "#68766E",
+        "hex": "#66746C",
         "role": "Secondary metadata"
       },
       "learnerAction": {
@@ -126,7 +126,7 @@
         "role": "Strong AI state"
       },
       "testedEvidence": {
-        "hex": "#2C8A61",
+        "hex": "#247A53",
         "role": "Tested consequence"
       },
       "testedEvidenceStrong": {

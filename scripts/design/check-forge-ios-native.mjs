@@ -36,6 +36,73 @@ assert.equal(
 assert.equal(screenIdentifiers.at(0), "IOS-01");
 assert.equal(screenIdentifiers.at(-1), "IOS-18");
 
+for (const colorName of [
+  "background",
+  "backgroundDeep",
+  "surface",
+  "surfaceStrong",
+  "border",
+  "borderStrong",
+  "text",
+  "textMuted",
+  "textDim",
+  "learnerAction",
+  "onLearnerAction",
+  "aiContribution",
+  "testedEvidence",
+  "focus",
+]) {
+  assert.match(
+    source,
+    new RegExp(`(?:ForgeTerrainColor\\.${colorName}|static let ${colorName})`),
+    `Missing adaptive ForgeTerrainColor.${colorName}.`,
+  );
+}
+
+for (const accessibilityRequirement of [
+  "accessibilityAddTraits\\(\\.isHeader\\)",
+  "accessibilityHidden\\(true\\)",
+  "accessibilityReduceMotion",
+  "accessibilityReduceTransparency",
+  "accessibilityDifferentiateWithoutColor",
+  "safeAreaPadding",
+  "dynamicTypeSize",
+  "ForgeOperationState",
+  "NavigationStack\\(path:",
+]) {
+  assert.match(
+    source,
+    new RegExp(accessibilityRequirement),
+    `Missing native requirement: ${accessibilityRequirement}.`,
+  );
+}
+
+for (const actionIdentifier of [
+  "ios.IOS-01.primary",
+  "ios.IOS-08.primary",
+  "ios.IOS-10.primary",
+  "ios.IOS-14.primary",
+  "ios.IOS-18.primary",
+]) {
+  assert.match(source, new RegExp(actionIdentifier.replaceAll(".", "\\.")));
+}
+
+for (const emptyAction of [
+  "Clarify this goal",
+  "Commit attempt",
+  "Submit proof",
+  "Start protected return",
+  "Save revision",
+  "Inspect source",
+  "Export local sample",
+]) {
+  assert.doesNotMatch(
+    source,
+    new RegExp(`Button\\(\\"${emptyAction}\\"\\) \\{\\s*\\}`),
+    `Action remains empty: ${emptyAction}.`,
+  );
+}
+
 const projectSpec = await readFile(path.join(iosRoot, "project.yml"), "utf8");
 assert.match(projectSpec, /type: application/);
 assert.match(projectSpec, /platform: iOS/);
@@ -83,5 +150,6 @@ console.log(JSON.stringify({
   canonicalScreenIdentifiers: screenIdentifiers,
   simulatorSDK: path.basename(sdkPath),
   verification: "swiftc typecheck",
+  staticAccessibilityChecks: "adaptive colors, labels, motion, transparency, color differentiation, Dynamic Type, safe areas, operation states, action IDs",
   runtimeGate: "A compatible installed iOS Simulator runtime is still required.",
 }, null, 2));

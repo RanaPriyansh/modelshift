@@ -34,6 +34,7 @@ private enum EntryStep: Hashable {
 
 private struct GoalEntryView: View {
     @Binding var goal: String
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -41,59 +42,70 @@ private struct GoalEntryView: View {
                 .resizable()
                 .scaledToFill()
                 .ignoresSafeArea()
-                .accessibilityLabel(
-                    "Deep green hills beneath a cobalt sky with an orange doorway."
+                .accessibilityHidden(true)
+
+            if reduceTransparency {
+                ForgeTerrainColor.backgroundDeep
+                    .ignoresSafeArea()
+            } else {
+                LinearGradient(
+                    colors: [.clear, ForgeTerrainColor.background.opacity(0.94)],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
-
-            LinearGradient(
-                colors: [.clear, .forgeMidnight.opacity(0.94)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-            .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: ForgeSpacing.standard) {
-                Text("FORGE")
-                    .font(.caption.weight(.bold))
-                    .tracking(2)
-                    .foregroundStyle(.white.opacity(0.88))
-
-                Text("What do you want to become able to do?")
-                    .font(.largeTitle.bold())
-                    .tracking(-0.8)
-                    .foregroundStyle(.white)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text("Your goal stays local until you accept a path.")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.82))
-
-                TextField(
-                    "I want to understand or do...",
-                    text: $goal,
-                    axis: .vertical
-                )
-                .textFieldStyle(.plain)
-                .lineLimit(2...4)
-                .padding(ForgeSpacing.standard)
-                .background(.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 12))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(.white.opacity(0.45), lineWidth: 1)
-                }
-                .foregroundStyle(.white)
-                .accessibilityLabel("Learning goal")
-
-                NavigationLink(value: EntryStep.clarify) {
-                    Text("Clarify this goal")
-                }
-                .buttonStyle(ForgePrimaryButtonStyle())
-                .disabled(goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .opacity(goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1)
+                .ignoresSafeArea()
+                .accessibilityHidden(true)
             }
-            .padding(ForgeSpacing.standard)
-            .padding(.bottom, ForgeSpacing.standard)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: ForgeSpacing.standard) {
+                    Text("FORGE")
+                        .font(.caption.weight(.bold))
+                        .tracking(2)
+                        .foregroundStyle(.white.opacity(0.88))
+
+                    Text("What do you want to become able to do?")
+                        .font(.largeTitle.bold())
+                        .tracking(-0.8)
+                        .foregroundStyle(.white)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("Your goal stays local until you accept a path.")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.82))
+
+                    TextField(
+                        "I want to understand or do...",
+                        text: $goal,
+                        axis: .vertical
+                    )
+                    .textFieldStyle(.plain)
+                    .lineLimit(nil)
+                    .padding(ForgeSpacing.standard)
+                    .background(
+                        reduceTransparency ? Color.black : Color.black.opacity(0.35),
+                        in: RoundedRectangle(cornerRadius: 12)
+                    )
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(.white.opacity(0.45), lineWidth: 1)
+                    }
+                    .foregroundStyle(.white)
+                    .accessibilityLabel("Learning goal")
+
+                    NavigationLink(value: EntryStep.clarify) {
+                        Text("Clarify this goal")
+                    }
+                    .buttonStyle(ForgePrimaryButtonStyle())
+                    .accessibilityIdentifier("ios.IOS-01.primary")
+                    .disabled(goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .opacity(goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(ForgeSpacing.standard)
+            }
+            .scrollIndicators(.hidden)
+            .safeAreaPadding(.bottom, ForgeSpacing.standard)
         }
         .toolbar(.hidden, for: .navigationBar)
         .accessibilityIdentifier("IOS-01")
@@ -117,19 +129,21 @@ private struct ClarifyGoalView: View {
                 text: $clarification,
                 axis: .vertical
             )
-            .lineLimit(3...6)
+            .lineLimit(nil)
             .padding(ForgeSpacing.standard)
-            .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
+            .background(ForgeTerrainColor.surface, in: RoundedRectangle(cornerRadius: 12))
             .overlay {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(.separator, lineWidth: 1)
             }
             .accessibilityLabel("Clarified outcome")
+            .lineLimit(nil)
 
             NavigationLink(value: EntryStep.preview) {
                 Text("Continue")
             }
             .buttonStyle(ForgePrimaryButtonStyle())
+            .accessibilityIdentifier("ios.IOS-02.primary")
             .disabled(
                 clarification.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             )
@@ -161,6 +175,7 @@ private struct PathPreviewView: View {
 
             Button("Accept this path", action: onAccept)
                 .buttonStyle(ForgePrimaryButtonStyle())
+                .accessibilityIdentifier("ios.IOS-03.primary")
 
             Text("You can revise, reject, or save the draft before acceptance.")
                 .font(.footnote)

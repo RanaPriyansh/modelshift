@@ -130,12 +130,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.40784314,
-            0.4627451,
-            0.43137255
+            0.4,
+            0.45490196,
+            0.42352941
           ],
           "alpha": 1,
-          "hex": "#68766E"
+          "hex": "#66746C"
         },
         "$description": "Secondary metadata"
       }
@@ -206,12 +206,12 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.17254902,
-            0.54117647,
-            0.38039216
+            0.14117647,
+            0.47843137,
+            0.3254902
           ],
           "alpha": 1,
-          "hex": "#2C8A61"
+          "hex": "#247A53"
         },
         "$description": "Tested consequence"
       },

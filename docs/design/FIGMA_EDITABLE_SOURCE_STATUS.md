@@ -1,6 +1,6 @@
 # Figma Editable Source Status
 
-Status: Editable source created and desktop visual audit passed. Semantic alias trace remains open.
+Status: Local source integrity passes. Figma source rerun required after generator fixes.
 
 Date: 2026-08-01.
 
@@ -24,6 +24,8 @@ The generator creates:
 - 54 primitive variables.
 - 16 Light semantic aliases.
 - 16 Dark semantic aliases.
+- 33 reusable web and iOS component records.
+- Eligible token-matched component fills, strokes, and text colors bind to mode-specific semantic variables.
 - 18 text styles.
 - 7 paint styles.
 - 2 effect styles.
@@ -57,15 +59,18 @@ The plugin makes no network request.
 - The file has no source conflict with the approved local system.
 - The plugin manifest is valid JSON.
 - The plugin JavaScript passes `node --check`.
-- The mock Figma run creates 10 pages, 86 variables, 17 components, and 28 frames.
+- The mock Figma run creates 10 pages, 86 variables, 33 components, and 28 frames.
+- The checker verifies 32 semantic alias targets and component variable bindings.
 - The 46 Figma coverage identifiers match the complete coded atlas.
 - The checker verifies 21 representative editable identifiers.
 - The token build check passes.
 - Repository lint and type checks pass.
-- 109 source and evaluation test files pass.
-- 969 source and evaluation tests pass.
+- 110 source and evaluation test files pass.
+- 972 source and evaluation tests pass.
 
 ## Desktop execution result
+
+The saved desktop execution predates the current source integrity fix.
 
 The development plugin was imported from:
 
@@ -96,7 +101,7 @@ The build receipt reports:
 - 18 text styles.
 - 7 paint styles.
 - 2 effect styles.
-- 17 components.
+- 17 components in the pre-fix desktop receipt.
 - 28 generated frames.
 
 The desktop variable editor showed 16 Light semantic aliases.
@@ -109,7 +114,7 @@ The saved evidence does not include the variable editor panel.
 
 The connector cannot supply an independent variable readback.
 
-The public, web, focus, iOS, state, accessibility, and coverage boards passed a desktop visual audit.
+The public, web, focus, iOS, state, accessibility, and coverage boards passed a pre-fix desktop visual audit.
 
 The durable evidence manifest is:
 
@@ -130,10 +135,18 @@ The capture endpoint failed before it created a capture.
 
 The desktop Figma audit supplies the source evidence that the connector could not supply.
 
-## Next action
+## Required Figma rerun gate
 
-Use the audited Figma file as the primary editable design source.
+Import the updated plugin into the target Figma file.
 
-Capture the variable editor panel or a variable export after macOS is unlocked.
+Run `FORGE Terrain Builder`.
 
-Run the generator again only after the generator or source requirements change.
+Confirm 33 components in the `09 Archive` receipt.
+
+Confirm 32 semantic aliases point to mode-matched primitive variables.
+
+Confirm eligible token-matched component fills, strokes, and text colors show correct variable bindings.
+
+Inspect the iOS component board for complete text rendering.
+
+Capture new evidence after this inspection.

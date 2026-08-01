@@ -1300,7 +1300,7 @@
 }
 
 .forge-landing-hero h1 em {
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
   font-family: var(--forge-serif);
   font-weight: 520;
 }
@@ -1329,7 +1329,7 @@
 }
 
 .forge-landing-goal label span {
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
   font-family: var(--forge-mono);
   font-size: 10px;
   font-weight: 780;

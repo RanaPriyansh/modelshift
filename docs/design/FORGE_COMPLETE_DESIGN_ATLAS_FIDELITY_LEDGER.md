@@ -29,6 +29,7 @@ This record does not establish production readiness, learning efficacy, accessib
 | Canonical Figma coverage index commit | `07eecc831da1bee1d14d6fac00d0b764ce021d9d` |
 | Figma-to-coded-atlas parity check commit | `1d52f50827b3bdd09d871aaa50acf890bfb051da` |
 | Native reference and visual audit commit | `6d1d58decd2562531e304ea78a39dc7eff6efbda` |
+| Figma desktop audit evidence commit | `50c6dbfdd258fd87a8a5c693b3447c34d4ddbf09` |
 | Deployment | Not done |
 | Push or merge | Not done |
 
@@ -147,7 +148,9 @@ The saved evidence does not include the variable editor panel.
 
 The connector also returns `INVALID_ARGUMENT` for the new file.
 
-The connector limitation does not block the completed desktop Figma source.
+The connector limitation does not erase the historical desktop audit.
+
+The current generator still requires a new Figma run.
 
 Paper remains an optional secondary editable source.
 
@@ -170,6 +173,15 @@ The Figma desktop audit manifest is:
 
 `docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json`
 
+That manifest records the pre-binding-fix generator at revision
+`9c2d0d0dc60910d4f8975e67ee309698ed48f705`.
+
+The current local generator creates 33 components.
+
+The current checker verifies 32 mode-matched alias targets and eligible token-matched component paint bindings.
+
+Run the updated generator before the next editable-source completion claim.
+
 ## 6. Token handoff
 
 The portable handoff uses the stable DTCG 2025.10 format.
@@ -189,9 +201,11 @@ The generator checks:
 
 The generator completed the Figma token creation.
 
-The Figma token creation and desktop alias observation passed.
+The pre-fix Figma token creation and desktop alias observation passed.
 
-An independent alias readback remains open.
+The current local alias-target and component-binding checks pass.
+
+A new Figma run and independent binding readback remain open.
 
 No token file was imported into Paper.
 
@@ -222,18 +236,17 @@ The Webpack production build passed on 2026-08-01.
 
 The build completed 54 page-generation tasks and TypeScript validation.
 
-The public build boundary check verified 106 static assets.
+The public build boundary check verified 121 static assets.
 
 The public asset digest is
-`b75e559a0bff74ca778a990a58768de7576d6e07d451579033247a0329f19166`.
+`a186bd6bca82d6ba0555d13af5084c65995ad1c70b43d140546cbb1ca91c042e`.
 
 The default Turbopack build cannot follow the linked `node_modules` path in this isolated worktree.
 
-The verified fallback command is:
+The project build command now uses the supported Webpack mode:
 
 ```text
-pnpm exec next build --webpack
-pnpm exec tsx scripts/ops/verify-public-build-boundary.ts
+pnpm build
 ```
 
 ## 8. Rendered evidence
@@ -394,8 +407,8 @@ Evaluation result:
 
 Combined result:
 
-- 109 test files passed.
-- 969 tests passed.
+- 110 test files passed.
+- 972 tests passed.
 
 Browser result:
 
@@ -435,14 +448,14 @@ Command:
 
 Result:
 
-- 106 static assets were checked.
-- Public asset digest: `b75e559a0bff74ca778a990a58768de7576d6e07d451579033247a0329f19166`.
+- 121 static assets were checked.
+- Public asset digest: `a186bd6bca82d6ba0555d13af5084c65995ad1c70b43d140546cbb1ca91c042e`.
 
 ## 11. Remaining gates
 
 The remaining design gates are:
 
-- Capture a durable semantic alias panel or variable export from Figma.
+- Run and audit the updated 33-component generator in Figma.
 - Install an available iOS Simulator runtime and complete native runtime checks.
 - Representative learner review.
 - Image rights clearance.

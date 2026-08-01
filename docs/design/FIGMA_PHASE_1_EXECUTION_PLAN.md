@@ -1,6 +1,6 @@
 # Figma Phase 1 Execution Plan
 
-Status: Approved. Starter generator complete. Desktop visual audit passed. Semantic alias trace remains open.
+Status: Approved. Local generator integrity passes. Figma source rerun required.
 
 Date: 2026-08-01.
 
@@ -20,9 +20,9 @@ The local Figma generator is complete.
 
 The generator is in `scripts/design/figma-forge-terrain-plugin`.
 
-The final build receipt passed the desktop audit.
+The pre-fix build receipt passed the desktop audit.
 
-The variable aliases passed a desktop editor observation.
+The pre-fix variable aliases passed a desktop editor observation.
 
 ## 2. Current constraint
 
@@ -42,7 +42,7 @@ The connector limitation does not block the completed desktop source.
 
 ## 3. Phase 1 result
 
-The Starter fallback passed the exit criteria.
+The current Starter fallback passed the local source integrity checks.
 
 The build receipt reports:
 
@@ -51,14 +51,18 @@ The build receipt reports:
 - 18 text styles.
 - 7 paint styles.
 - 2 effect styles.
-- 17 components.
+- 33 components.
 - 28 generated frames.
 
-The audit found 16 Light semantic aliases.
+The local checker verified 16 Light semantic aliases.
 
-The audit also found 16 Dark semantic aliases.
+The local checker also verified 16 Dark semantic aliases.
 
-The desktop editor showed no broken semantic alias marker.
+The local checker verified 32 alias targets and component variable bindings.
+
+The pre-fix desktop receipt reports 17 components.
+
+The saved desktop evidence does not verify the current 33-component source.
 
 The saved evidence does not include the variable editor panel.
 
@@ -235,12 +239,14 @@ Confirm:
 2. All planned variables exist.
 3. Every semantic value is an alias.
 4. Light and Dark values match the token handoff.
-5. No scope is broader than required.
-6. The text styles use the planned font families.
-7. The paint and effect styles use stable names.
-8. No text layer has a missing font.
-9. The Figma file contains no partial duplicate collection.
-10. Every created item has a returned identifier.
+5. Every alias target uses the matching mode primitive.
+6. Eligible token-matched component fills, strokes, and text colors use correct semantic variable bindings.
+7. No scope is broader than required.
+8. The text styles use the planned font families.
+9. The paint and effect styles use stable names.
+10. No text layer has a missing font.
+11. The Figma file contains no partial duplicate collection.
+12. Every created item has a returned identifier.
 
 ## 7. Exit criteria
 
@@ -251,6 +257,7 @@ The recommended paid-plan structure exits Phase 1 with:
 - 18 text styles.
 - 7 paint styles.
 - 2 effect styles.
+- 33 components.
 - 0 broken aliases.
 - 0 missing fonts.
 

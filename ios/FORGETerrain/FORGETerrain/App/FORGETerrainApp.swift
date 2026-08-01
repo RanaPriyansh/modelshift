@@ -25,7 +25,7 @@ struct ForgeRootView: View {
                 }
             }
         }
-        .tint(.forgeOrange)
+        .tint(ForgeTerrainColor.learnerAction)
         .preferredColorScheme(ForgeAppearance(rawValue: appearance)?.colorScheme)
     }
 }

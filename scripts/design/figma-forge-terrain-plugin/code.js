@@ -25,12 +25,12 @@ const C = {
     lineStrong: "#98AA9E",
     ink: "#102019",
     muted: "#56645D",
-    dim: "#68766E",
+    dim: "#66746C",
     learner: "#F0643B",
     learnerStrong: "#A93C20",
     ai: "#2F66D8",
     aiStrong: "#174EAE",
-    tested: "#2C8A61",
+    tested: "#247A53",
     testedStrong: "#185F43",
     focus: "#145BD7",
   },
@@ -244,12 +244,18 @@ const RECEIPT = {
   pages: [],
   collections: [],
   variables: [],
+  aliases: [],
+  bindings: [],
+  componentBindings: [],
   textStyles: [],
   paintStyles: [],
   effectStyles: [],
   components: [],
   frames: [],
 };
+
+let SEMANTIC_VARIABLES_BY_MODE = { light: {}, dark: {} };
+const COMPONENT_ROOTS = [];
 
 function rgb(hex) {
   const value = hex.replace("#", "");
@@ -264,14 +270,77 @@ function solid(hex, opacity = 1) {
   return { type: "SOLID", color: rgb(hex), opacity };
 }
 
+function colorHex(color) {
+  if (!color) return "";
+  return `#${[color.r, color.g, color.b]
+    .map((channel) => Math.round(channel * 255).toString(16).padStart(2, "0"))
+    .join("")
+    .toUpperCase()}`;
+}
+
 function mark(node) {
   node.setPluginData(GENERATED_KEY, GENERATED_VALUE);
   return node;
 }
 
 function remember(kind, node) {
-  RECEIPT[kind].push({ id: node.id, name: node.name });
+  RECEIPT[kind].push({ id: node.id, name: node.name, type: node.type });
   return node;
+}
+
+function semanticNameForColor(color, mode) {
+  const hex = colorHex(color);
+  const match = SEMANTIC_TOKENS.find(([, key]) => colorHex(rgb(C[mode][key])) === hex);
+  return match ? match[0] : null;
+}
+
+function bindPaintIfSemantic(node, field, paint, mode, componentName) {
+  if (!paint || paint.type !== "SOLID" || paint.opacity !== 1) return false;
+  const semanticName = semanticNameForColor(paint.color, mode);
+  if (!semanticName) return false;
+  const variable = SEMANTIC_VARIABLES_BY_MODE[mode][semanticName];
+  if (!variable) {
+    throw new Error(`Missing ${mode} semantic variable for ${semanticName}`);
+  }
+  if (typeof node.setBoundVariable !== "function") {
+    throw new Error(`Figma node bindings are unavailable for ${componentName}`);
+  }
+  node.setBoundVariable(field, variable);
+  RECEIPT.bindings.push({
+    nodeId: node.id,
+    nodeName: node.name,
+    field,
+    mode,
+    semanticName,
+    variableId: variable.id,
+    variableName: variable.name,
+  });
+  return true;
+}
+
+function bindComponentTrees() {
+  for (const { node, mode } of COMPONENT_ROOTS) {
+    const summary = {
+      componentId: node.id,
+      componentName: node.name,
+      mode,
+      semanticPaints: 0,
+      boundPaints: 0,
+    };
+    const visit = (child) => {
+      for (const field of ["fills", "strokes"]) {
+        for (const paint of child[field] || []) {
+          if (paint.type !== "SOLID" || paint.opacity !== 1) continue;
+          if (!semanticNameForColor(paint.color, mode)) continue;
+          summary.semanticPaints += 1;
+          if (bindPaintIfSemantic(child, field, paint, mode, node.name)) summary.boundPaints += 1;
+        }
+      }
+      for (const grandchild of child.children || []) visit(grandchild);
+    };
+    visit(node);
+    RECEIPT.componentBindings.push(summary);
+  }
 }
 
 function setScope(variable, scopes) {
@@ -393,7 +462,8 @@ function addButton(parent, label, x, y, colors, secondary = false, width = 184) 
     frame.strokes = [solid(colors.lineStrong)];
     frame.strokeWeight = 1;
   }
-  addText(frame, `${label}  →`, 16, 14, width - 32, 14, secondary ? colors.ink : C.scene.ivory, {
+  const labelColor = secondary ? colors.ink : (colors === C.dark ? colors.bg : colors.ink);
+  addText(frame, `${label}  →`, 16, 14, width - 32, 14, labelColor, {
     font: FONT.medium,
     lineHeight: 18,
   });
@@ -557,6 +627,7 @@ async function buildVariables() {
   const semanticDark = ensureCollection("FORGE / Semantic / Dark");
 
   const primitiveByKey = {};
+  const semanticByMode = { light: {}, dark: {} };
 
   for (const [name, value, scopes] of FLOAT_TOKENS) {
     const variable = await ensureVariable(variables, primitive, name, "FLOAT");
@@ -594,6 +665,17 @@ async function buildVariables() {
         semanticCollection.defaultModeId,
         figma.variables.createVariableAlias(primitiveVariable),
       );
+      semanticByMode[mode][semanticName] = semanticVariable;
+      RECEIPT.aliases.push({
+        mode,
+        semanticName,
+        semanticVariableId: semanticVariable.id,
+        semanticVariableName: semanticVariable.name,
+        semanticCollectionId: semanticCollection.id,
+        targetVariableId: primitiveVariable.id,
+        targetVariableName: primitiveVariable.name,
+        targetCollectionId: primitive.id,
+      });
       if (typeof semanticVariable.setVariableCodeSyntax === "function") {
         try {
           semanticVariable.setVariableCodeSyntax("WEB", cssName);
@@ -606,7 +688,8 @@ async function buildVariables() {
     }
   }
 
-  return { primitive, semanticLight, semanticDark, primitiveByKey };
+  SEMANTIC_VARIABLES_BY_MODE = semanticByMode;
+  return { primitive, semanticLight, semanticDark, primitiveByKey, semanticByMode };
 }
 
 async function buildTextStyles() {
@@ -812,6 +895,7 @@ function createComponentFrame(page, name, x, y, width, height, colors, radius = 
   page.appendChild(node);
   mark(node);
   remember("components", node);
+  COMPONENT_ROOTS.push({ node, mode: colors === C.dark ? "dark" : "light" });
   return node;
 }
 
@@ -834,7 +918,7 @@ function createWebComponents(page) {
 
   const buttonComponents = [];
   const buttonSpecs = [
-    ["Intent=Primary, State=Default", "Start attempt  →", C.light.learner, C.scene.ivory],
+    ["Intent=Primary, State=Default", "Start attempt  →", C.light.learner, C.light.ink],
     ["Intent=Primary, State=Disabled", "Start attempt", C.light.strong, C.light.dim],
     ["Intent=Secondary, State=Default", "Save and exit", C.light.surface, C.light.ink],
     ["Intent=Quiet, State=Default", "Inspect source", C.light.bg, C.light.muted],
@@ -961,6 +1045,51 @@ function createWebComponents(page) {
   });
   addButton(state, "Continue locally", 24, 198, C.light, false, 190);
   addButton(state, "Save and exit", 230, 198, C.light, true, 160);
+
+  createAdditionalWebComponents(page);
+}
+
+function createAdditionalWebComponents(page) {
+  const specs = [
+    ["Public header", "FORGE  Paths  Evidence and trust"],
+    ["Application shell", "Today  Paths  Projects  Evidence"],
+    ["Focus header", "FOCUS  One operation in view"],
+    ["Text action", "Inspect source  →"],
+    ["Icon button", "•••  More actions"],
+    ["Text area", "Describe the change in your model."],
+    ["Select control", "Choose one reviewed path ⌄"],
+    ["Theme control", "Appearance  Light / Dark"],
+    ["Goal intake", "One goal. One useful starting point."],
+    ["Path preview", "Reviewed path  •  3 milestones"],
+    ["Evidence record", "Supports one bounded consequence."],
+    ["Source row", "Primary study  •  Reviewed"],
+    ["Project brief", "Build the next valid operation."],
+  ];
+  specs.forEach(([name, detail], index) => {
+    const column = index % 3;
+    const row = Math.floor(index / 3);
+    const component = createComponentFrame(
+      page,
+      `Web / ${name}`,
+      64 + column * 520,
+      1480 + row * 142,
+      480,
+      116,
+      C.light,
+      12,
+    );
+    component.strokes = [solid(C.light.line)];
+    component.strokeWeight = 1;
+    addText(component, name.toUpperCase(), 18, 18, 440, 11, C.light.tested, {
+      font: FONT.mono,
+      lineHeight: 15,
+      letterSpacing: 3,
+    });
+    addText(component, detail, 18, 52, 440, 16, C.light.ink, {
+      font: FONT.medium,
+      lineHeight: 22,
+    });
+  });
 }
 
 function createIOSComponents(page) {
@@ -1065,6 +1194,58 @@ function createIOSComponents(page) {
     lineHeight: 15,
     letterSpacing: 3,
   });
+
+  const iosReceipt = createComponentFrame(page, "iOS / Source receipt", 56, 1270, 390, 156, C.light, 18);
+  iosReceipt.strokes = [solid(C.light.line)];
+  iosReceipt.strokeWeight = 1;
+  addText(iosReceipt, "SOURCE RECEIPT", 20, 18, 340, 11, C.light.tested, {
+    font: FONT.mono,
+    lineHeight: 15,
+    letterSpacing: 3,
+  });
+  addText(iosReceipt, "Primary study  •  Reviewed", 20, 54, 340, 19, C.light.ink, {
+    font: FONT.iosMedium,
+    lineHeight: 25,
+  });
+  addText(iosReceipt, "Inspect scope and provenance.", 20, 102, 340, 15, C.light.muted, {
+    font: FONT.ios,
+    lineHeight: 21,
+  });
+
+  const assistance = createComponentFrame(page, "iOS / Assistance disclosure", 500, 1270, 390, 156, C.dark, 18);
+  assistance.fills = [solid(C.dark.surface)];
+  assistance.strokes = [solid(C.dark.ai)];
+  assistance.strokeWeight = 1;
+  addText(assistance, "AI CONTRIBUTION", 20, 18, 340, 11, C.dark.ai, {
+    font: FONT.mono,
+    lineHeight: 15,
+    letterSpacing: 3,
+  });
+  addText(assistance, "Compare. Do not complete.", 20, 54, 340, 19, C.dark.ink, {
+    font: FONT.iosMedium,
+    lineHeight: 25,
+  });
+  addText(assistance, "The learner controls the next action.", 20, 102, 340, 15, C.dark.muted, {
+    font: FONT.ios,
+    lineHeight: 21,
+  });
+
+  const draftStatus = createComponentFrame(page, "iOS / Draft status", 944, 1270, 390, 156, C.light, 18);
+  draftStatus.strokes = [solid(C.light.learner)];
+  draftStatus.strokeWeight = 1;
+  addText(draftStatus, "LOCAL DRAFT", 20, 18, 340, 11, C.light.learner, {
+    font: FONT.mono,
+    lineHeight: 15,
+    letterSpacing: 3,
+  });
+  addText(draftStatus, "Saved on this iPhone.", 20, 54, 340, 19, C.light.ink, {
+    font: FONT.iosMedium,
+    lineHeight: 25,
+  });
+  addText(draftStatus, "Recovery remains available offline.", 20, 102, 340, 15, C.light.muted, {
+    font: FONT.ios,
+    lineHeight: 21,
+  });
 }
 
 function addChoiceRow(parent, text, x, y, width, colors, selected = false) {
@@ -1126,7 +1307,7 @@ function buildPublicScreen(viewport, screen, colors) {
     const entry = addFrame(viewport, "Goal entry", 84, 528, 720, 66, C.dark.surface, 6);
     addText(entry, "I want to understand why this method works.", 20, 22, 470, 15, C.dark.ink, { lineHeight: 22 });
     const action = addFrame(entry, "Primary action", 514, 7, 198, 52, C.dark.learner, 6);
-    addText(action, "Start learning  →", 18, 16, 162, 14, C.scene.ivory, { font: FONT.medium, lineHeight: 20 });
+    addText(action, "Start learning  →", 18, 16, 162, 14, C.dark.bg, { font: FONT.medium, lineHeight: 20 });
     addText(viewport, "Recall  →  Attempt  →  Repair  →  Prove  →  Return", 88, 644, 700, 12, C.dark.ink, {
       font: FONT.mono,
       lineHeight: 16,
@@ -1995,6 +2176,8 @@ async function build() {
   await figma.setCurrentPageAsync(pages["09 Archive"]);
   createCoverageIndex(pages["09 Archive"]);
   createArchive(pages["09 Archive"]);
+
+  bindComponentTrees();
 
   const coverageReceipt = Object.fromEntries(
     Object.entries(CANONICAL_COVERAGE).map(([family, items]) => [

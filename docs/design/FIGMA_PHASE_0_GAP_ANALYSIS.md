@@ -203,7 +203,7 @@ Phase 1 will not create final page designs.
 
 The user approved Phase 1 on 2026-08-01.
 
-Execution state: `PHASE_1_COMPLETE_DESKTOP_VISUAL_AUDIT_PASS_ALIAS_TRACE_OPEN`.
+Execution state: `LOCAL_BINDING_FIX_PASS_FIGMA_RERUN_REQUIRED`.
 
 The connected Figma plan is Starter.
 
@@ -215,13 +215,13 @@ The Figma connector also returned `INVALID_ARGUMENT` for the original and replac
 
 The desktop plugin created the ten planned pages.
 
-The final desktop audit passed.
+The pre-fix desktop audit passed.
 
 The build receipt reports 3 collections, 86 variables, 18 text styles, 7 paint styles, and 2 effect styles.
 
 The build receipt also reports 17 components and 28 generated frames.
 
-The desktop editor showed 16 Light aliases, 16 Dark aliases, and no broken alias marker.
+The pre-fix desktop editor showed 16 Light aliases, 16 Dark aliases, and no broken alias marker.
 
 The saved evidence does not include the variable editor panel.
 
@@ -237,8 +237,12 @@ The generator path is `scripts/design/figma-forge-terrain-plugin`.
 
 The exact build sequence is in `docs/design/FIGMA_PHASE_1_EXECUTION_PLAN.md`.
 
-The durable audit evidence is in
+The historical audit evidence is in
 `docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json`.
+
+The current local generator creates 33 components and verifies semantic paint bindings.
+
+Run the current generator before the next Figma completion claim.
 
 ## 10. Import-ready token handoff
 

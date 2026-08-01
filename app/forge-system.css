@@ -16,17 +16,22 @@
   --forge-line-strong: #98aa9e;
   --forge-ink: #102019;
   --forge-muted: #56645d;
-  --forge-dim: #68766e;
+  --forge-dim: #66746c;
   --forge-amber: #f0643b;
   --forge-amber-deep: #a93c20;
   --forge-violet: #2f66d8;
   --forge-violet-deep: #174eae;
-  --forge-cyan: #2c8a61;
+  --forge-cyan: #247a53;
   --forge-cyan-deep: #185f43;
   --forge-paper: #f4f7f1;
   --forge-paper-line: #cdd9d0;
   --forge-paper-ink: #102019;
   --forge-focus: #145bd7;
+  --forge-reflection: var(--font-forge-reflection), "Libre Baskerville", serif;
+  --forge-serif: var(--forge-reflection);
+  --forge-display: var(--font-geist-sans), "Geist", sans-serif;
+  --forge-sans: var(--font-geist-sans), "Geist", sans-serif;
+  --forge-mono: var(--font-geist-mono), "Geist Mono", monospace;
   --forge-space-1: 4px;
   --forge-space-2: 8px;
   --forge-space-3: 12px;
@@ -266,7 +271,7 @@
   letter-spacing: -0.04em;
 }
 
-.forge-question-field textarea:focus { border-bottom-color: var(--forge-amber); }
+.forge-question-field textarea:focus { border-bottom-color: var(--forge-amber-deep); }
 
 .forge-choice-group label { border-left-width: 1px; }
 
@@ -469,7 +474,7 @@
   max-width: 740px;
   margin: 0;
   color: var(--forge-ink);
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: clamp(48px, 6.5vw, 88px);
   font-weight: 500;
   line-height: 0.94;
@@ -560,7 +565,7 @@
   max-width: 670px;
   margin: 0;
   color: var(--forge-ink);
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: clamp(27px, 3vw, 38px);
   font-weight: 500;
   line-height: 1.02;
@@ -647,7 +652,7 @@
 .forge-pathways-control strong {
   display: block;
   color: var(--forge-ink);
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: 22px;
   font-weight: 500;
   line-height: 1.08;
@@ -762,7 +767,7 @@
 }
 
 .forge-modality-group label.is-selected {
-  border-color: var(--forge-amber);
+  border-color: var(--forge-amber-deep);
   background: #181b1b;
   color: var(--forge-ink);
 }
@@ -816,7 +821,7 @@
   max-width: 620px;
   margin: 8px 0 0;
   color: var(--forge-ink);
-  font-family: var(--forge-serif);
+  font-family: var(--forge-sans);
   font-size: clamp(25px, 3vw, 34px);
   font-weight: 500;
   line-height: 1.08;
@@ -838,12 +843,12 @@
   padding: 18px 20px;
 }
 
-.forge-map-intent > span { color: var(--forge-amber); }
+.forge-map-intent > span { color: var(--forge-amber-deep); }
 
 .forge-map-intent blockquote {
   margin: 9px 0 8px;
   color: var(--forge-ink);
-  font-family: var(--forge-serif);
+  font-family: var(--forge-reflection);
   font-size: clamp(19px, 2.2vw, 27px);
   line-height: 1.24;
 }
@@ -966,7 +971,7 @@
 }
 
 .forge-map-gates__copy label > span {
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
   font-size: 10px;
   font-weight: 700;
 }
@@ -1098,8 +1103,8 @@
 }
 
 .forge-map-preview__footer .forge-map-decision__accept {
-  border-color: var(--forge-amber);
-  color: var(--forge-amber);
+  border-color: var(--forge-amber-deep);
+  color: var(--forge-amber-deep);
 }
 
 .forge-map-activation {
@@ -1135,7 +1140,7 @@
 }
 
 .forge-map-revision-summary > span {
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
   font-family: var(--forge-mono);
   font-size: 9px;
   font-weight: 700;
