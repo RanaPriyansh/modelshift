@@ -18,6 +18,8 @@ import {
 const SHA = "0123456789abcdef0123456789abcdef01234567";
 const FORGED_SHA = "fedcba9876543210fedcba9876543210fedcba98";
 const REPORT_SHA256 = "a".repeat(64);
+const CLEANUP_ENTRY_LIMIT = 512;
+const TEMP_RECEIPT_PREFIX = ".forge-browser-receipt.tmp-";
 const roots: string[] = [];
 
 function reportBytes(report: unknown): Buffer {
@@ -147,6 +149,26 @@ directory = os.fstat(int(values["--dir-fd"]))
 os.close(fd)
 print(json.dumps({"directory": {"dev": str(directory.st_dev), "ino": str(directory.st_ino)}, "receipt": {"dev": str(receipt.st_dev), "ino": str(receipt.st_ino), "size": receipt.st_size, "digest": values["--sha256"]}}, separators=(",", ":")))
 `;
+
+function cleanupLimitProbeHelper(entryCount: number): string {
+  return `
+import os
+import sys
+
+arguments = sys.argv[1:]
+values = {arguments[index]: arguments[index + 1] for index in range(0, len(arguments), 2)}
+sys.stdin.buffer.read()
+for index in range(${entryCount}):
+    fd = os.open(
+        "${TEMP_RECEIPT_PREFIX}" + format(index, "032x"),
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+        0o600,
+        dir_fd=int(values["--dir-fd"]),
+    )
+    os.close(fd)
+sys.exit(7)
+`;
+}
 
 async function temporaryRoot(): Promise<string> {
   const root = await mkdtemp(resolve(tmpdir(), "forge-playwright-receipt-"));
@@ -777,6 +799,50 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
         .filter((entry) => entry.startsWith(".forge-browser-receipt.tmp-")))
         .toEqual([]);
     }
+  });
+
+  it("cleans exactly the bounded number of temporary entries", async () => {
+    const root = await temporaryRoot();
+    await writeReport(root, "foundation", foundationReport());
+    const helperPath = resolve(root, "receipt-helper-cleanup-limit.py");
+    await writeFile(helperPath, cleanupLimitProbeHelper(CLEANUP_ENTRY_LIMIT));
+
+    await expect(writePlaywrightEvidenceReceipt({
+      rootDirectory: root,
+      target: "foundation",
+      testedSha: SHA,
+      requestedStatus: "pass",
+      hooks: { helperPath },
+    })).rejects.toThrow();
+
+    const releaseOps = dirname(resolve(
+      root,
+      PLAYWRIGHT_EVIDENCE_TARGETS.foundation.writer_error_output_file,
+    ));
+    expect((await readdir(releaseOps))
+      .filter((entry) => entry.startsWith(TEMP_RECEIPT_PREFIX))).toEqual([]);
+  });
+
+  it("fails closed before deleting any over-limit temporary entries", async () => {
+    const root = await temporaryRoot();
+    await writeReport(root, "foundation", foundationReport());
+    const helperPath = resolve(root, "receipt-helper-cleanup-over-limit.py");
+    await writeFile(helperPath, cleanupLimitProbeHelper(CLEANUP_ENTRY_LIMIT + 1));
+
+    await expect(writePlaywrightEvidenceReceipt({
+      rootDirectory: root,
+      target: "foundation",
+      testedSha: SHA,
+      requestedStatus: "pass",
+      hooks: { helperPath },
+    })).rejects.toThrow();
+
+    const releaseOps = dirname(resolve(
+      root,
+      PLAYWRIGHT_EVIDENCE_TARGETS.foundation.writer_error_output_file,
+    ));
+    expect((await readdir(releaseOps))
+      .filter((entry) => entry.startsWith(TEMP_RECEIPT_PREFIX))).toHaveLength(CLEANUP_ENTRY_LIMIT + 1);
   });
 
   it("rejects helper stderr and preserves full receipt integrity", async () => {

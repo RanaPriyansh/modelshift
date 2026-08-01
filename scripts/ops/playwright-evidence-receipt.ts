@@ -34,7 +34,7 @@ const MAX_HELPER_SOURCE_BYTES = 128 * 1024;
 const RECEIPT_ROOT = "test-results/release-ops";
 const RECEIPT_TEMP_PREFIX = ".forge-browser-receipt.tmp-";
 const RECEIPT_HELPER = fileURLToPath(new URL("./write-exclusive-receipt.py", import.meta.url));
-export const PLAYWRIGHT_RECEIPT_HELPER_SOURCE_SHA256 = "9683eec91fe073930501e75c19f53aff2bf7ed90d1eeb99e5be52300244b4d06" as const;
+export const PLAYWRIGHT_RECEIPT_HELPER_SOURCE_SHA256 = "5d38e4ed34dd87888eb3055d81ca8a4dbc21d8d316b81fc9b38804b1e0c5b36c" as const;
 const RECEIPT_PYTHON = "/usr/bin/python3";
 const RECEIPT_HELPER_ENV: NodeJS.ProcessEnv = {
   PATH: "/usr/bin:/bin",
