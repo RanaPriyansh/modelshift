@@ -1,3 +1,5 @@
+import { types as nodeUtilTypes } from "node:util";
+
 import { boundedJsonSnapshot } from "../bounded-json-snapshot";
 import { deepFreeze } from "../deep-freeze";
 import { canonicalJson, sha256Digest } from "../events";
@@ -35,6 +37,7 @@ export const COURSE_SOURCE_ISSUE_CODES = [
 
 const COURSE_SOURCE_SNAPSHOT_OPTIONS = {
   allowNullPrototypeObjects: true,
+  rejectObject: nodeUtilTypes.isProxy,
 } as const;
 const MAX_RETURNED_SCHEMA_ISSUES = 64;
 
