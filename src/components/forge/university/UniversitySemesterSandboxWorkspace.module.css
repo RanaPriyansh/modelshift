@@ -184,7 +184,7 @@
 }
 
 .choice[data-selected="true"] .choiceIndex {
-  color: var(--forge-cyan);
+  color: var(--forge-paper);
 }
 
 .choiceCopy {

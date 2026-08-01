@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -27,6 +29,22 @@ async function renderWorkspace() {
 }
 
 describe("UniversitySemesterSandboxWorkspace", () => {
+  it("uses the paper token for the selected 10px index", () => {
+    const css = readFileSync(
+      resolve(
+        process.cwd(),
+        "src/components/forge/university/UniversitySemesterSandboxWorkspace.module.css",
+      ),
+      "utf8",
+    );
+    const selectedIndex = css.match(
+      /\.choice\[data-selected="true"\] \.choiceIndex\s*\{(?<body>[^}]*)\}/,
+    )?.groups?.body;
+
+    expect(selectedIndex).toContain("color: var(--forge-paper);");
+    expect(selectedIndex).not.toContain("color: var(--forge-cyan);");
+  });
+
   it("starts with one source judgment and no exposed learning action", async () => {
     const { container } = await renderWorkspace();
 
