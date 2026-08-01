@@ -31,6 +31,7 @@ This record does not establish production readiness, learning efficacy, accessib
 | Native reference and visual audit commit | `6d1d58decd2562531e304ea78a39dc7eff6efbda` |
 | Figma desktop audit evidence commit | `50c6dbfdd258fd87a8a5c693b3447c34d4ddbf09` |
 | Current Figma generator source commit | `4d57ed8d31d8e8ab8ae5a327522dc0135accd442` |
+| Current Figma desktop audit evidence commit | `663c17f39c53d7b57b30e4cc0bc13abc515673ac` |
 | Deployment | Not done |
 | Push or merge | Not done |
 
