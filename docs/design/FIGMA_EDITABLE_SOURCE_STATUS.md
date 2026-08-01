@@ -53,6 +53,8 @@ The plugin makes no network request.
 
 - The Figma file exists and opens in Chrome.
 - The file starts with one empty page.
+- The Figma Runtime Phase 0 gap analysis is complete.
+- The file has no source conflict with the approved local system.
 - The plugin manifest is valid JSON.
 - The plugin JavaScript passes `node --check`.
 - The mock Figma run creates 10 pages, 86 variables, 17 components, and 28 frames.
@@ -77,7 +79,9 @@ No editable-source completion claim is valid yet.
 
 ## Next action
 
-Unlock macOS.
+Test a browser-based editable-board import.
+
+If that path cannot create correct editable layers, unlock macOS.
 
 Open the target file in the Figma desktop application.
 

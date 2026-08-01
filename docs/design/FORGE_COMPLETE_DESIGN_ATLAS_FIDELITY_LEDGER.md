@@ -281,9 +281,29 @@ This browser review is not an accessibility conformance claim.
 | --- | --- |
 | `pnpm lint` | Pass |
 | `pnpm typecheck` | Pass |
+| `pnpm design:atlas:check` | Pass |
 | `pnpm design:tokens:check` | Pass |
 | `pnpm design:figma:check` | Pass |
 | `git diff --check` | Pass |
+
+The design-atlas audit used:
+
+```text
+FORGE_DESIGN_ATLAS_URL=http://127.0.0.1:3035/internal/design-lab pnpm design:atlas:check
+```
+
+The automated receipt recorded:
+
+- 46 canonical identifiers at 1440 by 900 CSS pixels.
+- 46 canonical identifiers at 320 by 800 CSS pixels.
+- 8 shared recovery states in both viewports.
+- 26 Light boards and 20 Dark boards.
+- Zero horizontal overflow in both viewports.
+- Zero horizontal overflow with Forced Colors in both viewports.
+- Zero active Reduced Motion animations over one millisecond.
+- Zero browser errors.
+- A visible first-focus skip link.
+- Correct main-content focus after skip-link activation.
 
 ### 10.2 Source and evaluation tests
 
