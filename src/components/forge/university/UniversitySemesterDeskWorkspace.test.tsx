@@ -178,6 +178,55 @@ describe("UniversitySemesterDeskWorkspace", () => {
     );
   });
 
+  it("renders every server-authored current-job index", () => {
+    render(<UniversitySemesterDeskWorkspace fixture={fixture} />);
+    const renderedIndexes = new Set<string>();
+
+    fixture.scenarios.forEach((scenario, scenarioIndex) => {
+      if (scenarioIndex > 0) {
+        fireEvent.click(within(scenarioGroup()).getByRole("radio", {
+          name: new RegExp(`^${scenario.label}\\.`),
+        }));
+      }
+      scenario.courses.forEach((course) => {
+        fireEvent.click(within(courseGroup()).getByRole("radio", {
+          name: new RegExp(`^${course.courseLabel}`),
+        }));
+        const selectedChapter = screen.getByRole("region", {
+          name: course.courseLabel,
+        });
+        const chapterIndex = selectedChapter.querySelector("header p");
+        expect(chapterIndex).toHaveTextContent(course.currentJob.index);
+        expect(chapterIndex).toHaveAttribute("aria-hidden", "true");
+        renderedIndexes.add(course.currentJob.index);
+      });
+    });
+
+    expect([...renderedIndexes].sort()).toEqual([
+      "01",
+      "02",
+      "03",
+      "04",
+      "05",
+    ]);
+  });
+
+  it("describes the course order and no-effect boundary from its fieldset", () => {
+    render(<UniversitySemesterDeskWorkspace fixture={fixture} />);
+    const fieldset = courseGroup();
+    const boundaryId = fieldset.getAttribute("aria-describedby");
+    expect(boundaryId).toBe("semester-desk-course-boundary");
+
+    const boundary = document.getElementById(boundaryId!);
+    expect(boundary).toBeInTheDocument();
+    expect(boundary).toHaveTextContent(
+      "Course-ID order is deterministic, not pedagogical, chronological, urgent, difficult, or recommended.",
+    );
+    expect(boundary).toHaveTextContent(
+      "Selecting a row changes only this refresh-clear inspection.",
+    );
+  });
+
   it("restores focus and reveals the course after its detail chapter collapses", () => {
     vi.spyOn(window, "innerWidth", "get").mockReturnValue(320);
     vi.spyOn(window, "innerHeight", "get").mockReturnValue(844);
