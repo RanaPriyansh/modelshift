@@ -54,6 +54,12 @@ jobs:
         run: pnpm test
       - name: Offline evaluation gate
         run: pnpm eval
+      - name: Install Chromium test runtime
+        run: pnpm exec playwright install --with-deps chromium
+      - name: University foundation browser acceptance
+        id: foundation_browser
+        continue-on-error: true
+        run: pnpm test:e2e:university-foundation
       - name: Capture immutable build identity
         run: |
           printf 'FORGE_BUILD_TIME=%s\n' "$(date -u -d "$(git show -s --format=%cI "$GITHUB_SHA")" +%Y-%m-%dT%H:%M:%S.000Z)" >> "$GITHUB_ENV"
@@ -62,8 +68,6 @@ jobs:
           printf 'FORGE_DATABASE_MIGRATION_IDENTITY=not_configured\n' >> "$GITHUB_ENV"
       - name: Build production artifact
         run: pnpm build
-      - name: Install Chromium test runtime
-        run: pnpm exec playwright install --with-deps chromium
       - name: Browser release contract
         id: browser
         continue-on-error: true
@@ -91,7 +95,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Upload bounded Playwright failure evidence
-        if: always() && steps.browser.outcome == 'failure' && hashFiles('test-results/release-ops/playwright-artifact-manifest.json') != ''
+        if: always() && (steps.foundation_browser.outcome == 'failure' || steps.browser.outcome == 'failure') && hashFiles('test-results/release-ops/playwright-artifact-manifest.json') != ''
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: forge-playwright-failure-${{ github.run_id }}
@@ -103,6 +107,7 @@ jobs:
       - name: Enforce release gate outcomes
         if: always()
         run: |
+          test "${{ steps.foundation_browser.outcome }}" = success
           test "${{ steps.browser.outcome }}" = success
           test "${{ steps.evaluation_report.outcome }}" = success
           test "${{ steps.local_verify.outcome }}" = success
