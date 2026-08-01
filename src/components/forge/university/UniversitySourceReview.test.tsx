@@ -27,6 +27,26 @@ afterEach(() => {
 });
 
 describe("UniversitySourceReview", () => {
+  it("announces initial loading and readiness through one live region", async () => {
+    const { container } = render(
+      <UniversitySourceReview initialRequest={await reviewedUniversitySourceRequest()} />,
+    );
+    const status = screen.getByRole("status");
+
+    expect(status).toHaveTextContent(
+      "Comparing the copied facts and their declared source boundaries.",
+    );
+    await screen.findByRole("heading", {
+      name: "Two copies give different deadlines.",
+    });
+    await waitFor(() => {
+      expect(status).toHaveTextContent(
+        "Course source review ready. 0 of 3 copied facts reviewed.",
+      );
+    });
+    expect(container.querySelectorAll("[aria-live]")).toHaveLength(1);
+  });
+
   it("uses one atomic status announcement for each source decision", async () => {
     const { container } = render(
       <UniversitySourceReview initialRequest={await reviewedUniversitySourceRequest()} />,
@@ -101,7 +121,22 @@ describe("UniversitySourceReview", () => {
     });
     fireEvent.click(correctionTrigger);
     const correction = screen.getByLabelText("Correct due date and time");
+    const correctionForm = correction.closest("[id^='correction-form-']");
+    const correctionDescription = screen.getByText(
+      /The correction uses this browser's local time zone/,
+    );
+
     expect(correction).toHaveFocus();
+    expect(correctionForm).toBeInTheDocument();
+    expect(correctionTrigger).toHaveAttribute("aria-expanded", "true");
+    expect(correctionTrigger).toHaveAttribute(
+      "aria-controls",
+      correctionForm?.id,
+    );
+    expect(correction).toHaveAttribute(
+      "aria-describedby",
+      correctionDescription.id,
+    );
     fireEvent.change(correction, { target: { value: "2026-09-14T15:30" } });
     fireEvent.click(screen.getByRole("button", { name: "Use my correction" }));
     expect(window.scrollTo).not.toHaveBeenCalled();

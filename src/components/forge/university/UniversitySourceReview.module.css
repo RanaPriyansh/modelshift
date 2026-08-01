@@ -247,7 +247,7 @@
 
 .decisionState {
   margin: 0;
-  color: var(--forge-dim);
+  color: var(--forge-muted);
   font-size: 12px;
 }
 
@@ -261,7 +261,7 @@
 .correctionForm button,
 .resetButton {
   min-height: 44px;
-  border: 1px solid var(--forge-line-strong);
+  border: 1px solid var(--forge-dim);
   border-radius: 6px;
   padding: 9px 13px;
   background: transparent;
@@ -304,12 +304,11 @@
 .correctionForm input {
   min-height: 46px;
   width: 100%;
-  border: 1px solid var(--forge-line-strong);
+  border: 1px solid var(--forge-dim);
   border-radius: 6px;
   padding: 9px 11px;
   background: var(--forge-bg);
   color: var(--forge-ink);
-  color-scheme: dark;
 }
 
 .correctionForm p {

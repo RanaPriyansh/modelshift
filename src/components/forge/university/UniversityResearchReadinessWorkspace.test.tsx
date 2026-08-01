@@ -62,6 +62,32 @@ function contrastRatio(first: string, second: string): number {
   );
 }
 
+function mixColors(
+  foreground: string,
+  background: string,
+  foregroundShare: number,
+): string {
+  const foregroundChannels = foreground.slice(1).match(/.{2}/g);
+  const backgroundChannels = background.slice(1).match(/.{2}/g);
+  if (
+    !foregroundChannels
+    || foregroundChannels.length !== 3
+    || !backgroundChannels
+    || backgroundChannels.length !== 3
+  ) {
+    throw new Error("Invalid six-digit CSS color");
+  }
+  const channels = foregroundChannels.map((channel, index) => {
+    const foregroundValue = Number.parseInt(channel, 16);
+    const backgroundValue = Number.parseInt(backgroundChannels[index]!, 16);
+    return Math.round(
+      (foregroundValue * foregroundShare)
+      + (backgroundValue * (1 - foregroundShare)),
+    ).toString(16).padStart(2, "0");
+  });
+  return `#${channels.join("")}`;
+}
+
 describe("UniversityResearchReadinessWorkspace", () => {
   it("uses active light contrast tokens for readiness text and controls", () => {
     const componentStyles = readFileSync(
@@ -90,6 +116,15 @@ describe("UniversityResearchReadinessWorkspace", () => {
     const pressedControl = sourceReviewStyles.match(
       /\.candidateActions button\[aria-pressed="true"\]\s*\{(?<body>[^}]*)\}/,
     )?.groups?.body;
+    const defaultControls = sourceReviewStyles.match(
+      /\.candidateActions button,\s*\.correctionForm button,\s*\.resetButton\s*\{(?<body>[^}]*)\}/,
+    )?.groups?.body;
+    const correctionInput = sourceReviewStyles.match(
+      /\.correctionForm input\s*\{(?<body>[^}]*)\}/,
+    )?.groups?.body;
+    const decisionState = sourceReviewStyles.match(
+      /\.decisionState\s*\{(?<body>[^}]*)\}/,
+    )?.groups?.body;
 
     expect(textStyles).not.toMatch(baseTextColor);
     expect(textStyles).toContain("color: var(--forge-cyan-deep);");
@@ -101,19 +136,36 @@ describe("UniversityResearchReadinessWorkspace", () => {
     expect(selectedControl).toContain("color: var(--forge-surface);");
     expect(pressedControl).toContain("background: var(--forge-cyan-deep);");
     expect(pressedControl).toContain("color: var(--forge-surface);");
+    expect(defaultControls).toContain("border: 1px solid var(--forge-dim);");
+    expect(correctionInput).toContain("border: 1px solid var(--forge-dim);");
+    expect(correctionInput).not.toContain("color-scheme: dark;");
+    expect(decisionState).toContain("color: var(--forge-muted);");
 
     const colors = {
       background: cssColor(forgeStyles, "forge-bg"),
       cyan: cssColor(forgeStyles, "forge-cyan"),
       cyanDeep: cssColor(forgeStyles, "forge-cyan-deep"),
       amberDeep: cssColor(forgeStyles, "forge-amber-deep"),
+      dim: cssColor(forgeStyles, "forge-dim"),
+      muted: cssColor(forgeStyles, "forge-muted"),
       surface: cssColor(forgeStyles, "forge-surface"),
     };
+    const acceptedCandidate = mixColors(
+      colors.cyan,
+      colors.background,
+      0.05,
+    );
     const ratios = {
       "cyan-deep-on-bg": contrastRatio(colors.cyanDeep, colors.background),
       "cyan-deep-on-surface": contrastRatio(colors.cyanDeep, colors.surface),
       "amber-deep-on-bg": contrastRatio(colors.amberDeep, colors.background),
       "amber-deep-on-surface": contrastRatio(colors.amberDeep, colors.surface),
+      "dim-on-bg": contrastRatio(colors.dim, colors.background),
+      "dim-on-surface": contrastRatio(colors.dim, colors.surface),
+      "muted-on-accepted-candidate": contrastRatio(
+        colors.muted,
+        acceptedCandidate,
+      ),
       "surface-on-cyan": contrastRatio(colors.surface, colors.cyan),
       "surface-on-cyan-deep": contrastRatio(colors.surface, colors.cyanDeep),
     };

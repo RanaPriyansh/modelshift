@@ -92,11 +92,14 @@ export function UniversitySourceReview({
   const [decisions, setDecisions] = useState<readonly CourseSourceDecisionV1[]>(initialRequest.decisions);
   const [result, setResult] = useState<Readonly<CourseSourceReconciliationResult> | null>(null);
   const [phase, setPhase] = useState<ReviewPhase>("loading");
-  const [announcement, setAnnouncement] = useState("");
+  const [announcement, setAnnouncement] = useState(
+    "Comparing the copied facts and their declared source boundaries.",
+  );
   const [correctingCandidateId, setCorrectingCandidateId] = useState<string | null>(null);
   const [correctedDueAt, setCorrectedDueAt] = useState("");
   const correctionInputRef = useRef<HTMLInputElement>(null);
   const correctionTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const initialLoadRef = useRef(true);
   const pendingScrollPositionRef = useRef<ScrollPosition | null>(null);
   const scrollRestoreFrameRef = useRef<number | null>(null);
 
@@ -134,6 +137,15 @@ export function UniversitySourceReview({
         if (!active) return;
         setResult(projection);
         setPhase("ready");
+        if (initialLoadRef.current) {
+          initialLoadRef.current = false;
+          const completed = projection.candidates.filter(
+            (candidate) => candidate.extractionState !== "candidate",
+          ).length;
+          setAnnouncement(
+            `Course source review ready. ${completed} of ${projection.candidates.length} copied facts reviewed.`,
+          );
+        }
       })
       .catch(() => {
         if (!active) return;
@@ -490,6 +502,9 @@ function SourceCandidate({
       : selectedDecision?.kind === "reject"
         ? "Extraction rejected"
         : "Not reviewed";
+  const correctionFormId = `correction-form-${candidate.candidateId}`;
+  const correctionDescriptionId =
+    `correction-description-${candidate.candidateId}`;
 
   return (
     <li className={styles.candidate} data-decision={selectedDecision?.kind ?? "candidate"}>
@@ -523,6 +538,7 @@ function SourceCandidate({
             type="button"
             aria-label={`Correct transcription: ${sourceLabel}, ${factActionContext(candidate.originalFact)}`}
             aria-expanded={isCorrecting}
+            aria-controls={isCorrecting ? correctionFormId : undefined}
             onClick={(event) => onCorrect(event.currentTarget)}
           >
             Correct transcription
@@ -538,7 +554,7 @@ function SourceCandidate({
         </button>
       </div>
       {isCorrecting ? (
-        <div className={styles.correctionForm}>
+        <div className={styles.correctionForm} id={correctionFormId}>
           <label htmlFor={`correction-${candidate.candidateId}`}>
             Correct due date and time
           </label>
@@ -547,9 +563,12 @@ function SourceCandidate({
             id={`correction-${candidate.candidateId}`}
             type="datetime-local"
             value={correctedDueAt}
+            aria-describedby={correctionDescriptionId}
             onChange={(event) => onCorrectionChange?.(event.target.value)}
           />
-          <p>The correction uses this browser&apos;s local time zone. The copied value remains visible above.</p>
+          <p id={correctionDescriptionId}>
+            The correction uses this browser&apos;s local time zone. The copied value remains visible above.
+          </p>
           <div>
             <button type="button" onClick={onCorrectionSave} disabled={correctedDueAt.length === 0}>
               Use my correction
