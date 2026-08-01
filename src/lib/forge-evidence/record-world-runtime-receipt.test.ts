@@ -13,6 +13,7 @@ import type { EvidenceLearningAction } from "../../worlds/ai-learning";
 import type { RatioWorldEvent } from "../../worlds/proportional-reasoning";
 import { PROPORTIONAL_REASONING_WORLD } from "../../forge/worlds";
 import { retainedRuntimeIdentityFor } from "../../forge/world-runtime/retained-runtime-binding";
+import { FORGE_DEVICE_PROFILE_KEY } from "../forge-profile/device-profile";
 import { createLocalStorageEvidenceLedgerAdapter } from "./local-storage";
 import {
   projectRuntimeSupportAssistanceKind,
@@ -34,6 +35,19 @@ class MemoryStorage {
   removeItem(key: string) {
     this.values.delete(key);
   }
+}
+
+const PROFILE_ID = "81000000-0000-4000-8000-000000000001";
+
+function stubWindowWithProfile(storage: MemoryStorage): void {
+  storage.setItem(FORGE_DEVICE_PROFILE_KEY, JSON.stringify({
+    schemaVersion: 1,
+    profileId: PROFILE_ID,
+    ageMode: "adult",
+    guardianPresent: false,
+    createdAt: "2026-07-22T00:00:00.000Z",
+  }));
+  vi.stubGlobal("window", { localStorage: storage });
 }
 
 const CORE_TRACE = [
@@ -201,7 +215,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe("recordWorldRuntimeReceipt", () => {
   it("projects only the bounded receipt with deterministic attempt id and no return schedule", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
 
     const completedReceipt = completedProportionalReceipt("pass", "attempt.receipt-projection");
     const first = recordWorldRuntimeReceipt(completedReceipt);
@@ -228,7 +242,7 @@ describe("recordWorldRuntimeReceipt", () => {
 
   it("rejects substituted canonical pass fields and every clone without an exact-object sidecar", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
     const genuinePass = completedProportionalReceipt("pass", "attempt.sidecar-genuine-pass");
     const genuineFail = completedProportionalReceipt("fail", "attempt.sidecar-genuine-fail");
     const substitutedPass: BoundedLocalWorldRuntimeReceipt = {
@@ -253,7 +267,7 @@ describe("recordWorldRuntimeReceipt", () => {
 
   it("does not attest a cloned adapter even when it emits a genuine canonical passing result", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
     const clonedAdapter = { ...proportionalReasoningWorldRuntimeAdapter } satisfies typeof proportionalReasoningWorldRuntimeAdapter;
     const clonedAdapterReceipt = completedProportionalReceipt(
       "pass",
@@ -294,7 +308,7 @@ describe("recordWorldRuntimeReceipt", () => {
 
   it("accepts one completed Source Corroboration receipt with its exact released identity and source tuple", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
     const completedReceipt = completedSourceCorroborationReceipt();
 
     expect(completedReceipt).toMatchObject({
@@ -366,7 +380,7 @@ describe("recordWorldRuntimeReceipt", () => {
 
   it("projects an exactly attested failure without strengthening it", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
     const result = recordWorldRuntimeReceipt(completedProportionalReceipt(
       "fail",
       "attempt.receipt-not-demonstrated",
@@ -378,7 +392,7 @@ describe("recordWorldRuntimeReceipt", () => {
 
   it("rejects forged receipt shapes and raw identifier additions without appending", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
     const forged = {
       ...receipt(),
       rawResponse: "learner explanation or provider secret",
@@ -394,7 +408,7 @@ describe("recordWorldRuntimeReceipt", () => {
 
   it("rejects a structurally valid receipt whose package-owned limitation list was replaced", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
     const forgedLimitations = receipt({
       remainsUntested: ["Trust asserted by an adapter or provider."],
     });
@@ -404,7 +418,7 @@ describe("recordWorldRuntimeReceipt", () => {
 
   it("rejects structurally valid unknown and mixed released-World identities", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
     const forgedReceipts = [
       receipt({ world: { ...receipt().world, id: "world.fabricated" } }),
       receipt({ world: { ...receipt().world, version: "9.9.9" } }),
@@ -432,7 +446,7 @@ describe("recordWorldRuntimeReceipt", () => {
 
   it("rejects a known World with substituted source or support identities", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
     const canonicalSupport = receipt().cognitiveSupport[0]!;
     const substitutedIdentities = [
       receipt({
@@ -495,7 +509,7 @@ describe("recordWorldRuntimeReceipt", () => {
     "return_or_apply",
   ] as const)("rejects cognitive support recorded at protected stage %s", (stage) => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
     const protectedStageSupport = receipt({
       cognitiveSupport: [{ ...receipt().cognitiveSupport[0]!, stage }],
     });
@@ -509,7 +523,7 @@ describe("recordWorldRuntimeReceipt", () => {
 
   it("accepts governed support only once in its canonical pre-reconstruction trace slot", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
     expect(recordWorldRuntimeReceipt(completedProportionalReceipt(
       "pass",
       "attempt.valid-support-trace",

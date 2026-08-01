@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLocalStorageEvidenceLedgerAdapter } from "./local-storage";
 import { recordWorldProof } from "./record-world-proof";
 import { createEvidenceLedgerStore } from "./store";
+import { FORGE_DEVICE_PROFILE_KEY } from "../forge-profile/device-profile";
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -20,6 +21,19 @@ class MemoryStorage {
   }
 }
 
+const PROFILE_ID = "81000000-0000-4000-8000-000000000001";
+
+function stubWindowWithProfile(storage: MemoryStorage): void {
+  storage.setItem(FORGE_DEVICE_PROFILE_KEY, JSON.stringify({
+    schemaVersion: 1,
+    profileId: PROFILE_ID,
+    ageMode: "adult",
+    guardianPresent: false,
+    createdAt: "2026-07-22T00:00:00.000Z",
+  }));
+  vi.stubGlobal("window", { localStorage: storage });
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -27,7 +41,7 @@ afterEach(() => {
 describe("recordWorldProof", () => {
   it("persists only bounded proof metadata without a return schedule when intervals are omitted", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
 
     const result = recordWorldProof({
       capabilityId: "capability.test.transfer",
@@ -60,7 +74,7 @@ describe("recordWorldProof", () => {
 
   it("keeps authored representation support distinct from hints and model interpretation", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
 
     const result = recordWorldProof({
       capabilityId: "capability.force-motion.zero-net-force",
@@ -82,7 +96,7 @@ describe("recordWorldProof", () => {
 
   it("schedules a proved attempt only when it receives valid explicit intervals", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
 
     const result = recordWorldProof({
       capabilityId: "capability.test.transfer",
@@ -105,7 +119,7 @@ describe("recordWorldProof", () => {
 
   it("rejects invalid explicit intervals without appending a record", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
 
     const result = recordWorldProof({
       capabilityId: "capability.test.transfer",
@@ -125,7 +139,7 @@ describe("recordWorldProof", () => {
 
   it.each(["not_proved", "open_question"] as const)("does not schedule return proof for %s attempts, even with intervals", (outcome) => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
 
     const result = recordWorldProof({
       capabilityId: "capability.test.transfer",

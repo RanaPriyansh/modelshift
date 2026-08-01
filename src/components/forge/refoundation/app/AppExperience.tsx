@@ -10,8 +10,8 @@ import {
 } from "react";
 
 import {
-  DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY,
-  decodeEvidenceLedger,
+  createEvidenceLedgerStore,
+  createLocalStorageEvidenceLedgerAdapter,
   type EvidenceEntry,
 } from "@/src/lib/forge-evidence";
 import {
@@ -289,13 +289,19 @@ function LocalEvidenceSummary() {
   useEffect(() => {
     const read = () => {
       try {
-        const decoded = decodeEvidenceLedger(window.localStorage.getItem(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY));
-        const entry = [...decoded.ledger.entries]
+        const result = createEvidenceLedgerStore(
+          createLocalStorageEvidenceLedgerAdapter(),
+        ).read();
+        if (result.status === "storage_unavailable" || result.status === "storage_error") {
+          setState({ phase: "unavailable" });
+          return;
+        }
+        const entry = [...result.ledger.entries]
           .sort((left, right) => Date.parse(right.recordedAt) - Date.parse(left.recordedAt))[0] ?? null;
         setState({
           phase: "ready",
           entry,
-          reset: decoded.status === "reset_malformed" || decoded.status === "reset_unknown_version",
+          reset: result.status === "reset_malformed" || result.status === "reset_unknown_version",
         });
       } catch {
         setState({ phase: "unavailable" });
@@ -744,14 +750,14 @@ function ProfileControls() {
   function removeProfile() {
     const result = clearForgeDeviceProfile(window.localStorage);
     if (!result.ok) {
-      setMessage("The local device mode could not be confirmed removed. Evidence and path records were not changed.");
+      setMessage("The local device mode and its profile-bound data could not be confirmed removed. The existing device mode remains active.");
       return;
     }
     window.dispatchEvent(new Event(FORGE_DEVICE_PROFILE_EVENT));
     setProfileExists(false);
     setAgeMode("adult");
     setGuardianPresent(false);
-    setMessage("The local device mode was removed. Evidence and path records were not changed.");
+    setMessage("The local device mode and its profile-bound evidence and path records were removed.");
   }
 
   return (

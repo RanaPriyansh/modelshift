@@ -1,5 +1,6 @@
 import { deepFreeze } from "@/src/forge/deep-freeze";
 import { exceedsUtf8ByteLimit } from "@/src/lib/storage/raw-byte-limit";
+import { FORGE_WORLD_SESSION_CHECKPOINT_STORAGE_PREFIX } from "@/src/lib/forge-profile/profile-bound-data";
 
 export const WORLD_SESSION_CHECKPOINT_SCHEMA_VERSION =
   "world-session-checkpoint.v1" as const;
@@ -61,7 +62,7 @@ function validIdentity(identity: WorldSessionCheckpointIdentity): boolean {
 
 function checkpointKey(identity: WorldSessionCheckpointIdentity): string {
   return [
-    "forge.world-session-checkpoint:v1",
+    FORGE_WORLD_SESSION_CHECKPOINT_STORAGE_PREFIX.slice(0, -1),
     identity.sessionId,
     identity.worldId,
     identity.worldVersion,
@@ -188,7 +189,11 @@ export function clearWorldSessionCheckpoint(
     return deepFreeze({ ok: false as const, reason: "invalid_identity" as const });
   }
   try {
-    storage.removeItem(checkpointKey(identity));
+    const key = checkpointKey(identity);
+    storage.removeItem(key);
+    if (storage.getItem(key) !== null) {
+      return deepFreeze({ ok: false as const, reason: "unavailable" as const });
+    }
     return deepFreeze({ ok: true as const, operation: "cleared" as const });
   } catch {
     return deepFreeze({ ok: false as const, reason: "unavailable" as const });

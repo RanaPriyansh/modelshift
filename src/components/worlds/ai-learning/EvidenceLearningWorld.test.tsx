@@ -3,14 +3,30 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../../lib/forge-evidence/record-world-runtime-receipt", () => ({
   recordWorldRuntimeReceipt: vi.fn(),
 }));
 
 import { recordWorldRuntimeReceipt } from "../../../lib/forge-evidence/record-world-runtime-receipt";
+import {
+  createForgeDeviceProfile,
+  forgeProfileBoundStorageKey,
+} from "../../../lib/forge-profile/device-profile";
 import { EvidenceLearningWorld } from "./EvidenceLearningWorld";
+
+const PROFILE_ID = "9be711de-d7a6-4911-b903-f2d829da83d5";
+
+beforeEach(() => {
+  createForgeDeviceProfile(
+    window.localStorage,
+    "adult",
+    false,
+    new Date("2026-08-02T00:00:00.000Z"),
+    PROFILE_ID,
+  );
+});
 
 afterEach(() => {
   cleanup();
@@ -25,8 +41,10 @@ const CHECKPOINT_IDENTITY = {
   worldVersion: "1.0.1",
 } as const;
 
-const CHECKPOINT_KEY =
-  "forge.world-session-checkpoint:v1:study-session.evidence-checkpoint:world.source-corroboration:1.0.1";
+const CHECKPOINT_KEY = forgeProfileBoundStorageKey(
+  "forge.world-session-checkpoint:v1:study-session.evidence-checkpoint:world.source-corroboration:1.0.1",
+  PROFILE_ID,
+);
 
 function commitEncounter(): void {
   fireEvent.click(screen.getByRole("radio", { name: /It depends/i }));

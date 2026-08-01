@@ -23,6 +23,7 @@ import {
   createDeviceContinuityStore,
   type DeviceContinuityPersistence,
 } from "./device-store";
+import { FORGE_DEVICE_PROFILE_KEY } from "../forge-profile/device-profile";
 import {
   completeDeviceStudySession,
   startDeviceStudySession,
@@ -44,6 +45,19 @@ class MemoryStorage {
   removeItem(key: string) {
     this.values.delete(key);
   }
+}
+
+const PROFILE_ID = "81000000-0000-4000-8000-000000000001";
+
+function stubWindowWithProfile(storage: MemoryStorage): void {
+  storage.setItem(FORGE_DEVICE_PROFILE_KEY, JSON.stringify({
+    schemaVersion: 1,
+    profileId: PROFILE_ID,
+    ageMode: "adult",
+    guardianPresent: false,
+    createdAt: "2026-07-24T12:00:00.000Z",
+  }));
+  vi.stubGlobal("window", { localStorage: storage });
 }
 
 function memoryPersistence(
@@ -279,7 +293,7 @@ describe("device-local StudySession composition", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-24T13:00:00.000Z"));
     const evidenceStorage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: evidenceStorage });
+    stubWindowWithProfile(evidenceStorage);
 
     const memory = memoryPersistence();
     const store = createDeviceContinuityStore(memory.persistence);
@@ -349,7 +363,7 @@ describe("device-local StudySession composition", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-24T13:00:00.000Z"));
     const evidenceStorage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: evidenceStorage });
+    stubWindowWithProfile(evidenceStorage);
 
     const memory = memoryPersistence();
     const store = createDeviceContinuityStore(memory.persistence);
@@ -384,7 +398,7 @@ describe("device-local StudySession composition", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-24T13:00:00.000Z"));
     const evidenceStorage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: evidenceStorage });
+    stubWindowWithProfile(evidenceStorage);
     const raw = '{"format":"forge-device-continuity","schemaVersion":999,"records":[]}';
     const memory = memoryPersistence(raw);
     const store = createDeviceContinuityStore(memory.persistence);
@@ -403,7 +417,7 @@ describe("device-local StudySession composition", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-24T13:00:00.000Z"));
     const evidenceStorage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: evidenceStorage });
+    stubWindowWithProfile(evidenceStorage);
 
     const memory = memoryPersistence();
     const store = createDeviceContinuityStore(memory.persistence);
@@ -446,7 +460,7 @@ describe("device-local StudySession composition", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-24T13:00:00.000Z"));
     const evidenceStorage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: evidenceStorage });
+    stubWindowWithProfile(evidenceStorage);
 
     // Save and start are writes one and two; fail the single completion envelope.
     const memory = memoryPersistence(null, { failWriteNumber: 3 });

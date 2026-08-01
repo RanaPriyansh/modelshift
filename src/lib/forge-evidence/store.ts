@@ -112,6 +112,18 @@ export function createEvidenceLedgerStore(persistence: EvidenceLedgerPersistence
         readStatus: before.status,
       };
     }
+    const verified = persistence.read();
+    if (!verified.ok || verified.value !== encoded) {
+      const reason = !verified.ok
+        ? verified.reason === "unavailable" ? "storage_unavailable" as const : "storage_error" as const
+        : "storage_error" as const;
+      return {
+        ok: false,
+        ledger: before.ledger,
+        reason,
+        readStatus: before.status,
+      };
+    }
     return { ok: true, ledger: transition.ledger, readStatus: before.status };
   };
 
@@ -123,6 +135,13 @@ export function createEvidenceLedgerStore(persistence: EvidenceLedgerPersistence
       const removed = persistence.remove();
       if (!removed.ok) {
         const status = removed.reason === "unavailable" ? "storage_unavailable" : "storage_error";
+        return { ok: false, ledger: createEmptyEvidenceLedger(), reason: status, readStatus: status };
+      }
+      const verified = persistence.read();
+      if (!verified.ok || verified.value !== null) {
+        const status = !verified.ok && verified.reason === "unavailable"
+          ? "storage_unavailable"
+          : "storage_error";
         return { ok: false, ledger: createEmptyEvidenceLedger(), reason: status, readStatus: status };
       }
       return { ok: true, ledger: createEmptyEvidenceLedger(), readStatus: "empty" };
