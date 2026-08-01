@@ -669,7 +669,7 @@ test.describe("FORGE cross-route release contract", () => {
     await page.keyboard.press("Enter");
     await expect(page.locator("#forge-main")).toBeFocused();
 
-    const openWorld = page.getByRole("link", { name: "Open Force & motion World" });
+    const openWorld = page.getByRole("link", { name: /Force & motion/ }).first();
     await tabTo(page, openWorld);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/learn\/force-and-motion$/);
@@ -692,6 +692,7 @@ test.describe("FORGE cross-route release contract", () => {
     await seedDeviceProfile(page, "teen");
     for (const path of ["/", "/pathways", "/learn/ai-and-learning", "/learn/proportional-reasoning"]) {
       await page.goto(path);
+      await page.locator("main").waitFor();
       const motion = await page.evaluate(() => {
         const milliseconds = (raw: string) => raw.split(",").map((part) => {
           const value = part.trim();

@@ -1011,7 +1011,7 @@
 }
 
 .forge-map-unavailable li::before {
-  content: "—";
+  content: "•";
   margin-right: 8px;
   color: var(--forge-dim);
 }
@@ -1440,7 +1440,7 @@
   line-height: 1.55;
 }
 
-.forge-source-unavailable li::before { content: "—"; margin-right: 8px; color: var(--forge-amber-deep); }
+.forge-source-unavailable li::before { content: "•"; margin-right: 8px; color: var(--forge-amber-deep); }
 
 @media (max-width: 760px) {
   .forge-source-path { width: calc(100% - 32px); padding: 74px 0 94px; }

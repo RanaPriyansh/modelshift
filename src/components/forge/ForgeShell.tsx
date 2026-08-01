@@ -38,12 +38,11 @@ const PUBLIC_NAV_ITEMS: ReadonlyArray<{ href: string; label: string; section: Fo
 ];
 
 const APP_NAV_ITEMS: ReadonlyArray<{ href: string; label: string; section: ForgeSection }> = [
-  { href: "/app", label: "Home", section: "today" },
+  { href: "/app", label: "Today", section: "today" },
   { href: "/app/paths", label: "Paths", section: "paths" },
-  { href: "/paths", label: "Explore", section: "explore" },
   { href: "/app/projects", label: "Projects", section: "projects" },
   { href: "/app/evidence", label: "Evidence", section: "evidence" },
-  { href: "/app/settings", label: "Profile", section: "settings" },
+  { href: "/app/settings", label: "Account", section: "settings" },
 ];
 
 const AUTHOR_NAV_ITEMS: ReadonlyArray<{ href: string; label: string; section: ForgeSection }> = [

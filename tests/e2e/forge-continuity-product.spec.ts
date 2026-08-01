@@ -608,7 +608,9 @@ test.describe("FORGE continuity product acceptance", () => {
       page.waitForURL("**/app"),
       page.getByRole("button", { name: "Save as an open question" }).click(),
     ]);
-    await expect(page.getByRole("heading", { name: "Begin with something you want to do." })).toBeVisible();
+    await expect(page.getByRole("heading", {
+      name: "What do you want to be able to do?",
+    })).toBeVisible();
     await expect(page.getByText("1 saved open question")).toBeVisible();
     await expect(page.getByText(/They remain non-runnable/)).toBeVisible();
 

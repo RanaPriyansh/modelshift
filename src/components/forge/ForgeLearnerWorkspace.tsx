@@ -172,18 +172,27 @@ export function ForgeToday() {
   if (!activeRecord) {
     return (
       <main className="forge-app-page" id="forge-main" tabIndex={-1}>
-        <header className="forge-app-page__hero">
-          <ForgeKicker>Today · no active path</ForgeKicker>
-          <h1>Begin with something you want to do.</h1>
-          <p>
-            There is no accepted path on this device. FORGE will not fabricate a task from an
-            unreviewed outline or silently activate one of your open questions.
-          </p>
-          <div className="forge-app-page__hero-actions">
-            <Link className="forge-primary-action" href="/start">Shape a path <ForgeArrow /></Link>
-            <Link className="forge-text-link" href="/paths">Explore honest directions</Link>
+        <section className="forge-today-empty" aria-labelledby="forge-today-empty-title">
+          <div className="forge-today-empty__landscape" aria-hidden="true" />
+          <div className="forge-today-empty__copy">
+            <p className="forge-today-empty__state">No active path</p>
+            <h1 id="forge-today-empty-title">What do you want to be able to do?</h1>
+            <p>
+              FORGE can propose one learning path. You inspect the work, sources, proof, and
+              limits before anything becomes active.
+            </p>
+            <div className="forge-today-empty__actions">
+              <Link className="forge-primary-action" href="/start">
+                Shape a path
+                <ForgeArrow />
+              </Link>
+              <Link className="forge-text-link" href="/paths">Browse reviewed paths</Link>
+            </div>
+            <p className="forge-today-empty__stop">
+              <Link href="/">Leave for now</Link>. Nothing will start.
+            </p>
           </div>
-        </header>
+        </section>
         {openQuestions > 0 ? (
           <section className="forge-app-open-questions">
             <ForgeStatus tone="human">{openQuestions} saved open {openQuestions === 1 ? "question" : "questions"}</ForgeStatus>
@@ -388,7 +397,7 @@ export function ForgePathWorkspace() {
     <main className="forge-app-page" id="forge-main" tabIndex={-1}>
       <header className="forge-app-page__hero forge-app-page__hero--compact">
         <ForgeKicker>My paths · device-local revisions</ForgeKicker>
-        <h1>Inspect what you accepted—and what FORGE still cannot run.</h1>
+        <h1>Inspect what you accepted and what FORGE still cannot run.</h1>
         <p>Candidate and accepted revisions remain immutable. Changing direction starts a new candidate; it never silently rewrites accepted history.</p>
         <div className="forge-app-page__hero-actions">
           <Link className="forge-primary-action" href="/start">Shape another path <ForgeArrow /></Link>

@@ -23,7 +23,7 @@ test.describe("FORGE expanded learning system", () => {
     await page.goto("/");
 
     await expect(page.getByRole("heading", { name: "What can a photograph prove?" })).toBeVisible();
-    await expect(page.locator('.forge-world-row a[href^="/learn/"]')).toHaveCount(4);
+    await expect(page.locator('#forge-main a[href^="/learn/"]')).toHaveCount(4);
     await expect(page.locator('a[href="/sign-in"]')).toHaveCount(2);
     expect(await page.locator("html").evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
   });

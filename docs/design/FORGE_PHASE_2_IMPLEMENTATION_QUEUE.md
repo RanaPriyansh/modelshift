@@ -8,7 +8,21 @@
 - Token source: DTCG JSON
 - Deployment authority: none
 
-This queue starts after the Paper foundation board is usable.
+The representative public and Today slice is built locally.
+
+The full queue is not complete.
+
+The Paper foundation board remains partial.
+
+## Completed representative slice
+
+- The public home uses the approved Horizon composition.
+- The public home accepts one learner goal.
+- The application shell uses Today, Paths, Projects, Evidence, and Account.
+- Empty Today uses one dominant action and one explicit stop action.
+- Light, Dark, 320 CSS pixel, keyboard, Reduce Motion, and Forced Colors checks pass.
+- The complete production browser suite has 127 passing checks and zero failures.
+- The iOS handoff includes 18 screen families and six rendered specimens.
 
 ## Work queue
 

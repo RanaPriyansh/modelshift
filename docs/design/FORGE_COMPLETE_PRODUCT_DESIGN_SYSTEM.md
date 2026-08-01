@@ -6,7 +6,14 @@ Date: 2026-08-01.
 
 Source revision: `684f5a898fa2ece3a1e4a61c1a51f0716b535400`.
 
-Figma source:
+Primary editable source:
+
+- Tool: Paper
+- File: `FORGE Terrain Product Design System`
+- URL: <https://app.paper.design/file/01KYX71X3KAA6R80T6650HK7Q8/1-0>
+- Status: Partial
+
+Planned Figma source:
 
 - File: `FORGE Product Design System - Public, Web, iOS`
 - Key: `BxrzaLocs29c53U1xLyfdc`
@@ -448,7 +455,9 @@ Use Apple semantic colors for iOS structure.
 
 Apply the FORGE accent only where the semantic role is correct.
 
-## 14. Figma architecture
+## 14. Editable design architecture
+
+Use this architecture in Paper or Figma.
 
 Create these pages:
 
@@ -502,7 +511,7 @@ The platform map connects each token to CSS, Figma, and Swift identifiers.
 
 The generator verifies every color against `app/forge-system.css`.
 
-Do not import the files into Figma before Phase 1 approval.
+Import the files only after the editable source supports the selected Light and Dark structure.
 
 ## 15. Acceptance
 

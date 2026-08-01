@@ -17,7 +17,6 @@ type PublicSection =
 
 const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; section: PublicSection }> = [
   { href: "/paths", label: "Paths", section: "paths" },
-  { href: "/build", label: "Project Sprint", section: "projects" },
   { href: "/how-forge-works", label: "How FORGE works", section: "how" },
   { href: "/trust", label: "Evidence and trust", section: "trust" },
 ];
@@ -56,8 +55,8 @@ export function PublicFrame({
         </nav>
         <div className={styles.headerActions}>
           <ForgeThemeControl overlay={overlayHeader} />
-          <Link className={styles.quietHeaderLink} href="/app">
-            Open app
+          <Link className={styles.quietHeaderLink} href="/sign-in">
+            Sign in
           </Link>
           <Link className={styles.headerCta} href="/start">
             Start learning
@@ -79,6 +78,7 @@ export function PublicFrame({
               {item.label}
             </Link>
           ))}
+          <Link href="/build">Project Sprint</Link>
           <Link href="/start">Start learning</Link>
           <Link href="/app">Open app</Link>
           <Link href="/sign-in">Device access</Link>

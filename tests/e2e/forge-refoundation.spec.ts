@@ -173,7 +173,7 @@ test.describe("FORGE refoundation acceptance contract", () => {
       expect(new URL(page.url()).pathname).toBe(surface.canonical);
     }
     await page.goto("/app");
-    await expect(page.locator("body")).toContainText(/no accepted path|will not fabricate/i);
+    await expect(page.locator("body")).toContainText(/no active path|nothing will start/i);
     await page.goto("/app/evidence");
     await expect(page.locator("body")).toContainText(/browser|device.local|no cloud/i);
     await page.goto("/modelshift");
@@ -266,7 +266,7 @@ test.describe("FORGE refoundation acceptance contract", () => {
     const appTheme = page.getByRole("combobox", { name: "Color theme" });
     await expect(appTheme).toHaveValue("dark");
     await expect(page.locator("html")).toHaveAttribute("data-forge-theme", "dark");
-    await expect(page.locator(".forge-app-page__hero")).toBeVisible();
+    await expect(page.locator(".forge-today-empty")).toBeVisible();
 
     await appTheme.selectOption("light");
     await expect(page.locator("html")).toHaveAttribute("data-forge-theme", "light");

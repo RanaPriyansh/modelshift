@@ -96,7 +96,7 @@ test.describe("FORGE sprint product routes", () => {
     await expect(page.getByRole("heading", {
       name: /Learn what matters next/i,
     })).toBeVisible();
-    await page.getByRole("navigation", { name: "Public" })
+    await page.getByRole("contentinfo")
       .getByRole("link", { name: "Project Sprint" })
       .click();
     await expect(page).toHaveURL(/\/build$/);

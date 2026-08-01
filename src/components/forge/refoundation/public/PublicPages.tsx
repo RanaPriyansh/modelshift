@@ -36,7 +36,7 @@ export function HowItWorksPage() {
       <main id="forge-main" className={styles.publicPage} tabIndex={-1}>
         <PageHero
           eyebrow="One continuous journey"
-          title="A goal becomes work you can inspect—and proof you can defend."
+          title="A goal becomes work you can inspect and proof you can defend."
           body="Forge is not a chatbot, a catalogue, or an automatic course generator. It is a learner-controlled route from intent to independent capability."
           aside="The route can propose broadly. It calls something available only after its content and evidence boundaries are reviewed."
         />

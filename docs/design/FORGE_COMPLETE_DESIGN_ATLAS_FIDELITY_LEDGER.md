@@ -18,6 +18,9 @@ This record does not establish production readiness, learning efficacy, accessib
 | Base commit | `684f5a898fa2ece3a1e4a61c1a51f0716b535400` |
 | Route compatibility commit | `de531955855bd7949ee973190365ba961b3526b9` |
 | Product atlas commit | `a509c7314dc5a88ed6462791cb2f6039c6f88971` |
+| Design foundation commit | `c6196ec9aa0651a20c765adb72af29d09459d894` |
+| Concept evidence commit | `3c09859142d40eea113b9cdbca58623ecfe6c09d` |
+| Phase 2 implementation commit | Pending in this isolated worktree |
 | Deployment | Not done |
 | Push or merge | Not done |
 
@@ -91,7 +94,7 @@ The design shows capability evidence and evidence limits.
 
 This design choice does not prove improved learning.
 
-## 5. Figma boundary
+## 5. Editable design source boundary
 
 The Figma file is:
 
@@ -99,13 +102,26 @@ The Figma file is:
 - Key: `BxrzaLocs29c53U1xLyfdc`
 - URL: <https://www.figma.com/design/BxrzaLocs29c53U1xLyfdc>
 
-Phase 0 discovery is complete.
+The user approved Figma Phase 1.
 
-The Figma file remains empty.
+The connected Figma Starter plan cannot create the required Light and Dark variable modes.
 
-No Figma variables, styles, components, or screen frames were created.
+The approved fallback is Paper.
 
-Phase 1 requires explicit user approval.
+The Paper file is:
+
+- Name: `FORGE Terrain Product Design System`
+- URL: <https://app.paper.design/file/01KYX71X3KAA6R80T6650HK7Q8/1-0>
+
+The Paper source contains a partial `01 Foundations` page and cover frame.
+
+The macOS session locked before the source could be completed.
+
+The local coded atlas and portable token files are the complete current design handoff.
+
+The Paper source is not complete.
+
+See `docs/design/PAPER_IMPLEMENTATION_STATUS.md`.
 
 ## 6. Token handoff
 
@@ -124,7 +140,7 @@ The generator checks:
 - Figma-supported token values.
 - Exact Light and Dark color matches in `app/forge-system.css`.
 
-No token file was imported into Figma.
+No token file was imported into Figma or Paper.
 
 ## 7. iOS boundary
 
@@ -152,44 +168,52 @@ The coded phone frames are visual specimens.
 | `docs/design/evidence/forge-terrain/forge-ios-app-atlas.png` | 1440 by 2574 | `06ab393088dc89a3be6c48a3f167c16cd23db416936e95b89dd0b84949ae06cf` |
 | `docs/design/evidence/forge-terrain/forge-product-atlas-320.png` | 320 by 800 | `bd3505f6a253ec74581c39def790efb596e8c710a86546e093531c8f4128ac2e` |
 | `docs/design/evidence/forge-terrain/forge-terrain-forced-colors.png` | 1440 by 1241 | `2d979bfea5ff1f2b4fce8fd6e84b69506233fe9406d70c2e506fb3daa4ebbd51` |
+| `docs/design/evidence/forge-terrain/forge-public-home-terrain-phase2.png` | 1440 by 4314 | `68302999a536ed64ab3e2dafb6ba5a03da252c07b9a3a8ebd39ad9c41bdf4416` |
+| `docs/design/evidence/forge-terrain/forge-public-home-terrain-phase2-320.png` | 320 by 5878 | `c21729de8e626600420adf491249851299ba0e3f17ea1f67bb3f4beed9d2a2ff` |
+| `docs/design/evidence/forge-terrain/forge-web-app-today-empty-terrain-phase2.png` | 1440 by 900 | `199280754a33fce2a80e49ffbe6c74a26a4068932708feaf2c6f98b8fb969b61` |
+| `docs/design/evidence/forge-terrain/forge-web-app-today-empty-terrain-phase2-320.png` | 320 by 800 | `b993e6a0202276f9f0049c18e24982174d3dc635c4156ec7bdd40b432ee809bf` |
 
 The screenshots embed the existing local landscape asset.
 
 The asset rights remain uncleared for production.
 
+### 8.1 Concept-to-product comparison
+
+| Concept decision | Product result | Status |
+| --- | --- | --- |
+| Board 02 uses one vivid landscape as the public threshold. | The public home uses one full-width cobalt and alpine landscape. | Implemented |
+| Board 02 makes one learner goal the dominant action. | The public hero asks for one goal and uses one orange learner action. | Implemented |
+| Board 03 uses a quiet surface during work. | Today uses a dark work panel with a contained terrain threshold. | Implemented |
+| Board 03 keeps one dominant action. | Today uses `Shape a path` as the only primary action. | Implemented |
+| Board 03 uses canonical product navigation. | The application uses Today, Paths, Projects, Evidence, and Account. | Implemented |
+| Board 04 uses native iOS structure. | The iOS atlas uses native navigation, tab, sheet, alert, and accessibility rules. | Design handoff |
+| Board 01 defines mood, grain, and color. | The product uses the mood without copying its presentation layout. | Implemented |
+
 ## 9. Browser verification
 
-Playwright checked the development atlas at 1440 by 900 CSS pixels.
+Playwright checked the production build with system Chrome.
 
-Playwright also checked the atlas at 320 by 800 CSS pixels.
+The checks covered the public home and application Today page at 1440 by 900 and 320 by 800 CSS pixels.
 
 Observed results:
 
-- The 320 CSS pixel page had no document-level horizontal overflow.
-- The document width and viewport width were both 320 CSS pixels.
-- The first Tab action showed the skip link at 12 CSS pixels from the top.
-- The skip link measured 213.42 CSS pixels wide.
+- The public home had no horizontal overflow at 1440 or 320 CSS pixels.
+- The Today page had no horizontal overflow at 1440 or 320 CSS pixels.
+- The public hero heading was `Learn what matters next.`
+- Public navigation used Paths, How FORGE works, Evidence and trust, and Sign in.
+- Application navigation used Today, Paths, Projects, Evidence, and Account.
+- The first Tab action showed the skip link.
 - The skip link used a three CSS pixel focus outline.
-- Enter moved the page to `#design-lab-main`.
-- Dark theme set `data-forge-theme="dark"`.
-- Dark theme stored `forge.color-theme.v1="dark"`.
-- System theme removed the document theme attribute.
-- System theme stored `forge.color-theme.v1="system"`.
+- Enter moved focus to `#forge-main`.
+- Light theme used `#F4F7F1` as the background and `#102019` as the main text.
+- Dark theme used `#071722` as the background and `#F3F7F0` as the main text.
+- Theme selection persisted through `forge.color-theme.v1`.
 - Reduced-motion emulation matched the reduced-motion media query.
-- The rendered page had zero active animations during that check.
-- The prior corrected development session had zero console errors.
-- The corrected development session had two unused preload warnings.
-- Forced Colors produced a white Canvas, black CanvasText, and black boundaries.
-- Forced Colors kept images at 0.2 opacity behind readable text.
-- Forced Colors kept the skip link visible with a three CSS pixel system outline.
-- Forced Colors had no horizontal overflow at 320 CSS pixels.
-- Forced Colors had zero active animations with Reduce Motion.
-
-The two warnings referenced development error and not-found CSS.
-
-The fresh Forced Colors session also logged the known `/favicon.ico` 404.
-
-It had no application runtime error.
+- Reduced Motion produced zero active animations.
+- Forced Colors preserved the 320 CSS pixel layout.
+- Forced Colors kept visible system boundaries and the focus outline.
+- The final screenshot session logged zero console errors.
+- `/favicon.ico` returned HTTP 200 as a 64 by 64 Windows icon resource.
 
 This browser review is not an accessibility conformance claim.
 
@@ -199,17 +223,17 @@ This browser review is not an accessibility conformance claim.
 
 | Check | Result |
 | --- | --- |
-| `./node_modules/.bin/eslint . --max-warnings=0` | Pass |
-| `./node_modules/.bin/tsc --noEmit` | Pass |
-| `node scripts/design/build-forge-terrain-tokens.mjs --check` | Pass |
+| `pnpm lint` | Pass |
+| `pnpm typecheck` | Pass |
+| `pnpm design:tokens:check` | Pass |
 | `git diff --check` | Pass |
 
 ### 10.2 Source and evaluation tests
 
 Source result:
 
-- 105 test files passed.
-- 954 tests passed.
+- 107 test files passed.
+- 956 tests passed.
 
 Evaluation result:
 
@@ -218,8 +242,14 @@ Evaluation result:
 
 Combined result:
 
-- 107 test files passed.
-- 967 tests passed.
+- 109 test files passed.
+- 969 tests passed.
+
+Browser result:
+
+- 127 browser tests passed.
+- 43 mobile project duplicates were intentionally skipped.
+- Zero browser tests failed.
 
 ### 10.3 Production build
 
@@ -233,7 +263,9 @@ Result:
 
 - Next.js compilation passed.
 - TypeScript passed.
-- 54 pages were generated.
+- 56 pages were generated.
+- `/icon.svg` was prerendered.
+- `/favicon.ico` was served by the production build.
 
 The initial build exposed invalid custom exports in two API route files.
 
@@ -252,14 +284,15 @@ Command:
 Result:
 
 - 108 static assets were checked.
-- Public asset digest: `fe1f9b55a69c42c25fbcd6d1e49cc55ab9b6fa303c59667168c5aceed2b97799`.
+- Public asset digest: `3b891b76507a2ccdfb78f9dddce83efa40271d20aab5d4080cba71a1834c03e2`.
 
 ## 11. Remaining gates
 
 The remaining design gates are:
 
-- Explicit approval for Figma Phase 1.
-- Figma variables, styles, components, and screen frames.
+- Complete the editable Paper source after macOS is unlocked.
+- Import the portable tokens into an editable design source.
+- Create the remaining detailed route variants.
 - Native SwiftUI implementation.
 - Representative learner review.
 - Image rights clearance.

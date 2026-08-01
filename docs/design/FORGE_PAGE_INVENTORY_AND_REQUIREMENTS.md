@@ -341,14 +341,14 @@ They need a separate workflow design review.
 
 The current code has these design conflicts:
 
-1. The application labels Today as `Home`.
-2. The application includes Explore in primary navigation.
+1. The application now labels Today as `Today`.
+2. The application no longer includes Explore in primary navigation.
 3. The application has both `/app/path` and `/app/paths`.
 4. The public code has both `/how-it-works` and `/how-forge-works`.
 5. The global font stack still uses Inter, Georgia, and Avenir fallbacks.
 6. Several legacy routes remain visible.
 7. iOS has a display study but no native application source.
-8. The Figma file has no foundations or components.
+8. The Paper file has a partial foundation cover and no complete component set.
 
 These conflicts do not block Phase 0.
 
