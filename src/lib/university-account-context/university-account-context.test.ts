@@ -12,10 +12,26 @@ const moduleReaders = vi.hoisted(() => ({
     read: () => null as unknown,
   },
 }));
+const canonicalProjector = vi.hoisted(() => ({
+  call: vi.fn<(value: unknown) => void>(),
+}));
 
 vi.mock("@/src/lib/forge-auth/session.server", () => ({
   readForgeCloudIdentitySubject: moduleReaders.identity,
 }));
+
+vi.mock("@/src/forge/university-student-context", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/src/forge/university-student-context")
+  >("@/src/forge/university-student-context");
+  return {
+    ...actual,
+    projectUniversityStudentContext: (value: unknown) => {
+      canonicalProjector.call(value);
+      return actual.projectUniversityStudentContext(value);
+    },
+  };
+});
 
 vi.mock("./binding-key-provider.server", () => ({
   readUniversityAccountContextBindingKey: () => {
@@ -184,6 +200,7 @@ beforeEach(() => {
   moduleReaders.identity.mockResolvedValue(identity());
   moduleReaders.bindingKey.calls = 0;
   moduleReaders.bindingKey.read = () => bindingKey();
+  canonicalProjector.call.mockReset();
 });
 
 describe("bindUniversityAccountContext", () => {
@@ -715,12 +732,21 @@ describe("bindUniversityAccountContext", () => {
     )?.state).toBe("in_progress");
   });
 
-  it("calls each module provider once and returns frozen effect-free data", async () => {
+  it("calls each server boundary once and returns frozen effect-free data", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const dispatchSpy = vi.spyOn(EventTarget.prototype, "dispatchEvent");
 
     const result = await bindUniversityAccountContext(request());
 
+    expect(canonicalProjector.call).toHaveBeenCalledTimes(1);
+    expect(canonicalProjector.call).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contextBinding: {
+          bindingId: "forge.account-context.preflight.v1",
+          ownershipDeclaration: "adult_learner_self_attested",
+        },
+      }),
+    );
     expect(moduleReaders.identity).toHaveBeenCalledTimes(1);
     expect(moduleReaders.bindingKey.calls).toBe(1);
     expect(fetchSpy).not.toHaveBeenCalled();

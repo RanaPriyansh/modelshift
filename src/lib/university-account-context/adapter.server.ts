@@ -321,32 +321,20 @@ export async function bindUniversityAccountContext(
       return unavailable("binding_key_invalid");
     }
 
-    const projection = projectUniversityStudentContext({
-      schemaVersion: UNIVERSITY_STUDENT_CONTEXT_REQUEST_SCHEMA_VERSION,
-      contextBinding: {
-        bindingId: opaqueBindingId(parsedIdentity.data.id, bindingKey),
-        ownershipDeclaration: "adult_learner_self_attested",
-      },
-      degreeMapRequest: parsedInput.data.degreeMapRequest,
-      learningMapRequest: parsedInput.data.learningMapRequest,
-    });
-
-    if (
-      !isCompleteStudentContextProjection(projection)
-      || projection.status !== preflightProjection.status
-    ) {
-      return invalidStudentContext(projection);
-    }
+    const contextBinding = {
+      bindingId: opaqueBindingId(parsedIdentity.data.id, bindingKey),
+      ownershipDeclaration: "adult_learner_self_attested",
+    } as const;
 
     return deepFreeze({
       schemaVersion: UNIVERSITY_ACCOUNT_CONTEXT_RESULT_VERSION,
       status: "bound_for_inspection",
       reason: null,
       context: {
-        canonicalStatus: projection.status,
-        contextBinding: projection.contextBinding,
-        degreeAxis: projection.degreeAxis,
-        learningAxis: projection.learningAxis,
+        canonicalStatus: preflightProjection.status,
+        contextBinding,
+        degreeAxis: preflightProjection.degreeAxis,
+        learningAxis: preflightProjection.learningAxis,
       },
       authority: BOUND_AUTHORITY,
       issues: [],
