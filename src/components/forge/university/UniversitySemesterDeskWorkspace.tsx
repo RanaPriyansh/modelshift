@@ -112,7 +112,7 @@ function CourseChapter({
     >
       <header className={styles.courseChapterHeader}>
         <div className={styles.chapterIdentity}>
-          <p aria-hidden="true">02</p>
+          <p aria-hidden="true">{course.currentJob.index}</p>
           <div>
             <span>{course.currentJob.eyebrow}</span>
             <h2 id="semester-desk-course-title">{course.courseLabel}</h2>
@@ -425,7 +425,10 @@ export function UniversitySemesterDeskWorkspace({
           </dl>
         </section>
 
-        <fieldset className={styles.courseSelector}>
+        <fieldset
+          className={styles.courseSelector}
+          aria-describedby="semester-desk-course-boundary"
+        >
           <legend className={styles.srOnly}>
             Choose one course to inspect
           </legend>
@@ -484,7 +487,10 @@ export function UniversitySemesterDeskWorkspace({
               </li>
             ))}
           </ol>
-          <p className={styles.ledgerBoundary}>
+          <p
+            id="semester-desk-course-boundary"
+            className={styles.ledgerBoundary}
+          >
             Course-ID order is deterministic, not pedagogical, chronological,
             urgent, difficult, or recommended. Selecting a row changes only
             this refresh-clear inspection.
