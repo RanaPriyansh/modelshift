@@ -33,18 +33,32 @@ This board replaces hackathon, judging, demo-video, submission, and deadline wor
 | Externally reviewed adult practical pilot | `EXTERNALLY BLOCKED` | Requires a recruited 18+ cohort, named reviewer/entitlement operation, approved fixture, incident authority, and delayed-return operation. `/pilot` must remain unavailable by default. |
 | Provider-authenticated production release | `EXTERNALLY BLOCKED` | Vercel must own a connected GitHub repository/ref/SHA tuple and emit the bound provider receipt. The current CLI deployment cannot satisfy that provenance gate. |
 
-## Current candidate verification
+## Latest verified implementation receipt
+
+The latest verified implementation candidate before this record update is clean source
+`98f9cd81b76a8d7c2caf3fa5fcd6a832c569c54c` and tree
+`78d7fc8d475b94fd3c7d0a022f593d83ffde337e`.
 
 - TypeScript: pass.
 - Zero-warning lint: pass.
-- Application contracts: 936 pass across 101 files.
+- Application contracts: 1,523 pass across 175 files.
 - Evaluator contracts: 13 pass across 2 files.
-- Fresh disposable-database replay plus the continuity V1 SQL contract: pass; the database and temporary roles were removed after verification.
-- Targeted rendered continuity browser contract: 14 pass across desktop and mobile, including the exact Force/ModelShift grounded activation, device-local checkpoint restore, delayed return, under-18 data minimization, 320 CSS px reflow, and keyboard operation. Four-World protocol mapping is covered by unit contracts; standard reviewed-activity persistence is covered by the disposable-database contract.
-- Optimized build: pass; 53 public static assets scanned with no private-pilot marker, secret-pattern leak, or stale internal package marker. Public asset digest for the final evidence build: `6f692bb4615bf23b2ab18b5b245eb4c64264980f2ad09d0af7599191c62733ae`.
-- Production dependency audit: pass; `pnpm audit --audit-level high` reported no known vulnerabilities.
+- Focused Source Review contracts: 5 pass across one file.
+- Connected Chrome Source Review check: pass at 1,440 and 320 CSS pixels for unique action names, keyboard focus, keyboard activation, and horizontal overflow.
+- Visual comparison: desktop and mobile before-and-after image digests are identical because visible button labels and layout did not change.
+- Optimized build: pass.
+- Public build boundary: 71 static assets passed. Public asset digest: `6a9ec772109636d70de83033f73e8d89dfaf59e622ebeac4019d9273a9f51a66`.
+- Production build receipt: 1,472 files. Artifact digest: `b80ad27db6893408eb06a4ef3aced603a8e49147c53b2b6c6a116b378b4e7586`.
 
-Only the current reruns above are candidate evidence; earlier broad browser and dependency-audit results are not inherited. These engineering gates do not promote production and are not a learner study, manual assistive-technology audit, provider credential test, cloud identity test, efficacy result, or release-provenance receipt.
+The Chrome check used a local fixture render harness. It is not production
+operation or deployment evidence. The public artifact guard rejected a
+fixture-enabled production harness as expected. No harness code entered this
+branch.
+
+This implementation candidate did not rerun disposable-database replay, dependency
+audit, the complete public browser matrix, forced colors, reduced motion, or
+manual assistive technology. Older results for those checks are not inherited.
+No push or deployment occurred.
 
 ## Current implementation order
 
