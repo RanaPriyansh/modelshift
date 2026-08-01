@@ -1,6 +1,6 @@
 # Figma Editable Source Status
 
-Status: Generator ready. Figma run not verified.
+Status: Editable source created and desktop visual audit passed. Semantic alias trace remains open.
 
 Date: 2026-08-01.
 
@@ -65,7 +65,57 @@ The plugin makes no network request.
 - 109 source and evaluation test files pass.
 - 969 source and evaluation tests pass.
 
-## Current external blockers
+## Desktop execution result
+
+The development plugin was imported from:
+
+`scripts/design/figma-forge-terrain-plugin/manifest.json`
+
+Figma accepted the plugin as `FORGE Terrain Builder`.
+
+The plugin completed in the target file.
+
+Figma showed all ten planned pages:
+
+1. `00 Cover`
+2. `01 Foundations`
+3. `02 Web Components`
+4. `03 Public Site`
+5. `04 Web Application`
+6. `05 Focus Mode`
+7. `06 iOS Components`
+8. `07 iOS Application`
+9. `08 States and Accessibility`
+10. `09 Archive`
+
+The build receipt reports:
+
+- 10 pages.
+- 3 variable collections.
+- 86 variables.
+- 18 text styles.
+- 7 paint styles.
+- 2 effect styles.
+- 17 components.
+- 28 generated frames.
+
+The desktop variable editor showed 16 Light semantic aliases.
+
+The desktop variable editor also showed 16 Dark semantic aliases.
+
+No broken semantic alias marker was visible.
+
+The saved evidence does not include the variable editor panel.
+
+The connector cannot supply an independent variable readback.
+
+The public, web, focus, iOS, state, accessibility, and coverage boards passed a desktop visual audit.
+
+The durable evidence manifest is:
+
+`docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json`
+
+## Connector limitation
 
 The following Figma endpoints return `INVALID_ARGUMENT` for the target file:
 
@@ -78,24 +128,12 @@ The local design atlas returned HTTP 200 before the web design capture attempt.
 
 The capture endpoint failed before it created a capture.
 
-The Chrome file chooser needs the extension file-access permission.
-
-The macOS session is locked.
-
-Paper cannot open while the macOS session is locked.
-
-The generator has not run in Figma.
-
-No editable-source completion claim is valid yet.
+The desktop Figma audit supplies the source evidence that the connector could not supply.
 
 ## Next action
 
-Unlock macOS.
+Use the audited Figma file as the primary editable design source.
 
-Open the target file in the Figma desktop application or open Paper for the approved fallback review.
+Capture the variable editor panel or a variable export after macOS is unlocked.
 
-Import `scripts/design/figma-forge-terrain-plugin/manifest.json` as a development plugin.
-
-Run `FORGE Terrain Builder`.
-
-Audit the build receipt, variables, styles, components, and boards.
+Run the generator again only after the generator or source requirements change.

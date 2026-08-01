@@ -16,11 +16,13 @@ The task set the cover fill to `#071722`.
 
 The task started the title.
 
-## Blocker
+## Boundary
 
-The macOS session locked before the task could continue.
+The Paper task stopped before it completed.
 
-The user must manually unlock macOS before work can continue.
+The audited Figma source is now the primary editable source.
+
+The partial Paper source does not block the current design goal.
 
 ## Known defect
 
@@ -34,15 +36,11 @@ Do not use this record as a completion claim.
 
 ## Next sequence
 
-After the manual unlock:
+Continue the Paper source only after an explicit request.
 
-1. Resume the LUNA Max task thread.
-2. Open the Paper file.
-3. Open the `01 Foundations` page.
-4. Correct the title placement and clipping.
-5. Verify the cover fill and title layout.
-6. Continue the remaining design system work.
-7. Record evidence before a completion claim.
+Correct the title placement and clipping before any Paper review.
+
+Record evidence before any Paper completion claim.
 
 ## Repository boundary
 

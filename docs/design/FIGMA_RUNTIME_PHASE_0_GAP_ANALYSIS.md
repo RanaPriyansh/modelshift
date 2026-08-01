@@ -78,7 +78,7 @@ The browser import path is an allowed fallback for representative editable board
 
 The connector can become a write path only after its `INVALID_ARGUMENT` error is resolved.
 
-Paper remains an approved visual-review fallback after the macOS session is unlocked.
+Paper remains an optional visual-review fallback.
 
 ## Phase 0 exit
 
@@ -88,4 +88,7 @@ All identified source conflicts have one recorded resolution.
 
 Phase 1 can start without another design-scope decision.
 
-The Figma file must not receive a completion status until the runtime build and visual audit pass.
+The runtime build and desktop visual audit later passed.
+
+The completion evidence is in
+`docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json`.

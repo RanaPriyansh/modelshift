@@ -1,6 +1,6 @@
 # FORGE Final Design Requirement Audit
 
-Status: Local requirements pass. External source and learner gates remain open.
+Status: Local and editable-source visual requirements pass. Trace, runtime, rights, and learner gates remain open.
 
 Date: 2026-08-01.
 
@@ -29,7 +29,8 @@ Recall -> Attempt -> Repair -> Prove -> Return
 | Canonical inventory | Pass | 11 public, 14 application, 3 focus, and 18 iOS identifiers exist. |
 | Coded design atlas | Pass | All 46 identifiers render at desktop and 320 CSS pixels. |
 | Shared states | Pass | Eight required recovery states render in both audited viewports. |
-| Editable-source generator | Pass locally | The generator creates 10 pages, 86 variables, 17 components, and 28 frames. |
+| Editable Figma source | Pass | The desktop source contains 10 pages, 3 collections, 86 variables, 17 components, and 28 frames. |
+| Figma semantic aliases | Observed, trace open | The desktop editor showed 16 Light aliases, 16 Dark aliases, and no broken alias marker. |
 | Static source parity | Pass | The 46 Figma coverage identifiers match the coded atlas. |
 | Representative boards | Pass locally | The generator contains 21 editable representative screen identifiers. |
 | Responsive behavior | Pass | Atlas and canonical route browser audits report zero horizontal overflow. |
@@ -64,25 +65,28 @@ The public boundary digest is
 
 The default Turbopack build cannot follow the linked `node_modules` path in this isolated worktree.
 
+The Figma desktop audit manifest is
+`docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json`.
+
+The Figma connector still returns `INVALID_ARGUMENT`.
+
+The connector limitation does not invalidate the completed desktop audit.
+
 ## Open external gates
 
-### Editable Figma source
+### Figma semantic alias trace
 
-The target Figma file is still empty.
+The saved screenshots do not include the variable editor panel.
 
-The Figma connector returns `INVALID_ARGUMENT`.
+The Figma connector returns `INVALID_ARGUMENT` for variable readback.
 
-The macOS session remains locked.
-
-Run the verified local plugin in Figma.
-
-Then inspect every variable, style, component, board, and build receipt.
+Capture the panel or a variable export after macOS is unlocked.
 
 ### Native iOS runtime verification
 
 The SwiftUI reference target exists at `ios/FORGETerrain/FORGETerrain.xcodeproj`.
 
-The machine has no installed iOS Simulator runtime.
+The machine lists iOS 26.5 simulator devices, but every listed runtime is unavailable.
 
 Install a compatible runtime before simulator, Dynamic Type, VoiceOver, or native motion claims.
 
@@ -98,4 +102,4 @@ Clear image rights before production use.
 
 The local design and implementation evidence passes.
 
-The complete goal remains active because the editable Figma, native runtime, learner-review, and rights gates remain open.
+The complete goal remains active because the Figma trace, native runtime, learner-review, and rights gates remain open.

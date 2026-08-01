@@ -1,0 +1,136 @@
+{
+  "schema": "forge.figma.desktop-audit.v1",
+  "date": "2026-08-01",
+  "status": "pass",
+  "sourceRevision": "9c2d0d0dc60910d4f8975e67ee309698ed48f705",
+  "file": {
+    "name": "FORGE Terrain Product Design System",
+    "key": "qzdsINs69QK44KiorK9plj",
+    "url": "https://www.figma.com/design/qzdsINs69QK44KiorK9plj/FORGE-Terrain-Product-Design-System",
+    "plan": "Starter"
+  },
+  "generator": {
+    "name": "FORGE Terrain Builder",
+    "version": "1.0.0",
+    "structure": "Starter fallback",
+    "sha256": "2b6efaff1d0e58d9fd1181b0e59fe07f87758b1fb691a8257b1610d6893d8e02"
+  },
+  "counts": {
+    "pages": 10,
+    "collections": 3,
+    "variables": 86,
+    "textStyles": 18,
+    "paintStyles": 7,
+    "effectStyles": 2,
+    "components": 17,
+    "generatedFrames": 28,
+    "canonicalCoverageIdentifiers": 46,
+    "representativeEditableIdentifiers": 21
+  },
+  "semanticAliases": {
+    "light": 16,
+    "dark": 16,
+    "broken": 0
+  },
+  "semanticAliasEvidence": {
+    "basis": "desktop variable editor observation",
+    "durablePanelCapture": false,
+    "connectorReadback": "INVALID_ARGUMENT"
+  },
+  "representativeBoards": {
+    "publicSite": 6,
+    "webApplication": 6,
+    "focusMode": 3,
+    "iosApplication": 6
+  },
+  "pages": [
+    "00 Cover",
+    "01 Foundations",
+    "02 Web Components",
+    "03 Public Site",
+    "04 Web Application",
+    "05 Focus Mode",
+    "06 iOS Components",
+    "07 iOS Application",
+    "08 States and Accessibility",
+    "09 Archive"
+  ],
+  "evidence": [
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-cover-audit-20260801.jpg",
+      "sha256": "15d7b3d01d8867cea5d5c3b3e582380fe4280a34dc8aa23485c0ab30f0ef6df9",
+      "width": 1195,
+      "height": 768,
+      "description": "Cover page"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-foundations-audit-20260801.jpg",
+      "sha256": "bee29e1f818e2584de8d0c601c47b894b1a172382d3400f5d60c04c853afd97e",
+      "width": 1195,
+      "height": 768,
+      "description": "Foundation tokens and styles"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-web-components-audit-20260801.jpg",
+      "sha256": "38a7e7dc383c74a5663db07b44c7b7d05b015aae7d98b2c2680ec1c473aacf76",
+      "width": 1195,
+      "height": 768,
+      "description": "Reusable web components"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-public-site-audit-20260801.jpg",
+      "sha256": "8051263843fc0af56849ec02871a5fee06f1a6846b94eed288b3db457d3ba6ed",
+      "width": 1195,
+      "height": 768,
+      "description": "Six representative public-site boards"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-web-application-audit-20260801.jpg",
+      "sha256": "6ff08f20a2ed145e58898754ebd1a51b94125fa07c9a48d315c2de895d467818",
+      "width": 1195,
+      "height": 768,
+      "description": "Six representative web-application boards"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-focus-mode-audit-20260801.jpg",
+      "sha256": "3e624a6f8b11393147ba3e0f9bfdd570f571c6717636f6812ae3b26037d5e323",
+      "width": 1195,
+      "height": 768,
+      "description": "Three representative focus-mode boards"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-ios-components-audit-20260801.jpg",
+      "sha256": "6fd2607fa29a4724137a7dbd4ba16774ea4710fefc08ef8dd2bf842783a7ae1b",
+      "width": 1195,
+      "height": 768,
+      "description": "Reusable iOS compound components"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-ios-application-audit-20260801.jpg",
+      "sha256": "c0aac4621cf4fa389993eff70f5306881f3ca4f57f322f066060a3f75886ef08",
+      "width": 1195,
+      "height": 768,
+      "description": "Six representative iOS application boards"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-states-audit-20260801.jpg",
+      "sha256": "284470362ce6f9e73ef88adeac60feb0fe231a1216804fc1748c44f77482dbad",
+      "width": 1195,
+      "height": 768,
+      "description": "Shared states and accessibility contracts"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-build-receipt-audit-20260801.jpg",
+      "sha256": "3b90051832322f09dc78cc7913c5c2410910e6c4137f59d40642d0611700f3f6",
+      "width": 1195,
+      "height": 768,
+      "description": "Build receipt and canonical coverage index"
+    }
+  ],
+  "limitations": [
+    "The Figma connector continues to return INVALID_ARGUMENT.",
+    "The desktop audit verifies created source, counts, aliases, styles, components, boards, and the build receipt.",
+    "The semantic alias counts were observed in the desktop variable editor, but the saved screenshots do not include that panel.",
+    "This audit does not prove learner preference, accessibility conformance, image rights, native iOS runtime behavior, or production deployment."
+  ]
+}

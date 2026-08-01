@@ -110,13 +110,11 @@ The design objective is complete only when all gates pass.
 
 ## 6. Current priority order
 
-1. Preserve the verified generator, token sources, identifiers, and coded atlas as one import-ready source.
-2. Run the generator in Figma after the desktop session becomes available.
-3. Use Paper for visual review if Figma remains unavailable after desktop access returns.
-4. Audit all generated variables, styles, components, boards, and identifiers.
-5. Compare the representative editable boards with the complete coded atlas.
-6. Run the SwiftUI reference after a compatible iOS Simulator runtime is installed.
-7. Test the design with representative learners.
+1. Preserve the audited Figma source, generator, token sources, identifiers, and coded atlas as one linked system.
+2. Compare future Figma changes with the complete coded atlas.
+3. Run the SwiftUI reference after a compatible iOS Simulator runtime is installed.
+4. Test the design with representative learners.
+5. Clear every image right before production use.
 
 ## 7. Execution direction
 
@@ -140,10 +138,10 @@ No visual reward can replace useful learning feedback or independent evidence.
 
 | Gate | Current state |
 | --- | --- |
-| Editable source | Generator and canonical coverage index verified locally. Actual Figma run remains open. |
+| Editable source | Figma desktop source, build receipt, variables, styles, components, and boards pass the recorded audit. |
 | Page inventory | Complete for public, web, focus, and iOS families. |
 | Visual fidelity | All canonical public, web, and iOS families are reviewed at desktop and 320 CSS pixels. |
-| Design-system integrity | Local token, count, coverage-index, and generator audits pass. Actual Figma audit remains open. |
+| Design-system integrity | Token, count, coverage-index, generator, and Figma visual audits pass. Durable semantic alias readback remains open. |
 | Web implementation | All public and web families have coded boards. Public Home, Today, and focus families use the direction in routes. |
 | Responsive behavior | Atlas and canonical route audits have no horizontal overflow at desktop or 320 CSS pixels. |
 | Themes | Light and Dark boards exist. One theme choice persists across public and application routes. |

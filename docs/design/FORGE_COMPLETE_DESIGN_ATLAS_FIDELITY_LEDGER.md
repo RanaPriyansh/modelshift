@@ -133,11 +133,23 @@ The local generator check creates:
 - One exact identifier comparison between the Figma coverage receipt and the coded atlas.
 - 21 identifiers marked as representative editable boards.
 
-The generator has not run in Figma because the macOS session is locked.
+The desktop generator completed in Figma and created the ten planned pages.
+
+The desktop visual audit passed.
+
+The build receipt confirms every local generator count.
+
+The desktop variable editor showed 16 Light semantic aliases and 16 Dark semantic aliases.
+
+No broken alias marker was visible.
+
+The saved evidence does not include the variable editor panel.
 
 The connector also returns `INVALID_ARGUMENT` for the new file.
 
-Paper remains a secondary editable source.
+The connector limitation does not block the completed desktop Figma source.
+
+Paper remains an optional secondary editable source.
 
 The Paper file is:
 
@@ -146,13 +158,17 @@ The Paper file is:
 
 The Paper source contains a partial `01 Foundations` page and cover frame.
 
-The macOS session locked before the source could be completed.
+The Paper source stopped before completion.
 
-The local coded atlas, token files, North Star, and Figma generator are the complete current local handoff.
+The local coded atlas, token files, North Star, and audited Figma file are the complete current design handoff.
 
-The Figma and Paper sources are not complete until a generator run and visual audit succeed.
+The Paper source remains partial.
 
 See `docs/design/PAPER_IMPLEMENTATION_STATUS.md`.
+
+The Figma desktop audit manifest is:
+
+`docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json`
 
 ## 6. Token handoff
 
@@ -171,7 +187,13 @@ The generator checks:
 - Figma-supported token values.
 - Exact Light and Dark color matches in `app/forge-system.css`.
 
-No token file was imported into Figma or Paper.
+The generator completed the Figma token creation.
+
+The Figma token creation and desktop alias observation passed.
+
+An independent alias readback remains open.
+
+No token file was imported into Paper.
 
 ## 7. iOS boundary
 
@@ -413,18 +435,15 @@ Command:
 
 Result:
 
-- 108 static assets were checked.
-- Public asset digest: `3b891b76507a2ccdfb78f9dddce83efa40271d20aab5d4080cba71a1834c03e2`.
+- 106 static assets were checked.
+- Public asset digest: `b75e559a0bff74ca778a990a58768de7576d6e07d451579033247a0329f19166`.
 
 ## 11. Remaining gates
 
 The remaining design gates are:
 
-- Run the local generator in the Figma desktop application after macOS is unlocked.
-- Audit the created variables, styles, components, and screens.
-- Complete or archive the partial Paper source.
-- Create the remaining detailed state variants in Figma and production routes.
-- Native SwiftUI implementation.
+- Capture a durable semantic alias panel or variable export from Figma.
+- Install an available iOS Simulator runtime and complete native runtime checks.
 - Representative learner review.
 - Image rights clearance.
 - Production deployment verification.

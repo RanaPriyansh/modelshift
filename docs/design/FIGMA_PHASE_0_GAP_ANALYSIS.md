@@ -203,7 +203,7 @@ Phase 1 will not create final page designs.
 
 The user approved Phase 1 on 2026-08-01.
 
-Execution state: `APPROVED_GENERATOR_READY_NOT_RUN`.
+Execution state: `PHASE_1_COMPLETE_DESKTOP_VISUAL_AUDIT_PASS_ALIAS_TRACE_OPEN`.
 
 The connected Figma plan is Starter.
 
@@ -213,7 +213,17 @@ The current target file cannot create the planned Light and Dark modes.
 
 The Figma connector also returned `INVALID_ARGUMENT` for the original and replacement files.
 
-No Phase 1 mutation succeeded.
+The desktop plugin created the ten planned pages.
+
+The final desktop audit passed.
+
+The build receipt reports 3 collections, 86 variables, 18 text styles, 7 paint styles, and 2 effect styles.
+
+The build receipt also reports 17 components and 28 generated frames.
+
+The desktop editor showed 16 Light aliases, 16 Dark aliases, and no broken alias marker.
+
+The saved evidence does not include the variable editor panel.
 
 The selected structure is:
 
@@ -225,9 +235,10 @@ The local generator creates this structure.
 
 The generator path is `scripts/design/figma-forge-terrain-plugin`.
 
-Run it in the Figma desktop application after macOS is unlocked.
-
 The exact build sequence is in `docs/design/FIGMA_PHASE_1_EXECUTION_PLAN.md`.
+
+The durable audit evidence is in
+`docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json`.
 
 ## 10. Import-ready token handoff
 
@@ -243,4 +254,8 @@ The generator verifies 16 semantic colors against the current CSS implementation
 
 These files prepare Phase 1.
 
-They were not imported into Figma.
+The generator completed their Figma creation.
+
+The variable editor observation passed.
+
+An independent alias readback remains open.

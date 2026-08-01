@@ -12,7 +12,8 @@ Primary editable target:
 - File: `FORGE Terrain Product Design System`
 - Key: `qzdsINs69QK44KiorK9plj`
 - URL: <https://www.figma.com/design/qzdsINs69QK44KiorK9plj/FORGE-Terrain-Product-Design-System>
-- Status: Valid empty file. Local generator ready. Generator run not verified.
+- Status: Editable source created. Desktop visual audit passed. Semantic alias trace remains open.
+- Evidence: `docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json`
 
 Secondary editable source:
 
@@ -487,13 +488,13 @@ The current Starter-compatible structure uses:
 - `FORGE / Semantic / Light`
 - `FORGE / Semantic / Dark`
 
-The local generator creates 86 variables across these three single-mode collections.
+The audited Figma source contains 86 variables across these three single-mode collections.
 
 The Phase 1 build sequence is in `docs/design/FIGMA_PHASE_1_EXECUTION_PLAN.md`.
 
 The local generator is in `scripts/design/figma-forge-terrain-plugin`.
 
-Run the generator in the Figma desktop application after macOS is unlocked.
+Run the generator again only after the generator or source requirements change.
 
 The native iOS interaction contract is in `docs/design/FORGE_IOS_NATIVE_HANDOFF.md`.
 

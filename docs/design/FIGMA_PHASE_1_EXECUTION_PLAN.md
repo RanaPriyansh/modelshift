@@ -1,6 +1,6 @@
 # Figma Phase 1 Execution Plan
 
-Status: Approved. Starter generator ready. Generator run not verified.
+Status: Approved. Starter generator complete. Desktop visual audit passed. Semantic alias trace remains open.
 
 Date: 2026-08-01.
 
@@ -14,11 +14,15 @@ Phase 1 can create foundations.
 
 Phase 1 cannot create final page designs.
 
-No Phase 1 mutation has succeeded in Figma.
+The desktop plugin created the ten planned pages.
 
 The local Figma generator is complete.
 
 The generator is in `scripts/design/figma-forge-terrain-plugin`.
+
+The final build receipt passed the desktop audit.
+
+The variable aliases passed a desktop editor observation.
 
 ## 2. Current constraint
 
@@ -32,13 +36,40 @@ The Starter plan also excludes published team libraries, Dev Mode, and Code Conn
 
 The Figma connector returns `INVALID_ARGUMENT` for the valid new file.
 
-The Chrome file chooser also cannot upload the token files without the required extension permission.
+The Figma desktop application supplied the completed source and audit evidence.
 
-The Figma desktop application is the next execution path.
+The connector limitation does not block the completed desktop source.
 
-The macOS session must be unlocked before that path can run.
+## 3. Phase 1 result
 
-## 3. Recommended structure
+The Starter fallback passed the exit criteria.
+
+The build receipt reports:
+
+- 3 collections.
+- 86 variables.
+- 18 text styles.
+- 7 paint styles.
+- 2 effect styles.
+- 17 components.
+- 28 generated frames.
+
+The audit found 16 Light semantic aliases.
+
+The audit also found 16 Dark semantic aliases.
+
+The desktop editor showed no broken semantic alias marker.
+
+The saved evidence does not include the variable editor panel.
+
+The connector cannot supply an independent variable readback.
+
+The complete generator also created representative public, web, focus, iOS, state, and accessibility boards.
+
+The durable audit evidence is in
+`docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json`.
+
+## 4. Recommended structure
 
 Use an Education, Professional, Organization, or Enterprise file.
 
@@ -64,7 +95,7 @@ The Semantic collection aliases its 16 values to the correct Light or Dark color
 
 This structure supports automatic appearance switching.
 
-## 4. Starter fallback
+## 5. Starter fallback
 
 Use this structure for the current Starter-compatible build.
 
@@ -83,7 +114,7 @@ This structure does not support automatic Light and Dark mode switching.
 
 Designers must bind each appearance to a different collection.
 
-## 5. Phase 1 checklist
+## 6. Phase 1 checklist
 
 ### P1.a Collections
 
@@ -211,7 +242,7 @@ Confirm:
 9. The Figma file contains no partial duplicate collection.
 10. Every created item has a returned identifier.
 
-## 6. Exit criteria
+## 7. Exit criteria
 
 The recommended paid-plan structure exits Phase 1 with:
 
@@ -233,7 +264,7 @@ The Starter fallback exits Phase 1 with:
 - 0 broken aliases.
 - 0 missing fonts.
 
-## 7. Execution rules
+## 8. Execution rules
 
 Use sequential Figma mutations.
 
@@ -251,7 +282,7 @@ Inspect the file before a retry.
 
 Keep the recovery ledger at `/private/tmp/dsb-state-forge-terrain-20260801.json`.
 
-## 8. Official references
+## 9. Official references
 
 - Figma plans and features: <https://help.figma.com/hc/en-us/articles/360040328273-Figma-plans-and-features>
 - Figma variable modes: <https://help.figma.com/hc/en-us/articles/15343816063383-Modes-for-variables>
