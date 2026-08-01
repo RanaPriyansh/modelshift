@@ -61,6 +61,9 @@ function copyPlainJson(value: unknown): unknown {
     }
 
     if (Array.isArray(current)) {
+      if (current.length > MAX_JSON_NODES - budget.nodes) {
+        throw new UnsafeJsonInput();
+      }
       const names = Object.getOwnPropertyNames(current);
       if (
         names.some((name) => name !== "length" && !/^(0|[1-9][0-9]*)$/.test(name))

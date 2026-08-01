@@ -350,6 +350,28 @@ describe("projectUniversityResearchDataOperations", () => {
     expect(projections.every((entry) => entry.status === "invalid")).toBe(true);
   });
 
+  it("rejects oversized arrays before own-key and element descriptor enumeration", async () => {
+    const input = request() as unknown as { roles: unknown[] };
+    const oversized = Array.from({ length: 128 }, () => null);
+    input.roles = oversized;
+    const ownKeys = vi.spyOn(Reflect, "ownKeys");
+    const getOwnPropertyDescriptor = vi.spyOn(Object, "getOwnPropertyDescriptor");
+
+    try {
+      const result = await projectUniversityResearchDataOperations(input);
+
+      expect(result).toMatchObject({
+        status: "invalid",
+        requestDigest: null,
+      });
+      expect(ownKeys).not.toHaveBeenCalledWith(oversized);
+      expect(getOwnPropertyDescriptor).not.toHaveBeenCalledWith(oversized, "0");
+    } finally {
+      ownKeys.mockRestore();
+      getOwnPropertyDescriptor.mockRestore();
+    }
+  });
+
   it("is deterministic, deeply frozen, side-effect free, and digest bound", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const first = await projectUniversityResearchDataOperations(request());

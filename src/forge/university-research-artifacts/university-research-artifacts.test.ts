@@ -430,6 +430,30 @@ describe("university research artifact preflight", () => {
     results.forEach((result) => expect(result.status).toBe("invalid"));
   });
 
+  it("rejects oversized arrays before own-key and element descriptor enumeration", async () => {
+    const input = await request() as unknown as {
+      scenarioPacks: Array<{ scenarios: unknown[] }>;
+    };
+    const oversized = Array.from({ length: 512 }, () => null);
+    input.scenarioPacks[0]!.scenarios = oversized;
+    const getOwnPropertyNames = vi.spyOn(Object, "getOwnPropertyNames");
+    const getOwnPropertyDescriptor = vi.spyOn(Object, "getOwnPropertyDescriptor");
+
+    try {
+      const result = await projectUniversityResearchArtifacts(input);
+
+      expect(result).toMatchObject({
+        status: "invalid",
+        projectionDigest: null,
+      });
+      expect(getOwnPropertyNames).not.toHaveBeenCalledWith(oversized);
+      expect(getOwnPropertyDescriptor).not.toHaveBeenCalledWith(oversized, "0");
+    } finally {
+      getOwnPropertyNames.mockRestore();
+      getOwnPropertyDescriptor.mockRestore();
+    }
+  });
+
   it("bounds depth and aggregate string bytes", async () => {
     const deep = await request() as unknown as JsonObject;
     let cursor = deep;

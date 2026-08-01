@@ -376,6 +376,28 @@ describe("projectUniversityDegreeMap", () => {
     expect(projectUniversityDegreeMap(oversized).status).toBe("invalid");
   });
 
+  it("rejects oversized arrays before own-key and element descriptor enumeration", () => {
+    const input = request() as unknown as { courses: unknown[] };
+    const oversized = Array.from({ length: 512 }, () => null);
+    input.courses = oversized;
+    const ownKeys = vi.spyOn(Reflect, "ownKeys");
+    const getOwnPropertyDescriptor = vi.spyOn(Object, "getOwnPropertyDescriptor");
+
+    try {
+      const result = projectUniversityDegreeMap(input as UniversityDegreeMapRequestV2);
+
+      expect(result).toMatchObject({
+        status: "invalid",
+        programRef: null,
+      });
+      expect(ownKeys).not.toHaveBeenCalledWith(oversized);
+      expect(getOwnPropertyDescriptor).not.toHaveBeenCalledWith(oversized, "0");
+    } finally {
+      ownKeys.mockRestore();
+      getOwnPropertyDescriptor.mockRestore();
+    }
+  });
+
   it("caps schema issues for maximum-size invalid input without actions or external effects", () => {
     const invalidMaximum = {
       ...request(),

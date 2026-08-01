@@ -77,6 +77,9 @@ function copyPlainJson(value: unknown): unknown {
         if (Object.getPrototypeOf(current) !== Array.prototype) {
           throw new UnsafeJsonInput();
         }
+        if (current.length > MAX_JSON_NODES - budget.nodes) {
+          throw new UnsafeJsonInput();
+        }
         const names = Object.getOwnPropertyNames(current);
         if (
           names.length !== current.length + 1

@@ -315,6 +315,29 @@ describe("projectUniversityProtectedStudy", () => {
     expect(getOwnPropertyDescriptor).not.toHaveBeenCalled();
   });
 
+  it("rejects oversized arrays before own-key and element descriptor enumeration", async () => {
+    const input = await request();
+    const oversized = Array.from({ length: 8_192 }, () => null);
+    input.worldPack = oversized;
+    const getOwnPropertyNames = vi.spyOn(Object, "getOwnPropertyNames");
+    const getOwnPropertyDescriptor = vi.spyOn(Object, "getOwnPropertyDescriptor");
+
+    try {
+      const result = await projectUniversityProtectedStudy(input);
+
+      expect(result).toMatchObject({
+        status: "invalid",
+        projectionDigest: null,
+        issues: [{ code: "schema.invalid" }],
+      });
+      expect(getOwnPropertyNames).not.toHaveBeenCalledWith(oversized);
+      expect(getOwnPropertyDescriptor).not.toHaveBeenCalledWith(oversized, "0");
+    } finally {
+      getOwnPropertyNames.mockRestore();
+      getOwnPropertyDescriptor.mockRestore();
+    }
+  });
+
   it("is deterministic, deeply frozen, and side-effect free", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const input = await request();
