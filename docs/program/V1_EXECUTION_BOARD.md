@@ -36,50 +36,48 @@ This board replaces hackathon, judging, demo-video, submission, and deadline wor
 ## Latest verified implementation receipt
 
 The latest verified implementation candidate before this evidence-only record
-update is clean source `eecdc5bf8f928ec616d8176ed333a2134e01b3c0`
-and tree `861e232be0b549db1d54ed1d2b2affc48600b67e`.
+update is clean source `ed1ac56885e953b762c18f54fb8cb8ef32d28906`
+and tree `aeeb0bc4959bcd2d4a69a90630e1a62b7e2a49a6`.
 
-The candidate aligns self-attested adult status across the degree, learning,
-student-context, and declaration-document boundaries. It also makes the
-existing positive university-foundation browser suite a required CI outcome
-before immutable production-build capture.
+The candidate preserves the university foundation work. It adds the production
+security and release-evidence repair defined in the 1 August audit.
 
 The candidate adds no public route, database object, provider operation,
 identity activation, entitlement, persistence path, or participant operation.
 
+- Frozen install without dependency scripts: pass.
+- Full locked dependency graph: zero known advisories.
+- Registry signatures: 576 of 576 pass.
+- Dependency install source-authority gate: pass.
 - TypeScript: pass.
 - Zero-warning lint: pass.
-- Application contracts: 1,565 pass across 177 files.
+- Application contracts: 1,582 pass across 177 files.
 - Evaluator contracts: 13 pass across two files.
-- Total contracts: 1,578 pass.
-- Offline evaluation gate: pass across 54 authored fixtures; no live-model run.
-- Focused adult-authority repair: 88 pass across six files.
-- CI workflow YAML parse and whitespace checks: pass.
-- CI now requires all 16 positive university-foundation browser cases before the production build.
-- The 16-case CI gate was configured but not executed in this local verification.
-- Connected Chrome: the learning-map authority boundary showed `Adult status` and `Self-attested; not verified`.
-- Connected Chrome: the 320 CSS pixel authority view had no horizontal overflow.
-- Connected Chrome: no manual screen-reader session ran.
-- The connected Chrome profile injected Dark Reader before hydration. This caused the recorded extension-specific hydration mismatch.
-- A clean-profile console check, forced colors, and reduced motion remain not run for this candidate.
-- Optimized build: pass.
-- Public build boundary: 71 static assets passed.
-- Public asset digest: `bcac19a638fb8f2f4728e9cf32e31b9a27a4bb7a07585ce5687f4c6e1e0e9ab7`.
+- Total contracts: 1,595 pass.
+- Offline evaluation gate: pass across 54 authored fixtures.
+- Live model evaluation: not run.
+- CI workflow YAML parse and immutable action-reference checks: pass.
+- Independent workflow review: no confirmed residual defect.
+- Optimized production build: pass.
+- Generated static pages: 67.
+- Public build boundary: 71 static assets pass.
 - Production build receipt: 1,472 files.
-- Artifact digest: `sha256:2880b0dc687fdc41fda204d8c7610c138775ba77621180404656d20b98f759a9`.
+- Artifact digest: `sha256:12754b41b49132a774e8b5c9485cd26dca893d306bf196752f478f0d73c4a70f`.
+- Public asset digest: `sha256:e9e3cbb07f265392a4f798d6f677e4bef3f0c296159c81327875b57a3cea4911`.
 - Public directory digest: `sha256:e0096e369f47666ca5a3f962b71b6f5199a17117ac5ce4a598d1b77dc42abac9`.
-- Runtime configuration digest: `sha256:2003550d7fa548abd65c4401a57ee1f1511cd5c4abd9a97a881f38b9033a0525`.
+- Runtime configuration digest: `sha256:06e97d7ea5aaf83b90deef10f941678198a442a267e97f9f23a1a97603774e29`.
 
-The Chrome checks used a server-gated synthetic development fixture. They do
-not prove production operation, deployment, assistive-technology support, or
-learning value. The production build kept every fixture switch disabled and
-passed the public artifact boundary.
+Release manifest schema `2.0` and provider receipt schema `2.0` now fail closed
+for retired asset-only evidence. The receipt requires a clean Git tree and the
+complete production build identity.
 
-This candidate did not run the configured Playwright university-foundation
-suite, the production browser release contract, disposable-database replay,
-dependency audit, the complete public browser matrix, forced colors, reduced
-motion, or manual assistive technology. Older results for those checks are not
-inherited. No push or deployment occurred.
+The configured university-foundation and production browser suites did not run
+locally. Product Design requires the selected Chrome workflow unless the user
+gives permission for direct Playwright use.
+
+GitHub environment protection, the least-privilege Vercel secret, required CI
+browser execution, and a live provider receipt remain external release gates.
+No push or deployment occurred.
 
 ## Current implementation order
 
