@@ -17,10 +17,13 @@ describe("UniversitySourceReview", () => {
 
     expect(await screen.findByRole("heading", { name: "Two copies give different deadlines." })).toBeInTheDocument();
     const conflictSection = screen.getByRole("heading", { name: "Two copies give different deadlines." }).closest("section")!;
-    const matchButtons = within(conflictSection).getAllByRole("button", { name: "Matches this copy" });
 
-    fireEvent.click(matchButtons[0]!);
-    fireEvent.click(matchButtons[1]!);
+    fireEvent.click(within(conflictSection).getByRole("button", {
+      name: "Matches this copy: Copied syllabus, Assignment one deadline",
+    }));
+    fireEvent.click(within(conflictSection).getByRole("button", {
+      name: "Matches this copy: Exported course calendar, Assignment one deadline",
+    }));
 
     await waitFor(() => {
       expect(within(conflictSection).getByText("Needs a human answer")).toBeInTheDocument();
@@ -35,8 +38,9 @@ describe("UniversitySourceReview", () => {
     render(<UniversitySourceReview initialRequest={await reviewedUniversitySourceRequest()} />);
     expect((await screen.findAllByText(/Assignment one, due/)).length).toBeGreaterThan(1);
 
-    const correctButtons = screen.getAllByRole("button", { name: "Correct transcription" });
-    fireEvent.click(correctButtons[0]!);
+    fireEvent.click(screen.getByRole("button", {
+      name: "Correct transcription: Copied syllabus, Assignment one deadline",
+    }));
     const correction = screen.getByLabelText("Correct due date and time");
     fireEvent.change(correction, { target: { value: "2026-09-14T15:30" } });
     fireEvent.click(screen.getByRole("button", { name: "Use my correction" }));
@@ -50,7 +54,9 @@ describe("UniversitySourceReview", () => {
     render(<UniversitySourceReview initialRequest={await reviewedUniversitySourceRequest()} />);
     const policyHeading = await screen.findByRole("heading", { name: "A copied permission is not authorization." });
     const policySection = policyHeading.closest("section")!;
-    fireEvent.click(within(policySection).getByRole("button", { name: "Matches this copy" }));
+    fireEvent.click(within(policySection).getByRole("button", {
+      name: "Matches this copy: Copied syllabus, assessment assistance policy",
+    }));
 
     await waitFor(() => {
       expect(within(policySection).getByText("Marked as matching this copy")).toBeInTheDocument();
@@ -62,10 +68,49 @@ describe("UniversitySourceReview", () => {
   it("does not write browser storage while reviewing the local sample", async () => {
     const storageSetItem = vi.spyOn(Storage.prototype, "setItem");
     render(<UniversitySourceReview initialRequest={await reviewedUniversitySourceRequest()} />);
-    await screen.findByRole("heading", { name: "Two copies give different deadlines." });
-    fireEvent.click(screen.getAllByRole("button", { name: "Reject extraction" })[0]!);
+    const conflictHeading = await screen.findByRole("heading", {
+      name: "Two copies give different deadlines.",
+    });
+    const conflictSection = conflictHeading.closest("section")!;
+    fireEvent.click(within(conflictSection).getByRole("button", {
+      name: "Reject extraction: Copied syllabus, Assignment one deadline",
+    }));
     await waitFor(() => expect(screen.getByText("Extraction rejected")).toBeInTheDocument());
     expect(storageSetItem).not.toHaveBeenCalled();
     storageSetItem.mockRestore();
+  });
+
+  it("gives every rendered action a unique source-and-fact accessible name", async () => {
+    render(<UniversitySourceReview initialRequest={await reviewedUniversitySourceRequest()} />);
+
+    const conflictHeading = await screen.findByRole("heading", {
+      name: "Two copies give different deadlines.",
+    });
+    const policyHeading = screen.getByRole("heading", {
+      name: "A copied permission is not authorization.",
+    });
+    const conflictSection = conflictHeading.closest("section")!;
+    const policySection = policyHeading.closest("section")!;
+    const expectedActions = [
+      ["Matches this copy: Copied syllabus, Assignment one deadline", "Matches this copy"],
+      ["Correct transcription: Copied syllabus, Assignment one deadline", "Correct transcription"],
+      ["Reject extraction: Copied syllabus, Assignment one deadline", "Reject extraction"],
+      ["Matches this copy: Exported course calendar, Assignment one deadline", "Matches this copy"],
+      ["Correct transcription: Exported course calendar, Assignment one deadline", "Correct transcription"],
+      ["Reject extraction: Exported course calendar, Assignment one deadline", "Reject extraction"],
+      ["Matches this copy: Copied syllabus, assessment assistance policy", "Matches this copy"],
+      ["Reject extraction: Copied syllabus, assessment assistance policy", "Reject extraction"],
+    ] as const;
+    const renderedActions = [
+      ...within(conflictSection).getAllByRole("button"),
+      ...within(policySection).getAllByRole("button"),
+    ];
+
+    expect(renderedActions).toHaveLength(expectedActions.length);
+    expect(new Set(expectedActions.map(([name]) => name)).size).toBe(expectedActions.length);
+
+    for (const [name, visibleLabel] of expectedActions) {
+      expect(screen.getByRole("button", { name })).toHaveTextContent(visibleLabel);
+    }
   });
 });

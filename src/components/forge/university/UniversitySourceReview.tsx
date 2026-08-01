@@ -39,6 +39,17 @@ function factSummary(fact: CourseSourceFactV1): string {
   return fact.statementSummary;
 }
 
+function factActionContext(fact: CourseSourceFactV1): string {
+  switch (fact.kind) {
+    case "deadline":
+      return `${fact.title} deadline`;
+    case "course_commitment":
+      return `${fact.title} commitment`;
+    case "assessment_assistance_policy":
+      return "assessment assistance policy";
+  }
+}
+
 function sourceFor(
   candidate: CourseSourceCandidateProjection,
   result: CourseSourceReconciliationResult,
@@ -415,6 +426,7 @@ function SourceCandidate({
       <div className={styles.candidateActions}>
         <button
           type="button"
+          aria-label={`Matches this copy: ${sourceLabel}, ${factActionContext(candidate.originalFact)}`}
           aria-pressed={selectedDecision?.kind === "accept"}
           onClick={onAccept}
         >
@@ -423,6 +435,7 @@ function SourceCandidate({
         {onCorrect ? (
           <button
             type="button"
+            aria-label={`Correct transcription: ${sourceLabel}, ${factActionContext(candidate.originalFact)}`}
             aria-expanded={isCorrecting}
             onClick={onCorrect}
           >
@@ -431,6 +444,7 @@ function SourceCandidate({
         ) : null}
         <button
           type="button"
+          aria-label={`Reject extraction: ${sourceLabel}, ${factActionContext(candidate.originalFact)}`}
           aria-pressed={selectedDecision?.kind === "reject"}
           onClick={onReject}
         >
