@@ -58,6 +58,8 @@ The design token names use learner, AI contribution, and tested evidence semanti
 
 It also records native typography, layout, navigation, accessibility, and recovery requirements.
 
+Use `../FORGE_IOS_NATIVE_HANDOFF.md` for the complete screen and interaction contract.
+
 The DTCG `px` distance unit translates to iOS points during platform implementation.
 
 This file is a design handoff.

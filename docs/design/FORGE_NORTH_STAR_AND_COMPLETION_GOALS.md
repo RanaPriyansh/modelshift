@@ -21,7 +21,7 @@ The final source must be useful for product review, visual iteration, implementa
 
 The permanent visual rule is:
 
-> Vivid at thresholds. Quiet during work.
+> Vivid at thresholds. Quiet during work. Precise when evidence appears.
 
 The permanent trust rule is:
 
@@ -109,18 +109,32 @@ The design objective is complete only when all gates pass.
 
 ## 6. Current priority order
 
-1. Replace the inaccessible Figma target with a valid editable file.
-2. Build foundations and reusable components.
-3. Build representative public, web, focus, and iOS frames.
-4. Compare Figma frames with the rendered product.
-5. Close implementation gaps.
-6. Complete the final audit.
+1. Run the verified local generator in the valid editable Figma file.
+2. Audit variables, styles, components, and generated screen families.
+3. Compare Figma frames with the rendered product.
+4. Close remaining public and application parity gaps.
+5. Complete the native iOS implementation handoff.
+6. Complete the final fidelity and accessibility audit.
 
-## 7. Boundaries
+## 7. Current gate state
+
+| Gate | Current state |
+| --- | --- |
+| Editable source | Generator verified locally. Actual Figma run remains open. |
+| Page inventory | Complete for public, web, focus, and iOS families. |
+| Visual fidelity | Representative local atlas reviewed at desktop and 320 CSS pixels. |
+| Design-system integrity | Local token and generator audits pass. Actual Figma audit remains open. |
+| Web implementation | Public Home, Today, and three focus families use the selected direction. |
+| Responsive behavior | The reviewed atlas has no horizontal overflow at 320 CSS pixels. |
+| Themes | Representative Light and Dark surfaces exist. Complete route review remains open. |
+| Accessibility behavior | Local keyboard and browser checks exist. Native checks remain open. |
+| iOS handoff | Complete design contract exists. No native target exists. |
+| Provenance | Local commits, hashes, and test results are recorded. |
+
+## 8. Boundaries
 
 No local design evidence proves production operation, accessibility conformance, learning efficacy, or learner preference.
 
 No image can enter production before its rights are cleared.
 
 No native iOS implementation is claimed until a simulator build and native checks pass.
-

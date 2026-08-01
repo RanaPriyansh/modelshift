@@ -276,6 +276,8 @@ Preserve local drafts without a network connection.
 
 Do not use decorative Liquid Glass inside dense work.
 
+Use `docs/design/FORGE_IOS_NATIVE_HANDOFF.md` for native routes, motion, accessibility, persistence, and simulator acceptance.
+
 ## 6. Shared state matrix
 
 All data-backed page families support:

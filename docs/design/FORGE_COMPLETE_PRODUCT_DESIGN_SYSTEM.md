@@ -495,6 +495,8 @@ The local generator is in `scripts/design/figma-forge-terrain-plugin`.
 
 Run the generator in the Figma desktop application after macOS is unlocked.
 
+The native iOS interaction contract is in `docs/design/FORGE_IOS_NATIVE_HANDOFF.md`.
+
 Create text styles, color styles, and minimal effect styles.
 
 Use Apple iOS library components for native iOS controls.
@@ -514,6 +516,7 @@ Files:
 - `docs/design/tokens/forge-terrain.semantic.dark.tokens.json`
 - `docs/design/tokens/forge-terrain.platform-map.json`
 - `docs/design/tokens/forge-terrain.ios.json`
+- `docs/design/FORGE_IOS_NATIVE_HANDOFF.md`
 
 The semantic files contain the same 16 names and types.
 

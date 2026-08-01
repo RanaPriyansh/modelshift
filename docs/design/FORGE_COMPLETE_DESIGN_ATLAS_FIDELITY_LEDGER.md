@@ -22,6 +22,7 @@ This record does not establish production readiness, learning efficacy, accessib
 | Concept evidence commit | `3c09859142d40eea113b9cdbca58623ecfe6c09d` |
 | Phase 2 implementation commit | `320c10f0b697e916db0eaf2cafc6f243ac602445` |
 | Figma source generator commit | `1f8028d83501c2655e0a3da445a0b2549aeb7464` |
+| Focus mode atlas commit | `62616e9bdf06d006ce9aeb3eab5ceb308a9ed1bb` |
 | Deployment | Not done |
 | Push or merge | Not done |
 
@@ -37,6 +38,7 @@ The local source records are:
 
 - `docs/design/FORGE_COMPLETE_PRODUCT_DESIGN_SYSTEM.md`
 - `docs/design/FORGE_PAGE_INVENTORY_AND_REQUIREMENTS.md`
+- `docs/design/FORGE_IOS_NATIVE_HANDOFF.md`
 - `docs/design/FIGMA_PHASE_0_GAP_ANALYSIS.md`
 
 The coded atlas source is:
