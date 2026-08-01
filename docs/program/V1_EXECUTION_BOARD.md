@@ -36,29 +36,32 @@ This board replaces hackathon, judging, demo-video, submission, and deadline wor
 ## Latest verified implementation receipt
 
 The latest verified implementation candidate before this record update is clean source
-`98f9cd81b76a8d7c2caf3fa5fcd6a832c569c54c` and tree
-`78d7fc8d475b94fd3c7d0a022f593d83ffde337e`.
+`edbcd496502eea258f7fddfe964fdabae6eec37c` and tree
+`632f1bbd4400b81847ed897436e42301776ead63`.
 
 - TypeScript: pass.
 - Zero-warning lint: pass.
-- Application contracts: 1,523 pass across 175 files.
+- Application contracts: 1,527 pass across 175 files.
 - Evaluator contracts: 13 pass across 2 files.
-- Focused Source Review contracts: 5 pass across one file.
-- Connected Chrome Source Review check: pass at 1,440 and 320 CSS pixels for unique action names, keyboard focus, keyboard activation, and horizontal overflow.
-- Visual comparison: desktop and mobile before-and-after image digests are identical because visible button labels and layout did not change.
+- Focused Semester Desk contracts: 6 pass across one file.
+- Focused Semester Overview contracts: 6 pass across one file.
+- Focused Today, Recovery, and Protected Study contracts: 17 pass across three files.
+- Connected Chrome semantic checks: pass for neutral course names, distinct scenario status, one concise status per changing view, selection state, and focus return.
+- Connected Chrome did not run a manual screen-reader session.
+- Visible copy and layout did not change in this candidate.
 - Optimized build: pass.
-- Public build boundary: 71 static assets passed. Public asset digest: `6a9ec772109636d70de83033f73e8d89dfaf59e622ebeac4019d9273a9f51a66`.
-- Production build receipt: 1,472 files. Artifact digest: `b80ad27db6893408eb06a4ef3aced603a8e49147c53b2b6c6a116b378b4e7586`.
+- Public build boundary: 71 static assets passed. Public asset digest: `7c049a45df9a3c803c4c6a69454d02de16205d3ff96b79b7fdf1dbc3c3cadba7`.
+- Production build receipt: 1,472 files. Artifact digest: `0065e55150cd7fc86126394a5560ca03fdf695a7091d9fcc944a5624612ac864`.
 
-The Chrome check used a local fixture render harness. It is not production
-operation or deployment evidence. The public artifact guard rejected a
-fixture-enabled production harness as expected. No harness code entered this
-branch.
+The Chrome checks used server-gated synthetic development fixtures. They are
+not production operation, deployment evidence, or manual assistive-technology
+evidence. The exact production build kept the fixture switches disabled and
+passed the public artifact boundary.
 
-This implementation candidate did not rerun disposable-database replay, dependency
-audit, the complete public browser matrix, forced colors, reduced motion, or
-manual assistive technology. Older results for those checks are not inherited.
-No push or deployment occurred.
+This implementation candidate did not rerun disposable-database replay,
+dependency audit, the complete public browser matrix, forced colors, reduced
+motion, or manual assistive technology. Older results for those checks are not
+inherited. No push or deployment occurred.
 
 ## Current implementation order
 
