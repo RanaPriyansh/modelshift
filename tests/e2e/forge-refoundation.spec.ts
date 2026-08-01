@@ -9,20 +9,20 @@ const PUBLIC_SURFACES = [
 ] as const;
 
 const RESPONSIVE_SURFACES = [
-  "/", "/how-it-works", "/start", "/paths", "/app", "/app/path", "/app/paths",
+  "/", "/how-it-works", "/start", "/paths", "/app", "/app/paths",
   "/app/projects", "/app/evidence", "/app/settings", "/modelshift", "/learn/force-and-motion",
 ] as const;
 
 const COMPATIBILITY_SURFACES = [
   { path: "/home", canonical: "/app" },
-  { path: "/app/path", canonical: "/app/paths" },
-  { path: "/plan", canonical: "/app/paths" },
   { path: "/orient", canonical: "/start" },
   { path: "/study/ai-foundations", canonical: "/learn/ai-and-learning" },
   { path: "/explore-auth", canonical: "/paths" },
   { path: "/projects", canonical: "/app/projects" },
   { path: "/profile", canonical: "/app/settings" },
 ] as const;
+
+const REMOVED_SURFACES = ["/app/path", "/plan"] as const;
 
 async function seedAdultDeviceMode(page: Page) {
   await page.addInitScript(() => {
@@ -181,6 +181,14 @@ test.describe("FORGE refoundation acceptance contract", () => {
     await expect(page.locator("body")).toContainText(/AI is a bounded interpretation layer/i);
   });
 
+  test("does not retain removed learner-path aliases", async ({ page }) => {
+    for (const path of REMOVED_SURFACES) {
+      const response = await page.goto(path);
+      expect(response?.status(), `${path} must stay removed`).toBe(404);
+      expect(new URL(page.url()).pathname).toBe(path);
+    }
+  });
+
   test("previews a global path command without mutating local records", async ({ page }) => {
     await expectHealthyRoute(page, "/app");
     const before = await page.evaluate(() => ({ ...localStorage }));
@@ -235,7 +243,7 @@ test.describe("FORGE refoundation acceptance contract", () => {
   test("offers keyboard skip links that move focus into canonical main content", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "Keyboard focus order is viewport-independent.");
     await seedAdultDeviceMode(page);
-    for (const path of ["/", "/how-it-works", "/start", "/app", "/app/path", "/modelshift", "/learn/force-and-motion", "/app/evidence"]) {
+    for (const path of ["/", "/how-it-works", "/start", "/app", "/app/paths", "/modelshift", "/learn/force-and-motion", "/app/evidence"]) {
       await expectHealthyRoute(page, path);
       const skipLink = page.getByRole("link", { name: /skip/i }).first();
       const target = await skipLink.getAttribute("href");

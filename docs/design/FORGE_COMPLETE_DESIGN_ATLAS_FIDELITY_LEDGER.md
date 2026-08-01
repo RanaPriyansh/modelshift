@@ -305,7 +305,32 @@ The automated receipt recorded:
 - A visible first-focus skip link.
 - Correct main-content focus after skip-link activation.
 
-### 10.2 Source and evaluation tests
+### 10.2 Canonical route checks
+
+Command:
+
+```text
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3035 pnpm exec playwright test tests/e2e/forge-refoundation.spec.ts tests/e2e/forge-experience-system.spec.ts --project=desktop
+```
+
+Result:
+
+- 15 browser tests passed.
+- Zero browser tests failed.
+- 11 public, application, focus, and World routes passed responsive target and form checks.
+- 9 canonical routes passed the named-control, 44-pixel target, and 16-pixel form-text checks.
+- 9 canonical routes passed keyboard skip-link checks.
+- 6 existing compatibility routes resolved to their documented canonical routes.
+- 2 removed learner-path aliases returned HTTP 404.
+- Reduced Motion removed active motion over one millisecond from the tested canonical surfaces.
+- Forced Colors preserved visible focus and meaningful controls.
+- One theme choice persisted across public and application surfaces.
+
+This receipt is local browser evidence.
+
+It is not an accessibility conformance claim.
+
+### 10.3 Source and evaluation tests
 
 Source result:
 
@@ -328,7 +353,7 @@ Browser result:
 - 43 mobile project duplicates were intentionally skipped.
 - Zero browser tests failed.
 
-### 10.3 Production build
+### 10.4 Production build
 
 Command:
 
@@ -350,7 +375,7 @@ Commit `de531955855bd7949ee973190365ba961b3526b9` moved testable handlers into s
 
 The route behavior and focused contract tests remained unchanged.
 
-### 10.4 Public build boundary
+### 10.5 Public build boundary
 
 Command:
 

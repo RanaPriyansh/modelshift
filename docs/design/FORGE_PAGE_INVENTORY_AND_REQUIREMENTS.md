@@ -302,11 +302,15 @@ Each state needs text, shape, and action.
 
 Color alone is not sufficient.
 
-## 7. Compatibility routes
+## 7. Legacy route removal
 
-These routes need redirects or compatibility behavior after destination parity exists.
+The current design does not preserve backward compatibility.
 
-| Current route | Destination |
+Remove each legacy route after destination parity is verified.
+
+Keep its former destination in migration notes only.
+
+| Legacy route | Canonical destination |
 | --- | --- |
 | `/login` | `/sign-in` |
 | `/account` | `/app/settings` |
@@ -315,10 +319,11 @@ These routes need redirects or compatibility behavior after destination parity e
 | `/studio` | `/author` |
 | `/pathways` | `/coverage` |
 | `/how-it-works` | `/how-forge-works` |
-| `/app/path` | `/app/paths` |
 | `/home` | `/app` or `/` by identity state |
 
-Do not remove a compatibility route before deep-link, policy, and evidence parity is tested.
+`/app/path` and `/plan` are removed.
+
+Their canonical destination is `/app/paths`.
 
 ## 8. Role-gated surfaces
 
@@ -345,8 +350,8 @@ The current code has these alignment states:
 
 1. The application labels Today as `Today`.
 2. The application excludes Explore from primary navigation.
-3. `/app/paths` is canonical. `/app/path` redirects for compatibility.
-4. `/how-forge-works` is canonical. `/how-it-works` redirects for compatibility.
+3. `/app/paths` is canonical. `/app/path` and `/plan` are removed.
+4. `/how-forge-works` is canonical. The legacy `/how-it-works` route remains a tracked conflict.
 5. The global font stack still uses Inter, Georgia, and Avenir fallbacks.
 6. Several legacy routes remain visible.
 7. iOS has a display study but no native application source.

@@ -25,7 +25,6 @@ const pages = [
   ["/account", "account"],
   ["/app", "app-home"],
   ["/app/goals", "app-goals"],
-  ["/app/path", "app-path"],
   ["/app/paths", "app-paths"],
   ["/app/study", "app-study"],
   ["/app/projects", "app-projects"],
@@ -45,7 +44,6 @@ const pages = [
   ["/author", "author"],
   ["/coverage", "coverage"],
   ["/home", "compat-home"],
-  ["/plan", "compat-plan"],
   ["/orient", "compat-orient"],
   ["/onboarding", "compat-onboarding"],
   ["/planner", "compat-planner"],
@@ -61,15 +59,13 @@ const pages = [
 ];
 
 const EXPECTED_OPERATIONAL_CAPTURE_COUNT = 3;
-const EXPECTED_CAPTURE_COUNT = 53;
+const EXPECTED_CAPTURE_COUNT = 51;
 
 const expectedFinalRoutes = new Map([
   ["/how-it-works", "/how-forge-works"],
   ["/login", "/sign-in"],
   ["/studio", "/author"],
   ["/home", "/app"],
-  ["/app/path", "/app/paths"],
-  ["/plan", "/app/paths"],
   ["/orient", "/start"],
   ["/onboarding", "/start"],
   ["/planner", "/start"],

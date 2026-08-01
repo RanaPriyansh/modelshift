@@ -126,9 +126,9 @@ The design objective is complete only when all gates pass.
 | Visual fidelity | All canonical public, web, and iOS families are reviewed at desktop and 320 CSS pixels. |
 | Design-system integrity | Local token, count, coverage-index, and generator audits pass. Actual Figma audit remains open. |
 | Web implementation | All public and web families have coded boards. Public Home, Today, and focus families use the direction in routes. |
-| Responsive behavior | The automated atlas audit has no horizontal overflow at desktop or 320 CSS pixels. |
-| Themes | Representative Light and Dark surfaces exist. Complete route review remains open. |
-| Accessibility behavior | Automated keyboard, Reduced Motion, and Forced Colors atlas checks pass. Native checks remain open. |
+| Responsive behavior | Atlas and canonical route audits have no horizontal overflow at desktop or 320 CSS pixels. |
+| Themes | Light and Dark boards exist. One theme choice persists across public and application routes. |
+| Accessibility behavior | Automated route and atlas keyboard, Reduced Motion, and Forced Colors checks pass. Native checks remain open. |
 | iOS handoff | Complete design contract exists. No native target exists. |
 | Provenance | Local commits, hashes, and test results are recorded. |
 
