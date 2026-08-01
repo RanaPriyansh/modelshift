@@ -27,6 +27,7 @@ This record does not establish production readiness, learning efficacy, accessib
 | Complete public and web atlas commit | `6a08f80c968f402145fed66ab086a91133702fb3` |
 | Complete iOS atlas commit | `d04fe0d759087197eff63aca9f08ad7f204eb96c` |
 | Canonical Figma coverage index commit | `07eecc831da1bee1d14d6fac00d0b764ce021d9d` |
+| Figma-to-coded-atlas parity check commit | `1d52f50827b3bdd09d871aaa50acf890bfb051da` |
 | Deployment | Not done |
 | Push or merge | Not done |
 
@@ -128,6 +129,8 @@ The local generator check creates:
 - 17 components.
 - 28 generated frames.
 - One coverage index for all 46 canonical families.
+- One exact identifier comparison between the Figma coverage receipt and the coded atlas.
+- 21 identifiers marked as representative editable boards.
 
 The generator has not run in Figma because the macOS session is locked.
 
