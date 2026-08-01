@@ -152,26 +152,34 @@ describe("UniversitySemesterDeskWorkspace", () => {
     );
   });
 
-  it("clears the inspected course, restores its focus, and reveals it only when needed", () => {
-    let controlIsVisible = true;
+  it("restores focus and reveals the course after its detail chapter collapses", () => {
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(320);
+    vi.spyOn(window, "innerHeight", "get").mockReturnValue(844);
     render(<UniversitySemesterDeskWorkspace fixture={fixture} />);
     const secondCourse = within(courseGroup()).getByRole("radio", {
       name: /MATH110: Discrete structures/i,
     }) as HTMLInputElement;
     const focusContainer = secondCourse.closest("label");
     expect(focusContainer).not.toBeNull();
+    const detailPresenceAtMeasurement: boolean[] = [];
     vi.spyOn(focusContainer!, "getBoundingClientRect")
-      .mockImplementation(() => ({
-        bottom: controlIsVisible ? 120 : 1_056,
-        height: 44,
-        left: 16,
-        right: 304,
-        top: controlIsVisible ? 76 : 1_012,
-        width: 288,
-        x: 16,
-        y: controlIsVisible ? 76 : 1_012,
-        toJSON: () => ({}),
-      }));
+      .mockImplementation(() => {
+        const detailIsPresent = screen.queryByRole("button", {
+          name: "Clear course inspection",
+        }) !== null;
+        detailPresenceAtMeasurement.push(detailIsPresent);
+        return {
+          bottom: detailIsPresent ? 120 : 1_056,
+          height: 44,
+          left: 16,
+          right: 304,
+          top: detailIsPresent ? 76 : 1_012,
+          width: 288,
+          x: 16,
+          y: detailIsPresent ? 76 : 1_012,
+          toJSON: () => ({}),
+        };
+      });
     const secondCourseFixture = fixture.scenarios[0].courses[1];
     const neutralName = expectedCourseAccessibleName(secondCourseFixture);
     const revealCourse = vi.fn();
@@ -187,7 +195,6 @@ describe("UniversitySemesterDeskWorkspace", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       secondCourseFixture.announcement,
     );
-    controlIsVisible = false;
     fireEvent.click(screen.getByRole("button", {
       name: "Clear course inspection",
     }));
@@ -195,6 +202,7 @@ describe("UniversitySemesterDeskWorkspace", () => {
     expect(secondCourse).toHaveFocus();
     expect(secondCourse).not.toBeChecked();
     expect(secondCourse).toHaveAccessibleName(neutralName);
+    expect(detailPresenceAtMeasurement).toEqual([false]);
     expect(revealCourse).toHaveBeenCalledWith({
       behavior: "instant",
       block: "nearest",

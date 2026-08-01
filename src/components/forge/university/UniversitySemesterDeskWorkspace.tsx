@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -235,6 +236,7 @@ export function UniversitySemesterDeskWorkspace({
     "No course is selected for inspection. FORGE has not chosen a course or priority.",
   );
   const courseRadioRefs = useRef(new Map<string, HTMLInputElement>());
+  const pendingClearOptionIdRef = useRef<string | null>(null);
   const scenario = useMemo(
     () => fixture.scenarios.find(
       (candidate) => candidate.id === selectedScenarioId,
@@ -247,6 +249,24 @@ export function UniversitySemesterDeskWorkspace({
     ) ?? null,
     [scenario, selectedCourseOptionId],
   );
+
+  useLayoutEffect(() => {
+    const optionId = pendingClearOptionIdRef.current;
+    if (optionId === null || selectedCourseOptionId !== null) return;
+    pendingClearOptionIdRef.current = null;
+
+    const selectedControl = courseRadioRefs.current.get(optionId);
+    if (!selectedControl) return;
+    const focusContainer = selectedControl.closest("label") ?? selectedControl;
+    selectedControl.focus({ preventScroll: true });
+    if (focusContainer && !fullyVisible(focusContainer)) {
+      focusContainer.scrollIntoView?.({
+        behavior: "instant" as ScrollBehavior,
+        block: "nearest",
+        inline: "nearest",
+      });
+    }
+  }, [selectedCourseOptionId]);
 
   if (!scenario) return <UniversitySemesterDeskUnavailable />;
 
@@ -265,22 +285,11 @@ export function UniversitySemesterDeskWorkspace({
 
   function clearCourseInspection() {
     if (!selectedCourseOptionId) return;
-    const selectedControl = courseRadioRefs.current.get(
-      selectedCourseOptionId,
-    );
-    const focusContainer = selectedControl?.closest("label") ?? selectedControl;
+    pendingClearOptionIdRef.current = selectedCourseOptionId;
     setSelectedCourseOptionId(null);
     setAnnouncement(
       "Course inspection cleared. No course is selected for inspection.",
     );
-    selectedControl?.focus({ preventScroll: true });
-    if (focusContainer && !fullyVisible(focusContainer)) {
-      focusContainer.scrollIntoView?.({
-        behavior: "instant" as ScrollBehavior,
-        block: "nearest",
-        inline: "nearest",
-      });
-    }
   }
 
   return (
