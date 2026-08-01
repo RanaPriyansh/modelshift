@@ -2,6 +2,8 @@
 
 import "@testing-library/jest-dom/vitest";
 
+import { StrictMode } from "react";
+
 import {
   cleanup,
   fireEvent,
@@ -12,6 +14,7 @@ import {
 import {
   afterEach,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
@@ -27,10 +30,33 @@ import { UniversitySemesterDeskUnavailable } from "./UniversitySemesterDeskUnava
 import { UniversitySemesterDeskWorkspace } from "./UniversitySemesterDeskWorkspace";
 
 let fixture: UniversitySemesterDeskFixture;
+let animationFrameCallbacks: Map<number, FrameRequestCallback>;
+let nextAnimationFrameId: number;
 
 beforeAll(async () => {
   fixture = await universitySemesterDeskFixture();
 });
+
+beforeEach(() => {
+  animationFrameCallbacks = new Map();
+  nextAnimationFrameId = 0;
+  vi.stubGlobal("requestAnimationFrame", vi.fn((callback: FrameRequestCallback) => {
+    const id = nextAnimationFrameId + 1;
+    nextAnimationFrameId = id;
+    animationFrameCallbacks.set(id, callback);
+    return id;
+  }));
+  vi.stubGlobal("cancelAnimationFrame", vi.fn((id: number) => {
+    animationFrameCallbacks.delete(id);
+  }));
+});
+
+function flushNextAnimationFrame() {
+  const next = animationFrameCallbacks.entries().next().value;
+  if (!next) throw new Error("Expected a queued animation frame.");
+  animationFrameCallbacks.delete(next[0]);
+  next[1](0);
+}
 
 afterEach(() => {
   cleanup();
@@ -152,26 +178,47 @@ describe("UniversitySemesterDeskWorkspace", () => {
     );
   });
 
-  it("clears the inspected course, restores its focus, and reveals it only when needed", () => {
-    let controlIsVisible = true;
-    render(<UniversitySemesterDeskWorkspace fixture={fixture} />);
+  it("restores focus and reveals the course after its detail chapter collapses", () => {
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(320);
+    vi.spyOn(window, "innerHeight", "get").mockReturnValue(844);
+    render(
+      <StrictMode>
+        <UniversitySemesterDeskWorkspace fixture={fixture} />
+      </StrictMode>,
+    );
     const secondCourse = within(courseGroup()).getByRole("radio", {
       name: /MATH110: Discrete structures/i,
     }) as HTMLInputElement;
     const focusContainer = secondCourse.closest("label");
     expect(focusContainer).not.toBeNull();
+    type LayoutPhase =
+      | "before-collapse"
+      | "post-collapse"
+      | "after-layout-shift";
+    let layoutPhase: LayoutPhase = "before-collapse";
+    const measurements: Array<{
+      detailRemoved: boolean;
+      phase: LayoutPhase;
+    }> = [];
     vi.spyOn(focusContainer!, "getBoundingClientRect")
-      .mockImplementation(() => ({
-        bottom: controlIsVisible ? 120 : 1_056,
-        height: 44,
-        left: 16,
-        right: 304,
-        top: controlIsVisible ? 76 : 1_012,
-        width: 288,
-        x: 16,
-        y: controlIsVisible ? 76 : 1_012,
-        toJSON: () => ({}),
-      }));
+      .mockImplementation(() => {
+        const detailRemoved = screen.queryByRole("button", {
+          name: "Clear course inspection",
+        }) === null;
+        measurements.push({ detailRemoved, phase: layoutPhase });
+        const isOffscreen = layoutPhase === "after-layout-shift";
+        return {
+          bottom: isOffscreen ? 1_056 : 120,
+          height: 44,
+          left: 16,
+          right: 304,
+          top: isOffscreen ? 1_012 : 76,
+          width: 288,
+          x: 16,
+          y: isOffscreen ? 1_012 : 76,
+          toJSON: () => ({}),
+        };
+      });
     const secondCourseFixture = fixture.scenarios[0].courses[1];
     const neutralName = expectedCourseAccessibleName(secondCourseFixture);
     const revealCourse = vi.fn();
@@ -187,17 +234,28 @@ describe("UniversitySemesterDeskWorkspace", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       secondCourseFixture.announcement,
     );
-    controlIsVisible = false;
     fireEvent.click(screen.getByRole("button", {
       name: "Clear course inspection",
     }));
 
     expect(secondCourse).toHaveFocus();
+    expect(animationFrameCallbacks.size).toBe(1);
+    layoutPhase = "post-collapse";
+    flushNextAnimationFrame();
+    expect(animationFrameCallbacks.size).toBe(1);
+    layoutPhase = "after-layout-shift";
+    flushNextAnimationFrame();
+
+    expect(secondCourse).toHaveFocus();
     expect(secondCourse).not.toBeChecked();
     expect(secondCourse).toHaveAccessibleName(neutralName);
+    expect(measurements).toEqual([
+      { detailRemoved: true, phase: "post-collapse" },
+      { detailRemoved: true, phase: "after-layout-shift" },
+    ]);
     expect(revealCourse).toHaveBeenCalledWith({
       behavior: "instant",
-      block: "nearest",
+      block: "center",
       inline: "nearest",
     });
     expect(screen.getByRole("heading", {
@@ -208,6 +266,37 @@ describe("UniversitySemesterDeskWorkspace", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Course inspection cleared.",
     );
+  });
+
+  it("cancels a deferred reveal when a later scenario change supersedes it", () => {
+    render(<UniversitySemesterDeskWorkspace fixture={fixture} />);
+    const firstCourse = within(courseGroup()).getByRole("radio", {
+      name: /CS102: Evidence and computation/i,
+    });
+    const focusContainer = firstCourse.closest("label");
+    expect(focusContainer).not.toBeNull();
+    const revealCourse = vi.fn();
+    Object.defineProperty(focusContainer!, "scrollIntoView", {
+      configurable: true,
+      value: revealCourse,
+    });
+
+    fireEvent.click(firstCourse);
+    fireEvent.click(screen.getByRole("button", {
+      name: "Clear course inspection",
+    }));
+    expect(animationFrameCallbacks.size).toBe(1);
+
+    fireEvent.click(within(scenarioGroup()).getByRole("radio", {
+      name: /^World changed\./i,
+    }));
+
+    expect(animationFrameCallbacks.size).toBe(0);
+    expect(revealCourse).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", {
+      level: 2,
+      name: "No course is selected.",
+    })).toBeInTheDocument();
   });
 
   it("keeps evidence details inside their definitions and hides decorative sequence numbers", () => {
