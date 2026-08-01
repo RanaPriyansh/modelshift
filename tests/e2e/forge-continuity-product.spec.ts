@@ -397,7 +397,7 @@ test.describe("FORGE continuity product acceptance", () => {
     await expect(page.getByRole("heading", {
       name: "A reviewed delayed task is scheduled.",
     })).toBeVisible();
-    await page.goto("/app/path");
+    await page.goto("/app/paths");
     const exactPathLink = page.getByRole("link", {
       name: "Inspect exact revision and session bindings",
     });
@@ -629,7 +629,7 @@ test.describe("FORGE continuity product acceptance", () => {
       activityStates: [],
     });
 
-    await page.goto("/app/path");
+    await page.goto("/app/paths");
     await expect(page.getByRole("heading", { name: goal })).toBeVisible();
     await expect(page.getByText("Open question · not executable")).toBeVisible();
     await expect(page.getByText(/execution blocked/)).toBeVisible();
@@ -687,7 +687,7 @@ test.describe("FORGE continuity product acceptance", () => {
     )).toBeFocused();
     await expectNoHorizontalOverflow(page);
 
-    for (const route of ["/app", "/app/path", "/app/study"]) {
+    for (const route of ["/app", "/app/paths", "/app/study"]) {
       await page.goto(route);
       await expectSettledSurface(page);
       await expectNoHorizontalOverflow(page);
@@ -698,7 +698,7 @@ test.describe("FORGE continuity product acceptance", () => {
     await page.keyboard.press("Tab");
     await expect(shapePath).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/app\/path$/);
+    await expect(page).toHaveURL(/\/app\/paths$/);
 
     expect(runtimeErrors).toEqual([]);
   });

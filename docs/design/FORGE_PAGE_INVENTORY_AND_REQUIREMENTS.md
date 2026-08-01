@@ -339,14 +339,14 @@ Role-gated surfaces use the same tokens and evidence language.
 
 They need a separate workflow design review.
 
-## 9. Current implementation conflicts
+## 9. Current implementation alignment and conflicts
 
-The current code has these design conflicts:
+The current code has these alignment states:
 
-1. The application now labels Today as `Today`.
-2. The application no longer includes Explore in primary navigation.
-3. The application has both `/app/path` and `/app/paths`.
-4. The public code has both `/how-it-works` and `/how-forge-works`.
+1. The application labels Today as `Today`.
+2. The application excludes Explore from primary navigation.
+3. `/app/paths` is canonical. `/app/path` redirects for compatibility.
+4. `/how-forge-works` is canonical. `/how-it-works` redirects for compatibility.
 5. The global font stack still uses Inter, Georgia, and Avenir fallbacks.
 6. Several legacy routes remain visible.
 7. iOS has a display study but no native application source.

@@ -123,7 +123,7 @@ export function EvidencePrototype() {
 
         <div className="forge-info-actions">
           <Link className="forge-primary-action" href="/start">Shape a proof-capable path<ForgeArrow /></Link>
-          <Link className="forge-secondary-action" href="/app/path">Inspect accepted paths</Link>
+          <Link className="forge-secondary-action" href="/app/paths">Inspect accepted paths</Link>
         </div>
       </main>
     </ForgeShell>

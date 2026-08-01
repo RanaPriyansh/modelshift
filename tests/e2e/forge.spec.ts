@@ -53,7 +53,7 @@ const ROUTES: readonly RouteCase[] = [
     deviceProfile: "teen",
   },
   {
-    path: "/app/path",
+    path: "/app/paths",
     slug: "my-path",
     title: /My paths — FORGE/i,
     heading: /Inspect what you accepted/i,

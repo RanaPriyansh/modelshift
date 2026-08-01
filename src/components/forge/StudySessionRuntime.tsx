@@ -322,7 +322,7 @@ export function StudySessionRuntime({
               Inspect scheduled delayed return
             </Link>
           ) : null}
-          <Link href="/app/path">Return to my path</Link>
+          <Link href="/app/paths">Return to my path</Link>
         </section>
       </main>
     );

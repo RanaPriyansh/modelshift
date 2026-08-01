@@ -15,7 +15,8 @@ const RESPONSIVE_SURFACES = [
 
 const COMPATIBILITY_SURFACES = [
   { path: "/home", canonical: "/app" },
-  { path: "/plan", canonical: "/app/path" },
+  { path: "/app/path", canonical: "/app/paths" },
+  { path: "/plan", canonical: "/app/paths" },
   { path: "/orient", canonical: "/start" },
   { path: "/study/ai-foundations", canonical: "/learn/ai-and-learning" },
   { path: "/explore-auth", canonical: "/paths" },

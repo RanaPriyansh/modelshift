@@ -197,7 +197,7 @@ export function ForgeToday() {
           <section className="forge-app-open-questions">
             <ForgeStatus tone="human">{openQuestions} saved open {openQuestions === 1 ? "question" : "questions"}</ForgeStatus>
             <p>They remain non-runnable until reviewed capability, source, activity, proof, and publication authority exists.</p>
-            <Link href="/app/path">Inspect open questions</Link>
+            <Link href="/app/paths">Inspect open questions</Link>
           </section>
         ) : null}
       </main>
@@ -266,7 +266,7 @@ export function ForgeToday() {
             <ForgeStatus tone="human">Next action blocked</ForgeStatus>
             <h2 id="next-action-title">FORGE cannot safely activate this path state.</h2>
             <p>Reason: {projection.reason.replaceAll("_", " ")}. The accepted path and local history were not changed.</p>
-            <Link href="/app/path">Inspect the path contract</Link>
+            <Link href="/app/paths">Inspect the path contract</Link>
           </>
         ) : null}
       </section>
@@ -279,7 +279,7 @@ export function ForgeToday() {
             return stateForNode?.status === "completed";
           }).length} of {revision.nodes.length} activities worked through</h2>
           <p>No percentage, streak, grade, rank, or permanent mastery label is derived from this count.</p>
-          <Link href="/app/path">Inspect exact path and revisions</Link>
+          <Link href="/app/paths">Inspect exact path and revisions</Link>
         </section>
         <section>
           <ForgeStatus tone={dueReturn ? "evidence" : expiredReturn ? "human" : "quiet"}>Return proof</ForgeStatus>
@@ -522,7 +522,7 @@ export function ForgeStudy() {
           <ForgeStatus tone="quiet">No runnable action</ForgeStatus>
           <h1>There is no reviewed next action to open.</h1>
           <p>Accept a reviewed path first, or inspect the current path if its state is blocked or complete.</p>
-          <Link href="/app/path">Inspect my path</Link>
+          <Link href="/app/paths">Inspect my path</Link>
         </section>
       </main>
     );

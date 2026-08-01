@@ -47,7 +47,7 @@ export function ForgePathRecord({ recordId }: { readonly recordId: string }) {
             Device continuity is {state.result.status.replaceAll("_", " ")}. No empty,
             deleted, or synchronized path state is being inferred.
           </p>
-          <Link href="/app/path">Return to my paths</Link>
+          <Link href="/app/paths">Return to my paths</Link>
         </section>
       </main>
     );
@@ -63,7 +63,7 @@ export function ForgePathRecord({ recordId }: { readonly recordId: string }) {
           <ForgeStatus tone="quiet">Path not found</ForgeStatus>
           <h1>This opaque path identity is not on this device.</h1>
           <p>It may belong to another browser, or the learner may have deleted it.</p>
-          <Link href="/app/path">Return to my paths</Link>
+          <Link href="/app/paths">Return to my paths</Link>
         </section>
       </main>
     );
@@ -78,7 +78,7 @@ export function ForgePathRecord({ recordId }: { readonly recordId: string }) {
           <ForgeStatus tone="human">Invalid path history</ForgeStatus>
           <h1>The current immutable revision is missing.</h1>
           <p>No activity is executable from this record.</p>
-          <Link href="/app/path">Return to my paths</Link>
+          <Link href="/app/paths">Return to my paths</Link>
         </section>
       </main>
     );
@@ -91,7 +91,7 @@ export function ForgePathRecord({ recordId }: { readonly recordId: string }) {
         <h1>{record.goal.learnerWords}</h1>
         <p>{record.goal.desiredOutcome}</p>
         <div className="forge-app-page__hero-actions">
-          <Link className="forge-secondary-action" href="/app/path">All local paths</Link>
+          <Link className="forge-secondary-action" href="/app/paths">All local paths</Link>
           {revision.status === "accepted" && revision.executionAllowed ? (
             <Link className="forge-primary-action" href="/app/study">Open next action</Link>
           ) : null}

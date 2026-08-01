@@ -4,7 +4,7 @@ const ROUTES = [
   { path: "/start", heading: /Turn a goal into a credible first path/i, main: "#forge-main" },
   { path: "/paths", heading: /Learn toward something you want to do/i, main: "#forge-main" },
   { path: "/app", heading: /What do you want to be able to do/i, main: "#forge-main" },
-  { path: "/app/path", heading: /Inspect what you accepted/i, main: "#forge-main" },
+  { path: "/app/paths", heading: /Inspect what you accepted/i, main: "#forge-main" },
   { path: "/app/evidence", heading: /Proof should say exactly what happened/i, main: "#forge-main" },
   { path: "/learn/force-and-motion", heading: /The engine is off\. What happens next/i, main: "#world-content", world: true },
   { path: "/learn/proportional-reasoning", heading: /The two citrus mixes/i, main: "#world-content", world: true },

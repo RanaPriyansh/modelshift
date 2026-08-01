@@ -42,7 +42,7 @@ export const CANONICAL_DEPLOYMENT_ROUTES = [
   { id: "public_paths", path: "/paths", marker: /Learn toward something you want to do|No complete broad path is published yet/i },
   { id: "how_forge_works", path: "/how-forge-works", marker: /A path is credible when every move earns its place|Goal(?: |&rarr;|→)path(?: |&rarr;|→)action/i },
   { id: "learner_today", path: "/app", marker: /Reading learner-owned device continuity|Begin with something you want to do/i },
-  { id: "learner_paths", path: "/app/path", marker: /Reading path history|Inspect what you accepted/i },
+  { id: "learner_paths", path: "/app/paths", marker: /Reading path history|Inspect what you accepted/i },
   { id: "learner_study", path: "/app/study", marker: /Preparing action brief|There is no reviewed next action to open/i },
   { id: "learner_evidence", path: "/app/evidence", marker: /Proof should say exactly what happened/i },
   { id: "trust", path: "/trust", marker: /FORGE should be inspectable before it is impressive/i },
