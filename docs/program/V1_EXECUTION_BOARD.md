@@ -36,34 +36,33 @@ This board replaces hackathon, judging, demo-video, submission, and deadline wor
 ## Latest verified implementation receipt
 
 The latest verified implementation candidate before this evidence-only record
-update is clean source `ed1ac56885e953b762c18f54fb8cb8ef32d28906`
-and tree `aeeb0bc4959bcd2d4a69a90630e1a62b7e2a49a6`.
+update is clean source `d81b27f71544a45f4473cc4174d0a7944a12f84c`
+and tree `5dcef6363e230bb2210445331bd862dc203586a7`.
 
-The candidate preserves the university foundation work. It adds the production
-security and release-evidence repair defined in the 1 August audit.
+The candidate preserves the university foundation, production security, and
+release-evidence work. It adds the bounded Semester Desk accessibility and CI
+acceptance repair defined in the 1 August audit.
 
 The candidate adds no public route, database object, provider operation,
 identity activation, entitlement, persistence path, or participant operation.
 
-- Frozen install without dependency scripts: pass.
-- Full locked dependency graph: zero known advisories.
-- Registry signatures: 576 of 576 pass.
-- Dependency install source-authority gate: pass.
+- Focused Semester Desk and release-runner contracts: 58 pass across seven
+  files.
 - TypeScript: pass.
 - Zero-warning lint: pass.
-- Application contracts: 1,582 pass across 177 files.
+- Application contracts: 1,601 pass across 177 files.
 - Evaluator contracts: 13 pass across two files.
-- Total contracts: 1,595 pass.
+- Total contracts: 1,614 pass.
 - Offline evaluation gate: pass across 54 authored fixtures.
 - Live model evaluation: not run.
-- CI workflow YAML parse and immutable action-reference checks: pass.
-- Independent workflow review: no confirmed residual defect.
+- CI workflow YAML parse and diff-integrity checks: pass.
+- Independent accessibility and workflow review: no confirmed residual defect.
 - Optimized production build: pass.
 - Generated static pages: 67.
 - Public build boundary: 71 static assets pass.
 - Production build receipt: 1,472 files.
-- Artifact digest: `sha256:12754b41b49132a774e8b5c9485cd26dca893d306bf196752f478f0d73c4a70f`.
-- Public asset digest: `sha256:e9e3cbb07f265392a4f798d6f677e4bef3f0c296159c81327875b57a3cea4911`.
+- Artifact digest: `sha256:1ac2e5151f87d210172199b1430cac27ef1982dd0f36f45903aa62ccbc3a5c9c`.
+- Public asset digest: `sha256:b127b8002027587622a3f317701ddbad94cb1042c0c26140897cdcad4c212af5`.
 - Public directory digest: `sha256:e0096e369f47666ca5a3f962b71b6f5199a17117ac5ce4a598d1b77dc42abac9`.
 - Runtime configuration digest: `sha256:06e97d7ea5aaf83b90deef10f941678198a442a267e97f9f23a1a97603774e29`.
 
@@ -71,13 +70,27 @@ Release manifest schema `2.0` and provider receipt schema `2.0` now fail closed
 for retired asset-only evidence. The receipt requires a clean Git tree and the
 complete production build identity.
 
+The Semester Desk repair keeps evidence details inside their definitions. It
+hides decorative sequence numbers from assistive technology. Clear inspection
+returns focus to the exact course control and measures the visible label.
+
+CI now runs the active Semester Desk fixture as a required browser gate. The
+production runner uses nine explicit production specifications on all
+platforms. Each browser gate writes to one bounded result directory, so a later
+run cannot erase earlier failure evidence.
+
+The selected Chrome check confirmed the repaired semantics, clear state, focus
+return, and unchanged visual composition. The checked viewport was 2000 by
+1183 CSS pixels. The capture was JPEG, so it is qualitative evidence only.
+
 The configured university-foundation and production browser suites did not run
 locally. Product Design requires the selected Chrome workflow unless the user
 gives permission for direct Playwright use.
 
-GitHub environment protection, the least-privilege Vercel secret, required CI
-browser execution, and a live provider receipt remain external release gates.
-No push or deployment occurred.
+No direct Playwright run, Windows runner execution, screen-reader review, push,
+or deployment occurred. GitHub environment protection, the least-privilege
+Vercel secret, required CI browser execution, and a live provider receipt
+remain external release gates.
 
 ## Current implementation order
 
