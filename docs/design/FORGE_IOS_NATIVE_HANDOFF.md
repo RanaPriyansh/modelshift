@@ -624,7 +624,13 @@ The Figma source must contain six representative iOS frames:
 - `IOS-10` Protected Proof.
 - `IOS-14` Delayed Return.
 
-Each frame must use native control references.
+Each frame must identify the intended native control.
+
+The current Figma frames use FORGE compound representations and implementation notes.
+
+The Figma evidence does not prove Apple library instances.
+
+The SwiftUI reference uses native controls.
 
 Each frame must include a Light or Dark appearance label.
 

@@ -1,6 +1,6 @@
 # Figma Phase 1 Execution Plan
 
-Status: Approved. Local generator integrity passes. Figma source rerun required.
+Status: Approved. Local generator integrity and the current desktop source audit pass.
 
 Date: 2026-08-01.
 
@@ -20,9 +20,9 @@ The local Figma generator is complete.
 
 The generator is in `scripts/design/figma-forge-terrain-plugin`.
 
-The pre-fix build receipt passed the desktop audit.
+The current build receipt passed the desktop audit.
 
-The pre-fix variable aliases passed a desktop editor observation.
+Current variable aliases and component bindings passed local and desktop checks.
 
 ## 2. Current constraint
 
@@ -60,17 +60,26 @@ The local checker also verified 16 Dark semantic aliases.
 
 The local checker verified 32 alias targets and component variable bindings.
 
-The pre-fix desktop receipt reports 17 components.
+The current desktop receipt reports 33 components.
 
-The saved desktop evidence does not verify the current 33-component source.
+The saved desktop evidence verifies the current 33-component source.
 
-The saved evidence does not include the variable editor panel.
+The saved evidence includes upper and lower Dark variable editor panels.
+
+The saved evidence includes surface, border, and learner-action binding panels.
+
+Two Dark variable captures cover all 16 aliases.
+
+The clean iOS component capture shows the complete assistance disclosure.
 
 The connector cannot supply an independent variable readback.
 
 The complete generator also created representative public, web, focus, iOS, state, and accessibility boards.
 
-The durable audit evidence is in
+The current durable audit evidence is in
+`docs/design/evidence/forge-terrain/forge-figma-desktop-audit-current-manifest.json`.
+
+The historical pre-fix evidence remains in
 `docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json`.
 
 ## 4. Recommended structure
@@ -203,7 +212,9 @@ Use Geist Mono for web technical labels.
 
 Use Libre Baskerville for the reflection prompt.
 
-Use SF Pro for iOS styles.
+Use Inter or Geist for iOS preview styles in Figma.
+
+Use native system SF Pro text styles in SwiftUI.
 
 Use Geist Mono for the iOS technical specimen in Figma.
 

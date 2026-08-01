@@ -4,11 +4,24 @@ Status: Canonical product map and design scope.
 
 Date: 2026-08-01.
 
-Source revision: `684f5a898fa2ece3a1e4a61c1a51f0716b535400`.
+Baseline repository revision: `684f5a898fa2ece3a1e4a61c1a51f0716b535400`.
+
+Current Figma generator revision: `4d57ed8d31d8e8ab8ae5a327522dc0135accd442`.
 
 This record maps every canonical product route to a design family.
 
 It also records compatibility routes and role-gated surfaces.
+
+Bracketed routes describe target route families.
+
+The current concrete public path pages are `/paths/ai-literacy` and `/paths/source-corroboration`.
+
+The current concrete World pages are:
+
+- `/learn/ai-and-learning`
+- `/learn/force-and-motion`
+- `/learn/primary-source-reasoning`
+- `/learn/proportional-reasoning`
 
 ## 1. Navigation model
 

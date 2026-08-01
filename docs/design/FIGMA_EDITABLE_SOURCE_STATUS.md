@@ -1,6 +1,6 @@
 # Figma Editable Source Status
 
-Status: Local source integrity passes. Figma source rerun required after generator fixes.
+Status: Local source integrity and the current Figma desktop audit pass.
 
 Date: 2026-08-01.
 
@@ -70,7 +70,8 @@ The plugin makes no network request.
 
 ## Desktop execution result
 
-The saved desktop execution predates the current source integrity fix.
+The desktop execution uses source revision
+`4d57ed8d31d8e8ab8ae5a327522dc0135accd442`.
 
 The development plugin was imported from:
 
@@ -101,22 +102,38 @@ The build receipt reports:
 - 18 text styles.
 - 7 paint styles.
 - 2 effect styles.
-- 17 components in the pre-fix desktop receipt.
+- 33 components.
 - 28 generated frames.
 
-The desktop variable editor showed 16 Light semantic aliases.
+The Figma variable editor showed 16 Light semantic aliases.
 
-The desktop variable editor also showed 16 Dark semantic aliases.
+The Figma variable editor also showed 16 Dark semantic aliases.
 
 No broken semantic alias marker was visible.
 
-The saved evidence does not include the variable editor panel.
+The saved evidence includes upper and lower Dark variable editor panels.
+
+The local checker verifies all 16 Light aliases and all 16 Dark aliases.
 
 The connector cannot supply an independent variable readback.
 
-The public, web, focus, iOS, state, accessibility, and coverage boards passed a pre-fix desktop visual audit.
+The public, web, focus, iOS, state, accessibility, and coverage boards passed the current desktop visual audit.
+
+The iOS preview text renders with file-safe Inter or Geist faces.
+
+Native SwiftUI continues to use the system font.
+
+The desktop property panel shows current bindings for:
+
+- `color/surface/default`
+- `color/border/default`
+- `color/action/learner`
 
 The durable evidence manifest is:
+
+`docs/design/evidence/forge-terrain/forge-figma-desktop-audit-current-manifest.json`
+
+The historical pre-fix manifest remains at:
 
 `docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json`
 
@@ -135,18 +152,20 @@ The capture endpoint failed before it created a capture.
 
 The desktop Figma audit supplies the source evidence that the connector could not supply.
 
-## Required Figma rerun gate
+## Completed Figma rerun
 
-Import the updated plugin into the target Figma file.
+The current `FORGE Terrain Builder` run completed in the target file.
 
-Run `FORGE Terrain Builder`.
+The `09 Archive` receipt shows 33 components.
 
-Confirm 33 components in the `09 Archive` receipt.
+The checker verifies 32 mode-matched semantic aliases.
 
-Confirm 32 semantic aliases point to mode-matched primitive variables.
+The checker verifies paint-level component bindings.
 
-Confirm eligible token-matched component fills, strokes, and text colors show correct variable bindings.
+The iOS component and application boards show complete preview text.
 
-Inspect the iOS component board for complete text rendering.
+Fifteen current PNG evidence files record the pages, receipt, variables, and bindings.
 
-Capture new evidence after this inspection.
+Two Dark variable captures cover all 16 aliases.
+
+The clean iOS component capture shows the complete assistance disclosure.

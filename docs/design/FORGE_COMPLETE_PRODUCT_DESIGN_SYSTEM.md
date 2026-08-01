@@ -4,7 +4,9 @@ Status: Cross-platform design system specification.
 
 Date: 2026-08-01.
 
-Source revision: `684f5a898fa2ece3a1e4a61c1a51f0716b535400`.
+Baseline repository revision: `684f5a898fa2ece3a1e4a61c1a51f0716b535400`.
+
+Current Figma generator revision: `4d57ed8d31d8e8ab8ae5a327522dc0135accd442`.
 
 Primary editable target:
 
@@ -12,8 +14,8 @@ Primary editable target:
 - File: `FORGE Terrain Product Design System`
 - Key: `qzdsINs69QK44KiorK9plj`
 - URL: <https://www.figma.com/design/qzdsINs69QK44KiorK9plj/FORGE-Terrain-Product-Design-System>
-- Status: Local generator integrity passes. Figma source rerun required.
-- Evidence: `docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json`
+- Status: Current generator integrity and desktop source audit pass.
+- Evidence: `docs/design/evidence/forge-terrain/forge-figma-desktop-audit-current-manifest.json`
 
 Secondary editable source:
 
@@ -498,9 +500,11 @@ The Phase 1 build sequence is in `docs/design/FIGMA_PHASE_1_EXECUTION_PLAN.md`.
 
 The local generator is in `scripts/design/figma-forge-terrain-plugin`.
 
-Run the updated generator in Figma before the next editable-source review.
+The updated generator ran in the target Figma file.
 
-Confirm aliases and eligible token-matched component bindings in the `09 Archive` receipt and the variable editor.
+The current `09 Archive` receipt shows 33 components.
+
+The checker and desktop panels verify semantic aliases and eligible paint bindings.
 
 The native iOS interaction contract is in `docs/design/FORGE_IOS_NATIVE_HANDOFF.md`.
 

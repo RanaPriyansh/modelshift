@@ -1,6 +1,6 @@
 # FORGE Final Design Requirement Audit
 
-Status: Local source requirements pass. Figma rerun, runtime, rights, and learner gates remain open.
+Status: Local source and current Figma requirements pass. Runtime, rights, and learner gates remain open.
 
 Date: 2026-08-01.
 
@@ -29,8 +29,8 @@ Recall -> Attempt -> Repair -> Prove -> Return
 | Canonical inventory | Pass | 11 public, 14 application, 3 focus, and 18 iOS identifiers exist. |
 | Coded design atlas | Pass | All 46 identifiers render at desktop and 320 CSS pixels. |
 | Shared states | Pass | Eight required recovery states render in both audited viewports. |
-| Editable Figma source | Rerun required | The pre-fix desktop source contains 10 pages, 3 collections, 86 variables, 17 components, and 28 frames. The current local generator creates 33 components. |
-| Figma semantic aliases and bindings | Local pass, Figma rerun required | The local checker verifies 32 mode-matched alias targets and eligible token-matched component fills, strokes, and text bindings. |
+| Editable Figma source | Pass | The current desktop source contains 10 pages, 3 collections, 86 variables, 33 components, and 28 frames. |
+| Figma semantic aliases and bindings | Pass | The checker verifies 32 mode-matched alias targets. Desktop property panels show surface, border, and learner-action bindings. |
 | Static source parity | Pass | The 46 Figma coverage identifiers match the coded atlas. |
 | Representative boards | Pass locally | The generator contains 21 editable representative screen identifiers. |
 | Responsive behavior | Pass | Atlas and canonical route browser audits report zero horizontal overflow. |
@@ -61,11 +61,14 @@ PLAYWRIGHT_BASE_URL=http://127.0.0.1:3035 pnpm exec playwright test tests/e2e/fo
 ```
 
 The public boundary digest is
-`a186bd6bca82d6ba0555d13af5084c65995ad1c70b43d140546cbb1ca91c042e`.
+`fa76d44d1e5fc8a0f2c656244f347df0a6e1813b837aa693a91b48a5afee1777`.
 
 The default Turbopack build cannot follow the linked `node_modules` path in this isolated worktree.
 
-The Figma desktop audit manifest is
+The current Figma desktop audit manifest is
+`docs/design/evidence/forge-terrain/forge-figma-desktop-audit-current-manifest.json`.
+
+The historical pre-fix audit remains at
 `docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json`.
 
 The Figma connector still returns `INVALID_ARGUMENT`.
@@ -74,19 +77,13 @@ The connector limitation does not invalidate the completed desktop audit.
 
 ## Open external gates
 
-### Figma source rerun
+### Figma connector readback
 
-Run the updated generator in the target Figma file.
+The current desktop source audit passes.
 
-Confirm 33 components in the `09 Archive` receipt.
+The Figma connector still returns `INVALID_ARGUMENT` for independent readback.
 
-Confirm 32 mode-matched semantic aliases.
-
-Confirm eligible token-matched component fills, strokes, and text colors use correct variable bindings.
-
-Capture the variable editor panel and the iOS component board after the rerun.
-
-The Figma connector returns `INVALID_ARGUMENT` for variable readback.
+The desktop variable and property panels supply current alias and binding evidence.
 
 ### Native iOS runtime verification
 
@@ -108,4 +105,4 @@ Clear image rights before production use.
 
 The local design and implementation evidence passes.
 
-The complete goal remains active because the Figma rerun, native runtime, learner-review, and rights gates remain open.
+The complete goal remains active because native runtime, learner-review, and rights gates remain open.

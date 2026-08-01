@@ -1,0 +1,222 @@
+{
+  "schema": "forge.figma.desktop-audit.v2",
+  "date": "2026-08-01",
+  "status": "pass",
+  "sourceRevision": "4d57ed8d31d8e8ab8ae5a327522dc0135accd442",
+  "supersedes": "docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json",
+  "file": {
+    "name": "FORGE Terrain Product Design System",
+    "key": "qzdsINs69QK44KiorK9plj",
+    "url": "https://www.figma.com/design/qzdsINs69QK44KiorK9plj/FORGE-Terrain-Product-Design-System",
+    "plan": "Starter"
+  },
+  "captureSurfaces": [
+    "Figma desktop application",
+    "Signed-in Figma browser"
+  ],
+  "generator": {
+    "name": "FORGE Terrain Builder",
+    "version": "1.0.0",
+    "structure": "Starter fallback",
+    "sha256": "5f1dd74bd20420277c8d49544cc238f17f691312a44ffef921aef799acbc8066",
+    "checkerSha256": "370fb8bee2c3d7436f711475a35471bdddf31c5964e167fb7cb208240e003595"
+  },
+  "counts": {
+    "pages": 10,
+    "collections": 3,
+    "variables": 86,
+    "textStyles": 18,
+    "paintStyles": 7,
+    "effectStyles": 2,
+    "components": 33,
+    "generatedFrames": 28,
+    "canonicalCoverageIdentifiers": 46,
+    "representativeEditableIdentifiers": 21
+  },
+  "semanticAliases": {
+    "light": 16,
+    "dark": 16,
+    "broken": 0
+  },
+  "semanticAliasEvidence": {
+    "localChecker": "32 mode-matched aliases pass",
+    "figmaVariablePanels": "Two Dark semantic captures cover all 16 primitive Dark targets",
+    "connectorReadback": "INVALID_ARGUMENT"
+  },
+  "semanticBindingEvidence": {
+    "localChecker": "Every semantic paint in all 33 component records has a paint-level variable binding",
+    "desktopComponentPanel": [
+      "color/surface/default",
+      "color/border/default",
+      "color/action/learner"
+    ],
+    "bindingMethod": "figma.variables.setBoundVariableForPaint"
+  },
+  "representativeBoards": {
+    "publicSite": 6,
+    "webApplication": 6,
+    "focusMode": 3,
+    "iosApplication": 6
+  },
+  "pages": [
+    {
+      "name": "00 Cover",
+      "nodeId": "3:2"
+    },
+    {
+      "name": "01 Foundations",
+      "nodeId": "3:3"
+    },
+    {
+      "name": "02 Web Components",
+      "nodeId": "3:4"
+    },
+    {
+      "name": "03 Public Site",
+      "nodeId": "3:5"
+    },
+    {
+      "name": "04 Web Application",
+      "nodeId": "3:6"
+    },
+    {
+      "name": "05 Focus Mode",
+      "nodeId": "3:7"
+    },
+    {
+      "name": "06 iOS Components",
+      "nodeId": "3:8"
+    },
+    {
+      "name": "07 iOS Application",
+      "nodeId": "3:9"
+    },
+    {
+      "name": "08 States and Accessibility",
+      "nodeId": "3:10"
+    },
+    {
+      "name": "09 Archive",
+      "nodeId": "3:11"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-current-cover-20260801.png",
+      "sha256": "fcb3f80ee3b51abff07f6560c1f1135c744fb557505c810e161149a9adee620a",
+      "width": 1195,
+      "height": 768,
+      "description": "Cover page"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-current-foundations-20260801.png",
+      "sha256": "49185df2230d016fb13dc27722acaecb3ed9bbe1d5ba4af647fd0add877ca212",
+      "width": 1195,
+      "height": 768,
+      "description": "Foundation tokens and styles"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-current-web-components-20260801.png",
+      "sha256": "1242ed098a664bfefcdd6425348ac45ece180f23bd931fae06438a26ed5314c9",
+      "width": 1195,
+      "height": 768,
+      "description": "Reusable web components"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-current-public-site-20260801.png",
+      "sha256": "6ef145346be9c96b301357e9a644a0518fd5c908d70f6630be7999475498d0f2",
+      "width": 1195,
+      "height": 768,
+      "description": "Six representative public-site boards"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-current-web-application-20260801.png",
+      "sha256": "13c98f684fbfa83f02a0186c45a67573e55ae2979c1337111b323f3a1abc3318",
+      "width": 1195,
+      "height": 768,
+      "description": "Six representative web-application boards"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-current-focus-mode-20260801.png",
+      "sha256": "83a723c38babb92d94f942b2c252b9ebb43b9bcbde91ba09a1a1f70f2fd6d4c0",
+      "width": 1195,
+      "height": 768,
+      "description": "Three representative focus-mode boards"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-current-ios-components-20260801.png",
+      "sha256": "08254c79006e8642c04666d04c35f4fba1856c6ae0083d6a05a437c4c9709712",
+      "width": 2000,
+      "height": 1093,
+      "description": "Reusable iOS compound components with current preview fonts and complete assistance text"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-current-ios-application-20260801.png",
+      "sha256": "5bbaeb024272b65495234d35ec3a5c6b2c2cc6ae484b7368a89539390ad50598",
+      "width": 1195,
+      "height": 768,
+      "description": "Six representative iOS application boards"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-current-states-20260801.png",
+      "sha256": "e10aced624ddc7e9dc3f7959fbdfcff613cc3ec29715b49eaf14a391391ea8f7",
+      "width": 1195,
+      "height": 768,
+      "description": "Shared states and accessibility contracts"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-current-archive-20260801.png",
+      "sha256": "b0cf5046d8469145fb2ac7ccdc4efc883c84f4e38f65e9fe9ee774012de30041",
+      "width": 1195,
+      "height": 768,
+      "description": "Archive build receipt and canonical coverage index"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-current-build-receipt-20260801.png",
+      "sha256": "e400310050152eb4a8f65aab117e57ac41c9dde0a5f792a5570dbd5a94c68d80",
+      "width": 1195,
+      "height": 768,
+      "description": "Close view of the current build receipt"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-current-variables-dark-20260801.png",
+      "sha256": "e9375c79bcf597047dd55c5c9eee2abc112c8a5cc8d9a0466a4eb7113ad77160",
+      "width": 2000,
+      "height": 1093,
+      "description": "Dark semantic variable aliases and primitive targets, upper section"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-current-variables-dark-lower-20260801.png",
+      "sha256": "edad8aaed4dbd3882265715b774d2d966d2eb43226a7878adcc9ca61baeb34a2",
+      "width": 2000,
+      "height": 1093,
+      "description": "Dark semantic variable aliases and primitive targets, lower section"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-current-component-binding-20260801.png",
+      "sha256": "c33714df64f674fe0552e74c3e4f884055efe2bc07c932141c9ad114a5dba887",
+      "width": 1195,
+      "height": 768,
+      "description": "Component surface and border variable bindings"
+    },
+    {
+      "path": "docs/design/evidence/forge-terrain/figma-current-action-binding-20260801.png",
+      "sha256": "fa07994f70abd550e0206f77f4a8171e65af4e066eacacb34bae0fa1985472b8",
+      "width": 1195,
+      "height": 768,
+      "description": "Learner action variable binding"
+    }
+  ],
+  "visualReview": {
+    "status": "pass",
+    "iosComponents": "No zoom popup covers the assistance disclosure.",
+    "darkVariables": "The upper and lower captures cover all 16 semantic aliases."
+  },
+  "limitations": [
+    "The Figma connector continues to return INVALID_ARGUMENT.",
+    "The desktop audit verifies the current source, counts, aliases, paint bindings, styles, components, boards, and build receipt.",
+    "Two saved variable panels cover the Dark semantic collection. The local checker verifies all Light and Dark aliases.",
+    "Figma iOS previews use Inter or Geist for reliable file rendering. Native SwiftUI continues to use the system font.",
+    "This audit does not prove learner preference, accessibility conformance, image rights, native iOS runtime behavior, or production deployment."
+  ]
+}

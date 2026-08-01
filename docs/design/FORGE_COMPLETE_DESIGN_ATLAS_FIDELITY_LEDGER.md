@@ -30,6 +30,7 @@ This record does not establish production readiness, learning efficacy, accessib
 | Figma-to-coded-atlas parity check commit | `1d52f50827b3bdd09d871aaa50acf890bfb051da` |
 | Native reference and visual audit commit | `6d1d58decd2562531e304ea78a39dc7eff6efbda` |
 | Figma desktop audit evidence commit | `50c6dbfdd258fd87a8a5c693b3447c34d4ddbf09` |
+| Current Figma generator source commit | `4d57ed8d31d8e8ab8ae5a327522dc0135accd442` |
 | Deployment | Not done |
 | Push or merge | Not done |
 
@@ -128,7 +129,7 @@ The local generator check creates:
 - 18 text styles.
 - 7 paint styles.
 - 2 effect styles.
-- 17 components.
+- 33 components.
 - 28 generated frames.
 - One coverage index for all 46 canonical families.
 - One exact identifier comparison between the Figma coverage receipt and the coded atlas.
@@ -136,21 +137,23 @@ The local generator check creates:
 
 The desktop generator completed in Figma and created the ten planned pages.
 
-The desktop visual audit passed.
+The current desktop visual audit passed.
 
 The build receipt confirms every local generator count.
 
-The desktop variable editor showed 16 Light semantic aliases and 16 Dark semantic aliases.
+The Figma variable editor showed 16 Light semantic aliases and 16 Dark semantic aliases.
 
 No broken alias marker was visible.
 
-The saved evidence does not include the variable editor panel.
+The saved evidence includes upper and lower Dark variable editor panels.
+
+The saved evidence also includes surface, border, and learner-action binding panels.
 
 The connector also returns `INVALID_ARGUMENT` for the new file.
 
-The connector limitation does not erase the historical desktop audit.
+The connector limitation does not erase the current desktop audit.
 
-The current generator still requires a new Figma run.
+The current generator completed in the target file.
 
 Paper remains an optional secondary editable source.
 
@@ -169,18 +172,20 @@ The Paper source remains partial.
 
 See `docs/design/PAPER_IMPLEMENTATION_STATUS.md`.
 
-The Figma desktop audit manifest is:
+The current Figma desktop audit manifest is:
+
+`docs/design/evidence/forge-terrain/forge-figma-desktop-audit-current-manifest.json`
+
+That manifest records source revision
+`4d57ed8d31d8e8ab8ae5a327522dc0135accd442`.
+
+The historical pre-binding-fix manifest remains at:
 
 `docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json`
 
-That manifest records the pre-binding-fix generator at revision
-`9c2d0d0dc60910d4f8975e67ee309698ed48f705`.
-
-The current local generator creates 33 components.
-
 The current checker verifies 32 mode-matched alias targets and eligible token-matched component paint bindings.
 
-Run the updated generator before the next editable-source completion claim.
+The updated generator and current desktop evidence support the editable-source claim.
 
 ## 6. Token handoff
 
@@ -201,11 +206,13 @@ The generator checks:
 
 The generator completed the Figma token creation.
 
-The pre-fix Figma token creation and desktop alias observation passed.
+The current Figma token creation and desktop alias observation passed.
 
 The current local alias-target and component-binding checks pass.
 
-A new Figma run and independent binding readback remain open.
+Independent connector readback remains unavailable.
+
+The current desktop property panels provide binding evidence.
 
 No token file was imported into Paper.
 
@@ -239,7 +246,7 @@ The build completed 54 page-generation tasks and TypeScript validation.
 The public build boundary check verified 121 static assets.
 
 The public asset digest is
-`a186bd6bca82d6ba0555d13af5084c65995ad1c70b43d140546cbb1ca91c042e`.
+`fa76d44d1e5fc8a0f2c656244f347df0a6e1813b837aa693a91b48a5afee1777`.
 
 The default Turbopack build cannot follow the linked `node_modules` path in this isolated worktree.
 
@@ -255,16 +262,16 @@ pnpm build
 | --- | --- | --- |
 | `docs/design/evidence/forge-terrain/forge-public-site-atlas.png` | 1440 by 7252 | `7d13bd1535e6f2f879cfb9d74a5ca82b77b717f9857a0f77fa2cc46cf0b7979c` |
 | `docs/design/evidence/forge-terrain/forge-web-app-atlas.png` | 1440 by 7269 | `9cea12f2f1a28d665580843f3c831650e180e360d7bc0e57a8ea3bd14ed9cf4c` |
-| `docs/design/evidence/forge-terrain/forge-public-complete-atlas.png` | 1440 by 13487 | `cb1c48c296cbe9fb9913ba858fe1aa727fde957887b5528b644199932b58659c` |
-| `docs/design/evidence/forge-terrain/forge-public-complete-atlas-320.png` | 320 by 15006 | `b4697b5337e72ad0f3212eac089c028a4f507646367359d7e4bf26b0f1b0abcd` |
-| `docs/design/evidence/forge-terrain/forge-web-complete-atlas.png` | 1440 by 16531 | `17f267078adb9a4cd5a7b69db136f52ad7320f3f93704b13d87c40d8623f8866` |
-| `docs/design/evidence/forge-terrain/forge-web-complete-atlas-320.png` | 320 by 17452 | `7c2ae95109ab3cb4305cb9db6c4798a6cfe9d3ee7ba017af33b76d1accdc99c1` |
-| `docs/design/evidence/forge-terrain/forge-focus-mode-atlas.png` | 1440 by 3987 | `026492361b1cb8a6309f7bad30dbef84005a450810eba1b94c38bb2cb6db629a` |
-| `docs/design/evidence/forge-terrain/forge-focus-mode-atlas-320.png` | 320 by 4851 | `9aa85592a05b28907dbdd988f3b1b27791382e4f67129f861dd7c4ecb6d92727` |
+| `docs/design/evidence/forge-terrain/forge-public-complete-atlas.png` | 1440 by 13487 | `aa6c8fa640a09607b20237772e9668d844393435bfefc8b68fe06953bdbe18b0` |
+| `docs/design/evidence/forge-terrain/forge-public-complete-atlas-320.png` | 320 by 15005 | `fffcfa272841b3a3006deb9c6e1b260299a75e7c0f0209a324ccc9aa9d00cf8a` |
+| `docs/design/evidence/forge-terrain/forge-web-complete-atlas.png` | 1440 by 16679 | `1aa0d88e48a7822e7ec48a02300f41e79ae03b7a9b3badf23b2e19947cd8b722` |
+| `docs/design/evidence/forge-terrain/forge-web-complete-atlas-320.png` | 320 by 17448 | `a48492603ab79e09144af0e444a247996ebebf35494013bacde7f8ef25b414fe` |
+| `docs/design/evidence/forge-terrain/forge-focus-mode-atlas.png` | 1440 by 3988 | `980f146791a22443d5c4498b705ab404651e07be1d04d1696710f7dafc69d13a` |
+| `docs/design/evidence/forge-terrain/forge-focus-mode-atlas-320.png` | 320 by 4843 | `9c420172394052061f3f0f4dcf5427fd8c8ed6df496f0994464fd57142c99c07` |
 | `docs/design/evidence/forge-terrain/forge-ios-app-atlas.png` | 1440 by 2574 | `06ab393088dc89a3be6c48a3f167c16cd23db416936e95b89dd0b84949ae06cf` |
-| `docs/design/evidence/forge-terrain/forge-ios-complete-atlas.png` | 1440 by 6499 | `a264775b83842d03c040dc479f681f213c229cee9696b47a8db554f4b0047efe` |
-| `docs/design/evidence/forge-terrain/forge-ios-complete-atlas-320-a.png` | 320 by 9016 | `a3ad4867e209765a65b38f510e886a18c1ee0bd9e4a1045936cbddd17afaf08e` |
-| `docs/design/evidence/forge-terrain/forge-ios-complete-atlas-320-b.png` | 320 by 8670 | `6e0cefcbb5f790cf31cf31f8d6454eb2f59c530ed9fc5508b381ee3cb206ffcb` |
+| `docs/design/evidence/forge-terrain/forge-ios-complete-atlas.png` | 1440 by 6498 | `d8b25a50b42d9debda74452014ca1a4f1fca189edabe4d8ab5a0a8a59ded6674` |
+| `docs/design/evidence/forge-terrain/forge-ios-complete-atlas-320-a.png` | 320 by 9085 | `f34ab6b1b6c22a85de74b1f98d4f85e931d26b13f00c18f2dea7777bdb8a1709` |
+| `docs/design/evidence/forge-terrain/forge-ios-complete-atlas-320-b.png` | 320 by 8651 | `b4141f4188179ac3715305ee5a6ca0a3d3c2186c828d2392b8f5bb95a7f87c62` |
 | `docs/design/evidence/forge-terrain/forge-product-atlas-320.png` | 320 by 800 | `bd3505f6a253ec74581c39def790efb596e8c710a86546e093531c8f4128ac2e` |
 | `docs/design/evidence/forge-terrain/forge-terrain-forced-colors.png` | 1440 by 1241 | `2d979bfea5ff1f2b4fce8fd6e84b69506233fe9406d70c2e506fb3daa4ebbd51` |
 | `docs/design/evidence/forge-terrain/forge-public-home-terrain-phase2.png` | 1440 by 4314 | `68302999a536ed64ab3e2dafb6ba5a03da252c07b9a3a8ebd39ad9c41bdf4416` |
@@ -349,11 +356,13 @@ This browser review is not an accessibility conformance claim.
 | `pnpm design:figma:check` | Pass |
 | `git diff --check` | Pass |
 
-The design-atlas audit used:
+The current design-atlas audit used:
 
 ```text
 FORGE_DESIGN_ATLAS_URL=http://127.0.0.1:3035/internal/design-lab pnpm design:atlas:check
 ```
+
+The temporary local server was stopped after the audit.
 
 The automated receipt recorded:
 
@@ -397,8 +406,8 @@ It is not an accessibility conformance claim.
 
 Source result:
 
-- 107 test files passed.
-- 956 tests passed.
+- 108 test files passed.
+- 959 tests passed.
 
 Evaluation result:
 
@@ -428,7 +437,7 @@ Result:
 
 - Next.js compilation passed.
 - TypeScript passed.
-- 56 pages were generated.
+- 54 page-generation tasks passed.
 - `/icon.svg` was prerendered.
 - `/favicon.ico` was served by the production build.
 
@@ -449,13 +458,12 @@ Command:
 Result:
 
 - 121 static assets were checked.
-- Public asset digest: `a186bd6bca82d6ba0555d13af5084c65995ad1c70b43d140546cbb1ca91c042e`.
+- Public asset digest: `fa76d44d1e5fc8a0f2c656244f347df0a6e1813b837aa693a91b48a5afee1777`.
 
 ## 11. Remaining gates
 
 The remaining design gates are:
 
-- Run and audit the updated 33-component generator in Figma.
 - Install an available iOS Simulator runtime and complete native runtime checks.
 - Representative learner review.
 - Image rights clearance.

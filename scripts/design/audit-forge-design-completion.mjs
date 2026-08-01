@@ -21,6 +21,7 @@ async function collectSwiftFiles(directory) {
 const [
   atlasSource,
   figmaSource,
+  figmaCheckerSource,
   goalSource,
   inventorySource,
   figmaStatusSource,
@@ -29,10 +30,11 @@ const [
 ] = await Promise.all([
   read("src/components/forge/design-lab/ProductDesignAtlas.tsx"),
   read("scripts/design/figma-forge-terrain-plugin/code.js"),
+  read("scripts/design/check-forge-terrain-figma-plugin.mjs"),
   read("docs/design/FORGE_NORTH_STAR_AND_COMPLETION_GOALS.md"),
   read("docs/design/FORGE_PAGE_INVENTORY_AND_REQUIREMENTS.md"),
   read("docs/design/FIGMA_EDITABLE_SOURCE_STATUS.md"),
-  read("docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json"),
+  read("docs/design/evidence/forge-terrain/forge-figma-desktop-audit-current-manifest.json"),
   read("docs/design/FORGE_IOS_NATIVE_HANDOFF.md"),
 ]);
 const figmaAudit = JSON.parse(figmaAuditSource);
@@ -119,22 +121,22 @@ assert.match(inventorySource, /\| `PUB-01` \|/);
 assert.match(inventorySource, /\| `APP-14` \|/);
 assert.match(inventorySource, /\| `FOCUS-03` \|/);
 assert.match(inventorySource, /\| `IOS-18` \|/);
-assert.equal(figmaAudit.schema, "forge.figma.desktop-audit.v1");
+assert.equal(figmaAudit.schema, "forge.figma.desktop-audit.v2");
 assert.equal(figmaAudit.status, "pass");
-assert.equal(figmaAudit.sourceRevision, "9c2d0d0dc60910d4f8975e67ee309698ed48f705");
+assert.equal(figmaAudit.sourceRevision, "4d57ed8d31d8e8ab8ae5a327522dc0135accd442");
 const figmaGeneratorDigest = createHash("sha256").update(figmaSource).digest("hex");
 const figmaEvidenceCurrent = figmaGeneratorDigest === figmaAudit.generator.sha256;
-if (figmaEvidenceCurrent) {
-  assert.match(
-    figmaStatusSource,
-    /Status: Editable source created and desktop visual audit passed\. Semantic alias trace remains open\./,
-  );
-} else {
-  assert.match(
-    figmaStatusSource,
-    /Status: Local source integrity passes\. Figma source rerun required after generator fixes\./,
-  );
-}
+const figmaCheckerDigest = createHash("sha256").update(figmaCheckerSource).digest("hex");
+assert.equal(figmaEvidenceCurrent, true, "The current Figma evidence must match the generator.");
+assert.equal(
+  figmaCheckerDigest,
+  figmaAudit.generator.checkerSha256,
+  "The current Figma evidence must match the checker.",
+);
+assert.match(
+  figmaStatusSource,
+  /Status: Local source integrity and the current Figma desktop audit pass\./,
+);
 assert.deepEqual(
   figmaAudit.counts,
   {
@@ -144,7 +146,7 @@ assert.deepEqual(
     textStyles: 18,
     paintStyles: 7,
     effectStyles: 2,
-    components: 17,
+    components: 33,
     generatedFrames: 28,
     canonicalCoverageIdentifiers: 46,
     representativeEditableIdentifiers: 21,
@@ -157,11 +159,25 @@ assert.deepEqual(
   "The Figma desktop audit must prove every semantic alias.",
 );
 assert.equal(figmaAudit.pages.length, 10, "The Figma audit must list ten generated pages.");
-assert.equal(figmaAudit.evidence.length, 10, "The Figma audit must contain ten evidence images.");
+assert.equal(figmaAudit.evidence.length, 15, "The Figma audit must contain fifteen evidence images.");
+assert.deepEqual(
+  figmaAudit.visualReview,
+  {
+    status: "pass",
+    iosComponents: "No zoom popup covers the assistance disclosure.",
+    darkVariables: "The upper and lower captures cover all 16 semantic aliases.",
+  },
+  "The Figma evidence must include a passed visual review.",
+);
 for (const evidence of figmaAudit.evidence) {
   const image = await readFile(new URL(evidence.path, root));
   const digest = createHash("sha256").update(image).digest("hex");
   assert.equal(digest, evidence.sha256, `Figma evidence hash mismatch: ${evidence.path}`);
+  assert.equal(
+    image.subarray(0, 8).toString("hex"),
+    "89504e470d0a1a0a",
+    `Figma evidence is not PNG data: ${evidence.path}`,
+  );
 }
 assert.equal(
   uniqueIdentifiers(iosHandoffSource).filter((identifier) => identifier.startsWith("IOS-")).length,
@@ -196,6 +212,7 @@ const requiredArtifacts = [
   "scripts/design/capture-forge-design-atlas.mjs",
   "scripts/design/check-forge-ios-native.mjs",
   "docs/design/evidence/forge-terrain/forge-design-atlas-capture-manifest.json",
+  "docs/design/evidence/forge-terrain/forge-figma-desktop-audit-current-manifest.json",
   "docs/design/evidence/forge-terrain/forge-figma-desktop-audit-manifest.json",
   "ios/FORGETerrain/project.yml",
   "ios/FORGETerrain/FORGETerrain.xcodeproj/project.pbxproj",
@@ -205,14 +222,12 @@ await Promise.all(requiredArtifacts.map((relativePath) => access(new URL(relativ
 console.log(
   JSON.stringify(
     {
-      status: figmaEvidenceCurrent
-        ? "local_requirements_pass"
-        : "local_source_requirements_pass_figma_rerun_required",
+      status: "local_requirements_pass",
       canonicalFamilies: expectedFamilyCounts,
       canonicalIdentifiers: atlasIdentifiers.length,
       representativeEditableIdentifiers: 21,
       figmaDesktopAudit: {
-        status: figmaEvidenceCurrent ? "current" : "historical_pre_binding_fix",
+        status: "current",
         sourceRevision: figmaAudit.sourceRevision,
         pages: figmaAudit.counts.pages,
         variables: figmaAudit.counts.variables,
@@ -232,7 +247,6 @@ console.log(
       },
       sharedStates: 8,
       externalGates: [
-        "Run and audit the updated 33-component generator in the target Figma file.",
         "Install a compatible iOS Simulator runtime and complete native runtime checks.",
         "Complete learner review and asset-rights review.",
       ],

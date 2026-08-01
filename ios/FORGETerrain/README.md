@@ -2,7 +2,9 @@
 
 This directory contains the native SwiftUI reference for the FORGE Terrain design system.
 
-The application targets iOS 17 and later. It implements the 18 screen contracts in
+The application targets iOS 17 and later.
+
+It provides a deterministic reference for the 18 screen identifiers and selected states in
 `docs/design/FORGE_IOS_NATIVE_HANDOFF.md`.
 
 Generate the Xcode project:

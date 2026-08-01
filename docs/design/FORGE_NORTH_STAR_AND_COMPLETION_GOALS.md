@@ -138,16 +138,16 @@ No visual reward can replace useful learning feedback or independent evidence.
 
 | Gate | Current state |
 | --- | --- |
-| Editable source | The pre-fix Figma source is audited. The current 33-component generator requires a new Figma run. |
+| Editable source | The current Figma source is audited with 10 pages, 86 variables, 33 components, and 28 frames. |
 | Page inventory | Complete for public, web, focus, and iOS families. |
 | Visual fidelity | All canonical public, web, and iOS families are reviewed at desktop and 320 CSS pixels. |
-| Design-system integrity | Current local alias and binding checks pass. A new Figma receipt and binding audit remain open. |
+| Design-system integrity | Local alias and binding checks pass. Current desktop receipt, variable, and binding evidence also passes. |
 | Web implementation | All public and web families have coded boards. Public Home, Today, and focus families use the direction in routes. |
 | Responsive behavior | Atlas and canonical route audits have no horizontal overflow at desktop or 320 CSS pixels. |
 | Themes | Light and Dark boards exist. One theme choice persists across public and application routes. |
 | Accessibility behavior | Automated route and atlas keyboard, Reduced Motion, and Forced Colors checks pass. Native checks remain open. |
 | iOS handoff | Native reference source and all 18 screen identifiers exist. Simulator runtime verification remains open. |
-| Provenance | Local commits, hashes, and test results are recorded. |
+| Provenance | Local commits, current screenshot hashes, page node identifiers, and test results are recorded. |
 
 ## 9. Boundaries
 
