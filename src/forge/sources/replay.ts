@@ -1,9 +1,11 @@
 import { z } from "zod";
 
+import { boundedJsonSnapshot } from "../bounded-json-snapshot";
 import { canonicalJson, forgeEventDigestSchema, sha256Digest } from "../events";
 import {
   SOURCE_PRODUCT_USES,
   SOURCE_AUTHORITY_SCHEMA_VERSION,
+  SOURCE_MAX_SNAPSHOT_BASE64_CHARS,
   canonicalCodeUnitCompare,
   sourceAuthorityPackageDigest,
   sourceAuthorityPackageSchema,
@@ -14,6 +16,39 @@ import {
   type SourceAuthorityPackage,
   type SourceReviewPolicy,
 } from "./contracts";
+
+type ProxyDetector = (value: object) => boolean;
+
+/**
+ * Node callers use the intrinsic Proxy detector. Browser callers receive
+ * serialized plain data and must not import a Node-only module into the client
+ * graph.
+ */
+function nodeProxyDetector(): ProxyDetector | undefined {
+  if (
+    typeof process === "undefined"
+    || typeof process.getBuiltinModule !== "function"
+  ) {
+    return undefined;
+  }
+  try {
+    const detector = process.getBuiltinModule("node:util").types.isProxy;
+    return typeof detector === "function" ? detector : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const NODE_PROXY_DETECTOR = nodeProxyDetector();
+const SOURCE_AUTHORITY_SNAPSHOT_OPTIONS = {
+  maximumStringLength: SOURCE_MAX_SNAPSHOT_BASE64_CHARS,
+  maximumSerializedJsonBytes: 16 * 1024 * 1024,
+  rejectRepeatedReferences: true,
+  ...(NODE_PROXY_DETECTOR
+    ? { rejectObject: NODE_PROXY_DETECTOR }
+    : {}),
+} as const;
+const MAX_RETURNED_SCHEMA_ISSUES = 64;
 
 const sourceEventIdSchema = z.string().max(160).regex(/^source-event\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/);
 const sourceCorrectionIdSchema = z.string().max(160).regex(/^source-correction\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/);
@@ -229,7 +264,7 @@ function issue(issues: SourceAuthorityIssue[], code: SourceAuthorityIssueCode, p
   issues.push({ code, path, message });
 }
 
-function asOfDate(value: string): Date | null {
+function asOfDate(value: unknown): Date | null {
   const parsed = timestampSchema.safeParse(value);
   if (!parsed.success) return null;
   const date = new Date(parsed.data);
@@ -247,7 +282,7 @@ function occursAfter(left: string, right: Date | string): boolean {
 function structuralIssues(candidate: unknown, schema: z.ZodTypeAny, code: "schema.invalid" | "policy.invalid"): SourceAuthorityIssue[] {
   const parsed = schema.safeParse(candidate);
   if (parsed.success) return [];
-  return parsed.error.issues.map((entry) => ({
+  return parsed.error.issues.slice(0, MAX_RETURNED_SCHEMA_ISSUES).map((entry) => ({
     code,
     path: entry.path.join("."),
     message: entry.message,
@@ -610,7 +645,7 @@ function collectDependentCandidates(values: readonly unknown[], issues: SourceAu
       return;
     }
     invalidCandidateIds.add(candidateId);
-    for (const entry of parsed.error.issues) {
+    for (const entry of parsed.error.issues.slice(0, MAX_RETURNED_SCHEMA_ISSUES)) {
       issue(issues, "candidate.binding-invalid", `dependentCandidates.${index}.${entry.path.join(".")}`, entry.message);
     }
   });
@@ -712,21 +747,63 @@ function candidateInvalidations(
  * does not attest live source authenticity, durable records, human identity,
  * rights clearance, or publication.
  */
-export async function replaySourceAuthority(input: {
-  readonly replay: unknown;
-  readonly reviewPolicy: unknown;
-  readonly asOf: string;
-  readonly dependentCandidates?: readonly unknown[];
-}): Promise<SourceAuthorityReplayResult> {
+export async function replaySourceAuthority(input: unknown): Promise<SourceAuthorityReplayResult> {
+  let snapshot: unknown;
+  try {
+    snapshot = boundedJsonSnapshot(input, SOURCE_AUTHORITY_SNAPSHOT_OPTIONS);
+  } catch {
+    return {
+      status: "review-candidate-incomplete",
+      publicationAuthority: "not-established",
+      sourceAuthenticity: "not-established",
+      durableStorage: "not-established",
+      accountableHumanApproval: "not-established",
+      rightsClearance: "not-established",
+      invalidatedCandidates: [],
+      issues: [{
+        code: "schema.invalid",
+        path: "",
+        message: "The replay request must contain only bounded, accessor-free JSON data.",
+      }],
+    };
+  }
+
+  const request = snapshot !== null && typeof snapshot === "object" && !Array.isArray(snapshot)
+    ? snapshot as Record<string, unknown>
+    : null;
+  if (!request) {
+    return {
+      status: "review-candidate-incomplete",
+      publicationAuthority: "not-established",
+      sourceAuthenticity: "not-established",
+      durableStorage: "not-established",
+      accountableHumanApproval: "not-established",
+      rightsClearance: "not-established",
+      invalidatedCandidates: [],
+      issues: [{
+        code: "schema.invalid",
+        path: "",
+        message: "The replay request must be an object.",
+      }],
+    };
+  }
+
+  const dependentCandidatesInput = request.dependentCandidates;
   const issues = [
-    ...structuralIssues(input.replay, sourceAuthorityReplaySchema, "schema.invalid"),
-    ...structuralIssues(input.reviewPolicy, sourceReviewPolicySchema, "policy.invalid"),
+    ...structuralIssues(request.replay, sourceAuthorityReplaySchema, "schema.invalid"),
+    ...structuralIssues(request.reviewPolicy, sourceReviewPolicySchema, "policy.invalid"),
   ];
-  const asOf = asOfDate(input.asOf);
+  const asOf = asOfDate(request.asOf);
   if (!asOf) issue(issues, "schema.invalid", "asOf", "Replay evaluation time must be an offset timestamp.");
-  const replayResult = sourceAuthorityReplaySchema.safeParse(input.replay);
-  const policyResult = sourceReviewPolicySchema.safeParse(input.reviewPolicy);
-  const collectedCandidates = collectDependentCandidates(input.dependentCandidates ?? [], issues);
+  if (dependentCandidatesInput !== undefined && !Array.isArray(dependentCandidatesInput)) {
+    issue(issues, "schema.invalid", "dependentCandidates", "Dependent candidates must be an array.");
+  }
+  const replayResult = sourceAuthorityReplaySchema.safeParse(request.replay);
+  const policyResult = sourceReviewPolicySchema.safeParse(request.reviewPolicy);
+  const collectedCandidates = collectDependentCandidates(
+    Array.isArray(dependentCandidatesInput) ? dependentCandidatesInput : [],
+    issues,
+  );
 
   if (!replayResult.success || !policyResult.success || !asOf) {
     const invalidatedCandidates = collectedCandidates.candidateIds.map((candidateId) => ({
