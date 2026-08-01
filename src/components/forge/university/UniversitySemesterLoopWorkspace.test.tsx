@@ -69,9 +69,19 @@ describe("UniversitySemesterLoopWorkspace", () => {
   it("renders the only allowed route for each actionable state", async () => {
     await renderWorkspace();
 
-    expect(screen.getByRole("link", {
+    const protectedStudyLink = screen.getByRole("link", {
       name: "Inspect protected study brief",
-    })).toHaveAttribute("href", "/internal/university-protected-study");
+    });
+    expect(protectedStudyLink).toHaveAccessibleName(
+      "Inspect protected study brief",
+    );
+    expect(protectedStudyLink).toHaveAttribute(
+      "href",
+      "/internal/university-protected-study",
+    );
+    expect(protectedStudyLink).toHaveAccessibleDescription(
+      "Preview only. No course state, learner session, completion, evidence, or progress transfers or saves.",
+    );
     expect(screen.getAllByRole("link")).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("radio", { name: "Source review" }));
@@ -79,9 +89,17 @@ describe("UniversitySemesterLoopWorkspace", () => {
       level: 2,
       name: "Review what the copied sources disagree about.",
     })).toBeInTheDocument();
-    expect(screen.getByRole("link", {
+    const sourceReviewLink = screen.getByRole("link", {
       name: "Review copied sources",
-    })).toHaveAttribute("href", "/internal/university-source-review");
+    });
+    expect(sourceReviewLink).toHaveAccessibleName("Review copied sources");
+    expect(sourceReviewLink).toHaveAttribute(
+      "href",
+      "/internal/university-source-review",
+    );
+    expect(sourceReviewLink).toHaveAccessibleDescription(
+      "Opens a separate synthetic review. No decision or source state transfers or saves.",
+    );
     expect(screen.getAllByRole("link")).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("radio", { name: "Capacity break" }));
@@ -89,9 +107,17 @@ describe("UniversitySemesterLoopWorkspace", () => {
       level: 2,
       name: "Rebuild from the time you actually have.",
     })).toBeInTheDocument();
-    expect(screen.getByRole("link", {
+    const recoveryLink = screen.getByRole("link", {
       name: "Inspect recovery draft",
-    })).toHaveAttribute("href", "/internal/university-recovery");
+    });
+    expect(recoveryLink).toHaveAccessibleName("Inspect recovery draft");
+    expect(recoveryLink).toHaveAttribute(
+      "href",
+      "/internal/university-recovery",
+    );
+    expect(recoveryLink).toHaveAccessibleDescription(
+      "Opens a separate synthetic draft. No capacity, classification, message, or plan transfers or saves.",
+    );
     expect(screen.getAllByRole("link")).toHaveLength(1);
     expect(screen.getByRole("heading", {
       level: 2,

@@ -315,10 +315,16 @@ export function UniversitySemesterLoopWorkspace({
           <p>{job.body}</p>
           {job.route && job.routeLabel ? (
             <div className={styles.actionControl}>
-              <Link href={job.route} prefetch={false}>
+              <Link
+                href={job.route}
+                prefetch={false}
+                aria-describedby="semester-loop-action-boundary"
+              >
                 {job.routeLabel}
               </Link>
-              <small>{job.routeBoundary}</small>
+              <small id="semester-loop-action-boundary">
+                {job.routeBoundary}
+              </small>
             </div>
           ) : (
             <p className={styles.noAction}>{job.routeBoundary}</p>
