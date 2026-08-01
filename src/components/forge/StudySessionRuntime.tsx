@@ -22,6 +22,7 @@ import {
   FORGE_DEVICE_PROFILE_EVENT,
   FORGE_DEVICE_PROFILE_KEY,
   readForgeDeviceProfile,
+  createActiveForgeProfileBoundStorage,
 } from "@/src/lib/forge-profile/device-profile";
 import type { BoundedLocalWorldRuntimeReceipt } from "@/src/forge/world-runtime";
 
@@ -165,11 +166,25 @@ export function StudySessionRuntime({
       });
       return;
     }
-    clearWorldSessionCheckpoint(window.localStorage, {
+    const storage = createActiveForgeProfileBoundStorage(window.localStorage);
+    if (!storage) {
+      setReceiptState({
+        phase: "failed",
+        message: "FORGE could not safely clear this device-local session checkpoint.",
+      });
+      return;
+    }
+    const cleared = clearWorldSessionCheckpoint(storage, {
       sessionId,
       worldId: receipt.world.id,
       worldVersion: receipt.world.version,
     });
+    if (!cleared.ok) {
+      setReceiptState({
+        phase: "failed",
+        message: "FORGE could not safely clear this device-local session checkpoint.",
+      });
+    }
   }, [sessionId]);
 
   if (!studySessionIdSchema.safeParse(sessionId).success) {

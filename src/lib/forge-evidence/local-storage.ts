@@ -3,8 +3,15 @@ import type {
   PersistenceReadResult,
   PersistenceWriteResult,
 } from "./store";
+import {
+  createActiveForgeProfileBoundStorage,
+} from "../forge-profile/device-profile";
+import {
+  createForgeProfileBoundStorage,
+  FORGE_EVIDENCE_LEDGER_STORAGE_KEY,
+} from "../forge-profile/profile-bound-data";
 
-export const DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY = "forge.evidence-ledger";
+export const DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY = FORGE_EVIDENCE_LEDGER_STORAGE_KEY;
 
 export interface BrowserStorageLike {
   getItem(key: string): string | null;
@@ -16,6 +23,8 @@ export interface LocalStorageEvidenceLedgerOptions {
   key?: string;
   /** Pass null explicitly to create an unavailable adapter (useful for SSR tests). */
   storage?: BrowserStorageLike | null;
+  /** Bind an explicitly supplied storage adapter to one profile namespace. */
+  profileId?: string | null;
 }
 
 /** Creates an exception-safe adapter. It never touches `window` during SSR. */
@@ -23,30 +32,52 @@ export function createLocalStorageEvidenceLedgerAdapter(
   options: LocalStorageEvidenceLedgerOptions = {},
 ): EvidenceLedgerPersistence {
   const key = options.key ?? DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY;
-  const storage = Object.prototype.hasOwnProperty.call(options, "storage") ? options.storage ?? null : browserLocalStorage();
+  const hasExplicitStorage = Object.prototype.hasOwnProperty.call(options, "storage");
+  const storage = hasExplicitStorage ? options.storage ?? null : browserLocalStorage();
+  const profileId = options.profileId;
+
+  function scopedStorage(): BrowserStorageLike | null {
+    try {
+      if (!storage || profileId === null) return null;
+      if (profileId !== undefined) return createForgeProfileBoundStorage(storage, profileId);
+      const isBrowserLocalStorage =
+        typeof window !== "undefined" && storage === window.localStorage;
+      if (!hasExplicitStorage || isBrowserLocalStorage) {
+        return createActiveForgeProfileBoundStorage(storage);
+      }
+      return storage;
+    } catch {
+      return null;
+    }
+  }
 
   return {
     read(): PersistenceReadResult {
-      if (!storage) return { ok: false, reason: "unavailable" };
+      const current = scopedStorage();
+      if (!current) return { ok: false, reason: "unavailable" };
       try {
-        return { ok: true, value: storage.getItem(key) };
+        return { ok: true, value: current.getItem(key) };
       } catch {
         return { ok: false, reason: "read_failed" };
       }
     },
     write(value: string): PersistenceWriteResult {
-      if (!storage) return { ok: false, reason: "unavailable" };
+      const current = scopedStorage();
+      if (!current) return { ok: false, reason: "unavailable" };
       try {
-        storage.setItem(key, value);
+        current.setItem(key, value);
+        if (current.getItem(key) !== value) return { ok: false, reason: "write_failed" };
         return { ok: true };
       } catch {
         return { ok: false, reason: "write_failed" };
       }
     },
     remove(): PersistenceWriteResult {
-      if (!storage) return { ok: false, reason: "unavailable" };
+      const current = scopedStorage();
+      if (!current) return { ok: false, reason: "unavailable" };
       try {
-        storage.removeItem(key);
+        current.removeItem(key);
+        if (current.getItem(key) !== null) return { ok: false, reason: "write_failed" };
         return { ok: true };
       } catch {
         return { ok: false, reason: "write_failed" };

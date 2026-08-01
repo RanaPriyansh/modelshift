@@ -226,7 +226,11 @@ describe("StudySessionRuntime", () => {
       }),
     ));
     expect(mocked.clearCheckpoint).toHaveBeenCalledWith(
-      window.localStorage,
+      expect.objectContaining({
+        getItem: expect.any(Function),
+        removeItem: expect.any(Function),
+        setItem: expect.any(Function),
+      }),
       {
         sessionId: "study-session.component-ratios",
         worldId: "world.proportional-reasoning",

@@ -2,11 +2,32 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY, recordWorldProof } from "@/src/lib/forge-evidence";
+import {
+  forgeProfileBoundStorageKey,
+  FORGE_DEVICE_PROFILE_KEY,
+} from "@/src/lib/forge-profile/device-profile";
 
 import { EvidenceLedgerPanel } from "./EvidenceLedgerPanel";
+
+const PROFILE_ID = "81000000-0000-4000-8000-000000000001";
+
+function setAdultProfile(): void {
+  window.localStorage.setItem(FORGE_DEVICE_PROFILE_KEY, JSON.stringify({
+    schemaVersion: 1,
+    profileId: PROFILE_ID,
+    ageMode: "adult",
+    guardianPresent: false,
+    createdAt: "2026-07-22T00:00:00.000Z",
+  }));
+}
+
+beforeEach(() => {
+  window.localStorage.clear();
+  setAdultProfile();
+});
 
 afterEach(() => {
   cleanup();
@@ -34,12 +55,14 @@ describe("EvidenceLedgerPanel", () => {
 
   it("does not imply a saved record when browser storage fails and offers an honest retry", async () => {
     let denyEvidenceRead = true;
+    const profileRaw = window.localStorage.getItem(FORGE_DEVICE_PROFILE_KEY);
     const read = vi.spyOn(Storage.prototype, "getItem")
       .mockImplementation((key) => {
-        if (key === DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY && denyEvidenceRead) {
+        if (key === forgeProfileBoundStorageKey(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY, PROFILE_ID) && denyEvidenceRead) {
           denyEvidenceRead = false;
           throw new Error("storage denied");
         }
+        if (key === FORGE_DEVICE_PROFILE_KEY) return profileRaw;
         return null;
       });
 

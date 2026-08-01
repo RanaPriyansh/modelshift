@@ -2,7 +2,7 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   applyPathDecision,
@@ -14,6 +14,10 @@ import {
   createDeviceContinuityRecord,
   encodeDeviceContinuityLedger,
 } from "@/src/lib/forge-continuity";
+import {
+  createForgeDeviceProfile,
+  forgeProfileBoundStorageKey,
+} from "@/src/lib/forge-profile/device-profile";
 
 import {
   FORGE_CONTINUITY_STORAGE_KEY,
@@ -21,6 +25,7 @@ import {
 import { ForgeToday } from "./ForgeLearnerWorkspace";
 
 const NOW = "2026-08-01T09:00:00.000Z";
+const PROFILE_ID = "9be711de-d7a6-4911-b903-f2d829da83d5";
 const PRIMARY_SOURCE_WORLD_REF = {
   worldId: "world.primary-source-reasoning",
   worldVersion: "1.0.2",
@@ -114,6 +119,16 @@ async function acceptedPrimarySourceRecord() {
   });
 }
 
+beforeEach(() => {
+  createForgeDeviceProfile(
+    window.localStorage,
+    "adult",
+    false,
+    new Date("2026-08-02T00:00:00.000Z"),
+    PROFILE_ID,
+  );
+});
+
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
@@ -128,7 +143,10 @@ describe("ForgeToday return proof copy", () => {
       records: [record],
     });
     if (!encoded) throw new Error("Expected an encodable continuity ledger.");
-    window.localStorage.setItem(FORGE_CONTINUITY_STORAGE_KEY, encoded);
+    window.localStorage.setItem(
+      forgeProfileBoundStorageKey(FORGE_CONTINUITY_STORAGE_KEY, PROFILE_ID),
+      encoded,
+    );
 
     render(<ForgeToday />);
 
