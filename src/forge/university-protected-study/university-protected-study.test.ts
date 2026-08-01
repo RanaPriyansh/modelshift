@@ -319,7 +319,7 @@ describe("projectUniversityProtectedStudy", () => {
     const input = await request();
     const oversized = Array.from({ length: 8_192 }, () => null);
     input.worldPack = oversized;
-    const getOwnPropertyNames = vi.spyOn(Object, "getOwnPropertyNames");
+    const ownKeys = vi.spyOn(Reflect, "ownKeys");
     const getOwnPropertyDescriptor = vi.spyOn(Object, "getOwnPropertyDescriptor");
 
     try {
@@ -330,12 +330,56 @@ describe("projectUniversityProtectedStudy", () => {
         projectionDigest: null,
         issues: [{ code: "schema.invalid" }],
       });
-      expect(getOwnPropertyNames).not.toHaveBeenCalledWith(oversized);
+      expect(ownKeys).not.toHaveBeenCalledWith(oversized);
       expect(getOwnPropertyDescriptor).not.toHaveBeenCalledWith(oversized, "0");
     } finally {
-      getOwnPropertyNames.mockRestore();
+      ownKeys.mockRestore();
       getOwnPropertyDescriptor.mockRestore();
     }
+  });
+
+  it("rejects array subclasses and symbol-decorated arrays", async () => {
+    class SourceArray extends Array<(ReturnType<typeof pack>)["manifest"]["sources"][number]> {}
+
+    const sourcePack = pack();
+    const subclassedSources = new SourceArray(...sourcePack.manifest.sources);
+    const decoratedSources = [...sourcePack.manifest.sources];
+    Object.defineProperty(decoratedSources, Symbol("source-marker"), {
+      enumerable: true,
+      value: "not JSON",
+    });
+    const subclassedInput = await request();
+    const decoratedInput = await request();
+    subclassedInput.worldPack = {
+      ...sourcePack,
+      manifest: {
+        ...sourcePack.manifest,
+        sources: subclassedSources,
+      },
+    };
+    decoratedInput.worldPack = {
+      ...sourcePack,
+      manifest: {
+        ...sourcePack.manifest,
+        sources: decoratedSources,
+      },
+    };
+
+    const [subclassed, decorated] = await Promise.all([
+      projectUniversityProtectedStudy(subclassedInput),
+      projectUniversityProtectedStudy(decoratedInput),
+    ]);
+
+    expect(subclassed).toMatchObject({
+      status: "invalid",
+      projectionDigest: null,
+      issues: [{ code: "schema.invalid" }],
+    });
+    expect(decorated).toMatchObject({
+      status: "invalid",
+      projectionDigest: null,
+      issues: [{ code: "schema.invalid" }],
+    });
   });
 
   it("is deterministic, deeply frozen, and side-effect free", async () => {

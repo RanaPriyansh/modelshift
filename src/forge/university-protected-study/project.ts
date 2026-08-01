@@ -61,20 +61,34 @@ function copyPlainJson(value: unknown): unknown {
     }
 
     if (Array.isArray(current)) {
+      if (Object.getPrototypeOf(current) !== Array.prototype) {
+        throw new UnsafeJsonInput();
+      }
       if (current.length > MAX_JSON_NODES - budget.nodes) {
         throw new UnsafeJsonInput();
       }
-      const names = Object.getOwnPropertyNames(current);
+      const names = Reflect.ownKeys(current);
       if (
-        names.some((name) => name !== "length" && !/^(0|[1-9][0-9]*)$/.test(name))
+        names.some((name) => (
+          typeof name !== "string"
+          || (name !== "length" && !/^(0|[1-9][0-9]*)$/.test(name))
+        ))
         || names.length !== current.length + 1
       ) throw new UnsafeJsonInput();
       return names
-        .filter((name) => name !== "length")
+        .filter((name): name is string => (
+          typeof name === "string" && name !== "length"
+        ))
         .sort((left, right) => Number(left) - Number(right))
         .map((name) => {
           const descriptor = Object.getOwnPropertyDescriptor(current, name);
-          if (!descriptor || !("value" in descriptor)) throw new UnsafeJsonInput();
+          if (
+            !descriptor
+            || !descriptor.enumerable
+            || !("value" in descriptor)
+            || descriptor.get
+            || descriptor.set
+          ) throw new UnsafeJsonInput();
           return visit(descriptor.value, depth + 1);
         });
     }
