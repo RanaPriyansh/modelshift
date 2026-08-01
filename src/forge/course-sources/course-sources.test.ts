@@ -407,6 +407,21 @@ describe("ADR-010 university course-source candidate boundary", () => {
     expect(result.issues.map((entry) => entry.code)).toContain("schema.invalid");
   });
 
+  it("caps structural issues for a maximum-size malformed candidate array", async () => {
+    const invalidMaximum = request({
+      candidates: Array.from({ length: 512 }, () => null),
+      decisions: [],
+    });
+
+    const first = await reconcileCourseSources(invalidMaximum);
+    const second = await reconcileCourseSources(invalidMaximum);
+
+    expect(first.status).toBe("invalid");
+    expect(first.issues).toHaveLength(64);
+    expect(first.issues.length).toBeLessThanOrEqual(64);
+    expect(first).toEqual(second);
+  });
+
   it("produces the same stable projection for semantically identical array orderings", async () => {
     const first = deadlineCandidate("course-source-candidate.stable-a", "2026-08-20T16:00:00.000Z", {
       claimKey: "course-claim.stable-a",

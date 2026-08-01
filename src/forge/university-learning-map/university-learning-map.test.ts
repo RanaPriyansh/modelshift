@@ -298,6 +298,21 @@ describe("university learning map", () => {
     });
   });
 
+  it("caps schema issues for a maximum-size malformed array", () => {
+    const invalidMaximum = {
+      ...request(),
+      concepts: Array.from({ length: 96 }, () => null),
+    };
+
+    const first = projectUniversityLearningMap(invalidMaximum);
+    const second = projectUniversityLearningMap(invalidMaximum);
+
+    expect(first.status).toBe("invalid");
+    expect(first.issues).toHaveLength(64);
+    expect(first.issues.length).toBeLessThanOrEqual(64);
+    expect(first).toEqual(second);
+  });
+
   it("rejects unsafe numbers before Zod schema traversal", () => {
     const safeParse = vi.spyOn(
       universityLearningMapRequestSchema,
