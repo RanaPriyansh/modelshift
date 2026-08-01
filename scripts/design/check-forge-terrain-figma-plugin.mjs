@@ -210,6 +210,8 @@ const expectedCounts = {
   textStyles: 18,
   paintStyles: 7,
   effectStyles: 2,
+  components: 17,
+  frames: 28,
 };
 
 for (const [key, count] of Object.entries(expectedCounts)) {
@@ -226,6 +228,13 @@ for (const pageName of [
   assert.ok(page, `Missing page: ${pageName}`);
   assert.ok(page.children.length > 0, `Empty page: ${pageName}`);
 }
+
+const archive = root.children.find((item) => item.name === "09 Archive");
+assert.ok(archive, "Missing page: 09 Archive");
+assert.ok(
+  archive.children.some((item) => item.name === "FORGE Terrain / Canonical coverage index"),
+  "Missing canonical coverage index",
+);
 
 console.log(
   `FORGE Figma generator verified: ${receipt.pages.length} pages, `

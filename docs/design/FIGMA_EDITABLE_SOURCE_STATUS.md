@@ -35,6 +35,7 @@ The generator creates:
 - 3 focus boards.
 - 6 iOS boards.
 - Shared state and accessibility boards.
+- 1 canonical coverage index for all 46 public, web, focus, and iOS families.
 
 ## Generator
 
@@ -54,7 +55,7 @@ The plugin makes no network request.
 - The file starts with one empty page.
 - The plugin manifest is valid JSON.
 - The plugin JavaScript passes `node --check`.
-- The mock Figma run creates 10 pages, 86 variables, 17 components, and 27 frames.
+- The mock Figma run creates 10 pages, 86 variables, 17 components, and 28 frames.
 - The token build check passes.
 - Repository lint and type checks pass.
 - 109 source and evaluation test files pass.

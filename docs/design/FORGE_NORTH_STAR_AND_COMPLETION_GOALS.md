@@ -89,6 +89,7 @@ The Figma file must contain:
 12. Shared loading, empty, offline, stale, permission, error, and recovery states.
 13. Accessibility annotations.
 14. Route and screen identifiers.
+15. A canonical coverage index for all public, web, focus, and iOS families.
 
 ## 5. Completion gates
 
@@ -110,20 +111,20 @@ The design objective is complete only when all gates pass.
 ## 6. Current priority order
 
 1. Run the verified local generator in the valid editable Figma file.
-2. Audit variables, styles, components, and generated screen families.
-3. Compare Figma frames with the rendered product.
-4. Close remaining public and application parity gaps.
-5. Complete the native iOS implementation handoff.
-6. Complete the final fidelity and accessibility audit.
+2. Audit all generated variables, styles, components, boards, and identifiers.
+3. Compare the representative Figma boards with the complete coded atlas.
+4. Complete route-level state and accessibility checks.
+5. Start native SwiftUI work after a native target exists.
+6. Test the design with representative learners.
 
 ## 7. Current gate state
 
 | Gate | Current state |
 | --- | --- |
-| Editable source | Generator verified locally. Actual Figma run remains open. |
+| Editable source | Generator and canonical coverage index verified locally. Actual Figma run remains open. |
 | Page inventory | Complete for public, web, focus, and iOS families. |
 | Visual fidelity | All canonical public, web, and iOS families are reviewed at desktop and 320 CSS pixels. |
-| Design-system integrity | Local token and generator audits pass. Actual Figma audit remains open. |
+| Design-system integrity | Local token, count, coverage-index, and generator audits pass. Actual Figma audit remains open. |
 | Web implementation | All public and web families have coded boards. Public Home, Today, and focus families use the direction in routes. |
 | Responsive behavior | The reviewed atlas has no horizontal overflow at 320 CSS pixels. |
 | Themes | Representative Light and Dark surfaces exist. Complete route review remains open. |

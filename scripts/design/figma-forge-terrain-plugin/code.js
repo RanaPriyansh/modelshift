@@ -165,6 +165,68 @@ const IOS_SCREENS = [
   ["IOS-14", "Today", "Delayed return", "Submit delayed work", "return", "dark"],
 ];
 
+const CANONICAL_COVERAGE = {
+  public: [
+    ["PUB-01", "/", "Scenic goal entry"],
+    ["PUB-02", "/start", "Goal clarification"],
+    ["PUB-03", "/paths", "Reviewed paths"],
+    ["PUB-04", "/paths/[slug]", "Path detail"],
+    ["PUB-05", "/how-forge-works", "Method narrative"],
+    ["PUB-06", "/modelshift", "ModelShift method"],
+    ["PUB-07", "/trust", "Evidence and trust"],
+    ["PUB-08", "/trust/evidence", "Evidence contract"],
+    ["PUB-09", "/coverage", "Coverage map"],
+    ["PUB-10", "/pricing", "Honest availability"],
+    ["PUB-11", "/sign-in", "Optional continuity"],
+  ],
+  app: [
+    ["APP-01", "/app", "Today"],
+    ["APP-02", "/app/goals", "Goal collection"],
+    ["APP-03", "/app/paths", "Path collection"],
+    ["APP-04", "/app/paths/[recordId]", "Path detail"],
+    ["APP-05", "/app/study", "Action brief"],
+    ["APP-06", "/app/study/[sessionId]", "Focus session"],
+    ["APP-07", "/app/projects", "Project collection"],
+    ["APP-08", "/app/projects/[projectId]", "Project workspace"],
+    ["APP-09", "/app/evidence", "Evidence ledger"],
+    ["APP-10", "/app/evidence/[evidenceId]", "Evidence detail"],
+    ["APP-11", "/app/returns", "Return queue"],
+    ["APP-12", "/app/returns/[returnId]", "Protected return"],
+    ["APP-13", "/app/library", "Resource library"],
+    ["APP-14", "/app/settings", "Account and data"],
+  ],
+  focus: [
+    ["FOCUS-01", "/focus/activity/[sessionId]", "Concentrated activity"],
+    ["FOCUS-02", "/focus/modelshift/[sessionId]", "ModelShift protocol"],
+    ["FOCUS-03", "/learn/[world]", "Bounded guest World"],
+  ],
+  ios: [
+    ["IOS-01", "Welcome", "Goal entry"],
+    ["IOS-02", "Entry", "Clarify goal"],
+    ["IOS-03", "Entry", "Path preview"],
+    ["IOS-04", "Today tab", "Today"],
+    ["IOS-05", "Paths tab", "Path collection"],
+    ["IOS-06", "Paths tab", "Path detail"],
+    ["IOS-07", "Today or path", "Action brief"],
+    ["IOS-08", "Focus", "Attempt"],
+    ["IOS-09", "Focus", "Repair"],
+    ["IOS-10", "Focus", "Protected proof"],
+    ["IOS-11", "Evidence tab", "Evidence collection"],
+    ["IOS-12", "Evidence tab", "Evidence detail"],
+    ["IOS-13", "Today", "Return queue"],
+    ["IOS-14", "Today", "Delayed return"],
+    ["IOS-15", "Projects tab", "Project collection"],
+    ["IOS-16", "Projects tab", "Project workspace"],
+    ["IOS-17", "Account route", "Resource library"],
+    ["IOS-18", "Account route", "Settings and data"],
+  ],
+};
+
+const REPRESENTATIVE_IDS = new Set(
+  [...PUBLIC_SCREENS, ...APP_SCREENS, ...FOCUS_SCREENS, ...IOS_SCREENS]
+    .map(([id]) => id),
+);
+
 const SHARED_STATES = [
   ["Loading", "Preparing the current work.", "Wait or exit safely."],
   ["Empty", "No next action is ready.", "Shape a goal or stop."],
@@ -1731,8 +1793,112 @@ function createStatesAndAccessibility(page) {
   remember("frames", board);
 }
 
+function addCoverageColumn(board, title, items, x, y, width) {
+  addText(board, title.toUpperCase(), x, y, width, 11, C.light.tested, {
+    font: FONT.mono,
+    lineHeight: 15,
+    letterSpacing: 4,
+  });
+
+  items.forEach(([id, route, name], index) => {
+    const rowY = y + 42 + index * 84;
+    const row = addFrame(board, `Coverage / ${id}`, x, rowY, width, 72, C.light.surface, 10);
+    row.strokes = [solid(REPRESENTATIVE_IDS.has(id) ? C.light.tested : C.light.line)];
+    row.strokeWeight = 1;
+    addText(row, id, 16, 12, 74, 11, REPRESENTATIVE_IDS.has(id) ? C.light.tested : C.light.muted, {
+      font: FONT.mono,
+      lineHeight: 15,
+      letterSpacing: 2,
+    });
+    addText(row, name, 96, 10, width - 112, 15, C.light.ink, {
+      font: FONT.medium,
+      lineHeight: 20,
+    });
+    addText(row, route, 96, 38, width - 204, 11, C.light.muted, {
+      font: FONT.mono,
+      lineHeight: 15,
+    });
+    addText(
+      row,
+      REPRESENTATIVE_IDS.has(id) ? "EDITABLE" : "ATLAS",
+      width - 96,
+      40,
+      78,
+      9,
+      REPRESENTATIVE_IDS.has(id) ? C.light.tested : C.light.dim,
+      { font: FONT.mono, lineHeight: 12, letterSpacing: 2 },
+    );
+  });
+
+  return y + 42 + items.length * 84;
+}
+
+function createCoverageIndex(page) {
+  const board = mark(addFrame(page, "FORGE Terrain / Canonical coverage index", 1480, 0, 1600, 2100, C.light.bg));
+  addText(board, "09 / CANONICAL COVERAGE", 64, 56, 620, 13, C.light.tested, {
+    font: FONT.mono,
+    lineHeight: 18,
+    letterSpacing: 6,
+  });
+  addText(board, "One system. Every surface.", 64, 106, 1040, 64, C.light.ink, {
+    font: FONT.display,
+    lineHeight: 66,
+    letterSpacing: -3,
+  });
+  addText(
+    board,
+    "The coded atlas contains every canonical family. Green rows also have representative editable Figma boards.",
+    68,
+    198,
+    1120,
+    18,
+    C.light.muted,
+    { lineHeight: 28 },
+  );
+
+  const legend = addFrame(board, "Coverage legend", 64, 264, 1468, 74, C.light.strong, 10);
+  legend.strokes = [solid(C.light.line)];
+  legend.strokeWeight = 1;
+  addText(legend, "EDITABLE", 18, 16, 90, 10, C.light.tested, {
+    font: FONT.mono,
+    lineHeight: 14,
+    letterSpacing: 3,
+  });
+  addText(legend, "Representative Figma board", 118, 14, 260, 14, C.light.ink, { lineHeight: 20 });
+  addText(legend, "ATLAS", 420, 16, 76, 10, C.light.dim, {
+    font: FONT.mono,
+    lineHeight: 14,
+    letterSpacing: 3,
+  });
+  addText(legend, "Canonical coded surface", 506, 14, 260, 14, C.light.ink, { lineHeight: 20 });
+  addText(legend, "/internal/design-lab", 1050, 14, 390, 12, C.light.muted, {
+    font: FONT.mono,
+    lineHeight: 18,
+  });
+
+  const firstColumnEnd = addCoverageColumn(board, "Public site", CANONICAL_COVERAGE.public, 64, 386, 456);
+  addCoverageColumn(board, "Focus mode", CANONICAL_COVERAGE.focus, 64, firstColumnEnd + 18, 456);
+  addCoverageColumn(board, "Web application", CANONICAL_COVERAGE.app, 572, 386, 456);
+  addCoverageColumn(board, "iOS application", CANONICAL_COVERAGE.ios, 1080, 386, 456);
+
+  addText(
+    board,
+    "Coverage is explicit. Representative depth does not replace canonical inventory.",
+    64,
+    2018,
+    1100,
+    15,
+    C.light.ink,
+    { font: FONT.medium, lineHeight: 22 },
+  );
+  remember("frames", board);
+}
+
 function createArchive(page) {
-  const board = mark(addFrame(page, "FORGE Terrain / Build receipt", 0, 0, 1400, 1180, C.dark.bg));
+  const board = remember(
+    "frames",
+    mark(addFrame(page, "FORGE Terrain / Build receipt", 0, 0, 1400, 1180, C.dark.bg)),
+  );
   addText(board, "09 / BUILD RECEIPT", 56, 54, 420, 13, C.dark.tested, {
     font: FONT.mono,
     lineHeight: 18,
@@ -1784,7 +1950,6 @@ function createArchive(page) {
     font: FONT.mono,
     lineHeight: 20,
   });
-  remember("frames", board);
 }
 
 async function build() {
@@ -1828,6 +1993,7 @@ async function build() {
   await figma.setCurrentPageAsync(pages["08 States and Accessibility"]);
   createStatesAndAccessibility(pages["08 States and Accessibility"]);
   await figma.setCurrentPageAsync(pages["09 Archive"]);
+  createCoverageIndex(pages["09 Archive"]);
   createArchive(pages["09 Archive"]);
 
   figma.root.setPluginData("forge.terrain.version", FORGE_VERSION);

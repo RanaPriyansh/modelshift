@@ -16,6 +16,7 @@ It creates:
 - Three focus boards.
 - Six iOS boards.
 - Shared state and accessibility boards.
+- One canonical coverage index for all 46 public, web, focus, and iOS families.
 
 The plugin only removes nodes that it created in an earlier run.
 
@@ -26,7 +27,7 @@ The plugin only removes nodes that it created in an earlier run.
 3. Select this `manifest.json` file.
 4. Run **FORGE Terrain Builder**.
 
-The plugin writes a build receipt to the `09 Archive` page.
+The plugin writes a coverage index and a build receipt to the `09 Archive` page.
 
 The plugin uses separate Light and Dark semantic collections.
 
