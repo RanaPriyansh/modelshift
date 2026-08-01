@@ -361,13 +361,32 @@ promote an internal route.
 | `UV1-SYS-012` | Keep cloud identity and university persistence disabled until their separate gates pass. | The default account adapter remains unavailable while cloud auth is structurally disabled; no route, migration, browser store, provider, model, event, or external action is added; ADR-026 retains identity, tenant, retention, export, correction, deletion, backup, RLS, and release blockers. |
 | `UV1-SYS-013` | Minimize identity data at correlation-only server boundaries. | The active-adult identity reader projects only account ID and identity kind for account-context and provider-authority consumers; the account adapter rejects email and every unknown identity field before it reads a binding key. |
 
+### University declaration document
+
+ADR-027 authorizes only one pure local `UniversityDeclarationDocument` v1
+contract and canonicalizer. It is not a persistence, identity, rights, public
+UI, tutoring, or participant-operation authorization.
+
+| ID | Requirement | Acceptance evidence |
+| --- | --- | --- |
+| `UV1-DOC-001` | Define one strict `UniversityDeclarationDocument` v1 contract. | The contract accepts only one exact degree-map v2 raw request and one exact learning-map v2 raw request. No compatibility alias, partial update, or second declaration contract exists. |
+| `UV1-DOC-002` | Reject all unapproved document input. | The outer request rejects unknown fields and every owner, tenant, account-binding, time, revision, predecessor, idempotency, projection, and status field before a document can exist. |
+| `UV1-DOC-003` | Copy hostile input through one bounded safe boundary. | The contract copies the complete input once before schema traversal. Accessors, proxies, symbols, exotic prototypes, sparse arrays, cycles, aliases, unsafe numbers, excessive depth, and excessive size fail closed. |
+| `UV1-DOC-004` | Recompute both canonical child projections. | The contract derives fresh degree-map and learning-map projections from exact raw v2 input. It rejects an invalid child and a learning course that is absent from the degree map. |
+| `UV1-DOC-005` | Limit document shape to raw declarations and exact versioned identity. | The document contains only the complete accepted raw child requests, exact child schema versions, exact child projector versions, one canonicalizer version, and one domain-separated complete-document digest. |
+| `UV1-DOC-006` | Keep inspection output outside the document. | The result exposes process-local inspection status and bounded review issues separately. No projection, issue, status, recommendation, mastery, or next action is serialized into the document. |
+| `UV1-DOC-007` | Bind all document versions into one domain-separated digest. | A fixed canonicalizer domain and serialization cover both complete raw child requests and every document version. The digest does not use display order, source digest, text formatting, account data, time, revision, predecessor, or idempotency data. |
+| `UV1-DOC-008` | Keep document construction deterministic and immutable. | Equal accepted input produces the same document and digest. The result is deeply frozen. The constructor mutates no caller input or process-global state. |
+| `UV1-DOC-009` | Keep all declaration-document authority and effects false. | The contract exposes no identity, owner, tenant, rights, source-truth, recommendation, tutoring, mastery, storage, network, event, provider, model, retrieval, analytics, or external authority. It performs no effect. |
+| `UV1-DOC-010` | Keep the future university product boundary blocked. | The future revision aggregate, cloud identity, owner relation, tenant rules, storage, export, correction, deletion, backup, recovery, public UI, live data, and tutoring remain separate blocked decisions. |
+
 ## First slice acceptance
 
 The slice is ready for review only when:
 
 1. no public route, database migration, provider, account, external connector, or production setting changes;
-2. the new ADR states its authority ceiling and the unresolved durable-event choice;
-3. focused normal, invalid, duplicate, conflict, correction, freshness, policy, immutability, and determinism tests pass;
+2. ADR-027 states its pure local document authority ceiling and the unresolved durable aggregate choice;
+3. focused normal, invalid, hostile-input, linkage, digest, policy, immutability, and determinism tests pass;
 4. lint, typecheck, the full unit/evaluator suite, and production build pass on the exact worktree;
 5. the handoff explicitly reports `UV1-GATE-001..003` as open.
 
@@ -378,14 +397,20 @@ slice. Its implementation evidence does not close `UV1-GATE-001..003` and
 does not authorize a public route, persistence, live coursework, provider
 operation, or a research claim.
 
+The next permitted internal implementation is the ADR-027
+`UniversityDeclarationDocument` v1 contract and canonicalizer. It is a pure
+local data boundary. It is not a synthetic product surface. It cannot close a
+gate or authorize identity, storage, rights, public UI, live data, or tutoring.
+
 The 1 August 2026 principal amendments permit bounded internal engineering for
 the learner-declared degree map, learning map, student context, inspection
-directory, copied-source binding, and server-disabled adult account binding.
-That work must remain effect-free, reversible, and separate from research
-evidence. It cannot enable cloud identity, persistence, tutoring, select the
-Phase -1 target, or justify a normative public product rebase.
+directory, copied-source binding, server-disabled adult account binding, and
+the ADR-027 pure document contract. That work must remain effect-free,
+reversible, and separate from research evidence. It cannot enable cloud
+identity, persistence, tutoring, select the Phase -1 target, or justify a
+normative public product rebase.
 
-The next program action must be one of:
+After the pure document contract, the next program action must be one of:
 
 - run the separately approved Phase -1 direct observation and matched
   substitution protocol, then accept, narrow, repair, or reject;

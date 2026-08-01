@@ -27,6 +27,20 @@ Live university data, account identity, persistence, and institutional
 authority are not approved. The first implementation must therefore remain
 pure, synthetic, deterministic, and removable.
 
+## Principal amendment under ADR-023
+
+This ADR is the principal amendment permitted by ADR-023. It permits bounded
+internal foundation engineering for learner-declared degree and learning
+inspection. It does not permit a further synthetic product surface.
+
+The amendment preserves `UV1-GATE-001`, `UV1-GATE-002`, and `UV1-GATE-003` as
+open. It does not authorize participant operation, live data, account
+activation, persistence, public UI replacement, tutoring, or a research claim.
+
+ADR-027 later authorizes one pure local declaration-document contract only.
+That contract is not a synthetic product surface. It does not change this ADR
+claim ceiling or the ADR-023 final-synthetic-slice rule.
+
 ## Decision
 
 Add three canonical pure projectors:
