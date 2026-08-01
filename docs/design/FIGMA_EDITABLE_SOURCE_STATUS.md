@@ -54,7 +54,11 @@ The plugin makes no network request.
 - The file starts with one empty page.
 - The plugin manifest is valid JSON.
 - The plugin JavaScript passes `node --check`.
+- The mock Figma run creates 10 pages, 86 variables, 17 components, and 27 frames.
 - The token build check passes.
+- Repository lint and type checks pass.
+- 109 source and evaluation test files pass.
+- 969 source and evaluation tests pass.
 
 ## Current external blockers
 

@@ -21,6 +21,7 @@ This record does not establish production readiness, learning efficacy, accessib
 | Design foundation commit | `c6196ec9aa0651a20c765adb72af29d09459d894` |
 | Concept evidence commit | `3c09859142d40eea113b9cdbca58623ecfe6c09d` |
 | Phase 2 implementation commit | `320c10f0b697e916db0eaf2cafc6f243ac602445` |
+| Figma source generator commit | `1f8028d83501c2655e0a3da445a0b2549aeb7464` |
 | Deployment | Not done |
 | Push or merge | Not done |
 
