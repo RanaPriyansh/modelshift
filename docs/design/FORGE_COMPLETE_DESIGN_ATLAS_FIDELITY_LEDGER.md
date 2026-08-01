@@ -59,7 +59,7 @@ The atlas contains:
 - Eleven canonical public-site frames.
 - Fourteen canonical web application frames.
 - Three representative focus-mode frames.
-- Six representative iOS frames.
+- Eighteen canonical iOS frames.
 - Eight shared failure and recovery states.
 - Light and dark examples.
 - A 320 CSS pixel responsive layout.
@@ -186,12 +186,21 @@ The coded phone frames are visual specimens.
 | `docs/design/evidence/forge-terrain/forge-focus-mode-atlas.png` | 1440 by 3988 | `1ac5c3603fba8ce2363da88b400644a14bd3de559ccf56813fa8618d3c728cd9` |
 | `docs/design/evidence/forge-terrain/forge-focus-mode-atlas-320.png` | 320 by 4852 | `dce7ea002b47f43eb7c3c5691649df7df06d86eda95e8d84691bba56c56ceacd` |
 | `docs/design/evidence/forge-terrain/forge-ios-app-atlas.png` | 1440 by 2574 | `06ab393088dc89a3be6c48a3f167c16cd23db416936e95b89dd0b84949ae06cf` |
+| `docs/design/evidence/forge-terrain/forge-ios-complete-atlas.png` | 1440 by 6498 | `2b29614836b8aeec4f5590dfd073a76173159fde82fea4b9aec119eb2641afa1` |
+| `docs/design/evidence/forge-terrain/forge-ios-complete-atlas-320-a.png` | 320 by 9110 | `e8cf170ec43642ba53b9bf40c8165980640ddd24c09945b21fb7c027e394181f` |
+| `docs/design/evidence/forge-terrain/forge-ios-complete-atlas-320-b.png` | 320 by 9138 | `e686466eaf588b7aa2ea53ab3404654e3f6b9e2c9bf52e0e6dd0568fc9404053` |
 | `docs/design/evidence/forge-terrain/forge-product-atlas-320.png` | 320 by 800 | `bd3505f6a253ec74581c39def790efb596e8c710a86546e093531c8f4128ac2e` |
 | `docs/design/evidence/forge-terrain/forge-terrain-forced-colors.png` | 1440 by 1241 | `2d979bfea5ff1f2b4fce8fd6e84b69506233fe9406d70c2e506fb3daa4ebbd51` |
 | `docs/design/evidence/forge-terrain/forge-public-home-terrain-phase2.png` | 1440 by 4314 | `68302999a536ed64ab3e2dafb6ba5a03da252c07b9a3a8ebd39ad9c41bdf4416` |
 | `docs/design/evidence/forge-terrain/forge-public-home-terrain-phase2-320.png` | 320 by 5878 | `c21729de8e626600420adf491249851299ba0e3f17ea1f67bb3f4beed9d2a2ff` |
 | `docs/design/evidence/forge-terrain/forge-web-app-today-empty-terrain-phase2.png` | 1440 by 900 | `199280754a33fce2a80e49ffbe6c74a26a4068932708feaf2c6f98b8fb969b61` |
 | `docs/design/evidence/forge-terrain/forge-web-app-today-empty-terrain-phase2-320.png` | 320 by 800 | `b993e6a0202276f9f0049c18e24982174d3dc635c4156ec7bdd40b432ee809bf` |
+
+The 320 CSS pixel iOS evidence uses two parts because the complete section exceeds the browser bitmap height.
+
+Part A contains `IOS-01` through `IOS-09`.
+
+Part B contains `IOS-10` through `IOS-18`.
 
 The screenshots embed the existing local landscape asset.
 
@@ -221,8 +230,10 @@ Observed results:
 
 - The design atlas contained all 11 canonical public identifiers.
 - The design atlas contained all 14 canonical application identifiers.
+- The design atlas contained all 18 canonical iOS identifiers.
 - The complete public atlas had no horizontal overflow at 320 CSS pixels.
 - The complete application atlas had no horizontal overflow at 320 CSS pixels.
+- The complete iOS atlas had no horizontal overflow at 320 CSS pixels.
 - The complete atlas logged zero browser errors during desktop and narrow review.
 - The public home had no horizontal overflow at 1440 or 320 CSS pixels.
 - The Today page had no horizontal overflow at 1440 or 320 CSS pixels.

@@ -400,12 +400,12 @@ The local design atlas contains:
 
 - Eleven canonical public-site frames.
 - Fourteen canonical web application frames.
-- Six representative iOS frames.
+- Eighteen canonical iOS frames.
 - Eight shared failure and recovery states.
 
 The public and web frames establish a direction for every canonical learner-facing page family.
 
-The iOS frames establish shared native layouts and state language.
+The iOS frames establish a direction for every canonical native screen family.
 
 The atlas does not replace final designs for every state variant.
 

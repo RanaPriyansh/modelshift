@@ -222,14 +222,49 @@ const IOS_SCREENS: readonly ScreenRecord[] = [
     id: "IOS-01",
     title: "Goal entry",
     route: "Welcome",
-    maps: "Welcome and goal clarification",
+    maps: "Welcome and local goal draft",
     mode: "dark",
+  },
+  {
+    id: "IOS-02",
+    title: "Clarify goal",
+    route: "Entry",
+    maps: "One useful question and editable answer",
+    mode: "light",
+  },
+  {
+    id: "IOS-03",
+    title: "Path preview",
+    route: "Entry",
+    maps: "Accept, revise, reject, or save",
+    mode: "light",
   },
   {
     id: "IOS-04",
     title: "Today",
     route: "Today tab",
     maps: "Next action, due return, and alternatives",
+    mode: "light",
+  },
+  {
+    id: "IOS-05",
+    title: "Path collection",
+    route: "Paths tab",
+    maps: "Accepted, active, paused, and complete paths",
+    mode: "light",
+  },
+  {
+    id: "IOS-06",
+    title: "Path detail",
+    route: "Paths tab",
+    maps: "Outcome, milestones, next action, and limitations",
+    mode: "dark",
+  },
+  {
+    id: "IOS-07",
+    title: "Action brief",
+    route: "Today or path",
+    maps: "Operation, support boundary, evidence state, and exit",
     mode: "light",
   },
   {
@@ -254,10 +289,59 @@ const IOS_SCREENS: readonly ScreenRecord[] = [
     mode: "light",
   },
   {
+    id: "IOS-11",
+    title: "Evidence collection",
+    route: "Evidence tab",
+    maps: "Bounded record states and provenance access",
+    mode: "dark",
+  },
+  {
+    id: "IOS-12",
+    title: "Evidence detail",
+    route: "Evidence tab",
+    maps: "Claim, conditions, support, limits, and correction",
+    mode: "light",
+  },
+  {
+    id: "IOS-13",
+    title: "Return queue",
+    route: "Today",
+    maps: "Upcoming, due, expired, and complete returns",
+    mode: "light",
+  },
+  {
     id: "IOS-14",
     title: "Delayed return",
     route: "Today",
     maps: "Return queue, evidence detail, and result limits",
+    mode: "dark",
+  },
+  {
+    id: "IOS-15",
+    title: "Project collection",
+    route: "Projects tab",
+    maps: "Proposed, active, critique, and closed projects",
+    mode: "light",
+  },
+  {
+    id: "IOS-16",
+    title: "Project workspace",
+    route: "Projects tab",
+    maps: "Brief, sources, revision, critique, and defence",
+    mode: "dark",
+  },
+  {
+    id: "IOS-17",
+    title: "Resource library",
+    route: "Account route",
+    maps: "Reviewed, external, fallback, and withdrawn sources",
+    mode: "light",
+  },
+  {
+    id: "IOS-18",
+    title: "Settings and data",
+    route: "Account route",
+    maps: "Theme, access, haptics, drafts, export, and deletion",
     mode: "dark",
   },
 ] as const;
@@ -1341,6 +1425,51 @@ function GoalPhone() {
   );
 }
 
+function ClarifyGoalPhone() {
+  return (
+    <PhoneFrame mode="light" title="Clarify goal">
+      <div className={styles.phoneBody}>
+        <div className={styles.focusProgress}><span>Goal</span><span data-active="true">Clarify</span><span>Preview</span></div>
+        <section className={styles.focusQuestion}>
+          <span>One useful question</span>
+          <h4>What should you become able to do?</h4>
+          <p>Your original words remain unchanged until you approve an interpretation.</p>
+        </section>
+        <div className={styles.choiceList}>
+          <b data-selected="true">Explain the method and use it in a new case.</b>
+          <b>Complete a project with the method.</b>
+          <b>Evaluate whether the method is suitable.</b>
+        </div>
+        <button className={styles.phonePrimary} type="button">Use this outcome</button>
+        <span className={styles.phoneTextAction}>Edit my goal</span>
+      </div>
+    </PhoneFrame>
+  );
+}
+
+function PathPreviewPhone() {
+  return (
+    <PhoneFrame mode="light" title="Path preview">
+      <div className={styles.phoneBody}>
+        <div className={styles.focusProgress}><span>Goal</span><span>Clarify</span><span data-active="true">Preview</span></div>
+        <section className={styles.focusQuestion}>
+          <span>Proposed path · not active</span>
+          <h4>Use AI without outsourcing judgment.</h4>
+          <p>Five milestones connect your goal to a project, protected proof, and delayed return.</p>
+        </section>
+        <dl className={styles.returnContract}>
+          <div><dt>Sources</dt><dd>2 reviewed · 1 candidate</dd></div>
+          <div><dt>Project</dt><dd>Verification memo</dd></div>
+          <div><dt>Proof</dt><dd>Fresh claim · no assistant</dd></div>
+          <div><dt>Open gap</dt><dd>Reviewer authority</dd></div>
+        </dl>
+        <button className={styles.phonePrimary} type="button">Accept this path</button>
+        <span className={styles.phoneTextAction}>Revise · Reject · Save draft</span>
+      </div>
+    </PhoneFrame>
+  );
+}
+
 function TodayPhone() {
   return (
     <PhoneFrame mode="light" tab="Today" title="Today">
@@ -1357,6 +1486,68 @@ function TodayPhone() {
           <button type="button">Open action brief</button>
         </section>
         <div className={styles.phoneDue}><span>Return opens Friday</span><b>Inspect</b></div>
+      </div>
+    </PhoneFrame>
+  );
+}
+
+function PathCollectionPhone() {
+  return (
+    <PhoneFrame mode="light" tab="Paths" title="Paths">
+      <div className={styles.phoneBody}>
+        <section className={styles.focusQuestion}>
+          <span>Accepted sequences</span>
+          <h4>Your paths begin with your goals.</h4>
+          <p>Proposals remain separate from active learning work.</p>
+        </section>
+        <div className={styles.phoneRows}>
+          <article><div><span>Active · 02 of 05</span><h5>Use AI with judgment</h5><p>Next: compare support.</p></div><b>Open</b></article>
+          <article><div><span>Accepted</span><h5>Reason from sources</h5><p>Ready to start.</p></div><b>Open</b></article>
+          <article><div><span>Paused</span><h5>Explain force models</h5><p>Draft preserved.</p></div><b>Inspect</b></article>
+        </div>
+      </div>
+    </PhoneFrame>
+  );
+}
+
+function PathDetailPhone() {
+  return (
+    <PhoneFrame mode="dark" tab="Paths" title="Active path">
+      <div className={styles.phoneBody}>
+        <div className={styles.phoneLandscape}>
+          <span>Revision 1.4 · accepted</span>
+          <h4>Use AI without outsourcing judgment.</h4>
+        </div>
+        <dl className={styles.returnContract}>
+          <div><dt>01 · Complete</dt><dd>Separate claim and source</dd></div>
+          <div><dt>02 · Ready</dt><dd>Compare support</dd></div>
+          <div><dt>03 · Locked</dt><dd>Build a memo</dd></div>
+          <div><dt>04 · Locked</dt><dd>Defend a fresh claim</dd></div>
+        </dl>
+        <div className={styles.proofSupport}><span>Open gap</span><b>External reviewer authority is not published.</b></div>
+        <button className={styles.phonePrimary} type="button">Open next action</button>
+      </div>
+    </PhoneFrame>
+  );
+}
+
+function ActionBriefPhone() {
+  return (
+    <PhoneFrame mode="light" title="Action brief">
+      <div className={styles.phoneBody}>
+        <section className={styles.focusQuestion}>
+          <span>Reviewed World · 18 to 25 min</span>
+          <h4>Compare support and contradiction.</h4>
+          <p>Complete one source-bound comparison. Save a draft when you need to stop.</p>
+        </section>
+        <dl className={styles.returnContract}>
+          <div><dt>Available</dt><dd>Sources and one process prompt</dd></div>
+          <div><dt>Unavailable</dt><dd>Generated conclusion</dd></div>
+          <div><dt>Evidence</dt><dd>Practice record only</dd></div>
+          <div><dt>Stop</dt><dd>Save and exit</dd></div>
+        </dl>
+        <button className={styles.phonePrimary} type="button">Start attempt</button>
+        <span className={styles.phoneTextAction}>Save for later</span>
       </div>
     </PhoneFrame>
   );
@@ -1430,6 +1621,66 @@ function ProofPhone() {
   );
 }
 
+function EvidenceCollectionPhone() {
+  return (
+    <PhoneFrame mode="dark" tab="Evidence" title="Evidence">
+      <div className={styles.phoneBody}>
+        <section className={styles.focusQuestion}>
+          <span>Learner-owned ledger</span>
+          <h4>What happened, under which conditions.</h4>
+          <p>Completion and evidence remain separate states.</p>
+        </section>
+        <div className={styles.phoneRows}>
+          <article><div><span>Demonstrated once</span><h5>Claim from source</h5><p>Fresh case · no help</p></div><b>Open</b></article>
+          <article><div><span>Return due</span><h5>Same distinction</h5><p>Opens today · one attempt</p></div><b>Open</b></article>
+          <article><div><span>Not evaluated</span><h5>Conflicting source</h5><p>No record exists.</p></div><b>Inspect</b></article>
+        </div>
+      </div>
+    </PhoneFrame>
+  );
+}
+
+function EvidenceDetailPhone() {
+  return (
+    <PhoneFrame mode="light" title="Evidence EV-204">
+      <div className={styles.phoneBody}>
+        <div className={styles.proofLock}><span>Demonstrated once</span><b>One fresh source-bound operation.</b></div>
+        <section className={styles.focusQuestion}>
+          <span>Bounded claim</span>
+          <h4>Distinguished a claim from its source.</h4>
+          <p>This record does not establish broad transfer or permanent retention.</p>
+        </section>
+        <dl className={styles.returnContract}>
+          <div><dt>Task</dt><dd>World 1.3 · P02</dd></div>
+          <div><dt>Help</dt><dd>Access support only</dd></div>
+          <div><dt>Sources</dt><dd>2 receipts</dd></div>
+          <div><dt>Reviewer</dt><dd>Not assigned</dd></div>
+        </dl>
+        <button className={styles.phonePrimary} type="button">Inspect provenance</button>
+        <span className={styles.phoneTextAction}>Challenge · Export · Delete</span>
+      </div>
+    </PhoneFrame>
+  );
+}
+
+function ReturnQueuePhone() {
+  return (
+    <PhoneFrame mode="light" tab="Today" title="Returns">
+      <div className={styles.phoneBody}>
+        <section className={styles.focusQuestion}>
+          <span>Proof after delay</span>
+          <h4>Return to the capability, not the lesson.</h4>
+        </section>
+        <div className={styles.phoneRows}>
+          <article data-state="due"><div><span>Due now</span><h5>Claim and source</h5><p>Fresh case · one attempt</p></div><b>Open</b></article>
+          <article><div><span>Upcoming</span><h5>Support and contradiction</h5><p>Opens 14 Aug</p></div><b>Inspect</b></article>
+          <article><div><span>Complete</span><h5>Force model</h5><p>One bounded observation</p></div><b>Record</b></article>
+        </div>
+      </div>
+    </PhoneFrame>
+  );
+}
+
 function ReturnPhone() {
   return (
     <PhoneFrame mode="dark" title="Delayed return">
@@ -1453,15 +1704,111 @@ function ReturnPhone() {
   );
 }
 
-function IosScreen({ screen, index }: { screen: ScreenRecord; index: number }) {
-  const content = [
-    <GoalPhone key="goal" />,
-    <TodayPhone key="today" />,
-    <AttemptPhone key="attempt" />,
-    <RepairPhone key="repair" />,
-    <ProofPhone key="proof" />,
-    <ReturnPhone key="return" />,
-  ][index];
+function ProjectCollectionPhone() {
+  return (
+    <PhoneFrame mode="light" tab="Projects" title="Projects">
+      <div className={styles.phoneBody}>
+        <section className={styles.focusQuestion}>
+          <span>Work with provenance</span>
+          <h4>Build something that survives critique.</h4>
+        </section>
+        <div className={styles.phoneRows}>
+          <article><div><span>Active · revision</span><h5>Verification memo</h5><p>2 sources · 3 revisions</p></div><b>Open</b></article>
+          <article><div><span>Critique ready</span><h5>Source reasoning brief</h5><p>Named reviewer required</p></div><b>Open</b></article>
+          <article><div><span>Proposed</span><h5>Force model</h5><p>No artifact exists.</p></div><b>Review</b></article>
+        </div>
+      </div>
+    </PhoneFrame>
+  );
+}
+
+function ProjectWorkspacePhone() {
+  return (
+    <PhoneFrame mode="dark" tab="Projects" title="Verification memo">
+      <div className={styles.phoneBody}>
+        <div className={styles.focusProgress}><span>Sources</span><span data-active="true">Revision</span><span>Defence</span></div>
+        <section className={styles.focusQuestion}>
+          <span>Current operation</span>
+          <h4>Revise the decision language.</h4>
+          <p>Name what the evidence supports and what would change the conclusion.</p>
+        </section>
+        <label className={styles.phoneTextArea}>
+          <span>Draft 03 · learner work</span>
+          <b>The available sources support…</b>
+          <small>Saved locally</small>
+        </label>
+        <div className={styles.assistanceLabel}><span>Provenance</span><p>2 reviewed sources · 1 AI process prompt · 3 learner revisions</p></div>
+        <button className={styles.phonePrimary} type="button">Save revision</button>
+      </div>
+    </PhoneFrame>
+  );
+}
+
+function LibraryPhone() {
+  return (
+    <PhoneFrame mode="light" title="Library">
+      <div className={styles.phoneBody}>
+        <section className={styles.focusQuestion}>
+          <span>Reviewed resource ledger</span>
+          <h4>Inspect the source before you depend on it.</h4>
+        </section>
+        <div className={styles.phoneRows}>
+          <article><div><span>Reviewed</span><h5>Source evaluation guide</h5><p>v2.1 · local fallback</p></div><b>Open</b></article>
+          <article><div><span>External</span><h5>Primary source archive</h5><p>Availability can change.</p></div><b>Open</b></article>
+          <article><div><span>Withdrawn</span><h5>AI literacy checklist</h5><p>Replacement v1.4 exists.</p></div><b>Replace</b></article>
+        </div>
+      </div>
+    </PhoneFrame>
+  );
+}
+
+function SettingsPhone() {
+  return (
+    <PhoneFrame mode="dark" title="Settings and data">
+      <div className={styles.phoneBody}>
+        <section className={styles.focusQuestion}>
+          <span>Explicit control</span>
+          <h4>Choose appearance, access, and data handling.</h4>
+        </section>
+        <div className={styles.scaffoldCard}>
+          <span>Experience</span>
+          <button type="button">Theme <b>System</b></button>
+          <button type="button">Haptics <b>Commitments only</b></button>
+          <button type="button">Reduce Motion <b>System</b></button>
+        </div>
+        <div className={styles.scaffoldCard}>
+          <span>Local data</span>
+          <button type="button">Drafts <b>3 on this device</b></button>
+          <button type="button">Export <b>Available</b></button>
+          <button type="button">Delete <b>Review first</b></button>
+        </div>
+      </div>
+    </PhoneFrame>
+  );
+}
+
+function IosScreen({ screen }: { screen: ScreenRecord }) {
+  const contentByID: Record<string, React.ReactNode> = {
+    "IOS-01": <GoalPhone />,
+    "IOS-02": <ClarifyGoalPhone />,
+    "IOS-03": <PathPreviewPhone />,
+    "IOS-04": <TodayPhone />,
+    "IOS-05": <PathCollectionPhone />,
+    "IOS-06": <PathDetailPhone />,
+    "IOS-07": <ActionBriefPhone />,
+    "IOS-08": <AttemptPhone />,
+    "IOS-09": <RepairPhone />,
+    "IOS-10": <ProofPhone />,
+    "IOS-11": <EvidenceCollectionPhone />,
+    "IOS-12": <EvidenceDetailPhone />,
+    "IOS-13": <ReturnQueuePhone />,
+    "IOS-14": <ReturnPhone />,
+    "IOS-15": <ProjectCollectionPhone />,
+    "IOS-16": <ProjectWorkspacePhone />,
+    "IOS-17": <LibraryPhone />,
+    "IOS-18": <SettingsPhone />,
+  };
+  const content = contentByID[screen.id];
 
   return (
     <article className={styles.phoneCard}>
@@ -1584,11 +1931,11 @@ export function ProductDesignAtlas() {
 
       <section className={styles.platformSection} id="ios-app-atlas" aria-labelledby="ios-app-atlas-title">
         <header className={styles.atlasHeader}>
-          <div><span>iOS application · six representative families</span><h2 id="ios-app-atlas-title">Native structure carries the same learning contract.</h2></div>
-          <p>These screens map the eighteen iOS families to native navigation, focus, sheets, alerts, and Dynamic Type.</p>
+          <div><span>iOS application · eighteen canonical families</span><h2 id="ios-app-atlas-title">Native structure carries the same learning contract.</h2></div>
+          <p>Each native screen family has a complete visual direction, main action, exit route, and accessibility contract.</p>
         </header>
         <div className={styles.phoneGrid}>
-          {IOS_SCREENS.map((screen, index) => <IosScreen index={index} key={screen.id} screen={screen} />)}
+          {IOS_SCREENS.map((screen) => <IosScreen key={screen.id} screen={screen} />)}
         </div>
       </section>
 
