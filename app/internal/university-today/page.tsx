@@ -17,7 +17,7 @@ export default async function InternalUniversityTodayPage() {
 
   return (
     <ForgeShell
-      active="learn"
+      active={null}
       navigationPrefetch={false}
       surface="author"
     >

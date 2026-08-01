@@ -9,6 +9,19 @@ function captureConsoleFailures(page: Page): string[] {
   return failures;
 }
 
+for (const route of [
+  "/internal/university-source-review",
+  "/internal/university-today",
+  "/internal/university-protected-study",
+]) {
+  test(`${route} does not identify an unrelated global page as current`, async ({
+    page,
+  }) => {
+    await page.goto(route);
+    await expect(page.locator('[aria-current="page"]')).toHaveCount(0);
+  });
+}
+
 test("moves across every protected-study boundary with native keyboard controls", async ({
   page,
 }) => {

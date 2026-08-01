@@ -18,7 +18,7 @@ export default async function InternalUniversityProtectedStudyPage() {
 
   return (
     <ForgeShell
-      active="learn"
+      active={null}
       navigationPrefetch={false}
       surface="author"
     >

@@ -30,7 +30,9 @@ describe("university source-to-study route boundary", () => {
       );
       const shellTags = openingTags(source, "ForgeShell");
       expect(shellTags).toHaveLength(1);
+      expect(shellTags[0]).toContain("active={null}");
       expect(shellTags[0]).toContain("navigationPrefetch={false}");
+      expect(source).not.toContain('active="learn"');
     }
   });
 
