@@ -28,6 +28,7 @@ This record does not establish production readiness, learning efficacy, accessib
 | Complete iOS atlas commit | `d04fe0d759087197eff63aca9f08ad7f204eb96c` |
 | Canonical Figma coverage index commit | `07eecc831da1bee1d14d6fac00d0b764ce021d9d` |
 | Figma-to-coded-atlas parity check commit | `1d52f50827b3bdd09d871aaa50acf890bfb051da` |
+| Native reference and visual audit commit | `6d1d58decd2562531e304ea78a39dc7eff6efbda` |
 | Deployment | Not done |
 | Push or merge | Not done |
 
