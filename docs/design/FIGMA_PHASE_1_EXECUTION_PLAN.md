@@ -1,10 +1,10 @@
 # Figma Phase 1 Execution Plan
 
-Status: Approved and ready after plan selection.
+Status: Approved. Starter generator ready. Generator run not verified.
 
 Date: 2026-08-01.
 
-Target file: <https://www.figma.com/design/BxrzaLocs29c53U1xLyfdc>
+Target file: <https://www.figma.com/design/qzdsINs69QK44KiorK9plj/FORGE-Terrain-Product-Design-System>
 
 ## 1. Approval
 
@@ -14,7 +14,11 @@ Phase 1 can create foundations.
 
 Phase 1 cannot create final page designs.
 
-No Phase 1 mutation has succeeded.
+No Phase 1 mutation has succeeded in Figma.
+
+The local Figma generator is complete.
+
+The generator is in `scripts/design/figma-forge-terrain-plugin`.
 
 ## 2. Current constraint
 
@@ -26,7 +30,13 @@ The approved design system requires Light and Dark semantic values.
 
 The Starter plan also excludes published team libraries, Dev Mode, and Code Connect.
 
-The Figma connector returned `INVALID_ARGUMENT` for read and write calls after the plan check.
+The Figma connector returns `INVALID_ARGUMENT` for the valid new file.
+
+The Chrome file chooser also cannot upload the token files without the required extension permission.
+
+The Figma desktop application is the next execution path.
+
+The macOS session must be unlocked before that path can run.
 
 ## 3. Recommended structure
 
@@ -56,7 +66,7 @@ This structure supports automatic appearance switching.
 
 ## 4. Starter fallback
 
-Use this structure only after explicit approval.
+Use this structure for the current Starter-compatible build.
 
 Create three collections:
 
@@ -246,4 +256,3 @@ Keep the recovery ledger at `/private/tmp/dsb-state-forge-terrain-20260801.json`
 - Figma plans and features: <https://help.figma.com/hc/en-us/articles/360040328273-Figma-plans-and-features>
 - Figma variable modes: <https://help.figma.com/hc/en-us/articles/15343816063383-Modes-for-variables>
 - Figma Starter plan: <https://help.figma.com/hc/en-us/articles/13838684089751-Starter-plan-overview>
-

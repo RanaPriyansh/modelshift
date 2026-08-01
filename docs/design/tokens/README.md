@@ -20,11 +20,9 @@ Create the collection `FORGE / Primitive`.
 
 Import `forge-terrain.core.tokens.json` as its first mode.
 
-Create the collection `FORGE / Semantic`.
+For a paid plan, create the collection `FORGE / Semantic`.
 
-Import the Light and Dark semantic files as two modes.
-
-Use the names `Light` and `Dark`.
+Import the Light and Dark semantic files as two modes named `Light` and `Dark`.
 
 The semantic files contain identical token names and types.
 
@@ -36,11 +34,13 @@ These values match the current Figma DTCG importer requirements.
 
 Phase 1 received explicit approval on 2026-08-01.
 
-Do not import these files before the Figma plan structure is selected.
+The selected Starter-compatible structure uses separate Light and Dark semantic collections.
 
-The current Starter plan cannot create the planned Light and Dark modes.
+The local generator creates and aliases these collections from the same token source.
 
 Use `docs/design/FIGMA_PHASE_1_EXECUTION_PLAN.md` for the selected structure.
+
+Use `scripts/design/figma-forge-terrain-plugin` to create the complete editable source.
 
 ## Web mapping
 

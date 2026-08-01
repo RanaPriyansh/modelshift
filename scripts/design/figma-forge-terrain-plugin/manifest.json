@@ -1,0 +1,15 @@
+{
+  "name": "FORGE Terrain Builder",
+  "id": "1536643798211432789",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": [
+    "figma"
+  ],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": [
+      "none"
+    ]
+  }
+}

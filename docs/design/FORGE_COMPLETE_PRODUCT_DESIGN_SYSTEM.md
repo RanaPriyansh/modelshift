@@ -6,18 +6,20 @@ Date: 2026-08-01.
 
 Source revision: `684f5a898fa2ece3a1e4a61c1a51f0716b535400`.
 
-Primary editable source:
+Primary editable target:
+
+- Tool: Figma
+- File: `FORGE Terrain Product Design System`
+- Key: `qzdsINs69QK44KiorK9plj`
+- URL: <https://www.figma.com/design/qzdsINs69QK44KiorK9plj/FORGE-Terrain-Product-Design-System>
+- Status: Valid empty file. Local generator ready. Generator run not verified.
+
+Secondary editable source:
 
 - Tool: Paper
 - File: `FORGE Terrain Product Design System`
 - URL: <https://app.paper.design/file/01KYX71X3KAA6R80T6650HK7Q8/1-0>
 - Status: Partial
-
-Planned Figma source:
-
-- File: `FORGE Product Design System - Public, Web, iOS`
-- Key: `BxrzaLocs29c53U1xLyfdc`
-- URL: <https://www.figma.com/design/BxrzaLocs29c53U1xLyfdc>
 
 This document defines one design system for the public site, web application, focus mode, and iOS application.
 
@@ -472,18 +474,26 @@ Create these pages:
 9. `08 States and Accessibility`
 10. `09 Archive`
 
-Create these variable collections:
+The paid-plan structure uses these variable collections:
 
 - `FORGE / Primitive`
 - `FORGE / Semantic`
 
 The Semantic collection has Light and Dark modes.
 
-The current Figma Starter plan does not support variable modes.
+The current Starter-compatible structure uses:
 
-Phase 1 needs a paid-plan file or an approved separate-collection fallback.
+- `FORGE / Primitive`
+- `FORGE / Semantic / Light`
+- `FORGE / Semantic / Dark`
+
+The local generator creates 86 variables across these three single-mode collections.
 
 The Phase 1 build sequence is in `docs/design/FIGMA_PHASE_1_EXECUTION_PLAN.md`.
+
+The local generator is in `scripts/design/figma-forge-terrain-plugin`.
+
+Run the generator in the Figma desktop application after macOS is unlocked.
 
 Create text styles, color styles, and minimal effect styles.
 

@@ -98,15 +98,23 @@ This design choice does not prove improved learning.
 
 The Figma file is:
 
-- Name: `FORGE Product Design System - Public, Web, iOS`
-- Key: `BxrzaLocs29c53U1xLyfdc`
-- URL: <https://www.figma.com/design/BxrzaLocs29c53U1xLyfdc>
+- Name: `FORGE Terrain Product Design System`
+- Key: `qzdsINs69QK44KiorK9plj`
+- URL: <https://www.figma.com/design/qzdsINs69QK44KiorK9plj/FORGE-Terrain-Product-Design-System>
 
 The user approved Figma Phase 1.
 
-The connected Figma Starter plan cannot create the required Light and Dark variable modes.
+The connected Figma Starter plan needs separate Light and Dark semantic collections.
 
-The approved fallback is Paper.
+The local Figma generator creates that Starter-compatible structure.
+
+The generator is in `scripts/design/figma-forge-terrain-plugin`.
+
+The generator has not run in Figma because the macOS session is locked.
+
+The connector also returns `INVALID_ARGUMENT` for the new file.
+
+Paper remains a secondary editable source.
 
 The Paper file is:
 
@@ -117,9 +125,9 @@ The Paper source contains a partial `01 Foundations` page and cover frame.
 
 The macOS session locked before the source could be completed.
 
-The local coded atlas and portable token files are the complete current design handoff.
+The local coded atlas, token files, North Star, and Figma generator are the complete current local handoff.
 
-The Paper source is not complete.
+The Figma and Paper sources are not complete until a generator run and visual audit succeed.
 
 See `docs/design/PAPER_IMPLEMENTATION_STATUS.md`.
 
@@ -290,8 +298,9 @@ Result:
 
 The remaining design gates are:
 
-- Complete the editable Paper source after macOS is unlocked.
-- Import the portable tokens into an editable design source.
+- Run the local generator in the Figma desktop application after macOS is unlocked.
+- Audit the created variables, styles, components, and screens.
+- Complete or archive the partial Paper source.
 - Create the remaining detailed route variants.
 - Native SwiftUI implementation.
 - Representative learner review.

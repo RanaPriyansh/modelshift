@@ -12,11 +12,18 @@ Code source:
 - Branch: `agent/forge-complete-design-system-20260801`
 - Revision: `684f5a898fa2ece3a1e4a61c1a51f0716b535400`
 
-Figma source:
+Original Figma source:
 
 - File: `FORGE Product Design System - Public, Web, iOS`
 - Key: `BxrzaLocs29c53U1xLyfdc`
 - URL: <https://www.figma.com/design/BxrzaLocs29c53U1xLyfdc>
+
+Replacement Figma target:
+
+- File: `FORGE Terrain Product Design System`
+- Key: `qzdsINs69QK44KiorK9plj`
+- URL: <https://www.figma.com/design/qzdsINs69QK44KiorK9plj/FORGE-Terrain-Product-Design-System>
+- Status: Valid empty file
 
 ## 2. Code inventory
 
@@ -196,7 +203,7 @@ Phase 1 will not create final page designs.
 
 The user approved Phase 1 on 2026-08-01.
 
-Execution state: `APPROVED_NOT_CREATED`.
+Execution state: `APPROVED_GENERATOR_READY_NOT_RUN`.
 
 The connected Figma plan is Starter.
 
@@ -204,14 +211,21 @@ Figma supports variable modes on Education, Professional, Organization, and Ente
 
 The current target file cannot create the planned Light and Dark modes.
 
-The Figma connector also returned `INVALID_ARGUMENT` for read and write calls after the plan check.
+The Figma connector also returned `INVALID_ARGUMENT` for the original and replacement files.
 
 No Phase 1 mutation succeeded.
 
-Continue with one of these available structures:
+The selected structure is:
 
-1. Use a paid-plan Figma file with one Semantic collection and Light and Dark modes.
-2. Approve separate Light and Dark Semantic collections as a Starter-compatible fallback.
+1. `FORGE / Primitive`
+2. `FORGE / Semantic / Light`
+3. `FORGE / Semantic / Dark`
+
+The local generator creates this structure.
+
+The generator path is `scripts/design/figma-forge-terrain-plugin`.
+
+Run it in the Figma desktop application after macOS is unlocked.
 
 The exact build sequence is in `docs/design/FIGMA_PHASE_1_EXECUTION_PLAN.md`.
 
