@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -28,7 +30,81 @@ async function renderWorkspace() {
   };
 }
 
+function cssColor(styles: string, variable: string): string {
+  const value = styles.match(
+    new RegExp(`--${variable}:\\s*(#[a-f\\d]{6})\\s*;`, "i"),
+  )?.[1];
+  if (!value) throw new Error(`Missing CSS color variable: --${variable}`);
+  return value;
+}
+
+function relativeLuminance(color: string): number {
+  const channels = color.slice(1).match(/.{2}/g);
+  if (!channels || channels.length !== 3) {
+    throw new Error(`Invalid six-digit CSS color: ${color}`);
+  }
+  const [red, green, blue] = channels.map((channel) => {
+    const value = Number.parseInt(channel, 16) / 255;
+    return value <= 0.04045
+      ? value / 12.92
+      : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return (0.2126 * red!) + (0.7152 * green!) + (0.0722 * blue!);
+}
+
+function contrastRatio(first: string, second: string): number {
+  const firstLuminance = relativeLuminance(first);
+  const secondLuminance = relativeLuminance(second);
+  return (
+    Math.max(firstLuminance, secondLuminance) + 0.05
+  ) / (
+    Math.min(firstLuminance, secondLuminance) + 0.05
+  );
+}
+
 describe("UniversityResearchReadinessWorkspace", () => {
+  it("uses normal-text contrast tokens for every readiness state", () => {
+    const componentStyles = readFileSync(
+      resolve(
+        process.cwd(),
+        "src/components/forge/university/UniversityResearchReadinessWorkspace.module.css",
+      ),
+      "utf8",
+    );
+    const forgeStyles = readFileSync(
+      resolve(process.cwd(), "app/forge.css"),
+      "utf8",
+    );
+    const deepTextColor = /^\s*color\s*:\s*var\(--forge-(?:amber|cyan)-deep\)\s*;/m;
+    const selectedControl = componentStyles.match(
+      /\.scenarioPicker input:checked \+ span\s*\{(?<body>[^}]*)\}/,
+    )?.groups?.body;
+
+    expect(componentStyles).not.toMatch(deepTextColor);
+    expect(selectedControl).toContain("background: var(--forge-cyan);");
+    expect(selectedControl).not.toContain(
+      "background: var(--forge-cyan-deep);",
+    );
+
+    const colors = {
+      amber: cssColor(forgeStyles, "forge-amber"),
+      background: cssColor(forgeStyles, "forge-bg"),
+      cyan: cssColor(forgeStyles, "forge-cyan"),
+      surface: cssColor(forgeStyles, "forge-surface"),
+    };
+    const ratios = {
+      "amber-on-bg": contrastRatio(colors.amber, colors.background),
+      "amber-on-surface": contrastRatio(colors.amber, colors.surface),
+      "cyan-on-bg": contrastRatio(colors.cyan, colors.background),
+      "cyan-on-surface": contrastRatio(colors.cyan, colors.surface),
+      "surface-on-cyan": contrastRatio(colors.surface, colors.cyan),
+    };
+
+    for (const ratio of Object.values(ratios)) {
+      expect(ratio).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
   it("leads with the permission boundary and five ordered readiness gates", async () => {
     await renderWorkspace();
 
