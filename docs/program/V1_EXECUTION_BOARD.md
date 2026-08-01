@@ -36,38 +36,54 @@ This board replaces hackathon, judging, demo-video, submission, and deadline wor
 ## Latest verified implementation receipt
 
 The latest verified implementation candidate before this evidence-only record
-update is clean source `f77464b834179b46f87400aa3db9cf9f828e5330`
-and tree `7988ae79b8486f2366127492cc2038b73ab4e693`.
+update is clean source `19c88c7d4ef3e1080632af78fefffef4bae597a3`
+and tree `3286d48b1eca014a25008ecd6c1d6c3f5642499d`.
 
 The candidate preserves the university foundation, production security, and
-release-evidence work. It adds three bounded repairs from the 1 August audit.
-Canonical student-context validation now occurs before account identity and
-binding-key readers. Semester Overview focus visibility now measures the full
-radio label. Declaration-document tests now cover each prohibited authority,
-identity, revision, projection, status, recommendation, and child-action field.
+release-evidence work. It includes the account-context preflight, Semester
+Overview focus, and declaration-document repairs from source
+`f77464b834179b46f87400aa3db9cf9f828e5330`.
+
+It adds six bounded repairs from the next 1 August audit:
+
+- University Today detaches raw input before Zod and rejects proxy input
+  without executing getters or proxy traps.
+- University Protected Study rejects proxy values before reflective property
+  inspection.
+- University Recovery rejects proxy input before snapshot reflection while it
+  keeps valid null-prototype records.
+- University Degree Map limits returned schema issues to 64.
+- University Source Review uses one concise, atomic, polite status region for
+  learner decisions.
+- University Source Review and Research Readiness use the active light-theme
+  deep text tokens. Pressed review controls use surface text.
 
 The candidate adds no public route, database object, provider operation,
 identity activation, entitlement, persistence path, or participant operation.
 
-- Focused account-context, Semester Overview, and declaration-document
-  contracts: 57 pass across three files.
+- Focused contracts for the six new repairs: 77 pass across six files.
 - TypeScript: pass.
 - Zero-warning lint: pass.
-- Application contracts: 1,617 pass across 177 files.
+- Application contracts: 1,620 pass across 177 files.
 - Evaluator contracts: 13 pass across two files.
-- Total contracts: 1,630 pass.
+- Total contracts: 1,633 pass.
 - Offline evaluation gate: pass across 54 authored fixtures.
 - Live model evaluation: not run.
 - CI workflow YAML parse and diff-integrity checks: pass.
-- Independent `gpt-5.6-luna` maximum-reasoning review: no confirmed defect.
+- Independent `gpt-5.6-luna` maximum-reasoning review found two contrast
+  defects. The candidate corrects both defects.
+- The final independent review found no remaining confirmed defect.
 - Optimized production build: pass.
 - Generated static pages: 67.
 - Public build boundary: 71 static assets pass.
 - Production build receipt: 1,472 files.
-- Artifact digest: `sha256:84dbf78883bcc38ef574941c272ce112510dc9c7dcf30945623dab7c5bff49e0`.
-- Public asset digest: `sha256:7b8ec989942cd4e7941ed9ee4b8b91b5ef5fd7bb9214218735d9539e459b7e32`.
+- Build ID: `forge-source-v1-19c88c7d4ef3e1080632af78fefffef4bae597a3`.
+- Artifact digest: `sha256:7294629a5a9e40af4a90a0ac1b6870142ab3089b16a389c5df321e662570946e`.
+- Public asset digest: `sha256:132b267cb105b0360a34c2a089cc97daca7649967878773d6f4e25103281fa2f`.
 - Public directory digest: `sha256:e0096e369f47666ca5a3f962b71b6f5199a17117ac5ce4a598d1b77dc42abac9`.
 - Runtime configuration digest: `sha256:06e97d7ea5aaf83b90deef10f941678198a442a267e97f9f23a1a97603774e29`.
+- Build receipt schema: `forge-production-build-receipt.v3`.
+- Public marker schema: `forge-public-build-artifact-marker.v2`.
 
 Release manifest schema `2.0` and provider receipt schema `2.0` now fail closed
 for retired asset-only evidence. The receipt requires a clean Git tree and the
@@ -96,6 +112,10 @@ The selected Chrome capture confirmed the unchanged visual composition. The
 capture was JPEG, so it is qualitative evidence only. The only browser log
 error was the known Dark Reader extension attribute hydration mismatch.
 
+The latest requirements audit found no additional confirmed source defect. It
+found missing browser and assistive-technology evidence and the unresolved
+Phase -1 target disposition.
+
 The configured university-foundation and production browser suites did not run
 locally. Product Design requires the selected Chrome workflow unless the user
 gives permission for direct Playwright use.
@@ -106,9 +126,10 @@ Vercel secret, required CI browser execution, and a live provider receipt
 remain external release gates.
 
 The account-context adapter performs the canonical projection twice for valid
-input. Input-limit performance remains unmeasured. Fixture evidence does not
-establish production identity, key provisioning, deployment, or privacy
-operation.
+input. Input-limit performance remains unmeasured. No selected-Chrome capture
+or assistive-technology review covers the new contrast and status-region
+repairs. Fixture evidence does not establish production identity, key
+provisioning, deployment, or privacy operation.
 
 ## Current implementation order
 
