@@ -24,6 +24,7 @@ This record does not establish production readiness, learning efficacy, accessib
 | Figma source generator commit | `1f8028d83501c2655e0a3da445a0b2549aeb7464` |
 | Focus mode atlas commit | `62616e9bdf06d006ce9aeb3eab5ceb308a9ed1bb` |
 | Native iOS handoff commit | `c7b2e219eef5dd052fae350734157de99ff3f0bd` |
+| Complete public and web atlas commit | `6a08f80c968f402145fed66ab086a91133702fb3` |
 | Deployment | Not done |
 | Push or merge | Not done |
 
