@@ -73,7 +73,15 @@ jobs:
       - name: University foundation browser acceptance
         id: foundation_browser
         continue-on-error: true
+        env:
+          FORGE_PLAYWRIGHT_OUTPUT_DIR: test-results/university-foundation
         run: pnpm test:e2e:university-foundation
+      - name: Semester Desk active-surface browser acceptance
+        id: semester_desk_browser
+        continue-on-error: true
+        env:
+          FORGE_PLAYWRIGHT_OUTPUT_DIR: test-results/university-semester-desk
+        run: pnpm test:e2e:university-semester-desk
       - name: Capture immutable build identity
         run: |
           printf 'FORGE_BUILD_TIME=%s\n' "$(date -u -d "$(git show -s --format=%cI "$GITHUB_SHA")" +%Y-%m-%dT%H:%M:%S.000Z)" >> "$GITHUB_ENV"
@@ -110,7 +118,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Upload bounded Playwright failure evidence
-        if: always() && (steps.foundation_browser.outcome == 'failure' || steps.browser.outcome == 'failure') && steps.failure_manifest.outcome == 'success' && hashFiles('test-results/release-ops/playwright-artifact-manifest.json') != ''
+        if: always() && (steps.foundation_browser.outcome == 'failure' || steps.semester_desk_browser.outcome == 'failure' || steps.browser.outcome == 'failure') && steps.failure_manifest.outcome == 'success' && hashFiles('test-results/release-ops/playwright-artifact-manifest.json') != ''
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: forge-playwright-failure-${{ github.run_id }}
@@ -122,11 +130,12 @@ jobs:
       - name: Enforce release gate outcomes
         if: always()
         run: |
-          if test "${{ steps.foundation_browser.outcome }}" = failure || test "${{ steps.browser.outcome }}" = failure; then
+          if test "${{ steps.foundation_browser.outcome }}" = failure || test "${{ steps.semester_desk_browser.outcome }}" = failure || test "${{ steps.browser.outcome }}" = failure; then
             test "${{ steps.failure_manifest.outcome }}" = success
             node -e 'const fs = require("node:fs"); const report = JSON.parse(fs.readFileSync("test-results/release-ops/playwright-artifact-manifest.json", "utf8")); if (report.schema_version !== "2.0" || !Array.isArray(report.artifacts) || report.artifacts.length === 0) process.exit(1)'
           fi
           test "${{ steps.foundation_browser.outcome }}" = success
+          test "${{ steps.semester_desk_browser.outcome }}" = success
           test "${{ steps.browser.outcome }}" = success
           test "${{ steps.evaluation_report.outcome }}" = success
           test "${{ steps.local_verify.outcome }}" = success

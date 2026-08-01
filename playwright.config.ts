@@ -2,6 +2,19 @@ import { defineConfig, devices } from "@playwright/test";
 
 export type ForgePlaywrightEnvironment = Readonly<Record<string, string | undefined>>;
 
+export function resolvePlaywrightOutputDirectory(
+  environment: ForgePlaywrightEnvironment = process.env,
+): string {
+  const outputDirectory =
+    environment.FORGE_PLAYWRIGHT_OUTPUT_DIR ?? "test-results/default";
+  if (!/^test-results\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(outputDirectory)) {
+    throw new Error(
+      "FORGE_PLAYWRIGHT_OUTPUT_DIR must be one bounded directory under test-results.",
+    );
+  }
+  return outputDirectory;
+}
+
 export function resolveLocalPlaywrightServer(
   environment: ForgePlaywrightEnvironment = process.env,
 ) {
@@ -23,6 +36,7 @@ export function resolveLocalPlaywrightServer(
 }
 
 const localServer = resolveLocalPlaywrightServer();
+const outputDir = resolvePlaywrightOutputDirectory();
 if (process.env.PLAYWRIGHT_BASE_URL === "") {
   throw new Error("PLAYWRIGHT_BASE_URL must be omitted or set to a nonempty URL.");
 }
@@ -31,6 +45,7 @@ const executablePath = process.env.FORGE_PLAYWRIGHT_EXECUTABLE_PATH;
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  outputDir,
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,

@@ -18,6 +18,17 @@ import {
 type ServerProcess = ChildProcessByStdio<null, Readable, Readable>;
 const STARTUP_TIMEOUT_MS = 90_000;
 export const MAX_SERVER_LOG_BYTES = 16_000;
+export const PRODUCTION_BROWSER_SPECS = Object.freeze([
+  "tests/e2e/production.spec.ts",
+  "tests/e2e/university-research-readiness-production.spec.ts",
+  "tests/e2e/university-semester-loop-production.spec.ts",
+  "tests/e2e/university-semester-desk-production.spec.ts",
+  "tests/e2e/university-semester-overview-production.spec.ts",
+  "tests/e2e/university-recovery-production.spec.ts",
+  "tests/e2e/university-post-attempt-repair-production.spec.ts",
+  "tests/e2e/university-foundation-production.spec.ts",
+  "tests/e2e/university-source-to-study-production.spec.ts",
+] as const);
 const arg = (name: string): string | undefined => { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : undefined; };
 const require = createRequire(import.meta.url);
 
@@ -33,6 +44,19 @@ export function productionBrowserSpec(value: string | undefined): string | undef
     );
   }
   return value;
+}
+
+export function productionBrowserInvocation(
+  spec: string | undefined,
+  platform: NodeJS.Platform = process.platform,
+): { command: string; args: string[] } {
+  const command = platform === "win32" ? "pnpm.cmd" : "pnpm";
+  return {
+    command,
+    args: spec
+      ? ["exec", "playwright", "test", spec]
+      : ["exec", "playwright", "test", ...PRODUCTION_BROWSER_SPECS],
+  };
 }
 
 /** Start the actual Next CLI process so shutdown cannot orphan a pnpm child. */
@@ -151,6 +175,7 @@ function browserEnvironment(
     PLAYWRIGHT_BASE_URL: baseUrl,
     FORGE_EXPECTED_RELEASE_SHA: expectedSha.toLowerCase(),
     FORGE_PLAYWRIGHT_PRODUCTION_BROWSER: "1",
+    FORGE_PLAYWRIGHT_OUTPUT_DIR: "test-results/production-browser",
     OPENAI_API_KEY: "",
     OPENAI_INTERPRETATION_ENABLED: "false",
     OPENAI_INTERPRETATION_DISABLED: "true",
@@ -166,6 +191,46 @@ function browserEnvironment(
   for (const key of ["PATH", "HOME", "TMPDIR", "PNPM_HOME", "COREPACK_HOME"]) if (process.env[key]) env[key] = process.env[key];
   return env;
 }
+
+export function productionServerEnvironment(
+  expectedSha: string,
+  sourceEnvironment: NodeJS.ProcessEnv = process.env,
+): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {
+    NODE_ENV: "production",
+    NEXT_TELEMETRY_DISABLED: "1",
+    NODE_PATH: resolve(process.cwd(), "node_modules"),
+    OPENAI_API_KEY: "",
+    OPENAI_INTERPRETATION_ENABLED: "false",
+    OPENAI_FORGE_PLANNER_ENABLED: "false",
+    FORGE_CLOUD_ACCOUNTS_ENABLED: "false",
+    FORGE_UNIVERSITY_RESEARCH_READINESS_FIXTURE:
+      "forge-university-research-readiness.v1",
+    FORGE_UNIVERSITY_SEMESTER_DESK_FIXTURE:
+      "forge-university-semester-desk.v1",
+    FORGE_RELEASE_SHA: expectedSha.toLowerCase(),
+    FORGE_BUILD_TIME: sourceEnvironment.FORGE_BUILD_TIME ?? "unknown",
+    FORGE_LOCKFILE_DIGEST: sourceEnvironment.FORGE_LOCKFILE_DIGEST,
+    FORGE_CONTENT_MANIFEST_DIGEST:
+      sourceEnvironment.FORGE_CONTENT_MANIFEST_DIGEST,
+    FORGE_EVALUATOR_BASELINE_DIGEST:
+      sourceEnvironment.FORGE_EVALUATOR_BASELINE_DIGEST,
+    FORGE_DATABASE_MIGRATION_IDENTITY:
+      sourceEnvironment.FORGE_DATABASE_MIGRATION_IDENTITY ?? "not_configured",
+  };
+  for (const key of [
+    "PATH",
+    "HOME",
+    "TMPDIR",
+    "PNPM_HOME",
+    "COREPACK_HOME",
+    "CI",
+  ]) {
+    if (sourceEnvironment[key]) env[key] = sourceEnvironment[key];
+  }
+  return env;
+}
+
 async function main() {
   const requestedSha = arg("--expected-sha");
   const currentSource = readProductionBuildSource();
@@ -188,37 +253,7 @@ async function main() {
   try {
     const port = await availablePort();
     const baseUrl = `http://127.0.0.1:${port}`;
-    const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-    const serverEnv: NodeJS.ProcessEnv = {
-      NODE_ENV: "production",
-      NEXT_TELEMETRY_DISABLED: "1",
-      NODE_PATH: resolve(process.cwd(), "node_modules"),
-      OPENAI_API_KEY: "",
-      OPENAI_INTERPRETATION_ENABLED: "false",
-      OPENAI_FORGE_PLANNER_ENABLED: "false",
-      FORGE_CLOUD_ACCOUNTS_ENABLED: "false",
-      FORGE_UNIVERSITY_RESEARCH_READINESS_FIXTURE:
-        "forge-university-research-readiness.v1",
-      FORGE_RELEASE_SHA: expectedSha.toLowerCase(),
-      FORGE_BUILD_TIME: process.env.FORGE_BUILD_TIME ?? "unknown",
-      FORGE_LOCKFILE_DIGEST: process.env.FORGE_LOCKFILE_DIGEST,
-      FORGE_CONTENT_MANIFEST_DIGEST:
-        process.env.FORGE_CONTENT_MANIFEST_DIGEST,
-      FORGE_EVALUATOR_BASELINE_DIGEST:
-        process.env.FORGE_EVALUATOR_BASELINE_DIGEST,
-      FORGE_DATABASE_MIGRATION_IDENTITY:
-        process.env.FORGE_DATABASE_MIGRATION_IDENTITY ?? "not_configured",
-    };
-    for (const key of [
-      "PATH",
-      "HOME",
-      "TMPDIR",
-      "PNPM_HOME",
-      "COREPACK_HOME",
-      "CI",
-    ]) {
-      if (process.env[key]) serverEnv[key] = process.env[key];
-    }
+    const serverEnv = productionServerEnvironment(expectedSha);
     const server = productionServerInvocation(port, runtimeSnapshot.root);
     const child = spawn(server.command, server.args, {
       cwd: process.cwd(),
@@ -235,9 +270,10 @@ async function main() {
       await waitForServer(baseUrl, child);
       await assertProductionServerIdentity(baseUrl, expectedSha);
       const result = await new Promise<number>((resolveExit) => {
+        const invocation = productionBrowserInvocation(spec);
         const browser = spawn(
-          command,
-          ["exec", "playwright", "test", ...(spec ? [spec] : [])],
+          invocation.command,
+          invocation.args,
           {
             cwd: process.cwd(),
             env: browserEnvironment(baseUrl, expectedSha),

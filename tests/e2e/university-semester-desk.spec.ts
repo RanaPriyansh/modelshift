@@ -240,6 +240,11 @@ test("recomposes at exactly 320 CSS pixels with visible focus and no overflow", 
     const bounds = control.getBoundingClientRect();
     return bounds.top >= 0 && bounds.bottom <= window.innerHeight;
   })).toBe(true);
+  expect(await page.evaluate(() => ({
+    body: document.body.scrollWidth,
+    client: document.documentElement.clientWidth,
+    document: document.documentElement.scrollWidth,
+  }))).toEqual({ body: 320, client: 320, document: 320 });
 
   const clear = page.getByRole("button", {
     name: "Clear course inspection",

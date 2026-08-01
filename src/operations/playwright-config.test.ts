@@ -1,6 +1,46 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveLocalPlaywrightServer } from "../../playwright.config";
+import {
+  resolveLocalPlaywrightServer,
+  resolvePlaywrightOutputDirectory,
+} from "../../playwright.config";
+
+describe("Playwright result isolation", () => {
+  it("uses a bounded default directory", () => {
+    expect(resolvePlaywrightOutputDirectory({})).toBe("test-results/default");
+  });
+
+  it("accepts one direct child under test-results", () => {
+    expect(
+      resolvePlaywrightOutputDirectory({
+        FORGE_PLAYWRIGHT_OUTPUT_DIR: "test-results/university-foundation",
+      }),
+    ).toBe("test-results/university-foundation");
+  });
+
+  it.each([
+    "",
+    ".",
+    "/",
+    "/tmp/playwright",
+    "\\tmp\\playwright",
+    "test-results",
+    "test-results/",
+    "test-results/.",
+    "test-results/..",
+    "test-results/../outside",
+    "test-results/nested/output",
+    "test-results\\university-foundation",
+  ])("rejects unbounded output directory %j", (outputDirectory) => {
+    expect(() =>
+      resolvePlaywrightOutputDirectory({
+        FORGE_PLAYWRIGHT_OUTPUT_DIR: outputDirectory,
+      }),
+    ).toThrow(
+      "FORGE_PLAYWRIGHT_OUTPUT_DIR must be one bounded directory under test-results.",
+    );
+  });
+});
 
 describe("Playwright checkout isolation", () => {
   it("uses a dedicated non-3000 port and never reuses an existing process", () => {

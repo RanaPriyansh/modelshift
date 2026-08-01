@@ -154,7 +154,13 @@ describe("UniversitySemesterDeskWorkspace", () => {
 
   it("clears the inspected course, restores its focus, and reveals it only when needed", () => {
     let controlIsVisible = true;
-    vi.spyOn(HTMLInputElement.prototype, "getBoundingClientRect")
+    render(<UniversitySemesterDeskWorkspace fixture={fixture} />);
+    const secondCourse = within(courseGroup()).getByRole("radio", {
+      name: /MATH110: Discrete structures/i,
+    }) as HTMLInputElement;
+    const focusContainer = secondCourse.closest("label");
+    expect(focusContainer).not.toBeNull();
+    vi.spyOn(focusContainer!, "getBoundingClientRect")
       .mockImplementation(() => ({
         bottom: controlIsVisible ? 120 : 1_056,
         height: 44,
@@ -166,14 +172,10 @@ describe("UniversitySemesterDeskWorkspace", () => {
         y: controlIsVisible ? 76 : 1_012,
         toJSON: () => ({}),
       }));
-    render(<UniversitySemesterDeskWorkspace fixture={fixture} />);
-    const secondCourse = within(courseGroup()).getByRole("radio", {
-      name: /MATH110: Discrete structures/i,
-    }) as HTMLInputElement;
     const secondCourseFixture = fixture.scenarios[0].courses[1];
     const neutralName = expectedCourseAccessibleName(secondCourseFixture);
     const revealCourse = vi.fn();
-    Object.defineProperty(secondCourse, "scrollIntoView", {
+    Object.defineProperty(focusContainer!, "scrollIntoView", {
       configurable: true,
       value: revealCourse,
     });
@@ -206,6 +208,34 @@ describe("UniversitySemesterDeskWorkspace", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Course inspection cleared.",
     );
+  });
+
+  it("keeps evidence details inside their definitions and hides decorative sequence numbers", () => {
+    render(<UniversitySemesterDeskWorkspace fixture={fixture} />);
+    fireEvent.click(within(courseGroup()).getByRole("radio", {
+      name: /CS102: Evidence and computation/i,
+    }));
+
+    const copiedContextDefinition = screen.getByText("Copied context")
+      .nextElementSibling;
+    expect(copiedContextDefinition?.tagName).toBe("DD");
+    expect(within(copiedContextDefinition as HTMLElement).getByText(
+      /reviewed copied fact/i,
+    )).toBeInTheDocument();
+
+    const selectedChapter = screen.getByRole("region", {
+      name: "CS102: Evidence and computation",
+    });
+    within(selectedChapter).getAllByText("02", { exact: true }).forEach(
+      (marker) => expect(marker).toHaveAttribute("aria-hidden", "true"),
+    );
+    const journey = within(selectedChapter).getByRole("region", {
+      name: "Selected course semester loop",
+    });
+    for (const number of ["01", "02", "03", "04", "05"]) {
+      expect(within(journey).getByText(number, { exact: true }))
+        .toHaveAttribute("aria-hidden", "true");
+    }
   });
 
   it("clears inspection whenever the research scenario changes", () => {

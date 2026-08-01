@@ -52,8 +52,8 @@ function readableAuthorityKey(key: string): string {
       .replace(/^./, (letter) => letter.toUpperCase());
 }
 
-function visibleControl(control: HTMLInputElement): boolean {
-  const bounds = control.getBoundingClientRect();
+function fullyVisible(element: HTMLElement): boolean {
+  const bounds = element.getBoundingClientRect();
   const clearance = 6;
   return bounds.top >= clearance
     && bounds.right <= window.innerWidth - clearance
@@ -111,7 +111,7 @@ function CourseChapter({
     >
       <header className={styles.courseChapterHeader}>
         <div className={styles.chapterIdentity}>
-          <p>02</p>
+          <p aria-hidden="true">02</p>
           <div>
             <span>{course.currentJob.eyebrow}</span>
             <h2 id="semester-desk-course-title">{course.courseLabel}</h2>
@@ -134,7 +134,9 @@ function CourseChapter({
               data-state={stage.state}
               aria-current={stage.state === "current" ? "step" : undefined}
             >
-              <span>{String(index + 1).padStart(2, "0")}</span>
+              <span aria-hidden="true">
+                {String(index + 1).padStart(2, "0")}
+              </span>
               <strong>{stage.label}</strong>
               <small>{readable(stage.state)}</small>
             </li>
@@ -175,29 +177,39 @@ function CourseChapter({
         <dl>
           <div>
             <dt>Copied context</dt>
-            <dd>{evidence.sourceReviewState}</dd>
-            <small>
-              {evidence.reviewedFactCountLabel} · {evidence.conflictCountLabel}
-              {" · "}
-              institutional completeness {evidence.institutionalCompleteness}
-            </small>
+            <dd>
+              {evidence.sourceReviewState}
+              <small>
+                {evidence.reviewedFactCountLabel}
+                {" · "}
+                {evidence.conflictCountLabel}
+                {" · "}
+                institutional completeness {evidence.institutionalCompleteness}
+              </small>
+            </dd>
           </div>
           <div>
             <dt>Declared reality</dt>
-            <dd>{evidence.capacityState}</dd>
-            <small>
-              {evidence.availableTimeLabel} · {evidence.effortLabel}
-            </small>
+            <dd>
+              {evidence.capacityState}
+              <small>
+                {evidence.availableTimeLabel} · {evidence.effortLabel}
+              </small>
+            </dd>
           </div>
           <div>
             <dt>Accepted path</dt>
-            <dd>{evidence.actionStatement}</dd>
-            <small>{evidence.actionSelectionBasis}</small>
+            <dd>
+              {evidence.actionStatement}
+              <small>{evidence.actionSelectionBasis}</small>
+            </dd>
           </div>
           <div>
             <dt>Learning boundary</dt>
-            <dd>{evidence.protectedStudyState}</dd>
-            <small>{evidence.worldState}</small>
+            <dd>
+              {evidence.protectedStudyState}
+              <small>{evidence.worldState}</small>
+            </dd>
           </div>
         </dl>
         <p className={styles.noEffectBoundary}>
@@ -256,13 +268,14 @@ export function UniversitySemesterDeskWorkspace({
     const selectedControl = courseRadioRefs.current.get(
       selectedCourseOptionId,
     );
+    const focusContainer = selectedControl?.closest("label") ?? selectedControl;
     setSelectedCourseOptionId(null);
     setAnnouncement(
       "Course inspection cleared. No course is selected for inspection.",
     );
     selectedControl?.focus({ preventScroll: true });
-    if (selectedControl && !visibleControl(selectedControl)) {
-      selectedControl.scrollIntoView?.({
+    if (focusContainer && !fullyVisible(focusContainer)) {
+      focusContainer.scrollIntoView?.({
         behavior: "instant" as ScrollBehavior,
         block: "nearest",
         inline: "nearest",
