@@ -104,6 +104,25 @@ describe("projectUniversityDegreeMap", () => {
     expect(JSON.stringify(projection)).not.toContain("rankedCourse");
   });
 
+  it("uses alphabetical reference order when declaration collections arrive in another order", () => {
+    const value = request();
+    value.courses.reverse();
+    value.requirements.reverse();
+
+    const projection = projectUniversityDegreeMap(value);
+
+    expect(projection.courses.map((course) => course.courseId)).toEqual([
+      "course.cs100",
+      "course.cs200",
+      "course.math100",
+    ]);
+    expect(projection.requirements.map((requirement) => requirement.requirementId))
+      .toEqual([
+        "requirement.core.cs200",
+        "requirement.credits.core",
+      ]);
+  });
+
   it("rejects the retired v1 request schema", () => {
     const retiredRequest = {
       ...request(),

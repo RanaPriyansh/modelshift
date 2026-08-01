@@ -72,6 +72,10 @@ export function UniversityDegreeMapWorkspace({
         <strong>Synthetic adult fixture</strong>
         <span>No rank or recommendation</span>
         <span>
+          Course and requirement references use alphabetical order. The order does
+          not show sequence, priority, or recommendation.
+        </span>
+        <span>
           No automatic network request. Explicit internal navigation only.
         </span>
       </aside>

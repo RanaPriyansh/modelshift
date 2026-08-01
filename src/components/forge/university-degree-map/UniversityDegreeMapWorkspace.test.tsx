@@ -43,6 +43,11 @@ describe("UniversityDegreeMapWorkspace", () => {
     expect(screen.getByRole("complementary", {
       name: "Inspection boundary",
     })).toHaveTextContent(
+      "Course and requirement references use alphabetical order. The order does not show sequence, priority, or recommendation.",
+    );
+    expect(screen.getByRole("complementary", {
+      name: "Inspection boundary",
+    })).toHaveTextContent(
       "No automatic network request. Explicit internal navigation only.",
     );
     expect(article).toHaveTextContent("self-attested learner declaration");
