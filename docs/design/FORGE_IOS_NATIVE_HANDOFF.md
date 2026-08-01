@@ -4,11 +4,17 @@ Status: `DESIGN_HANDOFF`
 
 Date: 2026-08-01
 
-Implementation status: `NO_NATIVE_TARGET`
+Implementation status: `NATIVE_REFERENCE_SOURCE_READY`
 
 This document defines the native iOS product contract for FORGE Terrain.
 
-It does not claim that a SwiftUI target exists.
+A SwiftUI reference target exists at `ios/FORGETerrain/FORGETerrain.xcodeproj`.
+
+The 18 canonical screen identifiers exist in native source.
+
+The source passes an iOS 17 Simulator SDK type check.
+
+A compatible iOS Simulator runtime is not installed on this machine.
 
 It does not establish App Store readiness, accessibility conformance, or learner efficacy.
 
@@ -78,7 +84,7 @@ Do not use an alert for normal navigation or expected deletion.
 
 ## 3. Proposed application modules
 
-Use these implementation boundaries after a native target exists:
+Use these implementation boundaries for the native target:
 
 ```text
 FORGEApp
@@ -639,4 +645,3 @@ Use these Apple references during implementation:
 - [SwiftUI environment values](https://developer.apple.com/documentation/swiftui/environmentvalues)
 - [Playing haptics](https://developer.apple.com/design/human-interface-guidelines/playing-haptics)
 - [Persistent storage](https://developer.apple.com/documentation/swiftui/persistent-storage)
-

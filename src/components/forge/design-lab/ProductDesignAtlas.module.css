@@ -498,6 +498,75 @@
   font-size: 0.65rem;
 }
 
+.storyThreshold {
+  min-height: clamp(420px, 47vw, 610px);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.storyThreshold::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgb(244 247 241 / 8%) 0%,
+    transparent 58%,
+    rgb(7 23 34 / 7%) 100%
+  );
+  content: "";
+  pointer-events: none;
+}
+
+.storyThresholdImage {
+  z-index: 0;
+  object-fit: cover;
+}
+
+.storyThreshold[data-visual="atlas"] .storyThresholdImage {
+  object-position: 50% center;
+}
+
+.storyThreshold[data-visual="evidence"] .storyThresholdImage {
+  object-position: 56% center;
+}
+
+.storyThresholdCopy {
+  width: min(49%, 600px);
+  position: relative;
+  z-index: 2;
+  padding: clamp(64px, 8vw, 108px) 0 48px clamp(24px, 6vw, 82px);
+  color: #102019;
+}
+
+.storyThresholdCopy > span {
+  color: #17643c;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: clamp(0.5rem, 0.8vw, 0.7rem);
+  font-weight: 760;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.storyThresholdCopy h4 {
+  max-width: 620px;
+  margin: 14px 0 0;
+  font-size: clamp(2.7rem, 5vw, 5.4rem);
+  font-weight: 560;
+  line-height: 0.94;
+  letter-spacing: -0.058em;
+  text-wrap: balance;
+}
+
+.storyThresholdCopy p {
+  max-width: 500px;
+  margin: 20px 0 0;
+  color: #56645d;
+  font-size: clamp(0.75rem, 1vw, 0.95rem);
+  line-height: 1.55;
+}
+
 .startLayout {
   min-height: 690px;
   display: grid;
@@ -2566,6 +2635,36 @@
 
   .publicHero {
     min-height: 700px;
+  }
+
+  .storyThreshold {
+    min-height: 560px;
+  }
+
+  .storyThreshold::after {
+    background: linear-gradient(
+      180deg,
+      rgb(244 247 241 / 97%) 0%,
+      rgb(244 247 241 / 82%) 42%,
+      transparent 72%
+    );
+  }
+
+  .storyThreshold[data-visual="atlas"] .storyThresholdImage {
+    object-position: 66% center;
+  }
+
+  .storyThreshold[data-visual="evidence"] .storyThresholdImage {
+    object-position: 72% center;
+  }
+
+  .storyThresholdCopy {
+    width: auto;
+    padding: 44px 22px;
+  }
+
+  .storyThresholdCopy h4 {
+    font-size: clamp(2.2rem, 13vw, 3.4rem);
   }
 
   .heroCopy {

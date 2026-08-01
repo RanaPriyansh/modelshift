@@ -278,7 +278,7 @@ function buildIOSHandoff() {
   return {
     schemaVersion: "1.0",
     status: "design-handoff",
-    implementationStatus: "no-native-target",
+    implementationStatus: "native-reference-source-ready",
     direction: "Vivid at thresholds. Quiet during work. Precise when evidence appears.",
     source: "forge-terrain.semantic.light.tokens.json and forge-terrain.semantic.dark.tokens.json",
     typography: {

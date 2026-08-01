@@ -1,8 +1,21 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const root = new URL("../../", import.meta.url);
 const read = (relativePath) => readFile(new URL(relativePath, root), "utf8");
+const rootPath = fileURLToPath(root);
+
+async function collectSwiftFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = await Promise.all(entries.map(async (entry) => {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) return collectSwiftFiles(entryPath);
+    return entry.isFile() && entry.name.endsWith(".swift") ? [entryPath] : [];
+  }));
+  return files.flat();
+}
 
 const [
   atlasSource,
@@ -19,6 +32,12 @@ const [
   read("docs/design/FIGMA_EDITABLE_SOURCE_STATUS.md"),
   read("docs/design/FORGE_IOS_NATIVE_HANDOFF.md"),
 ]);
+const iosSwiftFiles = await collectSwiftFiles(
+  path.join(rootPath, "ios", "FORGETerrain", "FORGETerrain"),
+);
+const iosSwiftSource = (
+  await Promise.all(iosSwiftFiles.map((file) => readFile(file, "utf8")))
+).join("\n");
 
 const identifierPattern = /(?:PUB|APP|FOCUS|IOS)-\d+/g;
 const uniqueIdentifiers = (source) => [...new Set(source.match(identifierPattern) ?? [])].sort();
@@ -103,7 +122,12 @@ assert.equal(
   18,
   "The iOS handoff must contain all 18 canonical screen identifiers.",
 );
-assert.match(iosHandoffSource, /NO_NATIVE_TARGET/);
+assert.match(iosHandoffSource, /NATIVE_REFERENCE_SOURCE_READY/);
+assert.equal(
+  uniqueIdentifiers(iosSwiftSource).filter((identifier) => identifier.startsWith("IOS-")).length,
+  18,
+  "The native SwiftUI source must contain all 18 canonical screen identifiers.",
+);
 
 await access(new URL("app/app/paths/page.tsx", root));
 for (const removedRoute of ["app/app/path/page.tsx", "app/plan/page.tsx"]) {
@@ -123,6 +147,11 @@ const requiredArtifacts = [
   "scripts/design/figma-forge-terrain-plugin/manifest.json",
   "scripts/design/check-forge-terrain-figma-plugin.mjs",
   "scripts/design/audit-forge-design-atlas.mjs",
+  "scripts/design/capture-forge-design-atlas.mjs",
+  "scripts/design/check-forge-ios-native.mjs",
+  "docs/design/evidence/forge-terrain/forge-design-atlas-capture-manifest.json",
+  "ios/FORGETerrain/project.yml",
+  "ios/FORGETerrain/FORGETerrain.xcodeproj/project.pbxproj",
 ];
 await Promise.all(requiredArtifacts.map((relativePath) => access(new URL(relativePath, root))));
 
@@ -136,7 +165,7 @@ console.log(
       sharedStates: 8,
       externalGates: [
         "Run and audit the generator in the target Figma file.",
-        "Create and verify a native iOS target.",
+        "Install a compatible iOS Simulator runtime and complete native runtime checks.",
         "Complete learner review and asset-rights review.",
       ],
     },

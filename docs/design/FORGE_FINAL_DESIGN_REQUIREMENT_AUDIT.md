@@ -38,6 +38,8 @@ Recall -> Attempt -> Repair -> Prove -> Return
 | Forced Colors | Pass | The audited surfaces retain boundaries, focus, and meaningful controls. |
 | Route identity | Pass | `/app/paths` is canonical. `/app/path` and `/plan` return HTTP 404. |
 | iOS design handoff | Pass locally | All 18 iOS families have structure, state, and accessibility contracts. |
+| Native iOS source | Pass locally | The SwiftUI reference contains all 18 screen IDs and passes the iOS 17 SDK type check. |
+| Production build | Pass locally | The Webpack build passed. The public boundary verified 106 assets. |
 | Production claim | Not made | This work is local and is not deployed. |
 
 ## Verification commands
@@ -45,13 +47,22 @@ Recall -> Attempt -> Repair -> Prove -> Return
 ```text
 pnpm design:tokens:check
 pnpm design:figma:check
-FORGE_DESIGN_ATLAS_URL=http://127.0.0.1:3035/internal/design-lab pnpm design:atlas:check
+pnpm design:ios:check
+FORGE_DESIGN_ATLAS_URL=http://localhost:3035/internal/design-lab pnpm design:atlas:capture
+FORGE_DESIGN_ATLAS_URL=http://localhost:3035/internal/design-lab pnpm design:atlas:check
 pnpm design:completion:audit
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm exec next build --webpack
+pnpm exec tsx scripts/ops/verify-public-build-boundary.ts
 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3035 pnpm exec playwright test tests/e2e/forge-refoundation.spec.ts tests/e2e/forge-experience-system.spec.ts --project=desktop
 ```
+
+The public boundary digest is
+`b75e559a0bff74ca778a990a58768de7576d6e07d451579033247a0329f19166`.
+
+The default Turbopack build cannot follow the linked `node_modules` path in this isolated worktree.
 
 ## Open external gates
 
@@ -67,11 +78,13 @@ Run the verified local plugin in Figma.
 
 Then inspect every variable, style, component, board, and build receipt.
 
-### Native iOS verification
+### Native iOS runtime verification
 
-No native target exists.
+The SwiftUI reference target exists at `ios/FORGETerrain/FORGETerrain.xcodeproj`.
 
-Create the SwiftUI target before any simulator, Dynamic Type, VoiceOver, or native motion claim.
+The machine has no installed iOS Simulator runtime.
+
+Install a compatible runtime before simulator, Dynamic Type, VoiceOver, or native motion claims.
 
 ### Learner and rights review
 
@@ -85,4 +98,4 @@ Clear image rights before production use.
 
 The local design and implementation evidence passes.
 
-The complete goal remains active because the editable Figma, native iOS, learner-review, and rights gates remain open.
+The complete goal remains active because the editable Figma, native runtime, learner-review, and rights gates remain open.

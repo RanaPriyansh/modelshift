@@ -115,7 +115,7 @@ The design objective is complete only when all gates pass.
 3. Use Paper for visual review if Figma remains unavailable after desktop access returns.
 4. Audit all generated variables, styles, components, boards, and identifiers.
 5. Compare the representative editable boards with the complete coded atlas.
-6. Start native SwiftUI work after a native target exists.
+6. Run the SwiftUI reference after a compatible iOS Simulator runtime is installed.
 7. Test the design with representative learners.
 
 ## 7. Execution direction
@@ -148,7 +148,7 @@ No visual reward can replace useful learning feedback or independent evidence.
 | Responsive behavior | Atlas and canonical route audits have no horizontal overflow at desktop or 320 CSS pixels. |
 | Themes | Light and Dark boards exist. One theme choice persists across public and application routes. |
 | Accessibility behavior | Automated route and atlas keyboard, Reduced Motion, and Forced Colors checks pass. Native checks remain open. |
-| iOS handoff | Complete design contract exists. No native target exists. |
+| iOS handoff | Native reference source and all 18 screen identifiers exist. Simulator runtime verification remains open. |
 | Provenance | Local commits, hashes, and test results are recorded. |
 
 ## 9. Boundaries
@@ -157,4 +157,4 @@ No local design evidence proves production operation, accessibility conformance,
 
 No image can enter production before its rights are cleared.
 
-No native iOS implementation is claimed until a simulator build and native checks pass.
+No native runtime claim is made until a simulator build and native checks pass.

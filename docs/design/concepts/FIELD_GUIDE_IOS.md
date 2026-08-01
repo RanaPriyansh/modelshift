@@ -6,7 +6,7 @@
 
 **Platform target:** native iPhone design exploration and mobile product guidance
 
-**Implementation status:** no native iOS application exists in this repository
+**Implementation status:** a separate native reference exists at `ios/FORGETerrain`
 
 Field Guide is a pocket learning instrument for one useful move at a time.
 It combines a field notebook, a clear route, and calm natural landscapes.
@@ -28,6 +28,9 @@ The board is illustrative and not an accessibility test.
 `src/components/forge/design-lab/FieldGuideIPhoneSample.tsx` provides one coded Today sample.
 The component has no application state, route, or learning logic.
 The component is a gallery display, not a native iOS implementation.
+
+The native reference implements the approved FORGE Terrain system.
+It does not promote this alternate concept lane to the active direction.
 
 ## Product intent
 

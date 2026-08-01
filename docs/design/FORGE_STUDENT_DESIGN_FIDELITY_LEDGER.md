@@ -83,7 +83,9 @@ This direction is a mobile and iOS specification.
 
 The coded iPhone sample is a display study.
 
-No native iOS target exists in this repository.
+A separate native iOS reference exists at `ios/FORGETerrain`.
+
+Native simulator runtime evidence remains open.
 
 ## 4. Learning and engagement boundary
 

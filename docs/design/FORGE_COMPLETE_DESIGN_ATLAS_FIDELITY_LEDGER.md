@@ -6,7 +6,7 @@ Date: 2026-08-01
 
 This record covers the local cross-platform product design atlas.
 
-This record does not establish production readiness, learning efficacy, accessibility conformance, learner preference, or native iOS implementation.
+This record does not establish production readiness, learning efficacy, accessibility conformance, learner preference, or native iOS runtime readiness.
 
 ## 1. Source identity
 
@@ -185,9 +185,33 @@ They specify:
 - Reduce Motion.
 - Native sheets and alerts.
 
-No SwiftUI target or native iOS source was created.
+A SwiftUI reference target now exists at `ios/FORGETerrain/FORGETerrain.xcodeproj`.
 
-The coded phone frames are visual specimens.
+The source contains all 18 screen identifiers and passes an iOS 17 SDK type check.
+
+The coded phone frames remain the visual comparison source.
+
+A compatible iOS Simulator runtime is still required for runtime evidence.
+
+## 7.1 Local build evidence
+
+The Webpack production build passed on 2026-08-01.
+
+The build completed 54 page-generation tasks and TypeScript validation.
+
+The public build boundary check verified 106 static assets.
+
+The public asset digest is
+`b75e559a0bff74ca778a990a58768de7576d6e07d451579033247a0329f19166`.
+
+The default Turbopack build cannot follow the linked `node_modules` path in this isolated worktree.
+
+The verified fallback command is:
+
+```text
+pnpm exec next build --webpack
+pnpm exec tsx scripts/ops/verify-public-build-boundary.ts
+```
 
 ## 8. Rendered evidence
 
@@ -195,16 +219,16 @@ The coded phone frames are visual specimens.
 | --- | --- | --- |
 | `docs/design/evidence/forge-terrain/forge-public-site-atlas.png` | 1440 by 7252 | `7d13bd1535e6f2f879cfb9d74a5ca82b77b717f9857a0f77fa2cc46cf0b7979c` |
 | `docs/design/evidence/forge-terrain/forge-web-app-atlas.png` | 1440 by 7269 | `9cea12f2f1a28d665580843f3c831650e180e360d7bc0e57a8ea3bd14ed9cf4c` |
-| `docs/design/evidence/forge-terrain/forge-public-complete-atlas.png` | 1440 by 13001 | `a352b619877dbdf023382e1ac58db528efeaa08149b29c84ed305c6fe76786ab` |
-| `docs/design/evidence/forge-terrain/forge-public-complete-atlas-320.png` | 320 by 14401 | `0564885155d26d77a37b494325e09578fff558c4e816226a5d9ced048e95a6ba` |
-| `docs/design/evidence/forge-terrain/forge-web-complete-atlas.png` | 1440 by 16530 | `2a95f1a01e5895804bac3ef634c29138368274aca7f85fb96d6009d8c0b82c4e` |
-| `docs/design/evidence/forge-terrain/forge-web-complete-atlas-320.png` | 320 by 17451 | `7484689560d62ca3e53347b3cc165e564bceee799738d18ff6ce1a8cfd4bb830` |
-| `docs/design/evidence/forge-terrain/forge-focus-mode-atlas.png` | 1440 by 3988 | `1ac5c3603fba8ce2363da88b400644a14bd3de559ccf56813fa8618d3c728cd9` |
-| `docs/design/evidence/forge-terrain/forge-focus-mode-atlas-320.png` | 320 by 4852 | `dce7ea002b47f43eb7c3c5691649df7df06d86eda95e8d84691bba56c56ceacd` |
+| `docs/design/evidence/forge-terrain/forge-public-complete-atlas.png` | 1440 by 13487 | `cb1c48c296cbe9fb9913ba858fe1aa727fde957887b5528b644199932b58659c` |
+| `docs/design/evidence/forge-terrain/forge-public-complete-atlas-320.png` | 320 by 15006 | `b4697b5337e72ad0f3212eac089c028a4f507646367359d7e4bf26b0f1b0abcd` |
+| `docs/design/evidence/forge-terrain/forge-web-complete-atlas.png` | 1440 by 16531 | `17f267078adb9a4cd5a7b69db136f52ad7320f3f93704b13d87c40d8623f8866` |
+| `docs/design/evidence/forge-terrain/forge-web-complete-atlas-320.png` | 320 by 17452 | `7c2ae95109ab3cb4305cb9db6c4798a6cfe9d3ee7ba017af33b76d1accdc99c1` |
+| `docs/design/evidence/forge-terrain/forge-focus-mode-atlas.png` | 1440 by 3987 | `026492361b1cb8a6309f7bad30dbef84005a450810eba1b94c38bb2cb6db629a` |
+| `docs/design/evidence/forge-terrain/forge-focus-mode-atlas-320.png` | 320 by 4851 | `9aa85592a05b28907dbdd988f3b1b27791382e4f67129f861dd7c4ecb6d92727` |
 | `docs/design/evidence/forge-terrain/forge-ios-app-atlas.png` | 1440 by 2574 | `06ab393088dc89a3be6c48a3f167c16cd23db416936e95b89dd0b84949ae06cf` |
-| `docs/design/evidence/forge-terrain/forge-ios-complete-atlas.png` | 1440 by 6498 | `2b29614836b8aeec4f5590dfd073a76173159fde82fea4b9aec119eb2641afa1` |
-| `docs/design/evidence/forge-terrain/forge-ios-complete-atlas-320-a.png` | 320 by 9110 | `e8cf170ec43642ba53b9bf40c8165980640ddd24c09945b21fb7c027e394181f` |
-| `docs/design/evidence/forge-terrain/forge-ios-complete-atlas-320-b.png` | 320 by 9138 | `e686466eaf588b7aa2ea53ab3404654e3f6b9e2c9bf52e0e6dd0568fc9404053` |
+| `docs/design/evidence/forge-terrain/forge-ios-complete-atlas.png` | 1440 by 6499 | `a264775b83842d03c040dc479f681f213c229cee9696b47a8db554f4b0047efe` |
+| `docs/design/evidence/forge-terrain/forge-ios-complete-atlas-320-a.png` | 320 by 9016 | `a3ad4867e209765a65b38f510e886a18c1ee0bd9e4a1045936cbddd17afaf08e` |
+| `docs/design/evidence/forge-terrain/forge-ios-complete-atlas-320-b.png` | 320 by 8670 | `6e0cefcbb5f790cf31cf31f8d6454eb2f59c530ed9fc5508b381ee3cb206ffcb` |
 | `docs/design/evidence/forge-terrain/forge-product-atlas-320.png` | 320 by 800 | `bd3505f6a253ec74581c39def790efb596e8c710a86546e093531c8f4128ac2e` |
 | `docs/design/evidence/forge-terrain/forge-terrain-forced-colors.png` | 1440 by 1241 | `2d979bfea5ff1f2b4fce8fd6e84b69506233fe9406d70c2e506fb3daa4ebbd51` |
 | `docs/design/evidence/forge-terrain/forge-public-home-terrain-phase2.png` | 1440 by 4314 | `68302999a536ed64ab3e2dafb6ba5a03da252c07b9a3a8ebd39ad9c41bdf4416` |
@@ -220,18 +244,21 @@ Part B contains `IOS-10` through `IOS-18`.
 
 The screenshots embed the existing local landscape asset.
 
+The capture manifest is
+`docs/design/evidence/forge-terrain/forge-design-atlas-capture-manifest.json`.
+
 The asset rights remain uncleared for production.
 
 ### 8.1 Concept-to-product comparison
 
 | Concept decision | Product result | Status |
 | --- | --- | --- |
-| Board 02 uses one vivid landscape as the public threshold. | The public home uses one full-width cobalt and alpine landscape. | Implemented |
+| Board 02 uses vivid landscape thresholds. | Home, Method, and Trust use three coordinated environmental compositions. | Implemented |
 | Board 02 makes one learner goal the dominant action. | The public hero asks for one goal and uses one orange learner action. | Implemented |
 | Board 03 uses a quiet surface during work. | Today uses a dark work panel with a contained terrain threshold. | Implemented |
 | Board 03 keeps one dominant action. | Today uses `Shape a path` as the only primary action. | Implemented |
 | Board 03 uses canonical product navigation. | The application uses Today, Paths, Projects, Evidence, and Account. | Implemented |
-| Board 04 uses native iOS structure. | The iOS atlas uses native navigation, tab, sheet, alert, and accessibility rules. | Design handoff |
+| Board 04 uses native iOS structure. | The iOS atlas and SwiftUI source use native navigation, tabs, controls, and accessibility rules. | Source implemented |
 | Board 01 defines mood, grain, and color. | The product uses the mood without copying its presentation layout. | Implemented |
 
 ## 9. Browser verification

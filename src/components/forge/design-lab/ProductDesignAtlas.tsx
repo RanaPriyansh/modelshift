@@ -523,10 +523,19 @@ function MethodScreen() {
   return (
     <div className={styles.publicViewport}>
       <MiniNav />
-      <div className={styles.methodHead}>
-        <span>One continuous journey</span>
-        <h4>A goal becomes work you can inspect.</h4>
-        <p>Each stage has a different job. Completion and evidence never become the same state.</p>
+      <div className={styles.storyThreshold} data-visual="atlas">
+        <Image
+          alt="An engraved alpine map with cobalt water, orange routes, and one learner at a route decision."
+          className={styles.storyThresholdImage}
+          fill
+          sizes="(max-width: 760px) 100vw, 72vw"
+          src="/forge/concepts/expedition-atlas-hero.png"
+        />
+        <div className={styles.storyThresholdCopy}>
+          <span>One continuous journey</span>
+          <h4>A goal becomes work you can inspect.</h4>
+          <p>Each stage has a different job. Completion and evidence never become the same state.</p>
+        </div>
       </div>
       <ol className={styles.methodSteps}>
         {[
@@ -575,9 +584,19 @@ function TrustScreen() {
   return (
     <div className={`${styles.publicViewport} ${styles.trustViewport}`}>
       <MiniNav />
-      <div className={styles.trustHead}>
-        <span>Evidence and trust</span>
-        <h4>Know what happened. Know what it can support.</h4>
+      <div className={styles.storyThreshold} data-visual="evidence">
+        <Image
+          alt="A measured cobalt and alpine landscape with an orange evidence doorway and a balance instrument."
+          className={styles.storyThresholdImage}
+          fill
+          sizes="(max-width: 760px) 100vw, 72vw"
+          src="/forge/concepts/evidence-atelier-instrument-landscape.png"
+        />
+        <div className={styles.storyThresholdCopy}>
+          <span>Evidence and trust</span>
+          <h4>Know what happened. Know what it can support.</h4>
+          <p>Every claim keeps its source, conditions, assistance, limit, and correction path visible.</p>
+        </div>
       </div>
       <div className={styles.trustGrid}>
         <article>
@@ -655,7 +674,7 @@ function CoveragePublicScreen() {
         {[
           ["01", "Goal to path", "Released", "Local goal entry, clarification, and explicit path acceptance."],
           ["02", "ModelShift guest labs", "Candidate", "Reviewed experience with remaining external authority work."],
-          ["03", "Native iOS application", "Unavailable", "Design handoff exists. No native application target exists."],
+          ["03", "Native iOS reference", "Candidate", "All 18 screen contracts exist in SwiftUI source. Simulator runtime verification remains open."],
         ].map(([number, title, state, body]) => (
           <article key={title}>
             <span>{number}</span>

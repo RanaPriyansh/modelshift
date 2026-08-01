@@ -154,7 +154,7 @@ Native controls will use the Apple iOS 27 library.
 | Public pages | Partial | Missing | Design canonical page families |
 | Web application | Partial | Missing | Design canonical application families |
 | Focus mode | Implemented in routes | Missing | Design protected states |
-| iOS application | No native source | Missing | Design native screen families |
+| iOS application | No native source at Phase 0 | Missing | Design native screen families |
 | Error states | Partial | Missing | Create shared state patterns |
 | Code Connect | Missing | Missing | Add after components stabilize |
 

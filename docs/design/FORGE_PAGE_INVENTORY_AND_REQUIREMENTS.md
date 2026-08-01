@@ -354,7 +354,7 @@ The current code has these alignment states:
 4. `/how-forge-works` is canonical. The legacy `/how-it-works` route remains a tracked conflict.
 5. The global font stack still uses Inter, Georgia, and Avenir fallbacks.
 6. Several legacy routes remain visible.
-7. iOS has a display study but no native application source.
+7. iOS has a complete display atlas and native reference source. Simulator runtime review remains open.
 8. The Paper file has a partial foundation cover and no complete component set.
 
 These conflicts do not block Phase 0.
