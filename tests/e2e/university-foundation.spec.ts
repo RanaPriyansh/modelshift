@@ -28,6 +28,10 @@ const ENABLED_SURFACES = [
   },
 ] as const;
 
+const MAP_SURFACES = ENABLED_SURFACES.filter(
+  (surface) => surface.path !== "/internal/university-command-center",
+);
+
 for (const surface of ENABLED_SURFACES) {
   test(`${surface.path} reflows and exposes keyboard focus at 320 CSS pixels`, async ({
     page,
@@ -141,5 +145,63 @@ for (const surface of ENABLED_SURFACES) {
         borderWidth: "2px",
       });
     }
+  });
+}
+
+for (const surface of MAP_SURFACES) {
+  test(`${surface.path} returns to the workspace directory only after activation`, async ({
+    page,
+  }) => {
+    const commandCenterRequests: string[] = [];
+    page.on("request", (request) => {
+      if (
+        new URL(request.url()).pathname
+        === "/internal/university-command-center"
+      ) {
+        commandCenterRequests.push(request.url());
+      }
+    });
+
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.goto(surface.path);
+    await expect(page.getByRole("heading", {
+      level: 1,
+      name: surface.heading,
+    })).toBeVisible();
+    expect(commandCenterRequests).toHaveLength(0);
+
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+
+    const returnLink = page.getByRole("link", {
+      name: "Open university workspaces",
+    });
+    await expect(returnLink).toBeFocused();
+    expect(await returnLink.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return {
+        contained: box.left >= 0 && box.right <= 320,
+        height: box.height,
+        outlineStyle: style.outlineStyle,
+        outlineWidth: style.outlineWidth,
+      };
+    })).toEqual({
+      contained: true,
+      height: 44,
+      outlineStyle: "solid",
+      outlineWidth: "3px",
+    });
+
+    await Promise.all([
+      page.waitForURL("**/internal/university-command-center"),
+      page.keyboard.press("Enter"),
+    ]);
+    await expect(page.getByRole("heading", {
+      level: 1,
+      name: "Choose a bounded university workspace.",
+    })).toBeVisible();
+    expect(commandCenterRequests.length).toBeGreaterThan(0);
   });
 }

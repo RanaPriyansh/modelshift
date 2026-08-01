@@ -56,6 +56,22 @@ describe("UniversityDegreeMapWorkspace", () => {
 
     expect(presentation.courses.length).toBeLessThanOrEqual(8);
     expect(presentation.requirements.length).toBeLessThanOrEqual(8);
+    expect(presentation.authority).toEqual([
+      { label: "Adult status", value: "Self-attested; not verified" },
+      { label: "Source status", value: "Learner supplied; not verified" },
+      { label: "Rank", value: "Not allowed" },
+      { label: "Recommendation", value: "Not allowed" },
+      { label: "Save", value: "Not allowed" },
+      {
+        label: "Automatic network effect",
+        value: "Absent",
+      },
+      {
+        label: "Permitted network effect",
+        value: "Explicit internal navigation only",
+      },
+      { label: "Event", value: "Not allowed" },
+    ]);
     expect(JSON.stringify(presentation)).not.toMatch(
       /sha256:|declaredSourceDigest|sourceRegistry|sourceRef/,
     );
