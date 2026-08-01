@@ -36,33 +36,36 @@ This board replaces hackathon, judging, demo-video, submission, and deadline wor
 ## Latest verified implementation receipt
 
 The latest verified implementation candidate before this evidence-only record
-update is clean source `d81b27f71544a45f4473cc4174d0a7944a12f84c`
-and tree `5dcef6363e230bb2210445331bd862dc203586a7`.
+update is clean source `f77464b834179b46f87400aa3db9cf9f828e5330`
+and tree `7988ae79b8486f2366127492cc2038b73ab4e693`.
 
 The candidate preserves the university foundation, production security, and
-release-evidence work. It adds the bounded Semester Desk accessibility and CI
-acceptance repair defined in the 1 August audit.
+release-evidence work. It adds three bounded repairs from the 1 August audit.
+Canonical student-context validation now occurs before account identity and
+binding-key readers. Semester Overview focus visibility now measures the full
+radio label. Declaration-document tests now cover each prohibited authority,
+identity, revision, projection, status, recommendation, and child-action field.
 
 The candidate adds no public route, database object, provider operation,
 identity activation, entitlement, persistence path, or participant operation.
 
-- Focused Semester Desk and release-runner contracts: 58 pass across seven
-  files.
+- Focused account-context, Semester Overview, and declaration-document
+  contracts: 57 pass across three files.
 - TypeScript: pass.
 - Zero-warning lint: pass.
-- Application contracts: 1,601 pass across 177 files.
+- Application contracts: 1,617 pass across 177 files.
 - Evaluator contracts: 13 pass across two files.
-- Total contracts: 1,614 pass.
+- Total contracts: 1,630 pass.
 - Offline evaluation gate: pass across 54 authored fixtures.
 - Live model evaluation: not run.
 - CI workflow YAML parse and diff-integrity checks: pass.
-- Independent accessibility and workflow review: no confirmed residual defect.
+- Independent `gpt-5.6-luna` maximum-reasoning review: no confirmed defect.
 - Optimized production build: pass.
 - Generated static pages: 67.
 - Public build boundary: 71 static assets pass.
 - Production build receipt: 1,472 files.
-- Artifact digest: `sha256:1ac2e5151f87d210172199b1430cac27ef1982dd0f36f45903aa62ccbc3a5c9c`.
-- Public asset digest: `sha256:b127b8002027587622a3f317701ddbad94cb1042c0c26140897cdcad4c212af5`.
+- Artifact digest: `sha256:84dbf78883bcc38ef574941c272ce112510dc9c7dcf30945623dab7c5bff49e0`.
+- Public asset digest: `sha256:7b8ec989942cd4e7941ed9ee4b8b91b5ef5fd7bb9214218735d9539e459b7e32`.
 - Public directory digest: `sha256:e0096e369f47666ca5a3f962b71b6f5199a17117ac5ce4a598d1b77dc42abac9`.
 - Runtime configuration digest: `sha256:06e97d7ea5aaf83b90deef10f941678198a442a267e97f9f23a1a97603774e29`.
 
@@ -74,14 +77,24 @@ The Semester Desk repair keeps evidence details inside their definitions. It
 hides decorative sequence numbers from assistive technology. Clear inspection
 returns focus to the exact course control and measures the visible label.
 
+The account-context adapter uses a fixed, module-owned binding only for the
+canonical preflight. Invalid semantic child data reaches no identity or key
+reader. The final projection recomputes with the server-derived HMAC binding,
+and the preflight binding never enters returned data.
+
+Semester Overview reset keeps native radio focus. It preserves scroll position
+when the full label is visible and scrolls that label when it is clipped. The
+selected Chrome check confirmed one status region, native radio focus, visible
+label bounds, and no horizontal overflow at 2000 by 1183 CSS pixels.
+
 CI now runs the active Semester Desk fixture as a required browser gate. The
 production runner uses nine explicit production specifications on all
 platforms. Each browser gate writes to one bounded result directory, so a later
 run cannot erase earlier failure evidence.
 
-The selected Chrome check confirmed the repaired semantics, clear state, focus
-return, and unchanged visual composition. The checked viewport was 2000 by
-1183 CSS pixels. The capture was JPEG, so it is qualitative evidence only.
+The selected Chrome capture confirmed the unchanged visual composition. The
+capture was JPEG, so it is qualitative evidence only. The only browser log
+error was the known Dark Reader extension attribute hydration mismatch.
 
 The configured university-foundation and production browser suites did not run
 locally. Product Design requires the selected Chrome workflow unless the user
@@ -92,9 +105,14 @@ or deployment occurred. GitHub environment protection, the least-privilege
 Vercel secret, required CI browser execution, and a live provider receipt
 remain external release gates.
 
+The account-context adapter performs the canonical projection twice for valid
+input. Input-limit performance remains unmeasured. Fixture evidence does not
+establish production identity, key provisioning, deployment, or privacy
+operation.
+
 ## Current implementation order
 
-1. Preserve the exact local adult-declaration repair candidate and its claim ceiling.
+1. Preserve the exact local university hardening candidate and its claim ceiling.
 2. Record the principal Phase -1 target disposition before participant operation.
 3. Obtain named participant and data authority before recruitment, observation, or capture.
 4. Run the approved matched-substitution protocol, then accept, narrow, repair, or reject.
