@@ -14,6 +14,10 @@ import {
   removeProductionRuntimeSnapshot,
   verifyCompletedProductionRuntimeSnapshot,
 } from "./production-runtime-snapshot";
+import {
+  playwrightCliInvocation,
+  runPlaywrightWithReportDigest,
+} from "./run-playwright-with-report-digest";
 
 type ServerProcess = ChildProcessByStdio<null, Readable, Readable>;
 const STARTUP_TIMEOUT_MS = 90_000;
@@ -269,18 +273,14 @@ async function main() {
     try {
       await waitForServer(baseUrl, child);
       await assertProductionServerIdentity(baseUrl, expectedSha);
-      const result = await new Promise<number>((resolveExit) => {
-        const invocation = productionBrowserInvocation(spec);
-        const browser = spawn(
-          invocation.command,
-          invocation.args,
-          {
-            cwd: process.cwd(),
-            env: browserEnvironment(baseUrl, expectedSha),
-            stdio: "inherit",
-          },
-        );
-        browser.once("exit", (code) => resolveExit(code ?? 1));
+      const invocation = playwrightCliInvocation(spec ? [spec] : PRODUCTION_BROWSER_SPECS);
+      const result = await runPlaywrightWithReportDigest({
+        rootDirectory: process.cwd(),
+        reportFile: "test-results/production-browser/playwright-report.json",
+        command: invocation.command,
+        args: invocation.args,
+        environment: browserEnvironment(baseUrl, expectedSha),
+        githubOutput: process.env.GITHUB_OUTPUT,
       });
       await assertProductionServerIdentity(baseUrl, expectedSha);
       if (result !== 0) process.exitCode = result;
