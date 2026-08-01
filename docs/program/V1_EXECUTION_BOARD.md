@@ -36,14 +36,14 @@ This board replaces hackathon, judging, demo-video, submission, and deadline wor
 ## Latest verified implementation receipt
 
 The latest verified implementation candidate before this evidence-only record
-update is clean source `a68d20c7df078a61d3ee9533320e8fd018e6c5b7`
-and tree `f9affb0925e874c8c4b858e1147bdc09fafb60bb`.
+update is clean source `612ab13daaca4122cee48b1204ae9b1f7d0a1357`
+and tree `893489aa1bc6386d5fb900afb780010b0085f4a5`.
 
 The candidate preserves the university foundation, production security, and
 release-evidence work through source
 `19c88c7d4ef3e1080632af78fefffef4bae597a3`.
 
-It adds eight implementation commits from the next 1 August audit:
+It adds twelve implementation commits from the 1 August audit:
 
 - `b64fccd5e0754c25a9cacee80f6fbf622a7951bb` reuses the validated account
   preflight projection. Accepted input now runs the canonical student-context
@@ -66,6 +66,14 @@ It adds eight implementation commits from the next 1 August audit:
 - `a68d20c7df078a61d3ee9533320e8fd018e6c5b7` rejects subclassed,
   symbol-decorated, and accessor-bearing Protected Study source arrays before
   element values are read.
+- `5e0856d3c9675c58612009c76647459d7c578e45` defers Semester Desk focus
+  restoration until the collapsed detail layout has committed.
+- `fb6f3c108b09f85ccb2f98d8cc0339082d44c222` rechecks visibility after the
+  later layout shift and centers the focused course label.
+- `a7edbcf1c54433145fa12821b98f67f2fea6b672` adds three target-specific,
+  digest-bound CI browser receipts and fail-closed validation.
+- `612ab13daaca4122cee48b1204ae9b1f7d0a1357` bounds temporary receipt
+  cleanup before it stores or removes any directory entry.
 
 The candidate adds no public route, database object, provider operation,
 identity activation, entitlement, persistence path, or participant operation.
@@ -77,9 +85,14 @@ identity activation, entitlement, persistence path, or participant operation.
 - TypeScript: pass.
 - Zero-warning lint: pass.
 - Diff-integrity check: pass.
-- Application contracts: 1,641 pass across 177 files.
+- Workflow YAML parse: pass.
+- Python helper syntax: pass.
+- Helper source digest:
+  `sha256:5d38e4ed34dd87888eb3055d81ca8a4dbc21d8d316b81fc9b38804b1e0c5b36c`.
+- Combined focus and browser-receipt contracts: 120 pass across seven files.
+- Application contracts: 1,715 pass across 180 files.
 - Evaluator contracts: 13 pass across two files.
-- Total contracts: 1,654 pass.
+- Total contracts: 1,728 pass.
 - `pnpm eval`: pass across 54 authored fixtures.
 - Live model evaluation: not run.
 - Four separate `gpt-5.6-luna` maximum-reasoning tasks implemented the bounded
@@ -101,13 +114,23 @@ identity activation, entitlement, persistence path, or participant operation.
 - A final independent review found the Protected Study exotic-array gap. The
   final candidate corrects it, and the review found no remaining confirmed
   defect across both post-range repairs.
+- Nine additional `gpt-5.6-luna` maximum-reasoning tasks audited Phase -1
+  authority, the seven-drill template, browser evidence, focus, and receipts.
+- Two independent reviews accepted exact receipt source
+  `08b2c661c59515ea0b7e55196b85a49c3769164f`.
+- The accepted receipt source was integrated as
+  `a7edbcf1c54433145fa12821b98f67f2fea6b672`.
+- Cleanup source `be6ad61b208caf630b23421f946f1642c1013c71`
+  passed an independent exact-source review and was integrated as `612ab13`.
+- One first full-suite run timed out in an unrelated Primary Source Reasoning
+  UI test. The exact file passed 6 tests, and the complete rerun passed.
 - Optimized production build: pass.
 - Generated static pages: 67.
 - Public build boundary: 71 static assets pass.
 - Production build receipt: 1,472 files.
-- Build ID: `forge-source-v1-a68d20c7df078a61d3ee9533320e8fd018e6c5b7`.
-- Local path-bound artifact digest: `sha256:c5d803f5812c5cc4548a4f5bcd2170a4fb430464fc0853a9e52dd48edfb9a599`.
-- Public asset digest: `sha256:e9f57fa2729d99c7745d9b3de7ad2c96bf507e0caf001135c140cf493584d695`.
+- Build ID: `forge-source-v1-612ab13daaca4122cee48b1204ae9b1f7d0a1357`.
+- Local path-bound artifact digest: `sha256:ab8f6e8202d1eed79b363d9b9ff11d21d159efa27181220f62c561968ec95477`.
+- Public asset digest: `sha256:ebd5ea3796ea899f1db87856b19fe8f5da6a6d51bd047f30f3a50e02ab3cf416`.
 - Public directory digest: `sha256:e0096e369f47666ca5a3f962b71b6f5199a17117ac5ce4a598d1b77dc42abac9`.
 - Runtime configuration digest: `sha256:06e97d7ea5aaf83b90deef10f941678198a442a267e97f9f23a1a97603774e29`.
 - Build receipt schema: `forge-production-build-receipt.v3`.
@@ -125,7 +148,13 @@ unproven.
 
 The Semester Desk repair keeps evidence details inside their definitions. It
 hides decorative sequence numbers from assistive technology. Clear inspection
-returns focus to the exact course control and measures the visible label.
+returns focus to the exact course control. It rechecks visibility across two
+settled animation frames and cancels stale reveals after a later action.
+
+Selected Chrome verified the exact clear-inspection path at 320 by 844 CSS
+pixels. The CS102 input retained focus and became unchecked. The label bounds
+were 399.796875 through 443.796875 pixels. The viewport had no horizontal
+overflow, and the focus ring was visible.
 
 The account-context adapter uses a fixed, module-owned binding for one
 canonical preflight. Invalid semantic child data reaches no identity or key
@@ -138,10 +167,19 @@ when the full label is visible and scrolls that label when it is clipped. The
 selected Chrome check confirmed one status region, native radio focus, visible
 label bounds, and no horizontal overflow at 2000 by 1183 CSS pixels.
 
-CI now runs the active Semester Desk fixture as a required browser gate. The
-production runner uses nine explicit production specifications on all
-platforms. Each browser gate writes to one bounded result directory, so a later
-run cannot erase earlier failure evidence.
+CI is configured to run the foundation, Semester Desk, and production browser
+targets. The production runner uses nine explicit production specifications.
+Each target writes exact JSON bytes through a trusted parent process. Each
+target records its report digest, tested SHA, coverage, status, and counts.
+
+Receipt schema `2.2` separates intentional skips from tests that did not run.
+Only passed tests satisfy required specification and project coverage.
+Missing, unsafe, replaced, malformed, oversized, or digest-mismatched reports
+produce fail receipts. The final validator re-hashes the current report bytes.
+
+Descriptor-relative output writes fail closed for ancestor replacement,
+symlink, collision, helper substitution, report substitution, and timeout
+cases. Failure uploads preserve the existing bounded screenshot manifest.
 
 The selected Chrome capture confirmed the unchanged visual composition. The
 capture was JPEG, so it is qualitative evidence only. The only browser log
@@ -185,17 +223,24 @@ unexpected property, or accessor before it reads an element value. Its array
 budget check occurs before key enumeration.
 
 The final independent repair review found no remaining confirmed defect inside
-this repair set. It still found missing assistive-technology evidence, missing
-required CI browser evidence, and the unresolved Phase -1 target disposition.
+this repair set. Two later receipt reviews found no integration blocker.
+Required CI browser execution, assistive-technology evidence, and the Phase -1
+target disposition remain open.
 
 The configured university-foundation and production browser suites did not run
 locally. Product Design requires the selected Chrome workflow unless the user
 gives permission for direct Playwright use.
 
-No direct Playwright run, Windows runner execution, screen-reader review, push,
-or deployment occurred. GitHub environment protection, the least-privilege
-Vercel secret, required CI browser execution, and a live provider receipt
-remain external release gates.
+No browser-driving Playwright run, GitHub Actions run, Windows runner
+execution, screen-reader review, push, or deployment occurred. Read-only
+Playwright list probes confirmed real result shapes without browser execution.
+GitHub environment protection, the least-privilege Vercel secret, required CI
+browser execution, and a live provider receipt remain external release gates.
+
+The receipt helper retains one accepted non-blocking hardening item. Its
+reserved temporary-name stat and unlink are separate operations. A same-user
+replacement can leave cleanup incomplete, but it cannot create an accepted
+receipt or write outside the trusted directory descriptor.
 
 No screen-reader, forced-colors, dormant-dark-theme, or native date-control
 review occurred. The Source Review route has no enabled dedicated browser
