@@ -1,5 +1,3 @@
-import { types as nodeUtilTypes } from "node:util";
-
 import { boundedJsonSnapshot } from "../bounded-json-snapshot";
 import { deepFreeze } from "../deep-freeze";
 import { canonicalJson, sha256Digest } from "../events";
@@ -35,11 +33,37 @@ export const COURSE_SOURCE_ISSUE_CODES = [
   "decision.corrected_fact_kind_mismatch",
 ] as const;
 
+type ProxyDetector = (value: object) => boolean;
+
+/**
+ * Node callers use the intrinsic Proxy detector. Browser callers receive
+ * serialized plain data and must not import a Node-only module into the client
+ * graph.
+ */
+function nodeProxyDetector(): ProxyDetector | undefined {
+  if (
+    typeof process === "undefined"
+    || typeof process.getBuiltinModule !== "function"
+  ) {
+    return undefined;
+  }
+  try {
+    const detector = process.getBuiltinModule("node:util").types.isProxy;
+    return typeof detector === "function" ? detector : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const NODE_PROXY_DETECTOR = nodeProxyDetector();
+
 const COURSE_SOURCE_SNAPSHOT_OPTIONS = {
   allowNullPrototypeObjects: true,
-  rejectObject: nodeUtilTypes.isProxy,
   maximumStringLength: 4_096,
   maximumSerializedJsonBytes: 512 * 1_024,
+  ...(NODE_PROXY_DETECTOR
+    ? { rejectObject: NODE_PROXY_DETECTOR }
+    : {}),
 } as const;
 const MAX_RETURNED_SCHEMA_ISSUES = 64;
 
