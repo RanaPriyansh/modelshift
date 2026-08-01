@@ -33,6 +33,30 @@ export const COURSE_SOURCE_INGESTION_LIMITS = deepFreeze({
 
 const MAXIMUM_SERIALIZED_JSON_BYTES = 512 * 1_024;
 
+type ProxyDetector = (value: object) => boolean;
+
+/**
+ * Node callers use the intrinsic Proxy detector. Browser callers receive
+ * serialized plain data and must not import a Node-only module into the client
+ * graph.
+ */
+function nodeProxyDetector(): ProxyDetector | undefined {
+  if (
+    typeof process === "undefined"
+    || typeof process.getBuiltinModule !== "function"
+  ) {
+    return undefined;
+  }
+  try {
+    const detector = process.getBuiltinModule("node:util").types.isProxy;
+    return typeof detector === "function" ? detector : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const NODE_PROXY_DETECTOR = nodeProxyDetector();
+
 const timestampSchema = z.string().datetime({ offset: true });
 const revisionIdSchema = z.string().trim().max(180).regex(/^course-source-revision\.[a-z0-9]+(?:[._-][a-z0-9]+)*$/);
 const candidateIdSchema = z.string().trim().max(180).regex(/^course-source-candidate\.[a-z0-9]+(?:[._-][a-z0-9]+)*$/);
@@ -93,6 +117,15 @@ const icsRequestSchema = z.strictObject({
 const ingestionRequestSchema = z.discriminatedUnion("inputKind", [manualRequestSchema, icsRequestSchema]);
 type ParsedIngestionRequest = z.infer<typeof ingestionRequestSchema>;
 type IcsMapping = z.infer<typeof commitmentMappingSchema> | z.infer<typeof deadlineMappingSchema>;
+
+const INGESTION_SNAPSHOT_OPTIONS = {
+  maximumStringLength: COURSE_SOURCE_INGESTION_LIMITS.maximumInputBytes,
+  maximumSerializedJsonBytes: MAXIMUM_SERIALIZED_JSON_BYTES,
+  rejectRepeatedReferences: true,
+  ...(NODE_PROXY_DETECTOR
+    ? { rejectObject: NODE_PROXY_DETECTOR }
+    : {}),
+} as const;
 
 export type CourseSourceIngestionIssueCode =
   | "schema.invalid"
@@ -237,10 +270,9 @@ function structuralRequest(
   value: unknown,
 ): { readonly request: ParsedIngestionRequest | null; readonly issues: readonly CourseSourceIngestionIssue[] } {
   try {
-    const result = ingestionRequestSchema.safeParse(boundedJsonSnapshot(value, {
-      maximumStringLength: COURSE_SOURCE_INGESTION_LIMITS.maximumInputBytes,
-      maximumSerializedJsonBytes: MAXIMUM_SERIALIZED_JSON_BYTES,
-    }));
+    const result = ingestionRequestSchema.safeParse(
+      boundedJsonSnapshot(value, INGESTION_SNAPSHOT_OPTIONS),
+    );
     if (result.success) return { request: result.data, issues: [] };
     return {
       request: null,

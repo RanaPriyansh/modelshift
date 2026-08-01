@@ -18,6 +18,10 @@ const scope = {
 } as const;
 const AS_OF = "2026-08-10T12:00:00.000Z";
 
+function scopeValue() {
+  return { ...scope };
+}
+
 function revision(
   revisionId = "course-source-revision.syllabus-v1",
   overrides: Record<string, unknown> = {},
@@ -25,7 +29,7 @@ function revision(
   return {
     schemaVersion: "course-source-revision.v1" as const,
     revisionId,
-    scope,
+    scope: scopeValue(),
     inputKind: "manual" as const,
     sourceLabel: "Learner-entered CS102 syllabus facts",
     sourceDigest: DIGEST("a"),
@@ -58,7 +62,7 @@ function deadlineCandidate(
   return {
     schemaVersion: "course-source-candidate.v1" as const,
     candidateId,
-    scope,
+    scope: scopeValue(),
     sourceRevisionId: "course-source-revision.syllabus-v1",
     claimKey: "course-claim.assignment-one-deadline",
     locator: { kind: "manual_field" as const, fieldKey: "assignment_one_deadline" },
@@ -84,7 +88,7 @@ function accept(
     schemaVersion: "course-source-decision.v1" as const,
     decisionId,
     candidateId,
-    scope,
+    scope: scopeValue(),
     actor: "learner" as const,
     kind: "accept" as const,
     extractionMatch: "learner_confirmed" as const,
@@ -270,7 +274,7 @@ describe("ADR-010 university course-source candidate boundary", () => {
       schemaVersion: "course-source-decision.v1" as const,
       decisionId: "course-source-decision.assignment-one-correct",
       candidateId: original.candidateId,
-      scope,
+      scope: scopeValue(),
       actor: "learner" as const,
       kind: "correct" as const,
       extractionMatch: "learner_corrected" as const,
@@ -388,6 +392,33 @@ describe("ADR-010 university course-source candidate boundary", () => {
     expect(mismatched.issues.map((entry) => entry.code)).toContain("candidate.locator_kind_mismatch");
   });
 
+  it("rejects extractedBy values that do not match the revision input kind", async () => {
+    const manualMismatch = await reconcileCourseSources(request({
+      candidates: [deadlineCandidate(undefined, undefined, {
+        extractedBy: "deterministic_ics_parser",
+      })],
+    }));
+    const icsRevision = revision("course-source-revision.calendar-v1", {
+      inputKind: "ics",
+      sourceLabel: "Exported course calendar",
+      sourceDigest: DIGEST("b"),
+    });
+    const icsMismatch = await reconcileCourseSources(request({
+      sourceRevisions: [icsRevision],
+      candidates: [deadlineCandidate("course-source-candidate.calendar-assignment-one", undefined, {
+        sourceRevisionId: icsRevision.revisionId,
+        locator: { kind: "ics_component", uid: "assignment-one@university.example", propertyName: "DUE" },
+        extractedBy: "learner_manual",
+      })],
+      decisions: [accept("course-source-candidate.calendar-assignment-one", "course-source-decision.calendar-accept")],
+    }));
+
+    expect(manualMismatch.status).toBe("invalid");
+    expect(manualMismatch.issues.map((entry) => entry.code)).toContain("candidate.extracted_by_mismatch");
+    expect(icsMismatch.status).toBe("invalid");
+    expect(icsMismatch.issues.map((entry) => entry.code)).toContain("candidate.extracted_by_mismatch");
+  });
+
   it("uses strict schemas so raw source text, URLs, and source bytes cannot cross the contract", async () => {
     const candidateWithRawText = {
       ...deadlineCandidate(),
@@ -460,7 +491,7 @@ describe("ADR-010 university course-source candidate boundary", () => {
         schemaVersion: "course-source-decision.v1",
         decisionId: "course-source-decision.invalid-kind",
         candidateId: "course-source-candidate.assignment-one",
-        scope,
+        scope: scopeValue(),
         actor: "learner",
         kind: "correct",
         extractionMatch: "learner_corrected",
@@ -487,7 +518,7 @@ describe("ADR-010 university course-source candidate boundary", () => {
         schemaVersion: "course-source-decision.v1",
         decisionId: "course-source-decision.assignment-one-reject",
         candidateId: candidate.candidateId,
-        scope,
+        scope: scopeValue(),
         actor: "learner",
         kind: "reject",
         extractionMatch: "learner_rejected",
@@ -611,6 +642,18 @@ describe("ADR-010 university course-source candidate boundary", () => {
     expect(rejected.issues.map((entry) => entry.code)).toEqual(["schema.invalid"]);
     expect(getPrototypeOfCalls).toBe(0);
     expect(ownKeysCalls).toBe(0);
+  });
+
+  it("rejects repeated object references instead of accepting a non-JSON graph", async () => {
+    const repeated = { marker: true };
+    const result = await reconcileCourseSources({
+      ...request(),
+      extraOne: repeated,
+      extraTwo: repeated,
+    });
+
+    expect(result.status).toBe("invalid");
+    expect(result.issues.map((entry) => entry.code)).toEqual(["schema.invalid"]);
   });
 
   it("builds goal context from one ordinary wrapper snapshot", async () => {
