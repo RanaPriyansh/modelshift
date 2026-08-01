@@ -1319,6 +1319,449 @@
   margin-top: 32px;
 }
 
+.focusDesktop {
+  min-height: clamp(680px, 65vw, 880px);
+  position: relative;
+  overflow: hidden;
+  background: var(--screen-bg);
+  color: var(--screen-ink);
+}
+
+.focusDesktopBar {
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  border-bottom: 1px solid var(--screen-line);
+  padding: 0 clamp(20px, 4vw, 52px);
+}
+
+.focusDesktopBar > span {
+  color: var(--screen-muted);
+  font-size: 0.58rem;
+}
+
+.focusDesktopBar > span:last-child {
+  text-align: right;
+}
+
+.focusDesktopBar > b {
+  color: var(--screen-green);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+}
+
+.focusDesktopMain {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(220px, 0.55fr);
+  gap: clamp(14px, 2.4vw, 34px);
+  padding: clamp(48px, 7vw, 90px) clamp(24px, 5.6vw, 76px) 32px;
+}
+
+.focusDesktopPrompt > span,
+.focusDesktopWork > span,
+.focusDesktopContract > span,
+.modelShiftDesktop > aside > span,
+.modelShiftDesktop > main > span,
+.observationGrid article > span,
+.worldFocusScene span,
+.worldFocusBody section > span,
+.worldFocusBody aside > span {
+  color: var(--screen-green);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.51rem;
+  font-weight: 760;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.focusDesktopPrompt h4 {
+  margin: 18px 0 0;
+  font-size: clamp(2rem, 4.5vw, 4.8rem);
+  font-weight: 570;
+  line-height: 0.96;
+  letter-spacing: -0.055em;
+}
+
+.focusDesktopPrompt > p {
+  margin: 18px 0 0;
+  color: var(--screen-muted);
+  font-size: 0.68rem;
+  line-height: 1.56;
+}
+
+.focusDesktopPrompt > div {
+  margin-top: 34px;
+  border-left: 3px solid var(--screen-blue);
+  padding: 16px 18px;
+  background: var(--screen-strong);
+}
+
+.focusDesktopPrompt > div > span {
+  color: var(--screen-blue);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.48rem;
+  text-transform: uppercase;
+}
+
+.focusDesktopPrompt > div p {
+  margin: 12px 0 0;
+  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-size: 0.76rem;
+  line-height: 1.54;
+}
+
+.focusDesktopWork {
+  min-height: 430px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--screen-line-strong);
+  border-radius: 12px;
+  padding: 24px;
+  background: var(--screen-surface);
+}
+
+.focusDesktopWork > span {
+  color: var(--screen-muted);
+}
+
+.focusDesktopWork > p {
+  margin: 34px 0 0;
+  color: var(--screen-dim);
+  font-family: "Iowan Old Style", Baskerville, Georgia, serif;
+  font-size: clamp(1.1rem, 2.4vw, 2.1rem);
+  line-height: 1.45;
+}
+
+.focusDesktopWork > small {
+  margin-top: auto;
+  color: var(--screen-green);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.5rem;
+}
+
+.focusDesktopContract {
+  border: 1px solid var(--screen-line);
+  border-radius: 12px;
+  padding: 22px;
+  background: var(--screen-strong);
+}
+
+.focusDesktopContract > span {
+  color: var(--screen-blue);
+}
+
+.focusDesktopContract h5 {
+  margin: 26px 0 0;
+  font-size: 1rem;
+  font-weight: 620;
+  line-height: 1.15;
+}
+
+.focusDesktopContract > p {
+  margin: 12px 0 0;
+  color: var(--screen-muted);
+  font-size: 0.61rem;
+  line-height: 1.55;
+}
+
+.focusDesktopContract dl {
+  margin: 30px 0 0;
+  border-bottom: 1px solid var(--screen-line);
+}
+
+.focusDesktopContract dl div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  border-top: 1px solid var(--screen-line);
+  padding: 11px 0;
+  font-size: 0.52rem;
+}
+
+.focusDesktopContract dt {
+  color: var(--screen-muted);
+}
+
+.focusDesktopContract dd {
+  margin: 0;
+  text-align: right;
+}
+
+.focusDesktopActions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 0 clamp(24px, 5.6vw, 76px) 46px;
+}
+
+.focusDesktopActions button,
+.worldFocusBody button {
+  background: var(--screen-orange);
+  color: #fff;
+}
+
+.focusDesktopActions > span {
+  color: var(--screen-muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+.modelShiftDesktop {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.26fr) minmax(0, 1fr);
+  min-height: 700px;
+}
+
+.modelShiftDesktop > aside {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--screen-line);
+  padding: clamp(34px, 5vw, 64px) clamp(20px, 3vw, 42px);
+  background: var(--screen-deep);
+}
+
+.modelShiftDesktop ol {
+  display: grid;
+  gap: 8px;
+  margin: 30px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.modelShiftDesktop li {
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  align-items: center;
+  border: 1px solid transparent;
+  padding: 0 12px;
+  color: var(--screen-muted);
+}
+
+.modelShiftDesktop li[data-active="true"] {
+  border-color: var(--screen-blue);
+  border-radius: 6px;
+  background: var(--screen-strong);
+  color: var(--screen-ink);
+}
+
+.modelShiftDesktop li b {
+  color: var(--screen-blue);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.5rem;
+}
+
+.modelShiftDesktop li span {
+  font-size: 0.62rem;
+}
+
+.modelShiftDesktop nav {
+  display: grid;
+  gap: 16px;
+  margin-top: auto;
+  color: var(--screen-muted);
+  font-size: 0.56rem;
+}
+
+.modelShiftDesktop > main {
+  padding: clamp(48px, 7vw, 88px) clamp(28px, 6vw, 82px);
+}
+
+.modelShiftDesktop > main > span {
+  color: var(--screen-blue);
+}
+
+.modelShiftDesktop > main > h4 {
+  max-width: 900px;
+  margin: 18px 0 0;
+  font-size: clamp(2.4rem, 5vw, 5rem);
+  font-weight: 570;
+  line-height: 0.96;
+  letter-spacing: -0.055em;
+}
+
+.observationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: clamp(34px, 5vw, 62px);
+}
+
+.observationGrid article {
+  min-height: 232px;
+  border: 1px solid var(--screen-line);
+  border-radius: 12px;
+  padding: 22px;
+  background: var(--screen-surface);
+}
+
+.observationGrid article[data-selected="true"] {
+  border: 2px solid var(--screen-blue);
+  background: var(--screen-strong);
+}
+
+.observationGrid article[data-selected="true"] > span {
+  color: var(--screen-orange);
+}
+
+.observationGrid h5 {
+  margin: 28px 0 0;
+  font-size: clamp(1rem, 2vw, 1.6rem);
+  font-weight: 600;
+  line-height: 1.08;
+}
+
+.observationGrid p {
+  margin: 16px 0 0;
+  color: var(--screen-muted);
+  font-size: 0.62rem;
+  line-height: 1.55;
+}
+
+.modelShiftDesktop .focusDesktopActions {
+  padding: 28px 0 0;
+}
+
+.worldFocusScene {
+  min-height: clamp(250px, 30vw, 390px);
+  position: relative;
+  display: flex;
+  align-items: end;
+  isolation: isolate;
+}
+
+.worldFocusScene::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: linear-gradient(90deg, rgb(7 23 34 / 90%), rgb(7 23 34 / 12%));
+  content: "";
+}
+
+.worldFocusScene > img {
+  z-index: 0;
+  object-fit: cover;
+  object-position: 50% 62%;
+}
+
+.worldFocusScene > div {
+  max-width: 740px;
+  position: relative;
+  z-index: 2;
+  padding: clamp(32px, 5vw, 68px);
+  color: #f3f7f0;
+}
+
+.worldFocusScene h4 {
+  margin: 16px 0 0;
+  font-size: clamp(2.3rem, 5vw, 5.2rem);
+  font-weight: 570;
+  line-height: 0.94;
+  letter-spacing: -0.055em;
+}
+
+.worldFocusScene p {
+  max-width: 620px;
+  margin: 18px 0 0;
+  color: rgb(243 247 240 / 82%);
+  font-size: 0.66rem;
+  line-height: 1.58;
+}
+
+.worldFocusBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.34fr);
+  gap: 12px;
+  padding: 24px clamp(24px, 5vw, 68px) 58px;
+}
+
+.worldFocusBody > section,
+.worldFocusBody > aside {
+  border: 1px solid var(--screen-line);
+  border-radius: 12px;
+  padding: 24px;
+  background: var(--screen-surface);
+}
+
+.worldFocusBody h5 {
+  margin: 22px 0 0;
+  font-size: clamp(1.3rem, 2.8vw, 2.4rem);
+  font-weight: 590;
+  letter-spacing: -0.04em;
+}
+
+.worldTrack {
+  min-height: 100px;
+  position: relative;
+  margin-top: 26px;
+  border-bottom: 3px solid var(--screen-line-strong);
+}
+
+.worldTrack i {
+  width: 64px;
+  height: 46px;
+  position: absolute;
+  bottom: 3px;
+  left: 26%;
+  border-radius: 6px;
+  background: var(--screen-blue);
+}
+
+.worldTrack b {
+  width: 28%;
+  height: 5px;
+  position: absolute;
+  bottom: 24px;
+  left: calc(26% + 64px);
+  border-radius: 4px;
+  background: var(--screen-orange);
+}
+
+.worldFocusBody dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 24px 0 0;
+  border-top: 1px solid var(--screen-line);
+  border-left: 1px solid var(--screen-line);
+}
+
+.worldFocusBody dl div {
+  border-right: 1px solid var(--screen-line);
+  border-bottom: 1px solid var(--screen-line);
+  padding: 12px;
+}
+
+.worldFocusBody dt {
+  color: var(--screen-muted);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.48rem;
+  text-transform: uppercase;
+}
+
+.worldFocusBody dd {
+  margin: 8px 0 0;
+  font-size: 0.64rem;
+}
+
+.worldFocusBody button {
+  margin-top: 20px;
+}
+
+.worldFocusBody aside > span:not(:first-child) {
+  display: block;
+  margin-top: 34px;
+  color: var(--screen-orange);
+}
+
+.worldFocusBody aside p {
+  margin: 12px 0 0;
+  color: var(--screen-muted);
+  font-size: 0.62rem;
+  line-height: 1.55;
+}
+
 .phoneGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1999,6 +2442,18 @@
     border-top: 1px solid var(--screen-line);
     border-left: 0;
   }
+
+  .focusDesktopMain {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  .focusDesktopContract {
+    grid-column: 1 / -1;
+  }
+
+  .worldFocusBody {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 620px) {
@@ -2043,7 +2498,8 @@
   }
 
   .publicViewport,
-  .appViewport {
+  .appViewport,
+  .focusDesktop {
     min-height: 700px;
   }
 
@@ -2151,6 +2607,70 @@
     font-size: 0.46rem;
   }
 
+  .focusDesktopBar {
+    grid-template-columns: 1fr auto;
+  }
+
+  .focusDesktopBar > b {
+    display: none;
+  }
+
+  .focusDesktopMain,
+  .modelShiftDesktop,
+  .observationGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .focusDesktopMain {
+    padding: 42px 20px 24px;
+  }
+
+  .focusDesktopActions {
+    flex-wrap: wrap;
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .modelShiftDesktop > aside {
+    border-right: 0;
+    border-bottom: 1px solid var(--screen-line);
+  }
+
+  .modelShiftDesktop ol {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .modelShiftDesktop li {
+    min-height: 64px;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding: 6px;
+  }
+
+  .modelShiftDesktop nav {
+    grid-template-columns: repeat(3, 1fr);
+    margin-top: 28px;
+    text-align: center;
+  }
+
+  .modelShiftDesktop > main {
+    padding: 44px 20px;
+  }
+
+  .worldFocusScene > div {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .worldFocusBody {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .worldFocusBody dl {
+    grid-template-columns: 1fr;
+  }
+
   .phoneStage {
     margin-right: -16px;
     margin-left: -16px;
@@ -2218,6 +2738,12 @@
   .phoneScreen,
   .publicViewport,
   .appViewport,
+  .focusDesktop,
+  .focusDesktopWork,
+  .focusDesktopContract,
+  .observationGrid article,
+  .worldFocusBody > section,
+  .worldFocusBody > aside,
   .foundationGrid > article,
   .stateGrid article {
     forced-color-adjust: auto;
@@ -2228,7 +2754,8 @@
   }
 
   .publicHeroImage,
-  .phoneScene {
+  .phoneScene,
+  .worldFocusScene > img {
     opacity: 0.2;
   }
 

@@ -54,6 +54,7 @@ The atlas contains:
 
 - Six representative public-site frames.
 - Six representative web application frames.
+- Three representative focus-mode frames.
 - Six representative iOS frames.
 - Eight shared failure and recovery states.
 - Light and dark examples.
@@ -174,6 +175,8 @@ The coded phone frames are visual specimens.
 | --- | --- | --- |
 | `docs/design/evidence/forge-terrain/forge-public-site-atlas.png` | 1440 by 7252 | `7d13bd1535e6f2f879cfb9d74a5ca82b77b717f9857a0f77fa2cc46cf0b7979c` |
 | `docs/design/evidence/forge-terrain/forge-web-app-atlas.png` | 1440 by 7269 | `9cea12f2f1a28d665580843f3c831650e180e360d7bc0e57a8ea3bd14ed9cf4c` |
+| `docs/design/evidence/forge-terrain/forge-focus-mode-atlas.png` | 1440 by 3988 | `1ac5c3603fba8ce2363da88b400644a14bd3de559ccf56813fa8618d3c728cd9` |
+| `docs/design/evidence/forge-terrain/forge-focus-mode-atlas-320.png` | 320 by 4852 | `dce7ea002b47f43eb7c3c5691649df7df06d86eda95e8d84691bba56c56ceacd` |
 | `docs/design/evidence/forge-terrain/forge-ios-app-atlas.png` | 1440 by 2574 | `06ab393088dc89a3be6c48a3f167c16cd23db416936e95b89dd0b84949ae06cf` |
 | `docs/design/evidence/forge-terrain/forge-product-atlas-320.png` | 320 by 800 | `bd3505f6a253ec74581c39def790efb596e8c710a86546e093531c8f4128ac2e` |
 | `docs/design/evidence/forge-terrain/forge-terrain-forced-colors.png` | 1440 by 1241 | `2d979bfea5ff1f2b4fce8fd6e84b69506233fe9406d70c2e506fb3daa4ebbd51` |
@@ -204,10 +207,14 @@ Playwright checked the production build with system Chrome.
 
 The checks covered the public home and application Today page at 1440 by 900 and 320 by 800 CSS pixels.
 
+The design-lab review also covered all three focus families at 1440 and 320 CSS pixels.
+
 Observed results:
 
 - The public home had no horizontal overflow at 1440 or 320 CSS pixels.
 - The Today page had no horizontal overflow at 1440 or 320 CSS pixels.
+- The Focus Mode atlas had no horizontal overflow at 320 CSS pixels.
+- The Focus Mode atlas logged zero browser errors.
 - The public hero heading was `Learn what matters next.`
 - Public navigation used Paths, How FORGE works, Evidence and trust, and Sign in.
 - Application navigation used Today, Paths, Projects, Evidence, and Account.

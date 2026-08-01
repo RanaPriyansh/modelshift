@@ -1755,7 +1755,7 @@ function createArchive(page) {
     ["Paint styles", RECEIPT.paintStyles.length],
     ["Effect styles", RECEIPT.effectStyles.length],
     ["Components", RECEIPT.components.length],
-    ["Screen frames", RECEIPT.frames.length],
+    ["Generated frames", RECEIPT.frames.length],
   ];
   counts.forEach(([label, value], index) => {
     const card = addFrame(board, label, 56 + (index % 4) * 320, 278 + Math.floor(index / 4) * 150, 286, 120, C.dark.surface, 12);

@@ -102,6 +102,30 @@ const APP_SCREENS: readonly ScreenRecord[] = [
   },
 ] as const;
 
+const FOCUS_SCREENS: readonly ScreenRecord[] = [
+  {
+    id: "FOCUS-01",
+    title: "Concentrated activity",
+    route: "/focus/activity/[sessionId]",
+    maps: "Ordinary attempt, local draft, bounded assistance, and safe exit",
+    mode: "light",
+  },
+  {
+    id: "FOCUS-02",
+    title: "ModelShift protocol",
+    route: "/focus/modelshift/[sessionId]",
+    maps: "Commit, investigate, reconstruct, and prove",
+    mode: "dark",
+  },
+  {
+    id: "FOCUS-03",
+    title: "Bounded guest World",
+    route: "/learn/[world]",
+    maps: "Experiment, idealization, source, safety, and recovery",
+    mode: "dark",
+  },
+] as const;
+
 const IOS_SCREENS: readonly ScreenRecord[] = [
   {
     id: "IOS-01",
@@ -613,6 +637,175 @@ function AppScreen({ screen, index }: { screen: ScreenRecord; index: number }) {
   );
 }
 
+function FocusFrame({
+  children,
+  mode,
+  label,
+}: {
+  children: React.ReactNode;
+  mode: ScreenMode;
+  label: string;
+}) {
+  return (
+    <BrowserFrame label={label} mode={mode}>
+      <div className={styles.focusDesktop}>
+        {children}
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function FocusTopBar({ stage }: { stage: string }) {
+  return (
+    <header className={styles.focusDesktopBar}>
+      <span>Exit</span>
+      <b>{stage}</b>
+      <span>Save state</span>
+    </header>
+  );
+}
+
+function ActivityFocusScreen() {
+  return (
+    <FocusFrame label="focus.local/activity/session" mode="light">
+      <FocusTopBar stage="FOCUS · ATTEMPT" />
+      <main className={styles.focusDesktopMain}>
+        <section className={styles.focusDesktopPrompt}>
+          <span>Learner attempt</span>
+          <h4>Explain the missing mechanism.</h4>
+          <p>Use the observed result. Do not restate the result as the explanation.</p>
+          <div>
+            <span>Reviewed source · passage 02</span>
+            <p>The reported result applies to the tested population and conditions.</p>
+          </div>
+        </section>
+        <section className={styles.focusDesktopWork}>
+          <span>Your explanation</span>
+          <p>The second case fails because…</p>
+          <small>Draft saved on this device.</small>
+        </section>
+        <aside className={styles.focusDesktopContract}>
+          <span>Assistance contract</span>
+          <h5>Available after a useful attempt</h5>
+          <p>One comparison scaffold. No completed explanation.</p>
+          <dl>
+            <div><dt>Sources</dt><dd>Available</dd></div>
+            <div><dt>Accessibility</dt><dd>Available</dd></div>
+            <div><dt>Generated answer</dt><dd>Unavailable</dd></div>
+          </dl>
+        </aside>
+      </main>
+      <footer className={styles.focusDesktopActions}>
+        <button type="button">Submit attempt <Arrow /></button>
+        <span>Save and exit</span>
+      </footer>
+    </FocusFrame>
+  );
+}
+
+function ModelShiftFocusScreen() {
+  return (
+    <FocusFrame label="focus.local/modelshift/session" mode="dark">
+      <FocusTopBar stage="MODEL SHIFT · 02 / 04" />
+      <div className={styles.modelShiftDesktop}>
+        <aside>
+          <span>Protocol</span>
+          <ol>
+            <li><b>01</b><span>Commit</span></li>
+            <li data-active="true"><b>02</b><span>Investigate</span></li>
+            <li><b>03</b><span>Reconstruct</span></li>
+            <li><b>04</b><span>Prove</span></li>
+          </ol>
+          <nav aria-label="ModelShift focus support">
+            <span>Sources</span>
+            <span>Idealizations</span>
+            <span>Safety</span>
+          </nav>
+        </aside>
+        <main>
+          <span>Investigate</span>
+          <h4>Which observation breaks your first model?</h4>
+          <div className={styles.observationGrid}>
+            <article>
+              <span>Observation A</span>
+              <h5>The first case follows the predicted relation.</h5>
+              <p>The stated factor and result change together.</p>
+            </article>
+            <article data-selected="true">
+              <span>Observation B</span>
+              <h5>The result changes while the stated factor stays fixed.</h5>
+              <p>Your first model cannot explain this observation.</p>
+            </article>
+          </div>
+          <div className={styles.focusDesktopActions}>
+            <button type="button">Commit observation B <Arrow /></button>
+            <span>Inspect idealization</span>
+          </div>
+        </main>
+      </div>
+    </FocusFrame>
+  );
+}
+
+function WorldFocusScreen() {
+  return (
+    <FocusFrame label="learn.local/force-and-motion" mode="dark">
+      <FocusTopBar stage="GUEST WORLD · EXPERIMENT" />
+      <section className={styles.worldFocusScene}>
+        <Image
+          alt=""
+          fill
+          sizes="(max-width: 760px) 100vw, 72vw"
+          src="/forge/landscapes/learning-threshold-cobalt.png"
+        />
+        <div>
+          <span>World 03 · force and motion</span>
+          <h4>Test the model before you trust it.</h4>
+          <p>The controls change an idealized system. Inspect the limits before you use the result.</p>
+        </div>
+      </section>
+      <div className={styles.worldFocusBody}>
+        <section>
+          <span>Experiment</span>
+          <h5>Change force while mass stays fixed.</h5>
+          <div className={styles.worldTrack}>
+            <i />
+            <b />
+          </div>
+          <dl>
+            <div><dt>Force</dt><dd>42 N</dd></div>
+            <div><dt>Mass</dt><dd>8 kg</dd></div>
+            <div><dt>Trial</dt><dd>Not run</dd></div>
+          </dl>
+          <button type="button">Run trial <Arrow /></button>
+        </section>
+        <aside>
+          <span>Idealization</span>
+          <h5>The track removes friction.</h5>
+          <p>The result does not directly describe a real road, body, or machine.</p>
+          <span>Safety</span>
+          <p>Do not copy this setup with moving equipment.</p>
+        </aside>
+      </div>
+    </FocusFrame>
+  );
+}
+
+function FocusScreen({ screen, index }: { screen: ScreenRecord; index: number }) {
+  const content = [
+    <ActivityFocusScreen key="activity" />,
+    <ModelShiftFocusScreen key="modelshift" />,
+    <WorldFocusScreen key="world" />,
+  ][index];
+
+  return (
+    <article className={styles.screenCard}>
+      <ScreenMeta screen={screen} />
+      {content}
+    </article>
+  );
+}
+
 function PhoneFrame({
   children,
   mode,
@@ -893,6 +1086,16 @@ export function ProductDesignAtlas() {
         </header>
         <div className={styles.screenGrid}>
           {APP_SCREENS.map((screen, index) => <AppScreen index={index} key={screen.id} screen={screen} />)}
+        </div>
+      </section>
+
+      <section className={styles.platformSection} id="focus-mode-atlas" aria-labelledby="focus-mode-atlas-title">
+        <header className={styles.atlasHeader}>
+          <div><span>Focus mode · three canonical families</span><h2 id="focus-mode-atlas-title">Broad navigation leaves. The learner operation remains.</h2></div>
+          <p>These frames preserve exit, local save, sources, limits, safety, accessibility, and exact recovery.</p>
+        </header>
+        <div className={styles.screenGrid}>
+          {FOCUS_SCREENS.map((screen, index) => <FocusScreen index={index} key={screen.id} screen={screen} />)}
         </div>
       </section>
 
