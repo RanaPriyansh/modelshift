@@ -171,7 +171,7 @@ describe("UniversitySemesterOverviewWorkspace", () => {
     });
     const radios = within(group).getAllByRole("radio");
     const first = radios[0] as HTMLInputElement;
-    const third = radios[2] as HTMLInputElement;
+    const worldChanged = radios[3] as HTMLInputElement;
     const revealFirst = vi.fn();
     Object.defineProperty(first, "scrollIntoView", {
       configurable: true,
@@ -184,15 +184,31 @@ describe("UniversitySemesterOverviewWorkspace", () => {
       expect(radio).not.toHaveAttribute("tabindex", "-1");
     });
     expect(first).toBeChecked();
-
-    third.focus();
-    fireEvent.click(third);
-    expect(third).toHaveFocus();
-    expect(third).toBeChecked();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "4 courses are available for shallow inspection. "
-      + "Term recovery is learner choice required.",
+    const status = screen.getByRole("status");
+    const initialAnnouncement = status.textContent;
+    expect(status).toHaveTextContent(
+      "Mixed term. Four distinct course boundaries. "
+      + "4 courses are available for shallow inspection. "
+      + "Term recovery is draft ready.",
     );
+
+    worldChanged.focus();
+    fireEvent.click(worldChanged);
+    expect(worldChanged).toHaveFocus();
+    expect(worldChanged).toBeChecked();
+    expect(status).toHaveTextContent(
+      "World changed. One exact World binding changed. "
+      + "4 courses are available for shallow inspection. "
+      + "Term recovery is draft ready.",
+    );
+    expect(status.textContent).not.toBe(initialAnnouncement);
+    const ledger = screen.getByRole("list", {
+      name: "Current-course inspection ledger",
+    });
+    expect(within(within(ledger).getAllByRole("listitem")[0]!).getByText(
+      "world review required",
+      { exact: true },
+    )).toBeInTheDocument();
     expect(screen.getAllByRole("status")).toHaveLength(1);
     expect(vi.mocked(window.scrollTo)).toHaveBeenLastCalledWith({
       behavior: "auto",
@@ -205,6 +221,7 @@ describe("UniversitySemesterOverviewWorkspace", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reset view" }));
     expect(first).toHaveFocus();
     expect(first).toBeChecked();
+    expect(status.textContent).toBe(initialAnnouncement);
     expect(screen.getByRole("button", { name: "Reset view" })).toBeDisabled();
     expect(screen.getAllByRole("status")).toHaveLength(1);
     expect(vi.mocked(window.scrollTo)).toHaveBeenCalledTimes(

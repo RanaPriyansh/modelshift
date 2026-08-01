@@ -201,7 +201,7 @@ export function UniversitySemesterOverviewWorkspace({
         aria-live="polite"
         aria-atomic="true"
       >
-        {view.announcement}
+        {`${selected.label}. ${selected.description}. ${view.announcement}`}
       </p>
 
       <section className={styles.hero} aria-live="off">
