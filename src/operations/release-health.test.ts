@@ -34,7 +34,8 @@ describe("release health", () => {
       binding_status: "bound",
       candidate_state: "DEPLOYED_CANDIDATE",
       source_sha: SHA,
-      public_asset: { status: "provider_receipt_required", gate: "provider_observed_asset_digest_required_before_promotion" },
+      schema_version: "2.0",
+      artifact: { status: "provider_receipt_required", gate: "provider_observed_complete_artifact_required_before_promotion" },
     });
   });
   it("uses a platform SHA only when it is full length", () => {

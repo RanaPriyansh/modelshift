@@ -15,6 +15,7 @@ import {
   packageIntegrityHash,
   primarySourceRuntimeBindingDigest,
   readPublicAssetDigest,
+  readPublicAssetIdentity,
   readReleaseDigests,
   runtimeBindingDigest,
 } from "../../scripts/ops/release-digests";
@@ -62,7 +63,8 @@ function createLockfileRepository(lockfile = "lockfile: immutable\n") {
     execFileSync("git", ["config", "user.email", "forge-test@example.test"], { cwd: root });
     execFileSync("git", ["config", "user.name", "FORGE test"], { cwd: root });
     writeFileSync(resolve(root, "pnpm-lock.yaml"), lockfile, "utf8");
-    execFileSync("git", ["add", "pnpm-lock.yaml"], { cwd: root });
+    writeFileSync(resolve(root, ".gitignore"), "node_modules/\n.env*\n", "utf8");
+    execFileSync("git", ["add", "pnpm-lock.yaml", ".gitignore"], { cwd: root });
     execFileSync("git", ["commit", "--quiet", "-m", "lockfile fixture"], { cwd: root });
     return { root, sha: execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim() };
   } catch (error) {
@@ -273,6 +275,69 @@ describe("immutable dependency identity", () => {
     }
   });
 
+  it("allows ignored node_modules output and rejects other ignored install output", () => {
+    const { root, sha } = createLockfileRepository("lockfile: clean\n");
+    try {
+      const capture = runImmutableLockfile(root, ["capture", "--source-ref", sha]);
+      mkdirSync(resolve(root, "node_modules"), { recursive: true });
+      writeFileSync(resolve(root, "node_modules", "generated.js"), "generated", "utf8");
+      expect(runImmutableLockfile(root, ["verify", "--expected-digest", capture.stdout.trim()]).status).toBe(0);
+
+      writeFileSync(resolve(root, ".env.local"), "FORGE_TEST_ONLY=value\n", "utf8");
+      const verify = runImmutableLockfile(root, ["verify", "--expected-digest", capture.stdout.trim()]);
+      expect(verify.status).toBe(1);
+      expect(verify.stderr).toMatch(/ignored workspace files outside node_modules/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects tracked, untracked, and index-hidden workspace changes", () => {
+    const repositories = Array.from({ length: 3 }, () =>
+      createLockfileRepository("lockfile: clean\n")
+    );
+    try {
+      const [tracked, untracked, hidden] = repositories;
+      const trackedDigest = runImmutableLockfile(
+        tracked.root,
+        ["capture", "--source-ref", tracked.sha],
+      ).stdout.trim();
+      writeFileSync(resolve(tracked.root, ".gitignore"), "node_modules/\n.env*\nchanged\n", "utf8");
+      expect(runImmutableLockfile(
+        tracked.root,
+        ["verify", "--expected-digest", trackedDigest],
+      ).stderr).toMatch(/tracked workspace files changed/);
+
+      const untrackedDigest = runImmutableLockfile(
+        untracked.root,
+        ["capture", "--source-ref", untracked.sha],
+      ).stdout.trim();
+      writeFileSync(resolve(untracked.root, "unexpected.txt"), "unexpected", "utf8");
+      expect(runImmutableLockfile(
+        untracked.root,
+        ["verify", "--expected-digest", untrackedDigest],
+      ).stderr).toMatch(/untracked workspace files appeared/);
+
+      const hiddenDigest = runImmutableLockfile(
+        hidden.root,
+        ["capture", "--source-ref", hidden.sha],
+      ).stdout.trim();
+      execFileSync(
+        "git",
+        ["update-index", "--skip-worktree", ".gitignore"],
+        { cwd: hidden.root },
+      );
+      expect(runImmutableLockfile(
+        hidden.root,
+        ["verify", "--expected-digest", hiddenDigest],
+      ).stderr).toMatch(/index flags can hide/);
+    } finally {
+      for (const repository of repositories) {
+        rmSync(repository.root, { recursive: true, force: true });
+      }
+    }
+  });
+
   it("prevents local verification from replacing the preinstall digest after a later mutation", () => {
     const root = copyReleaseDigestInputs();
     try {
@@ -297,10 +362,15 @@ describe("public asset identity", () => {
       mkdirSync(staticRoot, { recursive: true });
       writeFileSync(resolve(staticRoot, "one.js"), "one", "utf8");
       const initial = readPublicAssetDigest(root);
+      expect(readPublicAssetIdentity(root)).toMatchObject({
+        publicAssetDigest: initial,
+        publicAssetFileCount: 1,
+      });
       writeFileSync(resolve(staticRoot, "one.js"), "two", "utf8");
       expect(readPublicAssetDigest(root)).not.toBe(initial);
       writeFileSync(resolve(staticRoot, "two.js"), "two", "utf8");
       expect(readPublicAssetDigest(root)).not.toBe(initial);
+      expect(readPublicAssetIdentity(root).publicAssetFileCount).toBe(2);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

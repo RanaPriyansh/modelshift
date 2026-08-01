@@ -1,9 +1,38 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeVercelProviderReceipt, parseBoundedProviderJson, receiptFromAuthenticatedHandle, validateVercelProviderReceipt } from "./vercel-provider-receipt";
+import { productionBuildId } from "./build-source-identity";
+import {
+  PUBLIC_BUILD_ARTIFACT_MARKER_PREFIX,
+  PUBLIC_BUILD_ARTIFACT_MARKER_SCHEMA_VERSION,
+  type PublicBuildArtifactMarker,
+} from "./public-build-boundary-receipt";
+import { PRODUCTION_BUILD_RECEIPT_SCHEMA_VERSION } from "./production-build-receipt";
+import {
+  normalizeVercelProviderReceipt,
+  parseBoundedProviderJson,
+  receiptFromAuthenticatedHandle,
+  validateVercelProviderReceipt,
+} from "./vercel-provider-receipt";
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
-const DIGEST = "aad49329533835e0ae319c56990f01afff52ebd35f98b130b44f2e56c1dcc3b1";
+const TREE = "89abcdef0123456789abcdef0123456789abcdef";
+const MARKER: PublicBuildArtifactMarker = {
+  schemaVersion: PUBLIC_BUILD_ARTIFACT_MARKER_SCHEMA_VERSION,
+  productionReceiptSchemaVersion: PRODUCTION_BUILD_RECEIPT_SCHEMA_VERSION,
+  sourceCommit: SHA,
+  sourceTree: TREE,
+  sourceState: "clean",
+  buildId: productionBuildId(SHA),
+  artifactDigest: `sha256:${"a".repeat(64)}`,
+  artifactFileCount: 1_472,
+  publicAssetDigest: `sha256:${"b".repeat(64)}`,
+  publicAssetFileCount: 71,
+  publicDirectoryDigest: `sha256:${"c".repeat(64)}`,
+  publicDirectoryFileCount: 5,
+  runtimeCachePolicy: "fresh_ephemeral_next_cache_v1",
+  runtimeConfigurationDigest: `sha256:${"d".repeat(64)}`,
+  runtimeConfigurationFileCount: 4,
+};
 const TARGET = {
   origin: "https://modelshift.vercel.app",
   hostname: "modelshift.vercel.app",
@@ -20,52 +49,81 @@ const DEPLOYMENT = {
   readyState: "READY",
   target: "production",
   createdAt: 1_784_764_800_000,
-  // Matches Vercel's documented Git deployment shape: the source object uses
-  // repoId, while repository owner/name/path are in the separate gitRepo.
   gitSource: { type: "github", repoId: 1308085427, ref: "main", sha: SHA },
   gitRepo: { namespace: "RanaPriyansh", name: "modelshift", path: "RanaPriyansh/modelshift", type: "github", defaultBranch: "main" },
 };
-// Exact shape observed from GET /v2/deployments/<id>/events. The API returns
-// an array; the log identity/text/date live in event.payload, while created is
-// the enclosing event timestamp.
-const LIVE_EVENTS = [{
-  payload: {
-    deploymentId: DEPLOYMENT.id,
-    id: "evt_AbCdEfGhIjKlMnOpQrStUvWxYz12",
-    date: 1_784_764_860_000,
-    text: `Public build boundary verified across 38 static assets; public asset digest ${DIGEST}.`,
-    info: { type: "stdout" },
-  },
-  created: 1_784_764_861_000,
-}];
 
-// Retained top-level variant: it is accepted only with an equally explicit
-// deployment binding and canonical envelope timestamp.
+function markerLine(
+  overrides: Partial<PublicBuildArtifactMarker> = {},
+): string {
+  return `${PUBLIC_BUILD_ARTIFACT_MARKER_PREFIX}${JSON.stringify({
+    ...MARKER,
+    ...overrides,
+  })}`;
+}
+
+function nestedEvents(text = markerLine()) {
+  return [{
+    payload: {
+      deploymentId: DEPLOYMENT.id,
+      id: "evt_AbCdEfGhIjKlMnOpQrStUvWxYz12",
+      date: 1_784_764_860_000,
+      text,
+      info: { type: "stdout" },
+    },
+    created: 1_784_764_861_000,
+  }];
+}
+
+const LIVE_EVENTS = nestedEvents();
 const TOP_LEVEL_EVENTS = {
   events: [{
     deploymentId: DEPLOYMENT.id,
     id: "evt_QrStUvWxYz12AbCdEfGhIjKlMnOp",
     created: 1_784_764_860_000,
-    text: `Public build boundary verified across 38 static assets; public asset digest ${DIGEST}.`,
+    text: markerLine(),
   }],
 };
 
 describe("Vercel provider deployment receipt", () => {
-  it("normalizes the exact nested live-provider event shape and observed terminal build-log digest", () => {
-    const receipt = normalizeVercelProviderReceipt(DEPLOYMENT, LIVE_EVENTS, TARGET, "2026-07-23T00:02:00.000Z");
+  it("normalizes one exact complete artifact marker from the live nested event shape", () => {
+    const receipt = normalizeVercelProviderReceipt(
+      DEPLOYMENT,
+      LIVE_EVENTS,
+      TARGET,
+      "2026-07-23T00:02:00.000Z",
+    );
     expect(receipt).toMatchObject({
-      schema_version: "1.0",
-      receipt_kind: "vercel_authenticated_build_log",
+      schema_version: "2.0",
+      receipt_kind: "vercel_authenticated_complete_artifact_build_log",
       provider: "vercel",
-      deployment: { id: DEPLOYMENT.id, project_id: TARGET.project_id, source_sha: SHA, immutable_url: "https://forge-learning-7a63ywsp5-ranapriyanshs-projects.vercel.app/", ready_state: "READY" },
-      public_asset: { algorithm: "sha256", digest: DIGEST, source: "vercel_build_log_marker" },
+      deployment: {
+        id: DEPLOYMENT.id,
+        project_id: TARGET.project_id,
+        source_sha: SHA,
+        immutable_url: "https://forge-learning-7a63ywsp5-ranapriyanshs-projects.vercel.app/",
+        ready_state: "READY",
+      },
+      artifact: {
+        source: "vercel_complete_artifact_build_log_marker",
+        marker: MARKER,
+      },
     });
     expect(validateVercelProviderReceipt(receipt)).toEqual([]);
   });
 
-  it("retains the explicitly bound top-level event variant", () => {
-    const receipt = normalizeVercelProviderReceipt(DEPLOYMENT, TOP_LEVEL_EVENTS, TARGET, "2026-07-23T00:02:00.000Z");
-    expect(receipt.public_asset).toMatchObject({ event_id: TOP_LEVEL_EVENTS.events[0].id, observed_at: "2026-07-23T00:01:00.000Z" });
+  it("retains the explicitly deployment-bound top-level event variant", () => {
+    const receipt = normalizeVercelProviderReceipt(
+      DEPLOYMENT,
+      TOP_LEVEL_EVENTS,
+      TARGET,
+      "2026-07-23T00:02:00.000Z",
+    );
+    expect(receipt.artifact).toMatchObject({
+      event_id: TOP_LEVEL_EVENTS.events[0].id,
+      observed_at: "2026-07-23T00:01:00.000Z",
+      marker: MARKER,
+    });
   });
 
   it.each([
@@ -77,28 +135,108 @@ describe("Vercel provider deployment receipt", () => {
     ["meta-only source SHA", { ...DEPLOYMENT, gitSource: undefined, meta: { githubCommitSha: SHA } }, LIVE_EVENTS],
     ["conflicting caller meta SHA", { ...DEPLOYMENT, meta: { githubCommitSha: "f".repeat(40) } }, LIVE_EVENTS],
     ["conflicting caller meta repository", { ...DEPLOYMENT, meta: { githubRepo: "attacker/other" } }, LIVE_EVENTS],
-    ["dirty local-source archive without provider gitSource", { ...DEPLOYMENT, gitSource: undefined, meta: { githubCommitSha: SHA, githubRepo: "RanaPriyansh/modelshift", githubCommitRef: "main" } }, LIVE_EVENTS],
     ["missing provider git repository", { ...DEPLOYMENT, gitRepo: undefined }, LIVE_EVENTS],
     ["wrong provider repository ID", { ...DEPLOYMENT, gitSource: { ...DEPLOYMENT.gitSource, repoId: 99 } }, LIVE_EVENTS],
     ["wrong provider git repository path", { ...DEPLOYMENT, gitRepo: { ...DEPLOYMENT.gitRepo, path: "attacker/other" } }, LIVE_EVENTS],
     ["wrong provider git ref", { ...DEPLOYMENT, gitSource: { ...DEPLOYMENT.gitSource, ref: "feature/dirty" } }, LIVE_EVENTS],
     ["missing nested deployment ID", DEPLOYMENT, [{ ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, deploymentId: undefined } }]],
     ["cross-deployment nested marker", DEPLOYMENT, [{ ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, deploymentId: "dpl_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm" } }]],
-    ["cross-deployment marker alongside matching marker", DEPLOYMENT, [...LIVE_EVENTS, { ...LIVE_EVENTS[0], created: 1_784_764_861_000, payload: { ...LIVE_EVENTS[0].payload, id: "evt_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm", deploymentId: "dpl_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm" } }]],
     ["missing nested marker date", DEPLOYMENT, [{ ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, date: undefined } }]],
     ["malformed nested marker date", DEPLOYMENT, [{ ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, date: "not-a-timestamp" } }]],
-    ["undefined own payload cannot fall through to a top-level marker", DEPLOYMENT, [{ payload: undefined, deploymentId: DEPLOYMENT.id, id: "evt_AbCdEfGhIjKlMnOpQrStUvWxYz12", created: 1_784_764_860_000, text: LIVE_EVENTS[0].payload.text }]],
-    ["conflicting top-level shadow beside nested marker", DEPLOYMENT, [{ ...LIVE_EVENTS[0], text: `Public build boundary verified across 39 static assets; public asset digest ${"b".repeat(64)}.`, id: "evt_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm", deploymentId: "dpl_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm", date: 1_784_764_861_000 }]],
-    ["matching top-level shadow beside nested marker", DEPLOYMENT, [{ ...LIVE_EVENTS[0], text: LIVE_EVENTS[0].payload.text, id: LIVE_EVENTS[0].payload.id, deploymentId: LIVE_EVENTS[0].payload.deploymentId, date: LIVE_EVENTS[0].payload.date }]],
-    ["two matching markers with the same digest in one nested payload", DEPLOYMENT, [{ ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, text: `${LIVE_EVENTS[0].payload.text}\n${LIVE_EVENTS[0].payload.text}` } }]],
-    ["two matching markers with different digests in one nested payload", DEPLOYMENT, [{ ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, text: `${LIVE_EVENTS[0].payload.text}\nPublic build boundary verified across 39 static assets; public asset digest ${"b".repeat(64)}.` } }]],
-    ["duplicate matching digest markers", DEPLOYMENT, [...LIVE_EVENTS, { ...LIVE_EVENTS[0], created: 1_784_764_861_000, payload: { ...LIVE_EVENTS[0].payload, id: "evt_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm" } }]],
+    ["undefined payload cannot fall through", DEPLOYMENT, [{ payload: undefined, deploymentId: DEPLOYMENT.id, id: "evt_AbCdEfGhIjKlMnOpQrStUvWxYz12", created: 1_784_764_860_000, text: markerLine() }]],
+    ["matching top-level shadow", DEPLOYMENT, [{ ...LIVE_EVENTS[0], text: markerLine(), id: LIVE_EVENTS[0].payload.id, deploymentId: LIVE_EVENTS[0].payload.deploymentId, date: LIVE_EVENTS[0].payload.date }]],
+    ["two markers in one nested payload", DEPLOYMENT, nestedEvents(`${markerLine()}\n${markerLine()}`)],
+    ["duplicate matching markers", DEPLOYMENT, [...LIVE_EVENTS, { ...LIVE_EVENTS[0], payload: { ...LIVE_EVENTS[0].payload, id: "evt_ZzYyXxWwVvUuTtSsRrQqPpOoNnMm" } }]],
   ])("fails closed for %s", (_label, deployment, events) => {
-    expect(() => normalizeVercelProviderReceipt(deployment, events, TARGET, "2026-07-23T00:02:00.000Z")).toThrow();
+    expect(() => normalizeVercelProviderReceipt(
+      deployment,
+      events,
+      TARGET,
+      "2026-07-23T00:02:00.000Z",
+    )).toThrow();
+  });
+
+  it.each([
+    ["retired asset-only marker", `Public build boundary verified across 71 static assets; public asset digest ${"b".repeat(64)}.`],
+    ["retired marker family version", markerLine().replace("MARKER.v2", "MARKER.v1")],
+    ["malformed marker JSON", `${PUBLIC_BUILD_ARTIFACT_MARKER_PREFIX}{bad-json}`],
+    ["missing marker field", (() => {
+      const incomplete: Record<string, unknown> = { ...MARKER };
+      delete incomplete.artifactDigest;
+      return `${PUBLIC_BUILD_ARTIFACT_MARKER_PREFIX}${JSON.stringify(incomplete)}`;
+    })()],
+    ["extra marker field", `${PUBLIC_BUILD_ARTIFACT_MARKER_PREFIX}${JSON.stringify({ ...MARKER, extra: true })}`],
+    ["unverified source", markerLine({ sourceState: "unverified" })],
+    ["unknown source tree", markerLine({ sourceTree: "unknown", sourceState: "unverified" })],
+    ["dirty source", markerLine({ sourceState: "dirty" })],
+    ["mismatched provider source", markerLine({ sourceCommit: "f".repeat(40), buildId: productionBuildId("f".repeat(40)) })],
+  ])("rejects %s", (_label, text) => {
+    expect(() => normalizeVercelProviderReceipt(
+      DEPLOYMENT,
+      nestedEvents(text),
+      TARGET,
+      "2026-07-23T00:02:00.000Z",
+    )).toThrow();
+  });
+
+  it("rejects a duplicated JSON field that JSON.parse would overwrite", () => {
+    const duplicated = markerLine().replace(
+      `"sourceCommit":"${SHA}"`,
+      `"sourceCommit":"${SHA}","sourceCommit":"${SHA}"`,
+    );
+    expect(() => normalizeVercelProviderReceipt(
+      DEPLOYMENT,
+      nestedEvents(duplicated),
+      TARGET,
+      "2026-07-23T00:02:00.000Z",
+    )).toThrow();
+  });
+
+  it("rejects retired provider receipt schemas and incomplete artifact objects", () => {
+    const receipt = normalizeVercelProviderReceipt(
+      DEPLOYMENT,
+      LIVE_EVENTS,
+      TARGET,
+      "2026-07-23T00:02:00.000Z",
+    );
+    expect(validateVercelProviderReceipt({
+      ...receipt,
+      schema_version: "1.0",
+      receipt_kind: "vercel_authenticated_build_log",
+    })).not.toEqual([]);
+    expect(validateVercelProviderReceipt({
+      ...receipt,
+      artifact: {
+        ...receipt.artifact,
+        marker: {
+          ...receipt.artifact.marker,
+          publicDirectoryDigest: undefined,
+        },
+      },
+    })).not.toEqual([]);
+    expect(validateVercelProviderReceipt({
+      ...receipt,
+      artifact: { ...receipt.artifact, duplicate: true },
+    })).not.toEqual([]);
+    expect(validateVercelProviderReceipt({
+      ...receipt,
+      artifact: {
+        ...receipt.artifact,
+        marker: {
+          ...receipt.artifact.marker,
+          runtimeCachePolicy: "retired",
+        },
+      },
+    })).not.toEqual([]);
   });
 
   it("does not turn normalized JSON or a fabricated object into an authenticated capability", () => {
-    const plainReceipt = normalizeVercelProviderReceipt(DEPLOYMENT, LIVE_EVENTS, TARGET, "2026-07-23T00:02:00.000Z");
+    const plainReceipt = normalizeVercelProviderReceipt(
+      DEPLOYMENT,
+      LIVE_EVENTS,
+      TARGET,
+      "2026-07-23T00:02:00.000Z",
+    );
     expect(receiptFromAuthenticatedHandle(plainReceipt)).toBeNull();
     expect(receiptFromAuthenticatedHandle({})).toBeNull();
   });
@@ -107,8 +245,20 @@ describe("Vercel provider deployment receipt", () => {
     async function* chunks(values: readonly string[]): AsyncGenerator<Buffer> {
       for (const value of values) yield Buffer.from(value);
     }
-    await expect(parseBoundedProviderJson(chunks(["{\"ok\":", "true}"]), undefined, 32)).resolves.toEqual({ ok: true });
-    await expect(parseBoundedProviderJson(chunks(["{\"payload\":\"", "x".repeat(64), "\"}"]), undefined, 32)).rejects.toThrow(/bounded collector size/);
-    await expect(parseBoundedProviderJson(chunks(["{}"]), "999", 32)).rejects.toThrow(/bounded collector size/);
+    await expect(parseBoundedProviderJson(
+      chunks(["{\"ok\":", "true}"]),
+      undefined,
+      32,
+    )).resolves.toEqual({ ok: true });
+    await expect(parseBoundedProviderJson(
+      chunks(["{\"payload\":\"", "x".repeat(64), "\"}"]),
+      undefined,
+      32,
+    )).rejects.toThrow(/bounded collector size/);
+    await expect(parseBoundedProviderJson(
+      chunks(["{}"]),
+      "999",
+      32,
+    )).rejects.toThrow(/bounded collector size/);
   });
 });

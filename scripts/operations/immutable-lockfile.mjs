@@ -58,6 +58,63 @@ function workingTreeIsClean() {
   return result.status === 0;
 }
 
+function nulSeparatedGitEntries(args, failureMessage) {
+  const result = spawnSync("git", [...args, "-z"], {
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  if (result.error || result.status !== 0) fail(failureMessage);
+  return result.stdout.split("\0").filter(Boolean);
+}
+
+function verifyDependencyInstallBoundary() {
+  const tracked = spawnSync(
+    "git",
+    ["diff", "--quiet", "HEAD", "--", "."],
+    { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
+  );
+  if (tracked.error || (tracked.status !== 0 && tracked.status !== 1)) {
+    fail("could not inspect tracked workspace files after dependency installation.");
+  }
+  if (tracked.status === 1) {
+    fail("tracked workspace files changed after dependency installation.");
+  }
+
+  const untracked = nulSeparatedGitEntries(
+    ["ls-files", "--others", "--exclude-standard"],
+    "could not inspect untracked workspace files after dependency installation.",
+  );
+  if (untracked.length > 0) {
+    fail("untracked workspace files appeared after dependency installation.");
+  }
+
+  const ignored = nulSeparatedGitEntries(
+    [
+      "ls-files",
+      "--others",
+      "--ignored",
+      "--exclude-standard",
+      "--directory",
+    ],
+    "could not inspect ignored workspace files after dependency installation.",
+  );
+  if (ignored.some((path) =>
+    path !== "node_modules/" && !path.startsWith("node_modules/")
+  )) {
+    fail(
+      "ignored workspace files outside node_modules appeared after dependency installation.",
+    );
+  }
+
+  const indexEntries = nulSeparatedGitEntries(
+    ["ls-files", "-v"],
+    "could not inspect Git index flags after dependency installation.",
+  );
+  if (indexEntries.some((entry) => entry[0] !== "H")) {
+    fail("Git index flags can hide dependency-install workspace changes.");
+  }
+}
+
 function verify() {
   const expected = argument("--expected-digest") ?? process.env.FORGE_LOCKFILE_DIGEST;
   if (!expected || !DIGEST.test(expected)) fail("a lowercase 64-character --expected-digest (or FORGE_LOCKFILE_DIGEST) is required.");
@@ -70,6 +127,7 @@ function verify() {
   }
   if (actual !== expected) fail(`${LOCKFILE} digest differs from the immutable source digest after dependency installation.`);
   if (!cleanWorkingTree) fail(`${LOCKFILE} differs from the checked-out Git source after dependency installation.`);
+  verifyDependencyInstallBoundary();
   process.stdout.write(`${actual}\n`);
 }
 

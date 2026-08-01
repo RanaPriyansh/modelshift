@@ -2,6 +2,7 @@ import { isIP, type LookupFunction } from "node:net";
 import { lookup } from "node:dns/promises";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
+import { execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -30,8 +31,13 @@ import {
   validateVercelProviderReceipt,
   type AuthenticatedVercelReceiptHandle,
 } from "./vercel-provider-receipt";
+import { productionBuildId } from "./build-source-identity";
+import {
+  readProductionPublicDirectoryIdentity,
+  readProductionRuntimeConfigurationIdentity,
+} from "./production-build-receipt";
 
-export const DEPLOYMENT_VERIFIER_VERSION = "2.5.0";
+export const DEPLOYMENT_VERIFIER_VERSION = "2.6.0";
 export const WORKER_CANDIDATE_STATES = ["BUILT_LOCAL", "PUSHED", "DEPLOYMENT_BLOCKED", "DEPLOYED_CANDIDATE"] as const;
 const SHA = /^[0-9a-f]{40}$/i;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
@@ -126,6 +132,17 @@ export type VerifyDeploymentOptions = {
   resolveHostname?: (hostname: string) => Promise<readonly string[]>;
   /** Supplied only by the checked-in target policy (or focused test fixtures). */
   deploymentTarget?: DeploymentTarget;
+  /** Focused tests may supply the tree for a synthetic SHA. The CLI derives it. */
+  expectedSourceTree?: string;
+  /** Focused tests may supply source-owned identities. The CLI derives them. */
+  expectedPublicDirectoryIdentity?: Readonly<{
+    publicDirectoryDigest: string;
+    publicDirectoryFileCount: number;
+  }>;
+  expectedRuntimeConfigurationIdentity?: Readonly<{
+    runtimeConfigurationDigest: string;
+    runtimeConfigurationFileCount: number;
+  }>;
 };
 
 // IANA IPv4/IPv6 Special-Purpose Address Registries, last updated 2025-10-09.
@@ -241,6 +258,39 @@ async function safeResolvedAddresses(hostname: string, resolver: (hostname: stri
 }
 
 function normalizeSha(value: string): string { if (!SHA.test(value)) throw new Error("expected release SHA must be a full 40-character Git SHA"); return value.toLowerCase(); }
+function readExpectedSourceTree(sourceSha: string): string | null {
+  try {
+    const sourceTree = execFileSync(
+      "git",
+      ["rev-parse", `${sourceSha}^{tree}`],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      },
+    ).trim().toLowerCase();
+    return SHA.test(sourceTree) ? sourceTree : null;
+  } catch {
+    return null;
+  }
+}
+function readExpectedSourceOwnedIdentities(): Readonly<{
+  publicDirectory: ReturnType<
+    typeof readProductionPublicDirectoryIdentity
+  >;
+  runtimeConfiguration: ReturnType<
+    typeof readProductionRuntimeConfigurationIdentity
+  >;
+}> | null {
+  try {
+    return Object.freeze({
+      publicDirectory: readProductionPublicDirectoryIdentity(),
+      runtimeConfiguration: readProductionRuntimeConfigurationIdentity(),
+    });
+  } catch {
+    return null;
+  }
+}
 export function validateTargetUrl(raw: string, allowedHosts: readonly string[] = [], allowLocalhost = false): URL {
   let url: URL;
   try { url = new URL(raw); } catch { throw new Error("base URL must be an absolute URL"); }
@@ -368,6 +418,18 @@ async function verifyDeploymentWithCapability(
   if (options.candidateState && !WORKER_CANDIDATE_STATES.includes(options.candidateState as (typeof WORKER_CANDIDATE_STATES)[number])) throw new Error("worker verifier cannot emit terminal ADR-006 states");
   if (options.liveEvaluationStatus && options.liveEvaluationStatus !== "not_evaluated") throw new Error("worker verifier cannot consume live evaluation proof; use the separately approved eval:live gate");
   const expected = normalizeSha(options.expectedSha); const target = validateTargetUrl(options.baseUrl, options.allowedHosts, options.allowLocalhost); const origin = target.origin; const targetOrigin = target.toString(); const fetchImpl = options.fetchImpl ?? fetch; const timeoutMs = options.timeoutMs ?? 10_000; const checks: VerificationCheck[] = []; let observed: string | "unknown" = "unknown"; let runtimeMode = "unknown"; let cloudProviderFlags: Record<string, boolean | string> = { cloud_accounts_enabled: "not_evaluated", cloud_auth_configured: "not_evaluated", provider_mode: "not_evaluated" }; const assets = new Map<string, URL>();
+  const expectedSourceTree = options.expectedSourceTree
+    ? normalizeSha(options.expectedSourceTree)
+    : readExpectedSourceTree(expected);
+  const sourceOwnedIdentities = (
+    options.expectedPublicDirectoryIdentity
+    && options.expectedRuntimeConfigurationIdentity
+  )
+    ? {
+        publicDirectory: options.expectedPublicDirectoryIdentity,
+        runtimeConfiguration: options.expectedRuntimeConfigurationIdentity,
+      }
+    : readExpectedSourceOwnedIdentities();
   const generatedAt = options.generatedAt ?? new Date().toISOString();
   const authenticatedProviderReceipt = receiptFromAuthenticatedHandle(authenticatedReceiptHandle);
   const externalProviderReceipt = options.externalProviderReceipt;
@@ -402,12 +464,19 @@ async function verifyDeploymentWithCapability(
     record(checks, "health.cache_control", response.headers.get("cache-control")?.toLowerCase().includes("no-store") === true, "health response is not cached");
     const text = await readBounded(response, MAX_HEALTH); let payload: unknown; try { payload = JSON.parse(text); } catch { payload = null; }
     if (!LOCAL_HOSTS.has(target.hostname)) aliasVerifiedAt = new Date().toISOString();
-    const expectedKeys = ["app_name", "build_time", "cloud_accounts_enabled", "cloud_auth_configured", "content_package_manifest_digest", "database_migration_identity", "dependency_lock_digest", "device_profiles", "evaluator_baseline_digest", "learner_evidence_sync", "managed_provider_flags", "managed_surface_flags", "provider_mode", "release_manifest", "release_sha", "runtime_mode", "schema_version", "service", "status"];
+    const expectedKeys = ["app_name", "build_source_sha", "build_time", "cloud_accounts_enabled", "cloud_auth_configured", "content_package_manifest_digest", "database_migration_identity", "dependency_lock_digest", "device_profiles", "evaluator_baseline_digest", "learner_evidence_sync", "managed_provider_flags", "managed_surface_flags", "provider_mode", "release_manifest", "release_sha", "runtime_mode", "schema_version", "service", "status"];
     const shape = isRecord(payload) && Object.keys(payload).sort().join(",") === expectedKeys.join(",") && payload.schema_version === "1.0" && payload.status === "ok" && payload.service === "forge-learning-os" && payload.app_name === "FORGE";
     record(checks, "health.schema", shape, "health payload uses the allowlisted release schema");
     if (shape && isRecord(payload)) {
       observed = typeof payload.release_sha === "string" && SHA.test(payload.release_sha) ? payload.release_sha.toLowerCase() : "unknown";
       runtimeMode = typeof payload.runtime_mode === "string" ? payload.runtime_mode : "unknown";
+      const buildSourceMatchesExpected = payload.build_source_sha === expected;
+      const buildSourceHeaderMatchesExpected =
+        response.headers.get("x-forge-build-source-sha")?.toLowerCase()
+          === expected;
+      const releaseHeaderMatchesObserved =
+        response.headers.get("x-forge-release-sha")?.toLowerCase()
+          === observed;
       const managedFlags = isRecord(payload.managed_provider_flags) ? payload.managed_provider_flags : {};
       const surfaceFlags = isRecord(payload.managed_surface_flags) ? payload.managed_surface_flags : {};
       cloudProviderFlags = {
@@ -422,6 +491,8 @@ async function verifyDeploymentWithCapability(
         managed_interpretation: surfaceFlags.interpretation === true,
         managed_planner: surfaceFlags.planner === true,
       };
+      record(checks, "health.build_source_identity", buildSourceMatchesExpected, "compiled build source SHA matches the expected immutable SHA");
+      record(checks, "health.build_source_header", buildSourceHeaderMatchesExpected, "compiled build source header matches the expected immutable SHA");
       record(checks, "health.build_time_diagnostic", typeof payload.build_time === "string" && (payload.build_time === "unknown" || ISO.test(payload.build_time)), "app build_time is well-formed diagnostic metadata, not provider provenance");
       record(checks, "health.disabled_cloud", payload.cloud_accounts_enabled === false && payload.cloud_auth_configured === false && payload.device_profiles === "device_only" && payload.learner_evidence_sync === "disabled", "cloud identity and learner evidence sync are disabled");
       const flags = payload.managed_provider_flags;
@@ -445,8 +516,8 @@ async function verifyDeploymentWithCapability(
           candidateManifest.public_alias.url,
           options.deploymentTarget,
         );
-        const requiresProviderReceipt = candidateManifest.public_asset.status === "provider_receipt_required"
-          && candidateManifest.public_asset.gate === "provider_observed_asset_digest_required_before_promotion";
+        const requiresProviderReceipt = candidateManifest.artifact.status === "provider_receipt_required"
+          && candidateManifest.artifact.gate === "provider_observed_complete_artifact_required_before_promotion";
         const receiptAuthorityIsProviderApi = authenticatedProviderReceipt !== null;
         const receiptMatchesCandidate = providerReceipt !== null
           && providerReceipt.deployment.id === candidateManifest.immutable_deployment.id
@@ -458,21 +529,43 @@ async function verifyDeploymentWithCapability(
             { id: providerReceipt.deployment.id, project_id: providerReceipt.deployment.project_id, url: providerReceipt.deployment.immutable_url },
             candidateManifest.public_alias.url,
             options.deploymentTarget,
-          );
+          )
+          && providerReceipt.artifact.marker.sourceCommit
+            === candidateManifest.source_sha
+          && providerReceipt.artifact.marker.sourceCommit === expected
+          && providerReceipt.artifact.marker.buildId
+            === productionBuildId(expected)
+          && providerReceipt.artifact.marker.sourceState === "clean"
+          && expectedSourceTree !== null
+          && providerReceipt.artifact.marker.sourceTree
+            === expectedSourceTree
+          && sourceOwnedIdentities !== null
+          && providerReceipt.artifact.marker.publicDirectoryDigest
+            === sourceOwnedIdentities.publicDirectory.publicDirectoryDigest
+          && providerReceipt.artifact.marker.publicDirectoryFileCount
+            === sourceOwnedIdentities.publicDirectory.publicDirectoryFileCount
+          && providerReceipt.artifact.marker.runtimeConfigurationDigest
+            === sourceOwnedIdentities.runtimeConfiguration
+              .runtimeConfigurationDigest
+          && providerReceipt.artifact.marker.runtimeConfigurationFileCount
+            === sourceOwnedIdentities.runtimeConfiguration
+              .runtimeConfigurationFileCount;
         const providerBuildOrdering = providerReceipt !== null
-          && new Date(providerReceipt.deployment.created_at).getTime() <= new Date(providerReceipt.public_asset.observed_at).getTime();
+          && new Date(providerReceipt.deployment.created_at).getTime() <= new Date(providerReceipt.artifact.observed_at).getTime();
         const providerObservationPrecedesAliasVerification = providerReceipt !== null
           && aliasVerifiedAt !== "not_verified"
-          && new Date(providerReceipt.public_asset.observed_at).getTime() <= new Date(aliasVerifiedAt).getTime();
+          && new Date(providerReceipt.artifact.observed_at).getTime() <= new Date(aliasVerifiedAt).getTime();
         record(checks, "health.release_manifest.alias_target", aliasMatchesTarget, "manifest public alias exactly matches the normalized verified target origin");
         record(checks, "health.release_manifest.immutable_target", immutableMatchesPolicy, "immutable deployment uses the checked-in FORGE Vercel hostname and non-placeholder deployment-ID policy");
         record(checks, "provider_receipt.schema", receiptFailures.length === 0, receiptFailures.length === 0 ? "provider receipt uses the exact versioned schema" : `provider receipt is missing or malformed: ${receiptFailures.join(", ")}`);
         record(checks, "provider_receipt.authority", receiptAuthorityIsProviderApi, receiptAuthorityIsProviderApi ? "receipt capability was issued in this process by the fixed-origin authenticated Vercel collector" : "plain JSON or an unregistered object is external evidence, not provider-authenticated proof");
-        record(checks, "provider_receipt.tuple", receiptMatchesCandidate, "provider receipt exactly matches health deployment ID, project ID, source SHA, immutable URL, and checked-in target policy");
-        record(checks, "provider_receipt.build_time_order", providerBuildOrdering, "provider deployment creation time is no later than its provider-observed public-asset build-log event");
-        record(checks, "provider_receipt.alias_time_order", providerObservationPrecedesAliasVerification, "provider-observed public-asset build-log event is no later than the verifier's alias fetch receipt");
-        record(checks, "provider_receipt.public_asset", requiresProviderReceipt && providerReceipt !== null, "health requires a post-build provider-observed public-asset digest; health never self-attests it");
-        const boundCandidate = matchesHealth && matchesExpectedSource && aliasMatchesTarget && immutableMatchesPolicy && requiresProviderReceipt && receiptAuthorityIsProviderApi && receiptFailures.length === 0 && receiptMatchesCandidate && providerBuildOrdering && providerObservationPrecedesAliasVerification;
+        record(checks, "provider_receipt.source_tree", providerReceipt !== null && expectedSourceTree !== null && providerReceipt.artifact.marker.sourceTree === expectedSourceTree, "complete artifact marker source tree exactly matches the expected Git commit tree");
+        record(checks, "provider_receipt.source_owned_artifact", providerReceipt !== null && sourceOwnedIdentities !== null && providerReceipt.artifact.marker.publicDirectoryDigest === sourceOwnedIdentities.publicDirectory.publicDirectoryDigest && providerReceipt.artifact.marker.publicDirectoryFileCount === sourceOwnedIdentities.publicDirectory.publicDirectoryFileCount && providerReceipt.artifact.marker.runtimeConfigurationDigest === sourceOwnedIdentities.runtimeConfiguration.runtimeConfigurationDigest && providerReceipt.artifact.marker.runtimeConfigurationFileCount === sourceOwnedIdentities.runtimeConfiguration.runtimeConfigurationFileCount, "complete artifact marker exactly matches the checked-out public directory and runtime configuration identities");
+        record(checks, "provider_receipt.tuple", receiptMatchesCandidate, "provider receipt exactly matches health deployment ID, project ID, source SHA, immutable URL, checked-in target policy, build ID, and source state");
+        record(checks, "provider_receipt.build_time_order", providerBuildOrdering, "provider deployment creation time is no later than its provider-observed complete artifact marker");
+        record(checks, "provider_receipt.alias_time_order", providerObservationPrecedesAliasVerification, "provider-observed complete artifact marker is no later than the verifier's alias fetch receipt");
+        record(checks, "provider_receipt.complete_artifact", requiresProviderReceipt && providerReceipt !== null, "provider receipt contains one strict marker with complete artifact, public asset, public directory, runtime configuration, build, and source identity");
+        const boundCandidate = matchesHealth && matchesExpectedSource && buildSourceMatchesExpected && buildSourceHeaderMatchesExpected && releaseHeaderMatchesObserved && aliasMatchesTarget && immutableMatchesPolicy && requiresProviderReceipt && receiptAuthorityIsProviderApi && receiptFailures.length === 0 && receiptMatchesCandidate && providerBuildOrdering && providerObservationPrecedesAliasVerification;
         if (boundCandidate) releaseManifest = candidateManifest;
         record(checks, "health.release_manifest.binding", boundCandidate, "bound candidate tuple matches health, verified alias, provider-authenticated exact deployment receipt, source SHA, immutable-target policy, and post-build asset observation");
       } else {

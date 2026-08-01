@@ -35,7 +35,8 @@ describe("release manifest", () => {
       dependency_lock_digest: DIGEST,
       immutable_deployment: { id: "dpl_AbCdEfGhIjKlMnOpQrStUvWxYz12", url: "https://forge-learning-test123-ranapriyanshs-projects.vercel.app/", project_id: "prj_SnTYtzLicYKYlHvXCNwq9J7ehQZB" },
       public_alias: { url: "https://modelshift.vercel.app/" },
-      public_asset: { status: "provider_receipt_required", gate: "provider_observed_asset_digest_required_before_promotion" },
+      schema_version: "2.0",
+      artifact: { status: "provider_receipt_required", gate: "provider_observed_complete_artifact_required_before_promotion" },
     });
     expect("build_time" in manifest).toBe(false);
   });
@@ -51,13 +52,13 @@ describe("release manifest", () => {
       FORGE_PUBLIC_ASSET_DIGEST: DIGEST,
     });
     expect(isBoundReleaseManifest(manifest)).toBe(false);
-    expect(manifest).toMatchObject({ binding_status: "unbound", reason_codes: expect.arrayContaining(["public_asset_digest"]) });
+    expect(manifest).toMatchObject({ binding_status: "unbound", reason_codes: expect.arrayContaining(["artifact_receipt"]) });
   });
 
   it.each([
     ["unknown candidate state", { FORGE_RELEASE_CANDIDATE_STATE: "PRODUCTION_VERIFIED" }, "candidate_state"],
     ["malformed lock digest", { FORGE_LOCKFILE_DIGEST: "short" }, "dependency_lock_digest"],
-    ["caller public asset absence gate", { FORGE_PUBLIC_ASSET_DIGEST_STATUS: "absent_with_gate" }, "public_asset_digest"],
+    ["caller public asset absence gate", { FORGE_PUBLIC_ASSET_DIGEST_STATUS: "absent_with_gate" }, "artifact_receipt"],
     ["malformed platform immutable URL", { VERCEL_URL: "forge-learning-test123-ranapriyanshs-projects.vercel.app/path" }, "immutable_deployment"],
     ["non-default Vercel HTTPS port 444", { VERCEL_URL: "forge-learning-test123-ranapriyanshs-projects.vercel.app:444" }, "immutable_deployment"],
     ["non-default Vercel HTTPS port 8443", { VERCEL_URL: "forge-learning-test123-ranapriyanshs-projects.vercel.app:8443" }, "immutable_deployment"],
@@ -76,8 +77,14 @@ describe("release manifest", () => {
 
   it("rejects forged unknown fields and malformed nested payloads", () => {
     const bound = candidate();
+    const { artifact, ...withoutArtifact } = bound;
     expect(validateReleaseManifest({ ...bound, token: "not-allowed" })).not.toEqual([]);
-    expect(validateReleaseManifest({ ...bound, public_asset: { status: "provider_receipt_required", gate: "provider_observed_asset_digest_required_before_promotion", extra: true } })).not.toEqual([]);
+    expect(validateReleaseManifest({ ...bound, artifact: { status: "provider_receipt_required", gate: "provider_observed_complete_artifact_required_before_promotion", extra: true } })).not.toEqual([]);
+    expect(validateReleaseManifest({
+      ...withoutArtifact,
+      schema_version: "1.0",
+      public_asset: artifact,
+    })).not.toEqual([]);
     expect(validateReleaseManifest({ ...bound, immutable_deployment: { id: "dpl_AbCdEfGhIjKlMnOpQrStUvWxYz12", url: "https://forge-learning-test123-ranapriyanshs-projects.vercel.app/", project_id: "prj_SnTYtzLicYKYlHvXCNwq9J7ehQZB", api_key: "not-allowed" } })).not.toEqual([]);
     expect(validateReleaseManifest({ ...bound, public_alias: { url: "https://modelshift.vercel.app/", resolved_at: TIME } })).toContain("public_alias");
   });

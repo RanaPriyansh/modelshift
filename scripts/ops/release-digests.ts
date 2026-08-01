@@ -63,20 +63,32 @@ function filesUnder(directory: string, realRoot: string): string[] {
  * A deterministic digest of every emitted public static asset. It is a build
  * identity input only: a deploy still has to bind it to the immutable target.
  */
-export function readPublicAssetDigest(root = process.cwd()): string {
+export function readPublicAssetIdentity(
+  root = process.cwd(),
+): Readonly<{
+  publicAssetDigest: string;
+  publicAssetFileCount: number;
+}> {
   const staticDirectory = resolve(root, ".next/static");
   const staticStat = lstatSync(staticDirectory);
   if (staticStat.isSymbolicLink() || !staticStat.isDirectory()) throw new Error("Public asset digest requires a real .next/static directory.");
   const realStaticDirectory = realpathSync(staticDirectory);
   const files = filesUnder(staticDirectory, realStaticDirectory).sort();
   if (files.length === 0) throw new Error("Public asset digest requires a non-empty .next/static build output.");
-  return framedFileTreeDigest(
-    "forge-public-static-file-tree.v1",
-    files.map((file) => ({
-      path: relative(realStaticDirectory, file).split(sep).join("/"),
-      bytes: readStableRegularFile(file),
-    })),
-  );
+  return Object.freeze({
+    publicAssetDigest: framedFileTreeDigest(
+      "forge-public-static-file-tree.v1",
+      files.map((file) => ({
+        path: relative(realStaticDirectory, file).split(sep).join("/"),
+        bytes: readStableRegularFile(file),
+      })),
+    ),
+    publicAssetFileCount: files.length,
+  });
+}
+
+export function readPublicAssetDigest(root = process.cwd()): string {
+  return readPublicAssetIdentity(root).publicAssetDigest;
 }
 
 function sha256Reference(value: string): string {

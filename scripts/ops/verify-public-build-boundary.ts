@@ -50,7 +50,7 @@ import {
   scanUniversityFoundationProductionArtifacts,
 } from "../../src/components/forge/university/university-foundation-public-artifact-boundary";
 
-import { readPublicAssetDigest } from "./release-digests";
+import { readPublicAssetIdentity } from "./release-digests";
 import { publicBuildBoundaryReceiptLine } from "./public-build-boundary-receipt";
 import {
   clearProductionRuntimeCache,
@@ -148,12 +148,20 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
   assertNoUniversityTodayProductionArtifactLeaks(universityTodayLeaks);
   assertNoUniversityFoundationPublicArtifactLeaks(universityFoundationLeaks);
   clearProductionRuntimeCache(root);
-  const publicAssetDigest = readPublicAssetDigest(root);
-  process.stdout.write(publicBuildBoundaryReceiptLine(
-    files.length,
-    publicAssetDigest,
-  ));
   const buildReceipt = writeProductionBuildReceipt(root);
+  const publicAssetIdentity = readPublicAssetIdentity(root);
+  if (
+    buildReceipt.publicAssetDigest
+    !== `sha256:${publicAssetIdentity.publicAssetDigest}`
+  ) {
+    throw new Error(
+      "Public build artifact marker rejected a changed public asset tree.",
+    );
+  }
+  process.stdout.write(publicBuildBoundaryReceiptLine(
+    buildReceipt,
+    publicAssetIdentity.publicAssetFileCount,
+  ));
   process.stdout.write(
     `Production build receipt: ${buildReceipt.sourceState} source ${buildReceipt.sourceCommit}; ${buildReceipt.artifactFileCount} files; artifact ${buildReceipt.artifactDigest}.\n`,
   );

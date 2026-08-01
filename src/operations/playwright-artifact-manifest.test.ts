@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -18,13 +19,18 @@ describe("bounded Playwright artifact staging", () => {
     await symlink(resolve(root, "test-failed-1.png"), resolve(root, "test-failed-99.png"));
     const output = resolve(root, "manifest.json"); const stage = resolve(root, "stage");
     const manifest = await writePlaywrightArtifactManifest(root, SHA, output, "playwright-failure-1", stage);
+    const expectedDigest = createHash("sha256").update(png).digest("hex");
     expect(manifest.artifacts).toHaveLength(40);
+    expect(new Set(manifest.artifacts.map((artifact) => artifact.sha256))).toEqual(new Set([expectedDigest]));
     expect(manifest.excluded_count).toBe(2);
     expect(manifest.truncated).toBe(true);
     expect((await readdir(stage)).filter((name) => name.endsWith(".png"))).toHaveLength(40);
     expect((await readdir(stage)).some((name) => name === "test-failed-99.png")).toBe(false);
     expect((await readdir(stage)).some((name) => name.endsWith(".zip"))).toBe(false);
-    expect(JSON.parse(await readFile(output, "utf8")).tested_sha).toBe(SHA);
+    const recordedManifest = JSON.parse(await readFile(output, "utf8"));
+    expect(recordedManifest.schema_version).toBe("2.0");
+    expect(recordedManifest.tested_sha).toBe(SHA);
+    expect(recordedManifest.artifacts).toEqual(manifest.artifacts);
     const stale = resolve(stage, "stale.png"); await writeFile(stale, png);
     const originalManifest = await readFile(output, "utf8");
     await expect(writePlaywrightArtifactManifest(root, SHA, output, "playwright-failure-2", stage)).rejects.toThrow(/stage-dir must not exist/);
@@ -37,17 +43,22 @@ describe("bounded Playwright artifact staging", () => {
     const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 115, 121, 110, 116, 104, 101, 116, 105, 99]);
     await writeFile(resolve(root, "test-failed-1.png"), png);
     const manifest = await writePlaywrightArtifactManifest(root, SHA, resolve(root, "release-ops", "manifest.json"), "playwright-failure-1", resolve(root, "release-ops", "stage"));
-    expect(manifest.artifacts).toEqual([{ path: "test-failed-1.png", bytes: png.length }]);
+    expect(manifest.artifacts).toEqual([{
+      path: "test-failed-1.png",
+      bytes: png.length,
+      sha256: createHash("sha256").update(png).digest("hex"),
+    }]);
   });
 
-  it("stages bytes from the no-follow descriptor when the candidate pathname is swapped after open", async () => {
+  it("binds the manifest to opened bytes when a pathname is replaced by different same-size bytes", async () => {
     const root = await mkdtemp(resolve(tmpdir(), "forge-artifact-open-once-")); temporaryDirectories.push(root);
     const original = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 111, 114, 105, 103, 105, 110, 97, 108]);
-    const outside = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 111, 117, 116, 115, 105, 100, 101]);
+    const replacementBytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 114, 101, 112, 108, 97, 99, 101, 100]);
+    expect(replacementBytes).toHaveLength(original.length);
     const candidate = resolve(root, "test-failed-1.png"); const replacement = resolve(root, "replacement.png");
-    await Promise.all([writeFile(candidate, original), writeFile(replacement, outside)]);
+    await Promise.all([writeFile(candidate, original), writeFile(replacement, replacementBytes)]);
 
-    await writePlaywrightArtifactManifest(root, SHA, resolve(root, "manifest.json"), "playwright-failure-1", resolve(root, "stage"), {
+    const manifest = await writePlaywrightArtifactManifest(root, SHA, resolve(root, "manifest.json"), "playwright-failure-1", resolve(root, "stage"), {
       afterCandidateOpened: async (path) => {
         expect(path).toMatch(/test-failed-1\.png$/);
         await rm(path);
@@ -55,8 +66,14 @@ describe("bounded Playwright artifact staging", () => {
       },
     });
 
+    expect(manifest.artifacts).toEqual([{
+      path: "test-failed-1.png",
+      bytes: original.length,
+      sha256: createHash("sha256").update(original).digest("hex"),
+    }]);
+    expect(manifest.artifacts[0]?.sha256).not.toBe(createHash("sha256").update(replacementBytes).digest("hex"));
     await expect(readFile(resolve(root, "stage", "test-failed-1.png"))).resolves.toEqual(original);
-    await expect(readFile(candidate)).resolves.toEqual(outside);
+    await expect(readFile(candidate)).resolves.toEqual(replacementBytes);
   });
 
   it.each(["equal", "outside", "ancestor", "output-overlap"])("rejects a %s stage path before it can remove sentinel evidence", async (caseName) => {

@@ -23,8 +23,12 @@ permissions:
 
 jobs:
   verify-read-only:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # RELEASE GATE: Configure required reviewers and main-only deployment protection for this GitHub environment.
+    # RELEASE GATE: Keep VERCEL_RECEIPT_TOKEN in this environment and limit it to production read-only receipt access.
+    environment: forge-production-read-only
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"
@@ -35,14 +39,13 @@ jobs:
       TARGET_ID: ${{ inputs.target_id }}
       EXPECTED_RELEASE_SHA: ${{ inputs.expected_sha }}
       VERCEL_DEPLOYMENT_ID: ${{ inputs.vercel_deployment_id }}
-      # A separately configured, least-privilege read-only Vercel API token.
-      # It is consumed only by the collector process and never written to a receipt or report.
-      VERCEL_RECEIPT_TOKEN: ${{ secrets.VERCEL_RECEIPT_TOKEN }}
     steps:
       - name: Check out verifier source
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           persist-credentials: false
+      - name: Bind expected release to checked-out main
+        run: test "$EXPECTED_RELEASE_SHA" = "$GITHUB_SHA"
       - name: Set up pnpm
         uses: pnpm/action-setup@08c4be7e2e672a47d11bd04269e27e5f3e8529cb # v6.0.0
         with:
@@ -51,19 +54,36 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version: "22.22.3"
           package-manager-cache: false
       - name: Capture immutable verifier dependency identity before install
         run: node scripts/operations/immutable-lockfile.mjs capture --source-ref "$GITHUB_SHA" --github-env "$GITHUB_ENV"
-      - name: Install locked verifier dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Reject post-install verifier lockfile mutation
+      - name: Install locked verifier dependencies without dependency scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Reject high or critical advisories in the locked verifier graph
+        run: pnpm audit --audit-level high
+      - name: Verify verifier dependency registry signatures
+        run: pnpm audit signatures
+      - name: Run allowlisted verifier dependency builds
+        run: pnpm rebuild esbuild
+      - name: Verify dependency-script source authority
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --exit-code "$GITHUB_SHA" -- scripts/operations/immutable-lockfile.mjs
+          git diff --exit-code "$GITHUB_SHA" -- .
+          test -z "$(git ls-files --others --exclude-standard)"
+          git ls-files --others --ignored --exclude-standard --directory -z | node -e 'const fs = require("node:fs"); const paths = fs.readFileSync(0).toString("utf8").split("\0").filter(Boolean); if (paths.some((path) => path !== "node_modules/" && !path.startsWith("node_modules/"))) process.exit(1)'
+          git ls-files -v -z | node -e 'const fs = require("node:fs"); const entries = fs.readFileSync(0).toString("utf8").split("\0").filter(Boolean); if (entries.some((entry) => entry[0] !== "H")) process.exit(1)'
+      - name: Verify lockfile and verifier install boundary
         run: node scripts/operations/immutable-lockfile.mjs verify --expected-digest "$FORGE_LOCKFILE_DIGEST"
       - name: Compute checked-in release metadata
         run: |
           printf 'FORGE_CONTENT_MANIFEST_DIGEST=%s\n' "$(shasum -a 256 scripts/ops/content-package-manifest.json | cut -d' ' -f1)" >> "$GITHUB_ENV"
           printf 'FORGE_EVALUATOR_BASELINE_DIGEST=%s\n' "$(shasum -a 256 scripts/ops/evaluation-baseline.json | cut -d' ' -f1)" >> "$GITHUB_ENV"
       - name: Run bounded same-origin GET verifier
+        env:
+          # This environment-scoped token is available only to the verifier process.
+          VERCEL_RECEIPT_TOKEN: ${{ secrets.VERCEL_RECEIPT_TOKEN }}
         run: >-
           pnpm exec tsx scripts/ops/deployment-verifier.ts
           --target-id "$TARGET_ID"
