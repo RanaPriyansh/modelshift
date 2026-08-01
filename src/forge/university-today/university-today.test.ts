@@ -13,6 +13,7 @@ import {
   projectUniversityToday,
   type UniversityTodayRequestV1,
 } from ".";
+import { universityTodayRequestSchema } from "./contracts";
 
 const SCOPE = Object.freeze({
   ownerUserId: "11111111-1111-4111-8111-111111111111",
@@ -476,5 +477,43 @@ describe("projectUniversityToday", () => {
     expect(proxyTrapCalls).toBe(0);
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
+  });
+
+  it("rejects oversized strings and serialized input before request validation", async () => {
+    const oversizedString = {
+      oversizedText: "x".repeat(4_194_304),
+      ...(await request()),
+    };
+    const oversizedAggregate = {
+      oversizedAggregate: Array.from(
+        { length: 129 },
+        () => "x".repeat(4_096),
+      ),
+      ...(await request()),
+    };
+    const safeParse = vi.spyOn(universityTodayRequestSchema, "safeParse");
+
+    try {
+      const [stringResult, byteResult] = await Promise.all([
+        projectUniversityToday(oversizedString),
+        projectUniversityToday(oversizedAggregate),
+      ]);
+
+      expect(stringResult).toMatchObject({
+        status: "invalid",
+        action: null,
+        projectionDigest: null,
+        issues: [{ code: "schema.invalid", path: "" }],
+      });
+      expect(byteResult).toMatchObject({
+        status: "invalid",
+        action: null,
+        projectionDigest: null,
+        issues: [{ code: "schema.invalid", path: "" }],
+      });
+      expect(safeParse).not.toHaveBeenCalled();
+    } finally {
+      safeParse.mockRestore();
+    }
   });
 });

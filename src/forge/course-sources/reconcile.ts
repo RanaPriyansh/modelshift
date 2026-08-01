@@ -35,6 +35,8 @@ export const COURSE_SOURCE_ISSUE_CODES = [
 
 const COURSE_SOURCE_SNAPSHOT_OPTIONS = {
   allowNullPrototypeObjects: true,
+  maximumStringLength: 4_096,
+  maximumSerializedJsonBytes: 512 * 1_024,
 } as const;
 
 export type CourseSourceIssueCode = (typeof COURSE_SOURCE_ISSUE_CODES)[number];

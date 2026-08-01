@@ -49,6 +49,9 @@ const AUTHORITY = deepFreeze({
   externalSideEffectsAllowed: false,
 } satisfies UniversityPostAttemptRepairAuthority);
 
+const MAXIMUM_STRING_LENGTH = 4_096;
+const MAXIMUM_SERIALIZED_JSON_BYTES = 512 * 1_024;
+
 type OuterRequest = Readonly<{
   todayRequest: unknown;
   worldPack: unknown;
@@ -249,6 +252,8 @@ export async function projectUniversityPostAttemptRepair(
     let todayRequestSnapshot: unknown;
     try {
       todayRequestSnapshot = boundedJsonSnapshot(request.todayRequest, {
+        maximumStringLength: MAXIMUM_STRING_LENGTH,
+        maximumSerializedJsonBytes: MAXIMUM_SERIALIZED_JSON_BYTES,
         rejectObject: nodeUtilTypes.isProxy,
       });
     } catch {

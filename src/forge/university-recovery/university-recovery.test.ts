@@ -9,6 +9,7 @@ import {
   type UniversityRecoveryItemV1,
   type UniversityRecoveryRequestV1,
 } from ".";
+import { universityRecoveryRequestSchema } from "./contracts";
 
 const OWNER_USER_ID = "11111111-1111-4111-8111-111111111111";
 const TENANT_ID = "22222222-2222-4222-8222-222222222222";
@@ -558,5 +559,41 @@ describe("projectUniversityRecovery", () => {
         message: "The recovery request must be bounded accessor-free plain JSON.",
       }],
     });
+  });
+
+  it("rejects oversized strings and serialized input before request validation", async () => {
+    const oversizedString = {
+      oversizedText: "x".repeat(4_194_304),
+      ...request(),
+    };
+    const oversizedAggregate = {
+      oversizedAggregate: Array.from(
+        { length: 129 },
+        () => "x".repeat(4_096),
+      ),
+      ...request(),
+    };
+    const safeParse = vi.spyOn(universityRecoveryRequestSchema, "safeParse");
+
+    try {
+      const [stringResult, byteResult] = await Promise.all([
+        projectUniversityRecovery(oversizedString),
+        projectUniversityRecovery(oversizedAggregate),
+      ]);
+
+      expect(stringResult).toMatchObject({
+        status: "invalid",
+        projectionDigest: null,
+        issues: [{ code: "schema.invalid", path: "" }],
+      });
+      expect(byteResult).toMatchObject({
+        status: "invalid",
+        projectionDigest: null,
+        issues: [{ code: "schema.invalid", path: "" }],
+      });
+      expect(safeParse).not.toHaveBeenCalled();
+    } finally {
+      safeParse.mockRestore();
+    }
   });
 });

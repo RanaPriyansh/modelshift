@@ -391,8 +391,11 @@ describe("ADR-012 transient course-source ingestion", () => {
 
   it("bounds bytes, lines, unfolded lines, components, and control characters before derivation", async () => {
     const tooLarge = await ingestCourseSource(icsRequest("x".repeat(COURSE_SOURCE_INGESTION_LIMITS.maximumInputBytes + 1)));
+    const snapshotTooLarge = await ingestCourseSource(icsRequest("x".repeat(4_194_304)));
     expect(tooLarge.status).toBe("invalid");
     expect(tooLarge.issues).toContainEqual(expect.objectContaining({ code: "schema.invalid" }));
+    expect(snapshotTooLarge.status).toBe("invalid");
+    expect(snapshotTooLarge.issues).toContainEqual(expect.objectContaining({ code: "schema.invalid" }));
 
     const tooManyBytes = await ingestCourseSource(icsRequest("é".repeat(200_000)));
     expect(tooManyBytes.issues).toContainEqual(expect.objectContaining({ code: "input.too_large" }));

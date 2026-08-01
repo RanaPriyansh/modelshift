@@ -20,6 +20,9 @@ import {
   universityRecoveryWhatIfRequestSchema,
 } from "./contracts";
 
+const MAXIMUM_STRING_LENGTH = 4_096;
+const MAXIMUM_SERIALIZED_JSON_BYTES = 512 * 1_024;
+
 const AUTHORITY = deepFreeze({
   identityAuthority: false,
   tenantIsolationAuthority: false,
@@ -118,6 +121,8 @@ export async function projectUniversityRecoveryWhatIf(
     let copied: unknown;
     try {
       copied = boundedJsonSnapshot(value, {
+        maximumStringLength: MAXIMUM_STRING_LENGTH,
+        maximumSerializedJsonBytes: MAXIMUM_SERIALIZED_JSON_BYTES,
         rejectObject: nodeUtilTypes.isProxy,
       });
     } catch {

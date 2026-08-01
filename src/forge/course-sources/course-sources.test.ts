@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   buildCourseSourceGoalContext,
   courseSourceCandidateSchema,
+  courseSourceReconciliationRequestSchema,
   reconcileCourseSources,
 } from ".";
 
@@ -651,5 +652,71 @@ describe("ADR-010 university course-source candidate boundary", () => {
     expect(rejected.reconciliation.status).toBe("invalid");
     expect(rejected.issues.map((entry) => entry.code)).toContain("schema.invalid");
     expect(getterCalls).toBe(0);
+  });
+
+  it("rejects oversized strings and serialized input before reconciliation validation", async () => {
+    const oversizedString = {
+      oversizedText: "x".repeat(4_194_304),
+      ...request(),
+    };
+    const oversizedAggregate = {
+      oversizedAggregate: Array.from(
+        { length: 129 },
+        () => "x".repeat(4_096),
+      ),
+      ...request(),
+    };
+    const safeParse = vi.spyOn(courseSourceReconciliationRequestSchema, "safeParse");
+
+    try {
+      const [stringResult, byteResult] = await Promise.all([
+        reconcileCourseSources(oversizedString),
+        reconcileCourseSources(oversizedAggregate),
+      ]);
+
+      expect(stringResult).toMatchObject({
+        status: "invalid",
+        projectionDigest: null,
+        issues: [{ code: "schema.invalid", path: "" }],
+      });
+      expect(byteResult).toMatchObject({
+        status: "invalid",
+        projectionDigest: null,
+        issues: [{ code: "schema.invalid", path: "" }],
+      });
+      expect(safeParse).not.toHaveBeenCalled();
+    } finally {
+      safeParse.mockRestore();
+    }
+  });
+
+  it("rejects oversized goal-context input before child validation", async () => {
+    const safeParse = vi.spyOn(courseSourceReconciliationRequestSchema, "safeParse");
+
+    try {
+      const result = await buildCourseSourceGoalContext({
+        goalRef: {
+          oversizedText: "x".repeat(4_194_304),
+          schemaVersion: "learner-goal.v1",
+          goalId: "goal.finish-assignment-one",
+          storageClass: "learner-owned-device-local",
+        },
+        reconciliationRequest: request(),
+      });
+
+      expect(result).toMatchObject({
+        status: "unavailable",
+        context: null,
+        reconciliation: {
+          status: "invalid",
+          projectionDigest: null,
+          issues: [{ code: "schema.invalid", path: "" }],
+        },
+        issues: [{ code: "schema.invalid", path: "" }],
+      });
+      expect(safeParse).not.toHaveBeenCalled();
+    } finally {
+      safeParse.mockRestore();
+    }
   });
 });

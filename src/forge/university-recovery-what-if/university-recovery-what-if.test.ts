@@ -9,6 +9,7 @@ import {
   projectUniversityRecoveryWhatIf,
   type UniversityRecoveryWhatIfRequestV1,
 } from ".";
+import { universityRecoveryWhatIfRequestSchema } from "./contracts";
 
 function request(
   availableMinutes: number,
@@ -293,6 +294,42 @@ describe("projectUniversityRecoveryWhatIf", () => {
       expect(projection.issues.every((issue) => (
         issue.code === "schema.invalid"
       ))).toBe(true);
+    }
+  });
+
+  it("rejects oversized strings and serialized input before request validation", async () => {
+    const oversizedString = {
+      oversizedText: "x".repeat(4_194_304),
+      ...request(240),
+    };
+    const oversizedAggregate = {
+      oversizedAggregate: Array.from(
+        { length: 129 },
+        () => "x".repeat(4_096),
+      ),
+      ...request(240),
+    };
+    const safeParse = vi.spyOn(universityRecoveryWhatIfRequestSchema, "safeParse");
+
+    try {
+      const [stringResult, byteResult] = await Promise.all([
+        projectUniversityRecoveryWhatIf(oversizedString),
+        projectUniversityRecoveryWhatIf(oversizedAggregate),
+      ]);
+
+      expect(stringResult).toMatchObject({
+        status: "invalid",
+        projectionDigest: null,
+        issues: [{ code: "schema.invalid", path: "" }],
+      });
+      expect(byteResult).toMatchObject({
+        status: "invalid",
+        projectionDigest: null,
+        issues: [{ code: "schema.invalid", path: "" }],
+      });
+      expect(safeParse).not.toHaveBeenCalled();
+    } finally {
+      safeParse.mockRestore();
     }
   });
 
