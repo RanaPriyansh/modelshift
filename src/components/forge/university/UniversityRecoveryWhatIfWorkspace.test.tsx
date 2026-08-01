@@ -122,17 +122,24 @@ describe("UniversityRecoveryWhatIfWorkspace", () => {
     const second = screen.getByRole("radio", {
       name: /2 h 10 min available/,
     });
+    const status = screen.getByRole("status");
+    expect(status).toBeEmptyDOMElement();
     second.focus();
 
     fireEvent.click(second);
 
     expect(document.activeElement).toBe(second);
     expect(second).toBeChecked();
+    expect(status).toHaveTextContent(
+      "Only the low estimate fits in 100 workable minutes. Learner choice remains.",
+    );
     fireEvent.click(screen.getByRole("button", { name: "Reset what-if" }));
     expect(document.activeElement).toBe(first);
     expect(screen.getAllByRole("radio").every((radio) => (
       !(radio as HTMLInputElement).checked
     ))).toBe(true);
+    expect(status).toHaveTextContent("What-if reset. No amount is selected.");
+    expect(screen.getAllByRole("status")).toHaveLength(1);
     expect(screen.getByLabelText("No what-if result selected")).toBeInTheDocument();
   });
 

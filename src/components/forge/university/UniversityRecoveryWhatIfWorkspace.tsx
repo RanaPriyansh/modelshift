@@ -72,6 +72,7 @@ export function UniversityRecoveryWhatIfWorkspace({
 }) {
   const [selectedId, setSelectedId] =
     useState<UniversityRecoveryWhatIfChoiceId | null>(null);
+  const [hasReset, setHasReset] = useState(false);
   const firstChoiceRef = useRef<HTMLInputElement>(null);
   const pendingScrollPositionRef = useRef<{
     readonly left: number;
@@ -113,11 +114,13 @@ export function UniversityRecoveryWhatIfWorkspace({
           top: window.scrollY,
         }
       : null;
+    setHasReset(false);
     setSelectedId(choiceId);
   }
 
   function reset() {
     pendingScrollPositionRef.current = null;
+    setHasReset(true);
     setSelectedId(null);
     firstChoiceRef.current?.focus();
   }
@@ -300,7 +303,8 @@ export function UniversityRecoveryWhatIfWorkspace({
             aria-live="polite"
             aria-atomic="true"
           >
-            {selected?.result.announcement ?? ""}
+            {selected?.result.announcement
+              ?? (hasReset ? "What-if reset. No amount is selected." : "")}
           </div>
 
           {selected ? (
