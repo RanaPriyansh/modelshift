@@ -398,13 +398,15 @@ Wave 4:
 
 The local design atlas contains:
 
-- Six representative public-site frames.
-- Six representative web application frames.
+- Eleven canonical public-site frames.
+- Fourteen canonical web application frames.
 - Six representative iOS frames.
 - Eight shared failure and recovery states.
 
-The representative frames establish shared layouts and state language.
+The public and web frames establish a direction for every canonical learner-facing page family.
 
-They do not replace final designs for every route variant.
+The iOS frames establish shared native layouts and state language.
+
+The atlas does not replace final designs for every state variant.
 
 Exact rendered evidence is in `docs/design/FORGE_COMPLETE_DESIGN_ATLAS_FIDELITY_LEDGER.md`.

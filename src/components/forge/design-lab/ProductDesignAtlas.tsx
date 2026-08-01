@@ -45,15 +45,50 @@ const PUBLIC_SCREENS: readonly ScreenRecord[] = [
     id: "PUB-05",
     title: "Method narrative",
     route: "/how-forge-works",
-    maps: "How FORGE Works and ModelShift",
+    maps: "Learning method and evidence separation",
     mode: "light",
+  },
+  {
+    id: "PUB-06",
+    title: "ModelShift method",
+    route: "/modelshift",
+    maps: "Method, guest lab, age policy, and unavailable state",
+    mode: "dark",
   },
   {
     id: "PUB-07",
     title: "Evidence and trust",
     route: "/trust",
-    maps: "Trust hub, evidence contract, coverage, and pricing",
+    maps: "Evidence, sources, AI, privacy, safety, and accessibility",
     mode: "dark",
+  },
+  {
+    id: "PUB-08",
+    title: "Evidence contract",
+    route: "/trust/evidence",
+    maps: "Claim, conditions, assistance, provenance, and limits",
+    mode: "light",
+  },
+  {
+    id: "PUB-09",
+    title: "Coverage map",
+    route: "/coverage",
+    maps: "Released, candidate, gap, and unavailable work",
+    mode: "light",
+  },
+  {
+    id: "PUB-10",
+    title: "Honest availability",
+    route: "/pricing",
+    maps: "Free local access and unavailable paid access",
+    mode: "dark",
+  },
+  {
+    id: "PUB-11",
+    title: "Optional continuity",
+    route: "/sign-in",
+    maps: "Signed out, authenticating, failure, and local recovery",
+    mode: "light",
   },
 ] as const;
 
@@ -64,6 +99,20 @@ const APP_SCREENS: readonly ScreenRecord[] = [
     route: "/app",
     maps: "Ready, empty, blocked, offline, and complete",
     mode: "dark",
+  },
+  {
+    id: "APP-02",
+    title: "Goal collection",
+    route: "/app/goals",
+    maps: "Draft, clarifying, active, paused, and retired goals",
+    mode: "light",
+  },
+  {
+    id: "APP-03",
+    title: "Path collection",
+    route: "/app/paths",
+    maps: "Proposed, accepted, active, paused, and completed paths",
+    mode: "light",
   },
   {
     id: "APP-04",
@@ -80,11 +129,39 @@ const APP_SCREENS: readonly ScreenRecord[] = [
     mode: "light",
   },
   {
+    id: "APP-06",
+    title: "Focus session",
+    route: "/app/study/[sessionId]",
+    maps: "Ready, active, paused, submitted, and invalid operations",
+    mode: "dark",
+  },
+  {
+    id: "APP-07",
+    title: "Project collection",
+    route: "/app/projects",
+    maps: "Empty, proposed, active, critique, and closed projects",
+    mode: "light",
+  },
+  {
+    id: "APP-08",
+    title: "Project workspace",
+    route: "/app/projects/[projectId]",
+    maps: "Brief, sources, revision, critique, and defence",
+    mode: "dark",
+  },
+  {
     id: "APP-09",
     title: "Evidence ledger",
     route: "/app/evidence",
     maps: "Evidence list, record detail, challenge, and export",
     mode: "dark",
+  },
+  {
+    id: "APP-10",
+    title: "Evidence detail",
+    route: "/app/evidence/[evidenceId]",
+    maps: "Ready, challenged, superseded, and invalidated records",
+    mode: "light",
   },
   {
     id: "APP-11",
@@ -94,10 +171,24 @@ const APP_SCREENS: readonly ScreenRecord[] = [
     mode: "light",
   },
   {
-    id: "APP-08",
-    title: "Project workspace",
-    route: "/app/projects/[projectId]",
-    maps: "Project list, brief, critique, revision, and defence",
+    id: "APP-12",
+    title: "Protected return",
+    route: "/app/returns/[returnId]",
+    maps: "Ready, active, expired, submitted, and invalid return",
+    mode: "dark",
+  },
+  {
+    id: "APP-13",
+    title: "Resource library",
+    route: "/app/library",
+    maps: "Reviewed, external, fallback, and withdrawn sources",
+    mode: "light",
+  },
+  {
+    id: "APP-14",
+    title: "Account and data",
+    route: "/app/settings",
+    maps: "Guest, authenticated, sync, export, and deletion states",
     mode: "dark",
   },
 ] as const;
@@ -368,6 +459,34 @@ function MethodScreen() {
   );
 }
 
+function ModelShiftPublicScreen() {
+  return (
+    <div className={`${styles.publicViewport} ${styles.trustViewport}`}>
+      <MiniNav />
+      <div className={styles.methodHead}>
+        <span>ModelShift · reviewed guest labs</span>
+        <h4>Build a model. Find its limit. Rebuild it.</h4>
+        <p>The protocol keeps observation, idealization, safety, and learner judgment visible.</p>
+      </div>
+      <ol className={styles.methodSteps}>
+        {[
+          ["01", "Commit", "State a first model before help appears."],
+          ["02", "Investigate", "Choose the observation that breaks the model."],
+          ["03", "Reconstruct", "Build the smallest model that explains more."],
+          ["04", "Prove", "Use the rebuilt model in a fresh case."],
+          ["05", "Return", "Use the distinction again after delay."],
+        ].map(([number, title, body]) => (
+          <li key={number}><span>{number}</span><h5>{title}</h5><p>{body}</p></li>
+        ))}
+      </ol>
+      <div className={styles.supportGrid}>
+        <article><span>Guest lab</span><b>Force and motion</b><p>Reviewed World · idealized system · safety note included</p></article>
+        <article><span>Access boundary</span><b>Age and policy checks happen before a session.</b><p>A safe fallback remains available when the lab is unavailable.</p></article>
+      </div>
+    </div>
+  );
+}
+
 function TrustScreen() {
   return (
     <div className={`${styles.publicViewport} ${styles.trustViewport}`}>
@@ -406,15 +525,134 @@ function TrustScreen() {
   );
 }
 
-function PublicScreen({ screen, index }: { screen: ScreenRecord; index: number }) {
-  const content = [
-    <PublicHeroScreen key="hero" />,
-    <StartScreen key="start" />,
-    <PathsScreen key="paths" />,
-    <PathDetailScreen key="detail" />,
-    <MethodScreen key="method" />,
-    <TrustScreen key="trust" />,
-  ][index];
+function EvidenceContractPublicScreen() {
+  return (
+    <div className={styles.publicViewport}>
+      <MiniNav />
+      <div className={styles.directoryHead}>
+        <span>Evidence contract · exact boundaries</span>
+        <h4>A record says what happened. It also says what remains unknown.</h4>
+        <p>Every claim keeps the task, conditions, assistance, source state, result, and correction history together.</p>
+      </div>
+      <section className={styles.nextAction}>
+        <header><b>Demonstrated once</b><span>Record EV-204</span></header>
+        <h5>Distinguished a claim from its source.</h5>
+        <p>The learner completed one fresh source-bound task without instructional help.</p>
+        <dl>
+          <div><dt>Conditions</dt><dd>One unfamiliar passage</dd></div>
+          <div><dt>Assistance</dt><dd>Access support only</dd></div>
+          <div><dt>Limit</dt><dd>No broad transfer claim</dd></div>
+        </dl>
+        <button type="button">Inspect example record <Arrow /></button>
+      </section>
+      <div className={styles.supportGrid}>
+        <article><span>Correction</span><b>Records remain inspectable after a challenge.</b><p>A replacement never hides the earlier state.</p></article>
+        <article><span>Authority</span><b>Completion is not evidence.</b><p>Only a bounded operation can support a bounded claim.</p></article>
+      </div>
+    </div>
+  );
+}
+
+function CoveragePublicScreen() {
+  return (
+    <div className={styles.publicViewport}>
+      <MiniNav />
+      <div className={styles.directoryHead}>
+        <span>Coverage · current release map</span>
+        <h4>See what is ready before you depend on it.</h4>
+        <p>Released work, candidates, gaps, and unavailable routes use separate states.</p>
+      </div>
+      <div className={styles.pathFilter}>
+        <span>All product areas</span>
+        <span>All release states</span>
+        <b>Updated 01 Aug 2026</b>
+      </div>
+      <div className={styles.pathRows}>
+        {[
+          ["01", "Goal to path", "Released", "Local goal entry, clarification, and explicit path acceptance."],
+          ["02", "ModelShift guest labs", "Candidate", "Reviewed experience with remaining external authority work."],
+          ["03", "Native iOS application", "Unavailable", "Design handoff exists. No native application target exists."],
+        ].map(([number, title, state, body]) => (
+          <article key={title}>
+            <span>{number}</span>
+            <div><small>{state}</small><h5>{title}</h5><p>{body}</p></div>
+            <b><Arrow /></b>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PricingPublicScreen() {
+  return (
+    <div className={`${styles.publicViewport} ${styles.trustViewport}`}>
+      <MiniNav />
+      <div className={styles.directoryHead}>
+        <span>Current access · no false offer</span>
+        <h4>Start locally. Pay for nothing that does not exist.</h4>
+        <p>FORGE does not show a purchase option until the product, policy, support, and data contracts are ready.</p>
+      </div>
+      <div className={styles.supportGrid}>
+        <article><span>Available now</span><b>Local goal and design preview</b><p>No payment method · no subscription · no hidden trial clock</p></article>
+        <article><span>Not offered</span><b>Paid learner plan</b><p>Pricing, billing, and service guarantees remain unapproved.</p></article>
+      </div>
+      <div className={styles.briefActions}>
+        <button type="button">Explore current access <Arrow /></button>
+        <span>Read the evidence and privacy contracts</span>
+      </div>
+    </div>
+  );
+}
+
+function SignInPublicScreen() {
+  return (
+    <div className={styles.publicViewport}>
+      <MiniNav />
+      <div className={styles.startLayout}>
+        <aside>
+          <span>Optional continuity</span>
+          <ol>
+            <li data-active="true">Local work</li>
+            <li>Identity</li>
+            <li>Explicit import</li>
+          </ol>
+          <p>Your local draft remains on this device until you approve an import.</p>
+        </aside>
+        <section>
+          <span>Sign in only when it helps</span>
+          <h4>Keep learning across devices.</h4>
+          <p>Sign in does not silently import your local draft or change its evidence status.</p>
+          <div className={styles.choiceList}>
+            <b data-selected="true">Continue with email</b>
+            <b>Continue with an approved identity provider</b>
+            <b>Stay local on this device</b>
+          </div>
+          <div className={styles.inlineActions}>
+            <button type="button">Continue securely <Arrow /></button>
+            <span>Recover access</span>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function PublicScreen({ screen }: { screen: ScreenRecord }) {
+  const contentByID: Record<string, React.ReactNode> = {
+    "PUB-01": <PublicHeroScreen />,
+    "PUB-02": <StartScreen />,
+    "PUB-03": <PathsScreen />,
+    "PUB-04": <PathDetailScreen />,
+    "PUB-05": <MethodScreen />,
+    "PUB-06": <ModelShiftPublicScreen />,
+    "PUB-07": <TrustScreen />,
+    "PUB-08": <EvidenceContractPublicScreen />,
+    "PUB-09": <CoveragePublicScreen />,
+    "PUB-10": <PricingPublicScreen />,
+    "PUB-11": <SignInPublicScreen />,
+  };
+  const content = contentByID[screen.id];
 
   return (
     <article className={styles.screenCard}>
@@ -467,6 +705,59 @@ function TodayAppScreen() {
       <div className={styles.supportGrid}>
         <article><span>Path context</span><b>2 of 5 activities worked through</b><p>No evidence claim comes from this count.</p></article>
         <article><span>Return proof</span><b>A delayed task opens Friday.</b><p>Prior results remain hidden during the task.</p></article>
+      </div>
+    </div>
+  );
+}
+
+function GoalsAppScreen() {
+  return (
+    <div className={styles.appPage}>
+      <div className={styles.appHero}>
+        <span>Goals · learner-owned direction</span>
+        <h4>Keep the outcome visible. Change the plan when the outcome changes.</h4>
+        <p>A goal can remain a draft, enter clarification, become active, pause, or retire.</p>
+      </div>
+      <div className={styles.evidenceRows}>
+        {[
+          ["Active", "Evaluate AI claims before I use them.", "Accepted path · next action ready", "Inspect goal"],
+          ["Clarifying", "Use statistics in product decisions.", "One useful question remains", "Answer question"],
+          ["Paused", "Explain force models.", "Local work preserved · no current due date", "Resume or retire"],
+        ].map(([state, goal, detail, action]) => (
+          <article key={goal}>
+            <span>{state}</span><h5>{goal}</h5><p>{detail}</p><b>{action} <Arrow /></b>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PathCollectionAppScreen() {
+  return (
+    <div className={styles.appPage}>
+      <div className={styles.appHero}>
+        <span>Paths · accepted sequences</span>
+        <h4>Each path begins with an approved outcome.</h4>
+        <p>Proposals remain separate from accepted paths. Completion remains separate from evidence.</p>
+      </div>
+      <div className={styles.pathFilter}>
+        <span>Search accepted outcomes</span>
+        <span>All path states</span>
+        <b>3 paths</b>
+      </div>
+      <div className={styles.pathRows}>
+        {[
+          ["01", "Use AI without outsourcing judgment", "Active · 02 of 05", "Next: compare support and contradiction."],
+          ["02", "Reason from primary sources", "Accepted · not started", "Next: observe before interpretation."],
+          ["03", "Explain force models", "Paused", "Draft and review state remain preserved."],
+        ].map(([number, title, state, body]) => (
+          <article key={title}>
+            <span>{number}</span>
+            <div><small>{state}</small><h5>{title}</h5><p>{body}</p></div>
+            <b><Arrow /></b>
+          </article>
+        ))}
       </div>
     </div>
   );
@@ -540,6 +831,67 @@ function StudyBriefScreen() {
   );
 }
 
+function StudySessionAppScreen() {
+  return (
+    <div className={styles.appPage}>
+      <div className={styles.projectHead}>
+        <div><span>Active operation · local draft saved</span><h4>State the strongest supported claim.</h4></div>
+        <b>Attempt · 02 / 05</b>
+      </div>
+      <div className={styles.projectLayout}>
+        <nav aria-label="Study operation preview">
+          <span>Recall</span>
+          <span data-active="true">Attempt</span>
+          <span>Repair</span>
+          <span>Prove</span>
+          <span>Return</span>
+        </nav>
+        <section>
+          <span>Learner operation</span>
+          <h5>Use the reviewed passage. Do not add outside facts.</h5>
+          <p>State one conclusion and one limit that the source supports.</p>
+          <div className={styles.memo}>
+            <small>Your answer · saved on this device</small>
+            <p>The passage supports the bounded claim that…</p>
+          </div>
+          <button type="button">Commit attempt <Arrow /></button>
+        </section>
+        <aside>
+          <span>Assistance</span>
+          <p>Source navigation is available.</p>
+          <p>One process prompt is available after a useful attempt.</p>
+          <span>Unavailable</span>
+          <p>No generated conclusion.</p>
+          <p>No evidence claim from completion.</p>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function ProjectCollectionAppScreen() {
+  return (
+    <div className={styles.appPage}>
+      <div className={styles.appHero}>
+        <span>Projects · work with provenance</span>
+        <h4>Build something that can survive critique.</h4>
+        <p>Each project keeps its brief, constraints, sources, revisions, critique, and defence together.</p>
+      </div>
+      <div className={styles.evidenceRows}>
+        {[
+          ["Active · revision", "Bounded verification memo", "2 reviewed sources · 3 learner revisions", "Open workspace"],
+          ["Critique ready", "Primary source reasoning brief", "Named reviewer required before defence", "Inspect critique"],
+          ["Proposed", "Force model explanation", "No artifact exists · no evidence claim", "Review proposal"],
+        ].map(([state, title, detail, action]) => (
+          <article key={title}>
+            <span>{state}</span><h5>{title}</h5><p>{detail}</p><b>{action} <Arrow /></b>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function EvidenceAppScreen() {
   return (
     <div className={styles.appPage}>
@@ -563,6 +915,33 @@ function EvidenceAppScreen() {
   );
 }
 
+function EvidenceDetailAppScreen() {
+  return (
+    <div className={styles.appPage}>
+      <div className={styles.appHero}>
+        <span>Evidence EV-204 · bounded record</span>
+        <h4>Distinguished a claim from its source.</h4>
+        <p>This record describes one operation. It does not establish broad transfer or permanent retention.</p>
+      </div>
+      <section className={styles.nextAction}>
+        <header><b>Demonstrated once</b><span>World 1.3 · task P02</span></header>
+        <h5>Fresh passage. One submission. No instructional help.</h5>
+        <p>The learner stated one supported claim and one source limit.</p>
+        <dl>
+          <div><dt>Access</dt><dd>Text size and screen reader support</dd></div>
+          <div><dt>Provenance</dt><dd>2 source receipts · revision 4</dd></div>
+          <div><dt>Reviewer</dt><dd>Not assigned</dd></div>
+        </dl>
+        <button type="button">Inspect provenance <Arrow /></button>
+      </section>
+      <div className={styles.supportGrid}>
+        <article><span>Challenge</span><b>Dispute the claim or its conditions.</b><p>The original record remains visible during review.</p></article>
+        <article><span>Control</span><b>Export or delete eligible learner data.</b><p>Deletion state and limits appear before confirmation.</p></article>
+      </div>
+    </div>
+  );
+}
+
 function ReturnAppScreen() {
   return (
     <div className={styles.appPage}>
@@ -575,6 +954,42 @@ function ReturnAppScreen() {
         <article data-state="due"><span>Due now</span><div><h5>Separate claim from source.</h5><p>Fresh unfamiliar example · one protected attempt</p></div><b>Open return <Arrow /></b></article>
         <article><span>Upcoming</span><div><h5>Compare support and contradiction.</h5><p>Opens 14 Aug · access support remains available</p></div><b>Inspect boundary</b></article>
         <article><span>Completed</span><div><h5>Explain a force model.</h5><p>One bounded attempt recorded · no broad retention claim</p></div><b>Inspect evidence</b></article>
+      </div>
+    </div>
+  );
+}
+
+function ProtectedReturnAppScreen() {
+  return (
+    <div className={styles.appPage}>
+      <div className={styles.briefHead}>
+        <span>Protected return · due now</span>
+        <h4>Use the distinction without the lesson.</h4>
+        <p>Prior answers, hints, and instructional content remain hidden. Accessibility support remains available.</p>
+      </div>
+      <div className={styles.briefGrid}>
+        <section>
+          <span>Fresh case</span>
+          <ol>
+            <li>Read one unfamiliar passage.</li>
+            <li>Separate the claim from the source.</li>
+            <li>State one conclusion and one limit.</li>
+            <li>Submit one protected response.</li>
+          </ol>
+        </section>
+        <section>
+          <span>Return contract</span>
+          <dl>
+            <div><dt>Window</dt><dd>Closes 10 Aug at 18:00</dd></div>
+            <div><dt>Attempt</dt><dd>One submission</dd></div>
+            <div><dt>Help</dt><dd>Instructional help is off</dd></div>
+            <div><dt>Result</dt><dd>One bounded retention observation</dd></div>
+          </dl>
+        </section>
+      </div>
+      <div className={styles.briefActions}>
+        <button type="button">Start protected return <Arrow /></button>
+        <span>Not now</span>
       </div>
     </div>
   );
@@ -619,15 +1034,83 @@ function ProjectAppScreen() {
   );
 }
 
-function AppScreen({ screen, index }: { screen: ScreenRecord; index: number }) {
-  const content = [
-    <TodayAppScreen key="today" />,
-    <PathAppScreen key="path" />,
-    <StudyBriefScreen key="brief" />,
-    <EvidenceAppScreen key="evidence" />,
-    <ReturnAppScreen key="returns" />,
-    <ProjectAppScreen key="project" />,
-  ][index];
+function LibraryAppScreen() {
+  return (
+    <div className={styles.appPage}>
+      <div className={styles.appHero}>
+        <span>Library · reviewed resource ledger</span>
+        <h4>Inspect the source before you depend on it.</h4>
+        <p>Each resource names its publisher, version, review state, rights, role, and fallback.</p>
+      </div>
+      <div className={styles.evidenceRows}>
+        {[
+          ["Reviewed", "Source evaluation guide", "Version 2.1 · first-party PDF · local fallback", "Inspect receipt"],
+          ["External", "Primary source archive", "External link · availability can change", "Open safely"],
+          ["Withdrawn", "AI literacy checklist", "Replaced by version 1.4 · earlier receipt retained", "Open replacement"],
+        ].map(([state, title, detail, action]) => (
+          <article key={title}>
+            <span>{state}</span><h5>{title}</h5><p>{detail}</p><b>{action} <Arrow /></b>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SettingsAppScreen() {
+  return (
+    <div className={styles.appPage}>
+      <div className={styles.appHero}>
+        <span>Account and data · explicit control</span>
+        <h4>Choose appearance, access, continuity, and data handling.</h4>
+        <p>Local work does not become a server record without a visible import and consent action.</p>
+      </div>
+      <div className={styles.briefGrid}>
+        <section>
+          <span>Experience</span>
+          <dl>
+            <div><dt>Theme</dt><dd>System · Light · Dark</dd></div>
+            <div><dt>Motion</dt><dd>Follow system Reduce Motion</dd></div>
+            <div><dt>Haptics</dt><dd>Meaningful commitments only</dd></div>
+            <div><dt>Text</dt><dd>Use browser and system settings</dd></div>
+          </dl>
+        </section>
+        <section>
+          <span>Data and continuity</span>
+          <dl>
+            <div><dt>Identity</dt><dd>Guest · no server account</dd></div>
+            <div><dt>Local drafts</dt><dd>3 records on this device</dd></div>
+            <div><dt>Sync</dt><dd>Not enabled</dd></div>
+            <div><dt>Controls</dt><dd>Export · inspect · delete</dd></div>
+          </dl>
+        </section>
+      </div>
+      <div className={styles.briefActions}>
+        <button type="button">Review local data <Arrow /></button>
+        <span>Delete requires an exact confirmation</span>
+      </div>
+    </div>
+  );
+}
+
+function AppScreen({ screen }: { screen: ScreenRecord }) {
+  const contentByID: Record<string, React.ReactNode> = {
+    "APP-01": <TodayAppScreen />,
+    "APP-02": <GoalsAppScreen />,
+    "APP-03": <PathCollectionAppScreen />,
+    "APP-04": <PathAppScreen />,
+    "APP-05": <StudyBriefScreen />,
+    "APP-06": <StudySessionAppScreen />,
+    "APP-07": <ProjectCollectionAppScreen />,
+    "APP-08": <ProjectAppScreen />,
+    "APP-09": <EvidenceAppScreen />,
+    "APP-10": <EvidenceDetailAppScreen />,
+    "APP-11": <ReturnAppScreen />,
+    "APP-12": <ProtectedReturnAppScreen />,
+    "APP-13": <LibraryAppScreen />,
+    "APP-14": <SettingsAppScreen />,
+  };
+  const content = contentByID[screen.id];
 
   return (
     <article className={styles.screenCard}>
@@ -1071,21 +1554,21 @@ export function ProductDesignAtlas() {
 
       <section className={styles.platformSection} id="public-site-atlas" aria-labelledby="public-site-atlas-title">
         <header className={styles.atlasHeader}>
-          <div><span>Public site · six representative families</span><h2 id="public-site-atlas-title">A landscape opens the door. The product earns trust below it.</h2></div>
-          <p>These frames cover the eleven canonical public page families through shared layouts and exact state variants.</p>
+          <div><span>Public site · eleven canonical families</span><h2 id="public-site-atlas-title">A landscape opens the door. The product earns trust below it.</h2></div>
+          <p>Each canonical public page family has a complete visual direction and an exact state contract.</p>
         </header>
         <div className={styles.screenGrid}>
-          {PUBLIC_SCREENS.map((screen, index) => <PublicScreen index={index} key={screen.id} screen={screen} />)}
+          {PUBLIC_SCREENS.map((screen) => <PublicScreen key={screen.id} screen={screen} />)}
         </div>
       </section>
 
       <section className={styles.platformSection} id="web-app-atlas" aria-labelledby="web-app-atlas-title">
         <header className={styles.atlasHeader}>
-          <div><span>Web application · six representative families</span><h2 id="web-app-atlas-title">One next action. Every boundary remains visible.</h2></div>
-          <p>These frames cover the fourteen canonical learner application families and their shared state contracts.</p>
+          <div><span>Web application · fourteen canonical families</span><h2 id="web-app-atlas-title">One next action. Every boundary remains visible.</h2></div>
+          <p>Each canonical learner application family has a complete visual direction and shared recovery contract.</p>
         </header>
         <div className={styles.screenGrid}>
-          {APP_SCREENS.map((screen, index) => <AppScreen index={index} key={screen.id} screen={screen} />)}
+          {APP_SCREENS.map((screen) => <AppScreen key={screen.id} screen={screen} />)}
         </div>
       </section>
 

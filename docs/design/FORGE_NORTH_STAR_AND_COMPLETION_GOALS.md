@@ -122,9 +122,9 @@ The design objective is complete only when all gates pass.
 | --- | --- |
 | Editable source | Generator verified locally. Actual Figma run remains open. |
 | Page inventory | Complete for public, web, focus, and iOS families. |
-| Visual fidelity | Representative local atlas reviewed at desktop and 320 CSS pixels. |
+| Visual fidelity | All canonical public and web families are reviewed at desktop and 320 CSS pixels. |
 | Design-system integrity | Local token and generator audits pass. Actual Figma audit remains open. |
-| Web implementation | Public Home, Today, and three focus families use the selected direction. |
+| Web implementation | All public and web families have coded boards. Public Home, Today, and focus families use the direction in routes. |
 | Responsive behavior | The reviewed atlas has no horizontal overflow at 320 CSS pixels. |
 | Themes | Representative Light and Dark surfaces exist. Complete route review remains open. |
 | Accessibility behavior | Local keyboard and browser checks exist. Native checks remain open. |
