@@ -26,6 +26,7 @@ This record does not establish production readiness, learning efficacy, accessib
 | Native iOS handoff commit | `c7b2e219eef5dd052fae350734157de99ff3f0bd` |
 | Complete public and web atlas commit | `6a08f80c968f402145fed66ab086a91133702fb3` |
 | Complete iOS atlas commit | `d04fe0d759087197eff63aca9f08ad7f204eb96c` |
+| Canonical Figma coverage index commit | `07eecc831da1bee1d14d6fac00d0b764ce021d9d` |
 | Deployment | Not done |
 | Push or merge | Not done |
 
@@ -116,6 +117,17 @@ The connected Figma Starter plan needs separate Light and Dark semantic collecti
 The local Figma generator creates that Starter-compatible structure.
 
 The generator is in `scripts/design/figma-forge-terrain-plugin`.
+
+The local generator check creates:
+
+- 10 pages.
+- 86 variables.
+- 18 text styles.
+- 7 paint styles.
+- 2 effect styles.
+- 17 components.
+- 28 generated frames.
+- One coverage index for all 46 canonical families.
 
 The generator has not run in Figma because the macOS session is locked.
 
