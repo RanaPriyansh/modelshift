@@ -1,3 +1,4 @@
+import { types as nodeUtilTypes } from "node:util";
 import { ZodError } from "zod";
 
 import {
@@ -232,6 +233,7 @@ export async function projectUniversityRecovery(
         // Trusted projectors may already have detached the request into
         // null-prototype dictionaries. Snapshot again before parsing while
         // preserving that internal composition boundary.
+        rejectObject: nodeUtilTypes.isProxy,
         allowNullPrototypeObjects: true,
       });
     } catch {

@@ -478,6 +478,7 @@ describe("projectUniversityRecovery", () => {
   it("copies hostile input without executing accessors, networking, or storage", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     let getterCalls = 0;
+    let proxyTrapCalls = 0;
     const hostile = {};
     Object.defineProperty(hostile, "schemaVersion", {
       enumerable: true,
@@ -486,19 +487,34 @@ describe("projectUniversityRecovery", () => {
         return "university-recovery-request.v1";
       },
     });
+    const hostileProxy = new Proxy({}, {
+      get: () => {
+        proxyTrapCalls += 1;
+        throw new Error("must fail closed");
+      },
+      getOwnPropertyDescriptor: () => {
+        proxyTrapCalls += 1;
+        throw new Error("must fail closed");
+      },
+      getPrototypeOf: () => {
+        proxyTrapCalls += 1;
+        throw new Error("must fail closed");
+      },
+      ownKeys: () => {
+        proxyTrapCalls += 1;
+        throw new Error("must fail closed");
+      },
+    });
 
     const [accessor, proxy] = await Promise.all([
       projectUniversityRecovery(hostile),
-      projectUniversityRecovery(new Proxy({}, {
-        ownKeys: () => {
-          throw new Error("must fail closed");
-        },
-      })),
+      projectUniversityRecovery(hostileProxy),
     ]);
 
     expect(accessor).toMatchObject({ status: "invalid", projectionDigest: null });
     expect(proxy).toMatchObject({ status: "invalid", projectionDigest: null });
     expect(getterCalls).toBe(0);
+    expect(proxyTrapCalls).toBe(0);
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });

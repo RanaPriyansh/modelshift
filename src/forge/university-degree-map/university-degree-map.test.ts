@@ -376,6 +376,42 @@ describe("projectUniversityDegreeMap", () => {
     expect(projectUniversityDegreeMap(oversized).status).toBe("invalid");
   });
 
+  it("caps schema issues for maximum-size invalid input without actions or external effects", () => {
+    const invalidMaximum = {
+      ...request(),
+      courses: Array.from({ length: 256 }, (_, index) => ({
+        courseId: `INVALID COURSE ${index}`,
+        creditUnits: -1,
+        state: "invalid",
+        prerequisiteCourseIds: ["not a course id"],
+        sourceRef: "invalid source",
+      })),
+    };
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const dispatchSpy = vi.spyOn(EventTarget.prototype, "dispatchEvent");
+
+    try {
+      const projection = projectUniversityDegreeMap(invalidMaximum);
+
+      expect(projection.status).toBe("invalid");
+      expect(projection.issues).toHaveLength(64);
+      expect(projection.issues.length).toBeLessThanOrEqual(64);
+      expect(projection).not.toHaveProperty("action");
+      expect(projection.authority).toMatchObject({
+        rankingAllowed: false,
+        recommendationAllowed: false,
+        persistenceAllowed: false,
+        networkAllowed: false,
+        eventEmissionAllowed: false,
+      });
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(dispatchSpy).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+      dispatchSpy.mockRestore();
+    }
+  });
+
   it("is deterministic, deeply frozen, and side-effect free", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const first = projectUniversityDegreeMap(request());

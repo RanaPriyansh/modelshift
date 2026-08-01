@@ -92,6 +92,7 @@ export function UniversitySourceReview({
   const [decisions, setDecisions] = useState<readonly CourseSourceDecisionV1[]>(initialRequest.decisions);
   const [result, setResult] = useState<Readonly<CourseSourceReconciliationResult> | null>(null);
   const [phase, setPhase] = useState<ReviewPhase>("loading");
+  const [announcement, setAnnouncement] = useState("");
   const [correctingCandidateId, setCorrectingCandidateId] = useState<string | null>(null);
   const [correctedDueAt, setCorrectedDueAt] = useState("");
   const correctionInputRef = useRef<HTMLInputElement>(null);
@@ -156,8 +157,9 @@ export function UniversitySourceReview({
   const reviewedCount = result?.candidates.filter((candidate) => candidate.extractionState !== "candidate").length ?? 0;
   const humanQuestion = result ? buildHumanQuestion(result) : null;
 
-  function replaceDecision(decision: CourseSourceDecisionV1) {
+  function replaceDecision(decision: CourseSourceDecisionV1, nextAnnouncement: string) {
     setPhase("loading");
+    setAnnouncement(nextAnnouncement);
     setDecisions((current) => [
       ...current.filter((entry) => entry.candidateId !== decision.candidateId),
       decision,
@@ -178,7 +180,7 @@ export function UniversitySourceReview({
       kind: "accept",
       extractionMatch: "learner_confirmed",
       decidedAt: initialRequest.asOf,
-    });
+    }, "Marked as matching this copy.");
   }
 
   function reject(candidate: CourseSourceCandidateProjection) {
@@ -194,7 +196,7 @@ export function UniversitySourceReview({
       extractionMatch: "learner_rejected",
       rejectionReasonCode: "source_extraction_mismatch",
       decidedAt: initialRequest.asOf,
-    });
+    }, "Extraction rejected.");
   }
 
   function beginCorrection(
@@ -231,7 +233,7 @@ export function UniversitySourceReview({
       },
       correctionReasonCode: "source_transcription_error",
       decidedAt: initialRequest.asOf,
-    });
+    }, "Student correction applied.");
     restoreCorrectionTrigger();
   }
 
@@ -266,6 +268,7 @@ export function UniversitySourceReview({
     correctionTriggerRef.current = null;
     clearCorrectionScrollRestore();
     setPhase("loading");
+    setAnnouncement("Review reset.");
     setDecisions(initialRequest.decisions);
     setCorrectingCandidateId(null);
     setCorrectedDueAt("");
@@ -305,8 +308,17 @@ export function UniversitySourceReview({
         <span>No recommendation</span>
       </div>
 
+      <p
+        className="forge-visually-hidden"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {announcement}
+      </p>
+
       {result === null ? (
-        <section className={styles.loading} aria-live="polite">
+        <section className={styles.loading}>
           <span aria-hidden="true" />
           <p>Comparing the copied facts and their declared source boundaries.</p>
         </section>
@@ -384,7 +396,7 @@ export function UniversitySourceReview({
             </section>
 
             <footer className={styles.ledgerFooter}>
-              <p aria-live="polite">
+              <p>
                 {phase === "loading"
                   ? "Updating the local projection."
                   : `${reviewedCount} of ${result.candidates.length} copied facts reviewed. Nothing has been saved.`}
@@ -496,7 +508,7 @@ function SourceCandidate({
           Restricted assessment mode remains active. Policy authorization is not established.
         </p>
       ) : null}
-      <p className={styles.decisionState} aria-live="polite">{decisionLabel}</p>
+      <p className={styles.decisionState}>{decisionLabel}</p>
       <div className={styles.candidateActions}>
         <button
           type="button"

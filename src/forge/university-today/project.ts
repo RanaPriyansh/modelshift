@@ -1,3 +1,4 @@
+import { types as nodeUtilTypes } from "node:util";
 import { ZodError } from "zod";
 
 import {
@@ -8,6 +9,7 @@ import {
   projectNextAction,
   validateLearningPathRevisionIntegrity,
 } from "../continuity";
+import { boundedJsonSnapshot } from "../bounded-json-snapshot";
 import { deepFreeze } from "../deep-freeze";
 import { canonicalJson, sha256Digest } from "../events";
 import {
@@ -117,7 +119,20 @@ export async function projectUniversityToday(
   value: unknown,
 ): Promise<Readonly<UniversityTodayProjectionV1>> {
   try {
-    const parsedRequest = universityTodayRequestSchema.safeParse(value);
+    let detached: unknown;
+    try {
+      detached = boundedJsonSnapshot(value, {
+        rejectObject: nodeUtilTypes.isProxy,
+        allowNullPrototypeObjects: true,
+      });
+    } catch {
+      return invalidProjection([{
+        code: "schema.invalid",
+        path: "",
+        message: "The University Today request must be bounded accessor-free plain JSON.",
+      }]);
+    }
+    const parsedRequest = universityTodayRequestSchema.safeParse(detached);
     if (!parsedRequest.success) return invalidProjection(zodIssues(parsedRequest.error));
     const request = parsedRequest.data;
     const { context } = request;

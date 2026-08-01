@@ -63,7 +63,7 @@ function contrastRatio(first: string, second: string): number {
 }
 
 describe("UniversityResearchReadinessWorkspace", () => {
-  it("uses normal-text contrast tokens for every readiness state", () => {
+  it("uses active light contrast tokens for readiness text and controls", () => {
     const componentStyles = readFileSync(
       resolve(
         process.cwd(),
@@ -71,33 +71,51 @@ describe("UniversityResearchReadinessWorkspace", () => {
       ),
       "utf8",
     );
-    const forgeStyles = readFileSync(
-      resolve(process.cwd(), "app/forge.css"),
+    const sourceReviewStyles = readFileSync(
+      resolve(
+        process.cwd(),
+        "src/components/forge/university/UniversitySourceReview.module.css",
+      ),
       "utf8",
     );
-    const deepTextColor = /^\s*color\s*:\s*var\(--forge-(?:amber|cyan)-deep\)\s*;/m;
+    const forgeStyles = readFileSync(
+      resolve(process.cwd(), "app/forge-system.css"),
+      "utf8",
+    );
+    const textStyles = `${componentStyles}\n${sourceReviewStyles}`;
+    const baseTextColor = /^\s*color\s*:\s*var\(--forge-(?:cyan|amber)\)\s*;/m;
     const selectedControl = componentStyles.match(
       /\.scenarioPicker input:checked \+ span\s*\{(?<body>[^}]*)\}/,
     )?.groups?.body;
+    const pressedControl = sourceReviewStyles.match(
+      /\.candidateActions button\[aria-pressed="true"\]\s*\{(?<body>[^}]*)\}/,
+    )?.groups?.body;
 
-    expect(componentStyles).not.toMatch(deepTextColor);
+    expect(textStyles).not.toMatch(baseTextColor);
+    expect(textStyles).toContain("color: var(--forge-cyan-deep);");
+    expect(textStyles).toContain("color: var(--forge-amber-deep);");
     expect(selectedControl).toContain("background: var(--forge-cyan);");
     expect(selectedControl).not.toContain(
       "background: var(--forge-cyan-deep);",
     );
+    expect(selectedControl).toContain("color: var(--forge-surface);");
+    expect(pressedControl).toContain("background: var(--forge-cyan-deep);");
+    expect(pressedControl).toContain("color: var(--forge-surface);");
 
     const colors = {
-      amber: cssColor(forgeStyles, "forge-amber"),
       background: cssColor(forgeStyles, "forge-bg"),
       cyan: cssColor(forgeStyles, "forge-cyan"),
+      cyanDeep: cssColor(forgeStyles, "forge-cyan-deep"),
+      amberDeep: cssColor(forgeStyles, "forge-amber-deep"),
       surface: cssColor(forgeStyles, "forge-surface"),
     };
     const ratios = {
-      "amber-on-bg": contrastRatio(colors.amber, colors.background),
-      "amber-on-surface": contrastRatio(colors.amber, colors.surface),
-      "cyan-on-bg": contrastRatio(colors.cyan, colors.background),
-      "cyan-on-surface": contrastRatio(colors.cyan, colors.surface),
+      "cyan-deep-on-bg": contrastRatio(colors.cyanDeep, colors.background),
+      "cyan-deep-on-surface": contrastRatio(colors.cyanDeep, colors.surface),
+      "amber-deep-on-bg": contrastRatio(colors.amberDeep, colors.background),
+      "amber-deep-on-surface": contrastRatio(colors.amberDeep, colors.surface),
       "surface-on-cyan": contrastRatio(colors.surface, colors.cyan),
+      "surface-on-cyan-deep": contrastRatio(colors.surface, colors.cyanDeep),
     };
 
     for (const ratio of Object.values(ratios)) {

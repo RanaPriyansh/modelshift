@@ -280,14 +280,39 @@ describe("projectUniversityProtectedStudy", () => {
       enumerable: true,
       get: getter,
     });
+    const getPrototypeOf = vi.fn(() => {
+      throw new Error("getPrototypeOf trap executed");
+    });
+    const ownKeys = vi.fn(() => {
+      throw new Error("ownKeys trap executed");
+    });
+    const getOwnPropertyDescriptor = vi.fn(() => {
+      throw new Error("getOwnPropertyDescriptor trap executed");
+    });
+    const proxy = new Proxy(await request(), {
+      getPrototypeOf,
+      ownKeys,
+      getOwnPropertyDescriptor,
+    });
 
-    const result = await projectUniversityProtectedStudy(hostile);
+    const [result, proxyResult] = await Promise.all([
+      projectUniversityProtectedStudy(hostile),
+      projectUniversityProtectedStudy(proxy),
+    ]);
 
     expect(getter).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       status: "invalid",
       issues: [{ code: "schema.invalid" }],
     });
+    expect(proxyResult).toMatchObject({
+      status: "invalid",
+      projectionDigest: null,
+      issues: [{ code: "schema.invalid" }],
+    });
+    expect(getPrototypeOf).not.toHaveBeenCalled();
+    expect(ownKeys).not.toHaveBeenCalled();
+    expect(getOwnPropertyDescriptor).not.toHaveBeenCalled();
   });
 
   it("is deterministic, deeply frozen, and side-effect free", async () => {

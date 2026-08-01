@@ -187,6 +187,16 @@ async function request(
   };
 }
 
+function nullPrototypeClone(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(nullPrototypeClone);
+  if (value === null || typeof value !== "object") return value;
+  const clone = Object.create(null) as Record<string, unknown>;
+  for (const key of Object.keys(value)) {
+    clone[key] = nullPrototypeClone((value as Record<string, unknown>)[key]);
+  }
+  return clone;
+}
+
 describe("projectUniversityToday", () => {
   it("projects one exact accepted-path action when reviewed copies and declared capacity fit", async () => {
     const projection = await projectUniversityToday(await request());
@@ -417,12 +427,37 @@ describe("projectUniversityToday", () => {
     }).toThrow();
   });
 
+  it("accepts a valid internally detached null-prototype request", async () => {
+    const detached = nullPrototypeClone(await request());
+
+    expect(Object.getPrototypeOf(detached)).toBe(null);
+    const projection = await projectUniversityToday(detached);
+
+    expect(projection).toMatchObject({
+      status: "ready",
+      action: {
+        nodeId: "path-node.sample-source-corroboration",
+        startAllowedFromThisProjection: false,
+      },
+    });
+    expect(projection.projectionDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+  });
+
   it("totally classifies malformed and hostile inputs without network or storage effects", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
+    let getterCalls = 0;
     const hostile = {};
     Object.defineProperty(hostile, "schemaVersion", {
       enumerable: true,
       get: () => {
+        getterCalls += 1;
+        throw new Error("must fail closed");
+      },
+    });
+    let proxyTrapCalls = 0;
+    const hostileProxy = new Proxy({}, {
+      ownKeys: () => {
+        proxyTrapCalls += 1;
         throw new Error("must fail closed");
       },
     });
@@ -432,11 +467,13 @@ describe("projectUniversityToday", () => {
       action: null,
       projectionDigest: null,
     });
-    await expect(projectUniversityToday(new Proxy({}, {
-      ownKeys: () => {
-        throw new Error("must fail closed");
-      },
-    }))).resolves.toMatchObject({ status: "invalid", action: null });
+    await expect(projectUniversityToday(hostileProxy)).resolves.toMatchObject({
+      status: "invalid",
+      action: null,
+      projectionDigest: null,
+    });
+    expect(getterCalls).toBe(0);
+    expect(proxyTrapCalls).toBe(0);
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });

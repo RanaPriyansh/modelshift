@@ -27,6 +27,46 @@ afterEach(() => {
 });
 
 describe("UniversitySourceReview", () => {
+  it("uses one atomic status announcement for each source decision", async () => {
+    const { container } = render(
+      <UniversitySourceReview initialRequest={await reviewedUniversitySourceRequest()} />,
+    );
+    const conflictHeading = await screen.findByRole("heading", {
+      name: "Two copies give different deadlines.",
+    });
+    const conflictSection = conflictHeading.closest("section")!;
+
+    const expectAnnouncement = (text: string) => {
+      const statuses = screen.getAllByRole("status");
+      expect(statuses).toHaveLength(1);
+      expect(statuses[0]).toHaveAttribute("aria-live", "polite");
+      expect(statuses[0]).toHaveAttribute("aria-atomic", "true");
+      expect(statuses[0]).toHaveTextContent(text);
+      expect(container.querySelectorAll("[aria-live]")).toHaveLength(1);
+    };
+
+    fireEvent.click(within(conflictSection).getByRole("button", {
+      name: "Matches this copy: Copied syllabus, Assignment one deadline",
+    }));
+    await waitFor(() => expectAnnouncement("Marked as matching this copy."));
+    expect(within(conflictSection).getByText("Marked as matching this copy"))
+      .not.toHaveAttribute("aria-live");
+
+    fireEvent.click(within(conflictSection).getByRole("button", {
+      name: "Correct transcription: Copied syllabus, Assignment one deadline",
+    }));
+    fireEvent.change(screen.getByLabelText("Correct due date and time"), {
+      target: { value: "2026-09-14T15:30" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Use my correction" }));
+    await waitFor(() => expectAnnouncement("Student correction applied."));
+
+    fireEvent.click(within(conflictSection).getByRole("button", {
+      name: "Reject extraction: Copied syllabus, Assignment one deadline",
+    }));
+    await waitFor(() => expectAnnouncement("Extraction rejected."));
+  });
+
   it("keeps conflicting copied facts blocked after both extractions are confirmed", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     render(<UniversitySourceReview initialRequest={await reviewedUniversitySourceRequest()} />);

@@ -1,3 +1,4 @@
+import { types as nodeUtilTypes } from "node:util";
 import { ZodError } from "zod";
 
 import {
@@ -55,7 +56,9 @@ function copyPlainJson(value: unknown): unknown {
       if (!Number.isFinite(current)) throw new UnsafeJsonInput();
       return current;
     }
-    if (typeof current !== "object") throw new UnsafeJsonInput();
+    if (typeof current !== "object" || nodeUtilTypes.isProxy(current)) {
+      throw new UnsafeJsonInput();
+    }
 
     if (Array.isArray(current)) {
       const names = Object.getOwnPropertyNames(current);

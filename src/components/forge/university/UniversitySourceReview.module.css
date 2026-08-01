@@ -18,7 +18,7 @@
 .kicker,
 .sectionIndex {
   margin: 0 0 12px;
-  color: var(--forge-cyan);
+  color: var(--forge-cyan-deep);
   font-family: var(--forge-mono);
   font-size: 11px;
   font-weight: 760;
@@ -56,7 +56,7 @@
 }
 
 .progress strong {
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
   font-family: var(--forge-serif);
   font-size: 48px;
   font-weight: 500;
@@ -81,7 +81,7 @@
 }
 
 .boundary strong {
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
 }
 
 .boundary span::before {
@@ -167,7 +167,7 @@
 }
 
 .state[data-tone="warning"] {
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
 }
 
 .sectionBody {
@@ -216,7 +216,7 @@
 }
 
 .candidateMeta span:first-child {
-  color: var(--forge-cyan);
+  color: var(--forge-cyan-deep);
   font-weight: 760;
 }
 
@@ -242,7 +242,7 @@
 
 .policyBoundary {
   border-left-color: var(--forge-amber);
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
 }
 
 .decisionState {
@@ -277,13 +277,13 @@
 .correctionForm button:hover:not(:disabled),
 .resetButton:hover:not(:disabled) {
   border-color: var(--forge-cyan);
-  color: var(--forge-cyan);
+  color: var(--forge-cyan-deep);
 }
 
 .candidateActions button[aria-pressed="true"] {
   border-color: var(--forge-cyan);
   background: var(--forge-cyan-deep);
-  color: var(--forge-ink);
+  color: var(--forge-surface);
 }
 
 .correctionForm {
@@ -335,7 +335,7 @@
 
 .humanQuestion > p {
   margin: 0 0 9px;
-  color: var(--forge-amber);
+  color: var(--forge-amber-deep);
   font-family: var(--forge-mono);
   font-size: 10px;
   font-weight: 760;

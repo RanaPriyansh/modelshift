@@ -18,6 +18,7 @@ const MAX_CONTAINER_KEYS = 512;
 const MAX_PROPERTY_NAME_BYTES = 120;
 const MAX_STRING_BYTES = 512;
 const MAX_TOTAL_STRING_BYTES = 192_000;
+const MAX_RETURNED_SCHEMA_ISSUES = 64;
 
 const AUTHORITY = deepFreeze({
   projectionClass: "learner_declared_degree_map_inspection",
@@ -177,7 +178,7 @@ function orderedIssues(
 }
 
 function structuralIssues(error: ZodError): readonly UniversityDegreeMapIssue[] {
-  return orderedIssues(error.issues.map((entry) => issue(
+  return orderedIssues(error.issues.slice(0, MAX_RETURNED_SCHEMA_ISSUES).map((entry) => issue(
     "schema.invalid",
     entry.path.join("."),
     entry.message,
