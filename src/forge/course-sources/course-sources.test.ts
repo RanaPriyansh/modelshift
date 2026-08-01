@@ -540,28 +540,10 @@ describe("ADR-010 university course-source candidate boundary", () => {
     expect(Object.isFrozen(result.context)).toBe(true);
   });
 
-  it("reconciles from one detached snapshot without reading the caller graph through proxy getters", async () => {
-    const callerRequest = request();
-    let ordinaryReads = 0;
-    const descriptorReads = new Map<PropertyKey, number>();
-    const guardedRequest = new Proxy(callerRequest, {
-      get() {
-        ordinaryReads += 1;
-        throw new Error("the caller graph must not be parsed directly");
-      },
-      getOwnPropertyDescriptor(target, key) {
-        descriptorReads.set(key, (descriptorReads.get(key) ?? 0) + 1);
-        return Reflect.getOwnPropertyDescriptor(target, key);
-      },
-    });
-
-    const result = await reconcileCourseSources(guardedRequest);
+  it("reconciles an ordinary request from one detached snapshot", async () => {
+    const result = await reconcileCourseSources(request());
 
     expect(result.status).toBe("connected_sources_reviewed");
-    expect(ordinaryReads).toBe(0);
-    expect([...descriptorReads.values()]).toEqual(
-      Array.from({ length: Reflect.ownKeys(callerRequest).length }, () => 1),
-    );
   });
 
   it("fails reconciliation closed without invoking an accessor or leaking a hostile proxy failure", async () => {
@@ -591,7 +573,31 @@ describe("ADR-010 university course-source candidate boundary", () => {
     expect(proxyResult.issues.map((entry) => entry.code)).toContain("schema.invalid");
   });
 
-  it("builds goal context from one wrapper snapshot and never revisits wrapper accessors", async () => {
+  it("rejects a proxy before reflection while preserving ordinary request input", async () => {
+    const accepted = await reconcileCourseSources(request());
+    let getPrototypeOfCalls = 0;
+    let ownKeysCalls = 0;
+    const proxyRequest = new Proxy(request(), {
+      getPrototypeOf() {
+        getPrototypeOfCalls += 1;
+        throw new Error("proxy prototype reflection must not run");
+      },
+      ownKeys() {
+        ownKeysCalls += 1;
+        throw new Error("proxy key reflection must not run");
+      },
+    });
+
+    const rejected = await reconcileCourseSources(proxyRequest);
+
+    expect(accepted.status).toBe("connected_sources_reviewed");
+    expect(rejected.status).toBe("invalid");
+    expect(rejected.issues.map((entry) => entry.code)).toEqual(["schema.invalid"]);
+    expect(getPrototypeOfCalls).toBe(0);
+    expect(ownKeysCalls).toBe(0);
+  });
+
+  it("builds goal context from one ordinary wrapper snapshot", async () => {
     const callerInput = {
       goalRef: {
         schemaVersion: "learner-goal.v1",
@@ -600,24 +606,9 @@ describe("ADR-010 university course-source candidate boundary", () => {
       },
       reconciliationRequest: request(),
     };
-    let ordinaryReads = 0;
-    const descriptorReads = new Map<PropertyKey, number>();
-    const guardedInput = new Proxy(callerInput, {
-      get() {
-        ordinaryReads += 1;
-        throw new Error("the goal-context wrapper must not be parsed directly");
-      },
-      getOwnPropertyDescriptor(target, key) {
-        descriptorReads.set(key, (descriptorReads.get(key) ?? 0) + 1);
-        return Reflect.getOwnPropertyDescriptor(target, key);
-      },
-    });
-
-    const result = await buildCourseSourceGoalContext(guardedInput);
+    const result = await buildCourseSourceGoalContext(callerInput);
 
     expect(result.status).toBe("available");
-    expect(ordinaryReads).toBe(0);
-    expect([...descriptorReads.values()]).toEqual([1, 1]);
 
     const extraWrapperKeyInput = {
       ...callerInput,
@@ -651,5 +642,36 @@ describe("ADR-010 university course-source candidate boundary", () => {
     expect(rejected.reconciliation.status).toBe("invalid");
     expect(rejected.issues.map((entry) => entry.code)).toContain("schema.invalid");
     expect(getterCalls).toBe(0);
+  });
+
+  it("rejects a proxy goal-context wrapper before reflection", async () => {
+    const callerInput = {
+      goalRef: {
+        schemaVersion: "learner-goal.v1",
+        goalId: "goal.finish-assignment-one",
+        storageClass: "learner-owned-device-local",
+      },
+      reconciliationRequest: request(),
+    };
+    let getPrototypeOfCalls = 0;
+    let ownKeysCalls = 0;
+    const proxyInput = new Proxy(callerInput, {
+      getPrototypeOf() {
+        getPrototypeOfCalls += 1;
+        throw new Error("goal-context proxy prototype reflection must not run");
+      },
+      ownKeys() {
+        ownKeysCalls += 1;
+        throw new Error("goal-context proxy key reflection must not run");
+      },
+    });
+
+    const result = await buildCourseSourceGoalContext(proxyInput);
+
+    expect(result.status).toBe("unavailable");
+    expect(result.reconciliation.status).toBe("invalid");
+    expect(result.issues.map((entry) => entry.code)).toEqual(["schema.invalid"]);
+    expect(getPrototypeOfCalls).toBe(0);
+    expect(ownKeysCalls).toBe(0);
   });
 });
