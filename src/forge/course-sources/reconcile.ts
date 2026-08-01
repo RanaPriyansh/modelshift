@@ -23,6 +23,7 @@ export const COURSE_SOURCE_ISSUE_CODES = [
   "candidate.scope_mismatch",
   "candidate.source_missing",
   "candidate.locator_kind_mismatch",
+  "candidate.extracted_by_mismatch",
   "candidate.created_before_source",
   "candidate.created_in_future",
   "decision.scope_mismatch",
@@ -61,6 +62,7 @@ const COURSE_SOURCE_SNAPSHOT_OPTIONS = {
   allowNullPrototypeObjects: true,
   maximumStringLength: 4_096,
   maximumSerializedJsonBytes: 512 * 1_024,
+  rejectRepeatedReferences: true,
   ...(NODE_PROXY_DETECTOR
     ? { rejectObject: NODE_PROXY_DETECTOR }
     : {}),
@@ -270,6 +272,12 @@ function validateSemantics(request: CourseSourceReconciliationRequestV1): Course
       );
       if (!locatorMatches) {
         issue(issues, "candidate.locator_kind_mismatch", `candidates.${index}.locator`, "The locator kind does not match the source input kind.");
+      }
+      const expectedExtractedBy = revision.inputKind === "manual"
+        ? "learner_manual"
+        : "deterministic_ics_parser";
+      if (candidate.extractedBy !== expectedExtractedBy) {
+        issue(issues, "candidate.extracted_by_mismatch", `candidates.${index}.extractedBy`, "The extractedBy provenance does not match the source input kind.");
       }
       if (Date.parse(candidate.createdAt) < Date.parse(revision.observedAt)) {
         issue(issues, "candidate.created_before_source", `candidates.${index}.createdAt`, "The candidate predates its source observation.");

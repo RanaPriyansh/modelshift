@@ -510,6 +510,54 @@ describe("ADR-012 transient course-source ingestion", () => {
     expect(nodeResult.issues).toContainEqual(expect.objectContaining({ code: "schema.invalid" }));
   });
 
+  it("rejects a transparent proxy before reflection while preserving ordinary input", async () => {
+    const accepted = await ingestCourseSource(icsRequest());
+    let getCalls = 0;
+    let getOwnPropertyDescriptorCalls = 0;
+    let getPrototypeOfCalls = 0;
+    let ownKeysCalls = 0;
+    const proxyRequest = new Proxy(icsRequest(), {
+      get() {
+        getCalls += 1;
+        throw new Error("proxy property reads must not run");
+      },
+      getOwnPropertyDescriptor() {
+        getOwnPropertyDescriptorCalls += 1;
+        throw new Error("proxy descriptor reflection must not run");
+      },
+      getPrototypeOf() {
+        getPrototypeOfCalls += 1;
+        throw new Error("proxy prototype reflection must not run");
+      },
+      ownKeys() {
+        ownKeysCalls += 1;
+        throw new Error("proxy key reflection must not run");
+      },
+    });
+
+    const rejected = await ingestCourseSource(proxyRequest);
+
+    expect(accepted.status).toBe("review_required");
+    expect(rejected.status).toBe("invalid");
+    expect(rejected.issues.map((entry) => entry.code)).toEqual(["schema.invalid"]);
+    expect(getCalls).toBe(0);
+    expect(getOwnPropertyDescriptorCalls).toBe(0);
+    expect(getPrototypeOfCalls).toBe(0);
+    expect(ownKeysCalls).toBe(0);
+  });
+
+  it("rejects repeated object references instead of accepting a non-JSON graph", async () => {
+    const repeated = { marker: true };
+    const result = await ingestCourseSource({
+      ...icsRequest(),
+      extraOne: repeated,
+      extraTwo: repeated,
+    });
+
+    expect(result.status).toBe("invalid");
+    expect(result.issues.map((entry) => entry.code)).toEqual(["schema.invalid"]);
+  });
+
   it("performs no fetch, storage, event, recommendation, or execution side effect", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const result = await ingestCourseSource(icsRequest());
