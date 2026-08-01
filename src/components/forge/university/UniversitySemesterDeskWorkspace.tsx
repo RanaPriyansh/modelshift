@@ -67,7 +67,7 @@ function courseAccessibleName(course: Course): string {
     `Today ${course.todayStatusLabel}.`,
     `Semester loop ${course.semesterLoopStatusLabel}.`,
     "Inspect this course.",
-    "Chosen by you for inspection; not selected or prioritized by FORGE.",
+    "Inspection changes only this view. FORGE does not choose course work or priority.",
   ].join(" ");
 }
 

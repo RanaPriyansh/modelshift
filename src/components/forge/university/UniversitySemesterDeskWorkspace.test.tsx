@@ -50,6 +50,21 @@ function scenarioGroup() {
   });
 }
 
+const neutralCourseBoundary =
+  "Inspection changes only this view. FORGE does not choose course work or priority.";
+
+function expectedCourseAccessibleName(
+  course: UniversitySemesterDeskFixture["scenarios"][number]["courses"][number],
+) {
+  return [
+    course.courseLabel,
+    `Today ${course.todayStatusLabel}.`,
+    `Semester loop ${course.semesterLoopStatusLabel}.`,
+    "Inspect this course.",
+    neutralCourseBoundary,
+  ].join(" ");
+}
+
 describe("UniversitySemesterDeskWorkspace", () => {
   it("starts with one shallow term ledger and no implicitly inspected course", () => {
     render(<UniversitySemesterDeskWorkspace fixture={fixture} />);
@@ -72,13 +87,20 @@ describe("UniversitySemesterDeskWorkspace", () => {
     const courseRadios = within(courseGroup()).getAllByRole("radio");
     expect(courseRadios).toHaveLength(4);
     courseRadios.forEach((radio) => expect(radio).not.toBeChecked());
-    expect(courseRadios.map((radio) => radio.getAttribute("aria-label")))
-      .toEqual([
-        expect.stringContaining("CS102: Evidence and computation"),
-        expect.stringContaining("MATH110: Discrete structures"),
-        expect.stringContaining("HIST204: Modern history"),
-        expect.stringContaining("BIO120: Cell systems"),
-      ]);
+    const expectedNames = fixture.scenarios[0].courses.map(
+      expectedCourseAccessibleName,
+    );
+    const renderedNames = courseRadios.map(
+      (radio) => radio.getAttribute("aria-label"),
+    );
+    expect(renderedNames).toEqual(expectedNames);
+    expect(new Set(renderedNames).size).toBe(renderedNames.length);
+    courseRadios.forEach((radio, index) => {
+      expect(radio).toHaveAccessibleName(expectedNames[index]);
+      expect(renderedNames[index]).toContain(neutralCourseBoundary);
+      expect(renderedNames[index]).not.toContain("Chosen by you");
+      expect(renderedNames[index]).not.toContain("selected for inspection");
+    });
 
     expect(screen.getByRole("heading", {
       level: 2,
@@ -148,13 +170,21 @@ describe("UniversitySemesterDeskWorkspace", () => {
     const secondCourse = within(courseGroup()).getByRole("radio", {
       name: /MATH110: Discrete structures/i,
     }) as HTMLInputElement;
+    const secondCourseFixture = fixture.scenarios[0].courses[1];
+    const neutralName = expectedCourseAccessibleName(secondCourseFixture);
     const revealCourse = vi.fn();
     Object.defineProperty(secondCourse, "scrollIntoView", {
       configurable: true,
       value: revealCourse,
     });
 
+    expect(secondCourse).toHaveAccessibleName(neutralName);
     fireEvent.click(secondCourse);
+    expect(secondCourse).toBeChecked();
+    expect(secondCourse).toHaveAccessibleName(neutralName);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      secondCourseFixture.announcement,
+    );
     controlIsVisible = false;
     fireEvent.click(screen.getByRole("button", {
       name: "Clear course inspection",
@@ -162,6 +192,7 @@ describe("UniversitySemesterDeskWorkspace", () => {
 
     expect(secondCourse).toHaveFocus();
     expect(secondCourse).not.toBeChecked();
+    expect(secondCourse).toHaveAccessibleName(neutralName);
     expect(revealCourse).toHaveBeenCalledWith({
       behavior: "instant",
       block: "nearest",
