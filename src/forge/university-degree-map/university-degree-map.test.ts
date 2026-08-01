@@ -171,6 +171,67 @@ describe("projectUniversityDegreeMap", () => {
     );
   });
 
+  it("withholds conflicting course declarations independent of input order", () => {
+    const forward = request();
+    forward.courses.push({
+      ...forward.courses[0]!,
+      creditUnits: 6,
+      state: "planned",
+      prerequisiteCourseIds: ["course.cs200"],
+    });
+    const directRequirement = forward.requirements[0]!;
+    if (directRequirement.kind !== "required_course") {
+      throw new Error("The fixture must start with a required course.");
+    }
+    forward.requirements[0] = {
+      ...directRequirement,
+      courseId: "course.math100",
+    };
+    const reversed = structuredClone(forward);
+    reversed.courses.reverse();
+
+    const forwardProjection = projectUniversityDegreeMap(forward);
+    const reversedProjection = projectUniversityDegreeMap(reversed);
+
+    expect(forwardProjection).toEqual(reversedProjection);
+    expect(forwardProjection.status).toBe("review_required");
+    expect(forwardProjection.flags).toMatchObject({
+      duplicateCourseIds: ["course.math100"],
+      conflictingStateCourseIds: ["course.math100"],
+      unknownCourseIds: [],
+    });
+    expect(forwardProjection.courses.map((course) => course.courseId)).toEqual([
+      "course.cs100",
+      "course.cs200",
+    ]);
+    expect(forwardProjection.creditTotals).toEqual({
+      completed: 0,
+      inProgress: 4,
+      planned: 4,
+      allDeclared: 8,
+    });
+    expect(forwardProjection.courses.find(
+      (course) => course.courseId === "course.cs100",
+    )?.unmetPrerequisiteCourseIds).toEqual(["course.math100"]);
+    expect(forwardProjection.requirements.find(
+      (requirement) => (
+        requirement.requirementId === "requirement.credits.core"
+      ),
+    )).toMatchObject({
+      met: false,
+      earnedCreditUnits: 0,
+    });
+    expect(forwardProjection.requirements.find(
+      (requirement) => (
+        requirement.requirementId === "requirement.core.cs200"
+      ),
+    )).toMatchObject({
+      met: false,
+      earnedCreditUnits: 0,
+      requiredCreditUnits: 0,
+    });
+  });
+
   it("detects cycles and active courses with unmet prerequisites", () => {
     const value = request();
     value.courses[0] = {

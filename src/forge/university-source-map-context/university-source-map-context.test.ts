@@ -290,6 +290,51 @@ describe("projectUniversitySourceMapContext", () => {
     expect(projection.projectionDigest).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
 
+  it("preserves learner correction provenance without exposing corrected facts", async () => {
+    const value = request();
+    const originalFact =
+      value.courseSourceReconciliationRequest.candidates[0]!.fact;
+    if (originalFact.kind !== "deadline") {
+      throw new Error("The test fixture must contain a deadline.");
+    }
+    const correctedTitle = "PRIVATE CORRECTED FACT TITLE MARKER";
+    const correctedDueAt = "2026-08-22T16:00:00.000Z";
+    value.courseSourceReconciliationRequest.decisions = [{
+      schemaVersion: "course-source-decision.v1",
+      decisionId: "course-source-decision.assignment-one-correct",
+      candidateId: "course-source-candidate.assignment-one",
+      scope: courseScope(),
+      actor: "learner",
+      kind: "correct",
+      extractionMatch: "learner_corrected",
+      correctedFact: {
+        ...originalFact,
+        title: correctedTitle,
+        dueAt: correctedDueAt,
+      },
+      correctionReasonCode: "source_transcription_error",
+      decidedAt: "2026-08-01T12:10:00.000Z",
+    }];
+
+    const projection = await projectUniversitySourceMapContext(value);
+    const serialized = JSON.stringify(projection);
+
+    expect(projection).toMatchObject({
+      status: "bound_review_candidate",
+      learningSources: [{
+        factKind: "deadline",
+        extractionState: "learner_corrected",
+        factAuthority: "student_entered_correction",
+        bindingState: "bound_review_candidate",
+      }],
+    });
+    expect(projection.learningSources[0]).not.toHaveProperty("originalFact");
+    expect(projection.learningSources[0]).not.toHaveProperty("effectiveFact");
+    expect(projection.learningSources[0]).not.toHaveProperty("correctedFact");
+    expect(serialized).not.toContain(correctedTitle);
+    expect(serialized).not.toContain(correctedDueAt);
+  });
+
   it("rejects retired outer and nested v1 request schemas", async () => {
     const retiredOuter = {
       ...request(),
@@ -310,6 +355,39 @@ describe("projectUniversitySourceMapContext", () => {
       const projection = await projectUniversitySourceMapContext(candidate);
       expect(projection.status).toBe("invalid");
       expect(projection.issues.map((entry) => entry.code)).toContain(issueCode);
+      expect(projection.degreeSources).toEqual([]);
+      expect(projection.learningSources).toEqual([]);
+    }
+  });
+
+  it("rejects retired nested degree-map and learning-map v1 request schemas", async () => {
+    const retiredDegreeMap = {
+      ...request(),
+      studentContextRequest: {
+        ...studentContextRequest(),
+        degreeMapRequest: {
+          ...degreeRequest(),
+          schemaVersion: "university-degree-map-request.v1",
+        },
+      },
+    };
+    const retiredLearningMap = {
+      ...request(),
+      studentContextRequest: {
+        ...studentContextRequest(),
+        learningMapRequest: {
+          ...learningRequest(),
+          schemaVersion: "university-learning-map-request.v1",
+        },
+      },
+    };
+
+    for (const candidate of [retiredDegreeMap, retiredLearningMap]) {
+      const projection = await projectUniversitySourceMapContext(candidate);
+      expect(projection.status).toBe("invalid");
+      expect(projection.issues.map((entry) => entry.code)).toContain(
+        "student_context.invalid",
+      );
       expect(projection.degreeSources).toEqual([]);
       expect(projection.learningSources).toEqual([]);
     }
@@ -589,6 +667,15 @@ describe("projectUniversitySourceMapContext", () => {
     expect(projection.learningSources[0]).not.toHaveProperty("effectiveFact");
     expect(serialized).not.toContain("PRIVATE SOURCE LABEL MARKER");
     expect(serialized).not.toContain("PRIVATE FACT TITLE MARKER");
+  });
+
+  it("does not expose owner or tenant markers", async () => {
+    const projection = await projectUniversitySourceMapContext(request());
+    const serialized = JSON.stringify(projection);
+
+    expect(projection.status).toBe("bound_review_candidate");
+    expect(serialized).not.toContain(OWNER);
+    expect(serialized).not.toContain(TENANT);
   });
 
   it("requires exact course, source, digest, candidate, claim, and concept relations", async () => {

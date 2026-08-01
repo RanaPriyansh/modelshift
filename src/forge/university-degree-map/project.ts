@@ -260,13 +260,17 @@ function projectValid(
 
   const courseIds = request.courses.map((entry) => entry.courseId);
   const duplicateCourseIds = duplicateValues(courseIds);
+  const duplicateCourseIdSet = new Set(duplicateCourseIds);
+  const declaredCourseIds = new Set(courseIds);
   const coursesById = new Map<
     string,
     UniversityDegreeMapRequestV2["courses"][number]
   >();
   const stateSets = new Map<string, Set<string>>();
   for (const course of request.courses) {
-    if (!coursesById.has(course.courseId)) coursesById.set(course.courseId, course);
+    if (!duplicateCourseIdSet.has(course.courseId)) {
+      coursesById.set(course.courseId, course);
+    }
     const states = stateSets.get(course.courseId) ?? new Set<string>();
     states.add(course.state);
     stateSets.set(course.courseId, states);
@@ -316,7 +320,7 @@ function projectValid(
     ));
   }
   const unknownCourseIds = sortedUnique(
-    referencedCourseIds.filter((courseId) => !coursesById.has(courseId)),
+    referencedCourseIds.filter((courseId) => !declaredCourseIds.has(courseId)),
   );
 
   const programSourceMissing = (

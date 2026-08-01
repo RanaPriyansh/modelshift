@@ -12,6 +12,9 @@ import {
   universityLearningMapRequestSchema,
 } from "./contracts";
 
+const MAXIMUM_STRING_LENGTH = 4_096;
+const MAXIMUM_SERIALIZED_JSON_BYTES = 512 * 1_024;
+
 const AUTHORITY = deepFreeze({
   projectionClass: "learner_declared_learning_map_inspection",
   masteryEstablished: false,
@@ -86,6 +89,13 @@ function sortBy<T>(values: readonly T[], key: (value: T) => string): readonly T[
   return [...values].sort((left, right) => key(left).localeCompare(key(right)));
 }
 
+function containsUnsafeNumber(value: unknown): boolean {
+  if (typeof value === "number") return !Number.isSafeInteger(value);
+  if (Array.isArray(value)) return value.some(containsUnsafeNumber);
+  if (value === null || typeof value !== "object") return false;
+  return Object.values(value).some(containsUnsafeNumber);
+}
+
 export function projectUniversityLearningMap(
   value: unknown,
 ): Readonly<UniversityLearningMapProjectionV2> {
@@ -95,8 +105,13 @@ export function projectUniversityLearningMap(
       detached = boundedJsonSnapshot(value, {
         rejectObject: (candidate) => nodeUtilTypes.isProxy(candidate),
         rejectRepeatedReferences: true,
+        maximumStringLength: MAXIMUM_STRING_LENGTH,
+        maximumSerializedJsonBytes: MAXIMUM_SERIALIZED_JSON_BYTES,
       });
     } catch {
+      return invalid([issue("schema.invalid", "")]);
+    }
+    if (containsUnsafeNumber(detached)) {
       return invalid([issue("schema.invalid", "")]);
     }
     const parsed = universityLearningMapRequestSchema.safeParse(detached);

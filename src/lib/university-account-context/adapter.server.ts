@@ -76,6 +76,8 @@ const BOUND_AUTHORITY = authority(true);
 
 function snapshot(value: unknown): unknown {
   return boundedJsonSnapshot(value, {
+    maximumSerializedJsonBytes: 512 * 1_024,
+    maximumStringLength: 4_096,
     rejectObject: nodeUtilTypes.isProxy,
     rejectRepeatedReferences: true,
   });

@@ -32,6 +32,8 @@ import * as accountContextModule from "./index.server";
 
 const ACCOUNT_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_ACCOUNT_ID = "22222222-2222-4222-8222-222222222222";
+const MAXIMUM_SERIALIZED_JSON_BYTES = 512 * 1_024;
+const MAXIMUM_STRING_LENGTH = 4_096;
 const EXPECTED_BINDING_ID =
   "learner.hmac-sha256.v1.35d071ae2c402ec6691e308bce35445f71e41cb5660153c59634e14ab0f94c5a";
 
@@ -138,6 +140,28 @@ function identity(id = ACCOUNT_ID): unknown {
 
 function bindingKey(): Uint8Array {
   return Uint8Array.from({ length: 32 }, (_, index) => index + 1);
+}
+
+function serializedBoundaryInput(additionalBytes = 0): unknown {
+  const input = request() as unknown as {
+    degreeMapRequest: {
+      program: Record<string, unknown>;
+    };
+  };
+  const values: string[] = [];
+  input.degreeMapRequest.program.boundary = values;
+  const targetBytes = MAXIMUM_SERIALIZED_JSON_BYTES + additionalBytes;
+
+  while (true) {
+    const remainingBytes = targetBytes
+      - Buffer.byteLength(JSON.stringify(input));
+    const nextStringJsonBytes = values.length === 0 ? 2 : 3;
+    if (remainingBytes <= nextStringJsonBytes + MAXIMUM_STRING_LENGTH) {
+      values.push("x".repeat(remainingBytes - nextStringJsonBytes));
+      return input;
+    }
+    values.push("x".repeat(MAXIMUM_STRING_LENGTH));
+  }
 }
 
 function expectDeeplyFrozen(
@@ -433,6 +457,63 @@ describe("bindUniversityAccountContext", () => {
     expect(results.every((result) => result.status === "invalid")).toBe(true);
     expect(results.every((result) => result.reason === "input_invalid"))
       .toBe(true);
+    expect(moduleReaders.identity).not.toHaveBeenCalled();
+    expect(moduleReaders.bindingKey.calls).toBe(0);
+  });
+
+  it("rejects over-limit strings and serialized inputs before server reads", async () => {
+    const overlongString = request();
+    overlongString.degreeMapRequest.program.programRef =
+      "x".repeat(MAXIMUM_STRING_LENGTH + 1);
+    const oversizedSerializedInput = serializedBoundaryInput(1);
+
+    expect(Buffer.byteLength(JSON.stringify(oversizedSerializedInput)))
+      .toBe(MAXIMUM_SERIALIZED_JSON_BYTES + 1);
+
+    const results = await Promise.all([
+      bindUniversityAccountContext(overlongString),
+      bindUniversityAccountContext(oversizedSerializedInput),
+    ]);
+
+    for (const result of results) {
+      expect(result).toMatchObject({
+        status: "invalid",
+        reason: "input_invalid",
+        context: null,
+        issues: [{
+          code: "input.invalid",
+          path: "",
+          message: "The account-context request must be bounded plain JSON.",
+        }],
+      });
+    }
+    expect(moduleReaders.identity).not.toHaveBeenCalled();
+    expect(moduleReaders.bindingKey.calls).toBe(0);
+  });
+
+  it("admits exact input ceilings to strict schema validation", async () => {
+    const exactStringBoundary = request();
+    exactStringBoundary.degreeMapRequest.program.programRef =
+      "x".repeat(MAXIMUM_STRING_LENGTH);
+    const exactSerializedBoundary = serializedBoundaryInput();
+
+    expect(Buffer.byteLength(JSON.stringify(exactSerializedBoundary)))
+      .toBe(MAXIMUM_SERIALIZED_JSON_BYTES);
+
+    const results = await Promise.all([
+      bindUniversityAccountContext(exactStringBoundary),
+      bindUniversityAccountContext(exactSerializedBoundary),
+    ]);
+
+    expect(results.every((result) => result.status === "invalid")).toBe(true);
+    expect(results.every((result) => result.reason === "input_invalid"))
+      .toBe(true);
+    expect(results[0]?.issues.some(
+      (issue) => issue.path === "degreeMapRequest.program.programRef",
+    )).toBe(true);
+    expect(results[1]?.issues.some(
+      (issue) => issue.path === "degreeMapRequest.program",
+    )).toBe(true);
     expect(moduleReaders.identity).not.toHaveBeenCalled();
     expect(moduleReaders.bindingKey.calls).toBe(0);
   });

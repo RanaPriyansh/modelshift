@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   projectUniversityLearningMap,
+  universityLearningMapRequestSchema,
   type UniversityLearningMapRequestV2,
 } from ".";
 
@@ -246,6 +247,73 @@ describe("university learning map", () => {
     expect(projectUniversityLearningMap(invalidReturnDate).status).toBe(
       "invalid",
     );
+  });
+
+  it("rejects a string above the 4,096-code-unit boundary", () => {
+    const value = {
+      ...request(),
+      oversizedText: "x".repeat(4_097),
+    };
+
+    expect(projectUniversityLearningMap(value)).toMatchObject({
+      status: "invalid",
+      issues: [{ code: "schema.invalid", path: "" }],
+    });
+  });
+
+  it("rejects an aggregate JSON value above the 512 KiB boundary", () => {
+    const value = {
+      ...request(),
+      oversizedAggregate: Array.from(
+        { length: 129 },
+        () => "x".repeat(4_096),
+      ),
+    };
+
+    expect(projectUniversityLearningMap(value)).toMatchObject({
+      status: "invalid",
+      issues: [{ code: "schema.invalid", path: "" }],
+    });
+  });
+
+  it("rejects unsafe numbers before Zod schema traversal", () => {
+    const safeParse = vi.spyOn(
+      universityLearningMapRequestSchema,
+      "safeParse",
+    );
+    const value = {
+      ...request(),
+      unsafeNumber: Number.MAX_SAFE_INTEGER + 1,
+    };
+
+    expect(projectUniversityLearningMap(value)).toMatchObject({
+      status: "invalid",
+      issues: [{ code: "schema.invalid", path: "" }],
+    });
+    expect(safeParse).not.toHaveBeenCalled();
+    safeParse.mockRestore();
+  });
+
+  it("applies the string boundary before Zod schema traversal", () => {
+    const safeParse = vi.spyOn(
+      universityLearningMapRequestSchema,
+      "safeParse",
+    );
+    const overLimit = {
+      ...request(),
+      boundaryProbe: "x".repeat(4_097),
+    };
+    const atLimit = {
+      ...request(),
+      boundaryProbe: "x".repeat(4_096),
+    };
+
+    expect(projectUniversityLearningMap(overLimit).status).toBe("invalid");
+    expect(safeParse).not.toHaveBeenCalled();
+
+    expect(projectUniversityLearningMap(atLimit).status).toBe("invalid");
+    expect(safeParse).toHaveBeenCalledTimes(1);
+    safeParse.mockRestore();
   });
 
   it("never invokes accessors and rejects proxies, symbols, sparse arrays, cycles, and exotic objects", () => {
