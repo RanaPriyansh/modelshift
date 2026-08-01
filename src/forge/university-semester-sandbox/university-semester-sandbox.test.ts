@@ -554,6 +554,30 @@ describe("projectUniversitySemesterSandbox", () => {
     });
   });
 
+  it("rejects oversized arrays before own-key and element descriptor enumeration", async () => {
+    const today = await universityTodayFixtureRequest("ready");
+    const input = sandboxRequest(loopFor(today), sourceRequest(today).decisions);
+    const oversized = Array.from({ length: 32_768 }, () => null);
+    input.semesterLoopRequest.worldPack = oversized;
+    const getOwnPropertyNames = vi.spyOn(Object, "getOwnPropertyNames");
+    const getOwnPropertyDescriptor = vi.spyOn(Object, "getOwnPropertyDescriptor");
+
+    try {
+      const result = await projectUniversitySemesterSandbox(input);
+
+      expect(result).toMatchObject({
+        status: "invalid",
+        projectionDigest: null,
+        issues: [{ code: "schema.invalid" }],
+      });
+      expect(getOwnPropertyNames).not.toHaveBeenCalledWith(oversized);
+      expect(getOwnPropertyDescriptor).not.toHaveBeenCalledWith(oversized, "0");
+    } finally {
+      getOwnPropertyNames.mockRestore();
+      getOwnPropertyDescriptor.mockRestore();
+    }
+  });
+
   it("rejects exotic prototypes, cycles, excessive depth, and excessive nodes", async () => {
     const today = await universityTodayFixtureRequest("ready");
     const valid = sandboxRequest(loopFor(today), sourceRequest(today).decisions);

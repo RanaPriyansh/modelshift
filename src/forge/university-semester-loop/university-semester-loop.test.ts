@@ -499,6 +499,30 @@ describe("projectUniversitySemesterLoop", () => {
     });
   });
 
+  it("rejects oversized arrays before own-key and element descriptor enumeration", async () => {
+    const today = await universityTodayFixtureRequest("ready");
+    const input = requestFor(today);
+    const oversized = Array.from({ length: 16_384 }, () => null);
+    input.worldPack = oversized;
+    const getOwnPropertyNames = vi.spyOn(Object, "getOwnPropertyNames");
+    const getOwnPropertyDescriptor = vi.spyOn(Object, "getOwnPropertyDescriptor");
+
+    try {
+      const result = await projectUniversitySemesterLoop(input);
+
+      expect(result).toMatchObject({
+        status: "invalid",
+        projectionDigest: null,
+        issues: [{ code: "schema.invalid" }],
+      });
+      expect(getOwnPropertyNames).not.toHaveBeenCalledWith(oversized);
+      expect(getOwnPropertyDescriptor).not.toHaveBeenCalledWith(oversized, "0");
+    } finally {
+      getOwnPropertyNames.mockRestore();
+      getOwnPropertyDescriptor.mockRestore();
+    }
+  });
+
   it("rejects exotic prototypes, cycles, excessive depth, and excessive nodes", async () => {
     const today = await universityTodayFixtureRequest("ready");
     const valid = requestFor(today);

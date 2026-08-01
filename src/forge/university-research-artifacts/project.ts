@@ -154,6 +154,9 @@ function copyPlainJson(value: unknown): unknown {
       if (Object.getPrototypeOf(current) !== Array.prototype) {
         throw new UnsafeJsonInput();
       }
+      if (current.length >= MAX_CONTAINER_KEYS) {
+        throw new UnsafeJsonInput();
+      }
       const names = boundedOwnPropertyNames(current);
       if (
         names.length !== current.length + 1

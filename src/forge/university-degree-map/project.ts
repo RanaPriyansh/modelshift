@@ -81,6 +81,9 @@ function copyBoundedPlainJson(value: unknown): unknown {
       if (Object.getPrototypeOf(current) !== Array.prototype) {
         throw new UnsafeJsonInput();
       }
+      if (current.length >= MAX_CONTAINER_KEYS) {
+        throw new UnsafeJsonInput();
+      }
       const keys = Reflect.ownKeys(current);
       if (
         keys.length > MAX_CONTAINER_KEYS
