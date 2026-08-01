@@ -35,42 +35,54 @@ This board replaces hackathon, judging, demo-video, submission, and deadline wor
 
 ## Latest verified implementation receipt
 
-The latest verified implementation candidate before this record update is clean source
-`edbcd496502eea258f7fddfe964fdabae6eec37c` and tree
-`632f1bbd4400b81847ed897436e42301776ead63`.
+The latest verified implementation candidate before this evidence-only record
+update is clean source `d98a9cf0093a825ab38774225d1b141380f2d4d2`
+and tree `04d0954e50264fca5f679ed92b6129aa9e407ed9`.
+
+The candidate adds no public route, database object, provider operation,
+identity activation, persistence path, or participant operation.
 
 - TypeScript: pass.
 - Zero-warning lint: pass.
-- Application contracts: 1,527 pass across 175 files.
-- Evaluator contracts: 13 pass across 2 files.
-- Focused Semester Desk contracts: 6 pass across one file.
-- Focused Semester Overview contracts: 6 pass across one file.
-- Focused Today, Recovery, and Protected Study contracts: 17 pass across three files.
-- Connected Chrome semantic checks: pass for neutral course names, distinct scenario status, one concise status per changing view, selection state, and focus return.
-- Connected Chrome did not run a manual screen-reader session.
-- Visible copy and layout did not change in this candidate.
+- Application contracts: 1,563 pass across 177 files.
+- Evaluator contracts: 13 pass across two files.
+- Total contracts: 1,576 pass.
+- Focused declaration-document contracts: 15 pass.
+- Focused command-center contracts: two pass.
+- Focused degree, learning, student-context, source-map, account, and identity checks: 88 pass.
+- Connected Chrome: 11 native workspace links used exact alphabetical names and destinations.
+- Connected Chrome: keyboard order moved from Degree map to Learning map.
+- Connected Chrome: desktop and 320 CSS pixel views had no horizontal overflow.
+- Connected Chrome: no manual screen-reader session ran.
+- The connected Chrome profile injected Dark Reader before hydration. This caused the recorded extension-specific hydration mismatch.
+- A clean-profile console check, forced colors, and reduced motion remain not run for this candidate.
 - Optimized build: pass.
-- Public build boundary: 71 static assets passed. Public asset digest: `7c049a45df9a3c803c4c6a69454d02de16205d3ff96b79b7fdf1dbc3c3cadba7`.
-- Production build receipt: 1,472 files. Artifact digest: `0065e55150cd7fc86126394a5560ca03fdf695a7091d9fcc944a5624612ac864`.
+- Public build boundary: 71 static assets passed.
+- Public asset digest: `e1b84e243d8401cc738df5860a9aa440d98cdcff0487569fae55312894d8280e`.
+- Production build receipt: 1,472 files.
+- Artifact digest: `sha256:6bc7477144a2d6296b50573d2c2dc2fae85a1a17bd10680effc679acc18fea33`.
+- Public directory digest: `sha256:e0096e369f47666ca5a3f962b71b6f5199a17117ac5ce4a598d1b77dc42abac9`.
+- Runtime configuration digest: `sha256:2003550d7fa548abd65c4401a57ee1f1511cd5c4abd9a97a881f38b9033a0525`.
 
-The Chrome checks used server-gated synthetic development fixtures. They are
-not production operation, deployment evidence, or manual assistive-technology
-evidence. The exact production build kept the fixture switches disabled and
+The Chrome checks used a server-gated synthetic development fixture. They do
+not prove production operation, deployment, assistive-technology support, or
+learning value. The production build kept every fixture switch disabled and
 passed the public artifact boundary.
 
-This implementation candidate did not rerun disposable-database replay,
-dependency audit, the complete public browser matrix, forced colors, reduced
-motion, or manual assistive technology. Older results for those checks are not
-inherited. No push or deployment occurred.
+This candidate did not run the Playwright university-foundation suite,
+disposable-database replay, dependency audit, the complete public browser
+matrix, forced colors, reduced motion, or manual assistive technology. Older
+results for those checks are not inherited. No push or deployment occurred.
 
 ## Current implementation order
 
-1. Retire demo/submission work from active product language.
-2. Complete universal intake and map decision semantics.
-3. Audit the adult shell so every primary route is useful, truthful, and keyboard-operable.
-4. Run focused security and contract tests, then the complete unit/evaluator/build suites.
-5. Verify the home path plus at least three complete Worlds at desktop, 320 CSS px, keyboard-only, and reduced motion.
-6. Push the exact green source. Promote a new public candidate only if the provider-owned release verifier passes; otherwise record the immutable blocker and leave production unpromoted.
+1. Preserve the exact local declaration-document candidate and its claim ceiling.
+2. Record the principal Phase -1 target disposition before participant operation.
+3. Obtain named participant and data authority before recruitment, observation, or capture.
+4. Run the approved matched-substitution protocol, then accept, narrow, repair, or reject.
+5. Define adult entitlement, ownership, tenant, rights, and persistence only after that decision.
+6. Keep identity, storage, tutoring, providers, and public UI replacement disabled until their separate gates pass.
+7. Promote no public candidate without explicit authority and a provider-owned release receipt.
 
 ## Explicit non-goals for this release
 
