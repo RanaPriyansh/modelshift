@@ -15,6 +15,12 @@ export function resolvePlaywrightOutputDirectory(
   return outputDirectory;
 }
 
+export function resolvePlaywrightJsonOutputFile(
+  environment: ForgePlaywrightEnvironment = process.env,
+): string {
+  return `${resolvePlaywrightOutputDirectory(environment)}/playwright-report.json`;
+}
+
 export function resolveLocalPlaywrightServer(
   environment: ForgePlaywrightEnvironment = process.env,
 ) {
@@ -50,7 +56,6 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   workers: 1,
-  reporter: [["list"]],
   use: {
     baseURL,
     trace: "retain-on-failure",
@@ -58,6 +63,10 @@ export default defineConfig({
     video: "retain-on-failure",
     launchOptions: executablePath ? { executablePath } : undefined,
   },
+  reporter: [
+    ["list"],
+    ["json", { outputFile: resolvePlaywrightJsonOutputFile() }],
+  ],
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {

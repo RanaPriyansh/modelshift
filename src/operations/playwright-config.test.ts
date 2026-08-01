@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   resolveLocalPlaywrightServer,
+  resolvePlaywrightJsonOutputFile,
   resolvePlaywrightOutputDirectory,
 } from "../../playwright.config";
 
@@ -16,6 +17,14 @@ describe("Playwright result isolation", () => {
         FORGE_PLAYWRIGHT_OUTPUT_DIR: "test-results/university-foundation",
       }),
     ).toBe("test-results/university-foundation");
+  });
+
+  it("writes the established JSON report inside the bounded output directory", () => {
+    expect(
+      resolvePlaywrightJsonOutputFile({
+        FORGE_PLAYWRIGHT_OUTPUT_DIR: "test-results/university-foundation",
+      }),
+    ).toBe("test-results/university-foundation/playwright-report.json");
   });
 
   it.each([

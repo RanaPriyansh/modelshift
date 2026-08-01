@@ -109,6 +109,41 @@ jobs:
         if: always()
         continue-on-error: true
         run: pnpm exec tsx scripts/ops/playwright-artifact-manifest.ts --root test-results --output test-results/release-ops/playwright-artifact-manifest.json --stage-dir test-results/release-ops/playwright-failure-artifacts --tested-sha "$GITHUB_SHA" --artifact-id "$FORGE_BROWSER_ARTIFACT_ID"
+      - name: Write browser evidence receipt
+        id: browser_receipt
+        if: always()
+        continue-on-error: true
+        env:
+          FORGE_EXPECTED_BROWSER_RECEIPT_STATUS: ${{ steps.foundation_browser.outcome == 'success' && steps.semester_desk_browser.outcome == 'success' && steps.browser.outcome == 'success' && 'pass' || 'fail' }}
+        run: |
+          pnpm exec tsx scripts/ops/playwright-evidence-receipt.ts \
+            --tested-sha "$GITHUB_SHA" \
+            --status "$FORGE_EXPECTED_BROWSER_RECEIPT_STATUS" \
+            --output test-results/release-ops/forge-browser-evidence-receipt.json \
+            --project desktop \
+            --project mobile \
+            --spec tests/e2e/university-foundation.spec.ts \
+            --spec tests/e2e/university-semester-desk.spec.ts \
+            --spec tests/e2e/production.spec.ts \
+            --spec tests/e2e/university-research-readiness-production.spec.ts \
+            --spec tests/e2e/university-semester-loop-production.spec.ts \
+            --spec tests/e2e/university-semester-desk-production.spec.ts \
+            --spec tests/e2e/university-semester-overview-production.spec.ts \
+            --spec tests/e2e/university-recovery-production.spec.ts \
+            --spec tests/e2e/university-post-attempt-repair-production.spec.ts \
+            --spec tests/e2e/university-foundation-production.spec.ts \
+            --spec tests/e2e/university-source-to-study-production.spec.ts \
+            --report test-results/university-foundation/playwright-report.json \
+            --report test-results/university-semester-desk/playwright-report.json \
+            --report test-results/production-browser/playwright-report.json
+      - name: Upload browser evidence receipt
+        if: always() && hashFiles('test-results/release-ops/forge-browser-evidence-receipt.json') != ''
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: forge-playwright-evidence-${{ github.run_id }}
+          path: test-results/release-ops/forge-browser-evidence-receipt.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Upload sanitized operations reports
         if: always() && hashFiles('test-results/release-ops/*') != ''
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -129,11 +164,15 @@ jobs:
           retention-days: 14
       - name: Enforce release gate outcomes
         if: always()
+        env:
+          FORGE_EXPECTED_BROWSER_RECEIPT_STATUS: ${{ steps.foundation_browser.outcome == 'success' && steps.semester_desk_browser.outcome == 'success' && steps.browser.outcome == 'success' && 'pass' || 'fail' }}
         run: |
           if test "${{ steps.foundation_browser.outcome }}" = failure || test "${{ steps.semester_desk_browser.outcome }}" = failure || test "${{ steps.browser.outcome }}" = failure; then
             test "${{ steps.failure_manifest.outcome }}" = success
             node -e 'const fs = require("node:fs"); const report = JSON.parse(fs.readFileSync("test-results/release-ops/playwright-artifact-manifest.json", "utf8")); if (report.schema_version !== "2.0" || !Array.isArray(report.artifacts) || report.artifacts.length === 0) process.exit(1)'
           fi
+          test "${{ steps.browser_receipt.outcome }}" = success
+          node -e 'const fs = require("node:fs"); const report = JSON.parse(fs.readFileSync("test-results/release-ops/forge-browser-evidence-receipt.json", "utf8")); if (report.schema_version !== "1.0" || report.receipt_kind !== "forge_ci_browser_evidence" || report.tested_sha !== process.env.GITHUB_SHA || report.status !== process.env.FORGE_EXPECTED_BROWSER_RECEIPT_STATUS || !Array.isArray(report.specs) || !Array.isArray(report.projects) || report.counts === null || typeof report.counts !== "object") process.exit(1)'
           test "${{ steps.foundation_browser.outcome }}" = success
           test "${{ steps.semester_desk_browser.outcome }}" = success
           test "${{ steps.browser.outcome }}" = success
