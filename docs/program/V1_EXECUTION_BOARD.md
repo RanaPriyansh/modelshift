@@ -36,31 +36,37 @@ This board replaces hackathon, judging, demo-video, submission, and deadline wor
 ## Latest verified implementation receipt
 
 The latest verified implementation candidate before this evidence-only record
-update is clean source `d98a9cf0093a825ab38774225d1b141380f2d4d2`
-and tree `04d0954e50264fca5f679ed92b6129aa9e407ed9`.
+update is clean source `eecdc5bf8f928ec616d8176ed333a2134e01b3c0`
+and tree `861e232be0b549db1d54ed1d2b2affc48600b67e`.
+
+The candidate aligns self-attested adult status across the degree, learning,
+student-context, and declaration-document boundaries. It also makes the
+existing positive university-foundation browser suite a required CI outcome
+before immutable production-build capture.
 
 The candidate adds no public route, database object, provider operation,
-identity activation, persistence path, or participant operation.
+identity activation, entitlement, persistence path, or participant operation.
 
 - TypeScript: pass.
 - Zero-warning lint: pass.
-- Application contracts: 1,563 pass across 177 files.
+- Application contracts: 1,565 pass across 177 files.
 - Evaluator contracts: 13 pass across two files.
-- Total contracts: 1,576 pass.
-- Focused declaration-document contracts: 15 pass.
-- Focused command-center contracts: two pass.
-- Focused degree, learning, student-context, source-map, account, and identity checks: 88 pass.
-- Connected Chrome: 11 native workspace links used exact alphabetical names and destinations.
-- Connected Chrome: keyboard order moved from Degree map to Learning map.
-- Connected Chrome: desktop and 320 CSS pixel views had no horizontal overflow.
+- Total contracts: 1,578 pass.
+- Offline evaluation gate: pass across 54 authored fixtures; no live-model run.
+- Focused adult-authority repair: 88 pass across six files.
+- CI workflow YAML parse and whitespace checks: pass.
+- CI now requires all 16 positive university-foundation browser cases before the production build.
+- The 16-case CI gate was configured but not executed in this local verification.
+- Connected Chrome: the learning-map authority boundary showed `Adult status` and `Self-attested; not verified`.
+- Connected Chrome: the 320 CSS pixel authority view had no horizontal overflow.
 - Connected Chrome: no manual screen-reader session ran.
 - The connected Chrome profile injected Dark Reader before hydration. This caused the recorded extension-specific hydration mismatch.
 - A clean-profile console check, forced colors, and reduced motion remain not run for this candidate.
 - Optimized build: pass.
 - Public build boundary: 71 static assets passed.
-- Public asset digest: `e1b84e243d8401cc738df5860a9aa440d98cdcff0487569fae55312894d8280e`.
+- Public asset digest: `bcac19a638fb8f2f4728e9cf32e31b9a27a4bb7a07585ce5687f4c6e1e0e9ab7`.
 - Production build receipt: 1,472 files.
-- Artifact digest: `sha256:6bc7477144a2d6296b50573d2c2dc2fae85a1a17bd10680effc679acc18fea33`.
+- Artifact digest: `sha256:2880b0dc687fdc41fda204d8c7610c138775ba77621180404656d20b98f759a9`.
 - Public directory digest: `sha256:e0096e369f47666ca5a3f962b71b6f5199a17117ac5ce4a598d1b77dc42abac9`.
 - Runtime configuration digest: `sha256:2003550d7fa548abd65c4401a57ee1f1511cd5c4abd9a97a881f38b9033a0525`.
 
@@ -69,14 +75,15 @@ not prove production operation, deployment, assistive-technology support, or
 learning value. The production build kept every fixture switch disabled and
 passed the public artifact boundary.
 
-This candidate did not run the Playwright university-foundation suite,
-disposable-database replay, dependency audit, the complete public browser
-matrix, forced colors, reduced motion, or manual assistive technology. Older
-results for those checks are not inherited. No push or deployment occurred.
+This candidate did not run the configured Playwright university-foundation
+suite, the production browser release contract, disposable-database replay,
+dependency audit, the complete public browser matrix, forced colors, reduced
+motion, or manual assistive technology. Older results for those checks are not
+inherited. No push or deployment occurred.
 
 ## Current implementation order
 
-1. Preserve the exact local declaration-document candidate and its claim ceiling.
+1. Preserve the exact local adult-declaration repair candidate and its claim ceiling.
 2. Record the principal Phase -1 target disposition before participant operation.
 3. Obtain named participant and data authority before recruitment, observation, or capture.
 4. Run the approved matched-substitution protocol, then accept, narrow, repair, or reject.
