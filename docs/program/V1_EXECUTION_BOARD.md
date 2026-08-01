@@ -36,14 +36,14 @@ This board replaces hackathon, judging, demo-video, submission, and deadline wor
 ## Latest verified implementation receipt
 
 The latest verified implementation candidate before this evidence-only record
-update is clean source `5b4f1c9c96c0ba77219d637889fef9e562224b5b`
-and tree `ba0cd663858a163e99e7c17f491f38a716adb085`.
+update is clean source `a68d20c7df078a61d3ee9533320e8fd018e6c5b7`
+and tree `f9affb0925e874c8c4b858e1147bdc09fafb60bb`.
 
 The candidate preserves the university foundation, production security, and
 release-evidence work through source
 `19c88c7d4ef3e1080632af78fefffef4bae597a3`.
 
-It adds six implementation commits from the next 1 August audit:
+It adds eight implementation commits from the next 1 August audit:
 
 - `b64fccd5e0754c25a9cacee80f6fbf622a7951bb` reuses the validated account
   preflight projection. Accepted input now runs the canonical student-context
@@ -60,19 +60,27 @@ It adds six implementation commits from the next 1 August audit:
 - `5b4f1c9c96c0ba77219d637889fef9e562224b5b` adds explicit string and
   serialized-byte limits to the remaining direct university snapshot
   boundaries.
+- `49dba0db00fa142467aa9c98d437d2dfaba0806a` removes a static Node-only
+  import from the Source Review client graph. Node callers keep intrinsic
+  Proxy detection through guarded runtime feature detection.
+- `a68d20c7df078a61d3ee9533320e8fd018e6c5b7` rejects subclassed,
+  symbol-decorated, and accessor-bearing Protected Study source arrays before
+  element values are read.
 
 The candidate adds no public route, database object, provider operation,
 identity activation, entitlement, persistence path, or participant operation.
 
-- Source Review focused contracts: 23 pass across three files.
+- Source Review focused contracts: 24 pass across three files.
 - Combined course-source boundary contracts: 45 pass across two files.
+- Protected Study focused contracts: 15 pass across one file.
+- Final independent repair review: 70 pass across five files.
 - TypeScript: pass.
 - Zero-warning lint: pass.
 - Diff-integrity check: pass.
-- Application contracts: 1,639 pass across 177 files.
+- Application contracts: 1,641 pass across 177 files.
 - Evaluator contracts: 13 pass across two files.
-- Total contracts: 1,652 pass.
-- Offline evaluation gate: pass across 54 authored fixtures.
+- Total contracts: 1,654 pass.
+- `pnpm eval`: pass across 54 authored fixtures.
 - Live model evaluation: not run.
 - Four separate `gpt-5.6-luna` maximum-reasoning tasks implemented the bounded
   repairs in isolated worktrees. The principal thread reviewed and integrated
@@ -80,21 +88,40 @@ identity activation, entitlement, persistence path, or participant operation.
 - Independent `gpt-5.6-luna` maximum-reasoning review found one remaining
   accepted-row contrast defect. The candidate corrects it.
 - The final accessibility re-review found no remaining confirmed source defect.
+- A post-integration selected-Chrome review then found a client-only regression
+  that unit tests and the default production build did not expose. Source
+  Review reported `0 of 0` copied facts because its shared reconciler imported
+  `node:util`.
+- Evidence-only record `f6721a641512938fe75a480aad625eeacf5fb746` is
+  superseded. Its Source Review browser statement for source `5b4f1c9` was
+  disproved by that selected-Chrome review.
+- The candidate removes that static import and adds a client-graph guard test.
+  The follow-up Chrome review passed the complete ready, decision, announcement,
+  pressed-state, and reset flow.
+- A final independent review found the Protected Study exotic-array gap. The
+  final candidate corrects it, and the review found no remaining confirmed
+  defect across both post-range repairs.
 - Optimized production build: pass.
 - Generated static pages: 67.
 - Public build boundary: 71 static assets pass.
 - Production build receipt: 1,472 files.
-- Build ID: `forge-source-v1-5b4f1c9c96c0ba77219d637889fef9e562224b5b`.
-- Artifact digest: `sha256:4806b40246f2a7160fbadd638d058f1a5fdff06a194cfbea1b45005f6fe704a5`.
-- Public asset digest: `sha256:977b1f41d3cff036b8fc41abe7710e4be2c85124c3fb74f9085ceeaf5ccc37bb`.
+- Build ID: `forge-source-v1-a68d20c7df078a61d3ee9533320e8fd018e6c5b7`.
+- Local path-bound artifact digest: `sha256:c5d803f5812c5cc4548a4f5bcd2170a4fb430464fc0853a9e52dd48edfb9a599`.
+- Public asset digest: `sha256:e9f57fa2729d99c7745d9b3de7ad2c96bf507e0caf001135c140cf493584d695`.
 - Public directory digest: `sha256:e0096e369f47666ca5a3f962b71b6f5199a17117ac5ce4a598d1b77dc42abac9`.
 - Runtime configuration digest: `sha256:06e97d7ea5aaf83b90deef10f941678198a442a267e97f9f23a1a97603774e29`.
 - Build receipt schema: `forge-production-build-receipt.v3`.
 - Public marker schema: `forge-public-build-artifact-marker.v2`.
 
 Release manifest schema `2.0` and provider receipt schema `2.0` now fail closed
-for retired asset-only evidence. The receipt requires a clean Git tree and the
-complete production build identity.
+for retired asset-only evidence. The exact-production verifier requires a
+clean Git tree and complete production build identity.
+
+The aggregate artifact digest is local path-bound evidence. A clean clone of
+source `5b4f1c9` produced the same file count and public/runtime identities but
+a different aggregate artifact digest because retained artifacts included
+absolute build paths. Cross-worktree aggregate digest reproducibility remains
+unproven.
 
 The Semester Desk repair keeps evidence details inside their definitions. It
 hides decorative sequence numbers from assistive technology. Clear inspection
@@ -137,6 +164,11 @@ return. A 320 by 844 CSS pixel capture showed no horizontal overflow. The final
 accepted-row check confirmed rendered text color `rgb(94, 99, 95)`. The only
 browser log error was the Dark Reader extension attribute hydration mismatch.
 
+The post-integration Chrome check confirmed `0 of 3` ready state. One exact
+decision set `aria-pressed="true"` and announced `Marked as matching this copy.`
+Reset returned the route to `0 of 3`, announced `Review reset.`, and disabled
+the reset control. No application error appeared.
+
 The bounded input policy now rejects each general university snapshot string
 or object key above 4,096 UTF-16 code units. It rejects a snapshot above 512
 KiB of serialized UTF-8 JSON. Course ingestion keeps its separate 256 KiB
@@ -148,10 +180,13 @@ before `getPrototypeOf` or `ownKeys` traps run. Six snapshot helpers reject
 oversized dense arrays from `length` before element-name enumeration.
 Structural adapters return at most 64 mapped and sorted schema issues.
 
-The latest requirements audit found no additional confirmed source defect
-inside this repair set. It still found missing assistive-technology evidence,
-missing required CI browser evidence, and the unresolved Phase -1 target
-disposition.
+Protected Study rejects arrays with a nonstandard prototype, symbol key,
+unexpected property, or accessor before it reads an element value. Its array
+budget check occurs before key enumeration.
+
+The final independent repair review found no remaining confirmed defect inside
+this repair set. It still found missing assistive-technology evidence, missing
+required CI browser evidence, and the unresolved Phase -1 target disposition.
 
 The configured university-foundation and production browser suites did not run
 locally. Product Design requires the selected Chrome workflow unless the user
