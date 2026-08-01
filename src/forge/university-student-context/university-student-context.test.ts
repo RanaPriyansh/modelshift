@@ -57,7 +57,7 @@ function learningRequest(): UniversityLearningMapRequestV2 {
     schemaVersion: "university-learning-map-request.v2",
     course: {
       courseRef: "course.cs100",
-      ownershipDeclaration: "learner_self_attested",
+      ownershipDeclaration: "adult_learner_self_attested",
       sourceAuthority: "learner_declared_unverified",
     },
     outcomes: [{

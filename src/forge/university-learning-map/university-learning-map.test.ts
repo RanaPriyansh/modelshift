@@ -11,7 +11,7 @@ function request(): UniversityLearningMapRequestV2 {
     schemaVersion: "university-learning-map-request.v2",
     course: {
       courseRef: "course.local-01",
-      ownershipDeclaration: "learner_self_attested",
+      ownershipDeclaration: "adult_learner_self_attested",
       sourceAuthority: "learner_declared_unverified",
     },
     outcomes: [{
@@ -73,6 +73,7 @@ describe("university learning map", () => {
     expect(projection.map?.delayedReturns[0]?.dueOn).toBe("2026-08-08");
     expect(projection.authority).toEqual({
       projectionClass: "learner_declared_learning_map_inspection",
+      adultStatusAuthority: "self_attested_not_verified",
       masteryEstablished: false,
       abilityScored: false,
       diagnosisAllowed: false,
@@ -99,6 +100,27 @@ describe("university learning map", () => {
     expect(projection.issues.map((entry) => entry.code)).toContain(
       "schema.invalid",
     );
+  });
+
+  it("rejects the retired non-adult ownership literal without conversion", () => {
+    const retiredOwnership = {
+      ...request(),
+      course: {
+        ...request().course,
+        ownershipDeclaration: "learner_self_attested",
+      },
+    };
+
+    const projection = projectUniversityLearningMap(retiredOwnership);
+
+    expect(projection).toMatchObject({
+      status: "invalid",
+      map: null,
+      issues: [{
+        code: "schema.invalid",
+        path: "course.ownershipDeclaration",
+      }],
+    });
   });
 
   it("keeps explicit unknowns and structural gaps visible for review", () => {

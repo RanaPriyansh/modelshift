@@ -13,7 +13,7 @@ const SYNTHETIC_REQUEST = deepFreeze({
   schemaVersion: "university-learning-map-request.v2",
   course: {
     courseRef: "course.synthetic-systems-01",
-    ownershipDeclaration: "learner_self_attested",
+    ownershipDeclaration: "adult_learner_self_attested",
     sourceAuthority: "learner_declared_unverified",
   },
   outcomes: [
@@ -248,8 +248,8 @@ export function universityLearningMapFixture(): UniversityLearningMapPresentatio
     ],
     authority: [
       {
-        label: "Ownership",
-        value: "Learner-declared and self-attested",
+        label: "Adult status",
+        value: "Self-attested; not verified",
       },
       { label: "Input", value: "Synthetic and learner-declared" },
       { label: "Source state", value: "Unverified" },

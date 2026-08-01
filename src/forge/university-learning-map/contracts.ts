@@ -120,7 +120,7 @@ export const universityLearningMapRequestSchema = z.strictObject({
   schemaVersion: z.literal(UNIVERSITY_LEARNING_MAP_REQUEST_VERSION),
   course: z.strictObject({
     courseRef: ref("course"),
-    ownershipDeclaration: z.literal("learner_self_attested"),
+    ownershipDeclaration: z.literal("adult_learner_self_attested"),
     sourceAuthority: z.literal("learner_declared_unverified"),
   }),
   outcomes: z.array(outcomeSchema).min(1).max(32),
@@ -163,6 +163,7 @@ export interface UniversityLearningMapProjectionV2 {
   } | null;
   readonly authority: {
     readonly projectionClass: "learner_declared_learning_map_inspection";
+    readonly adultStatusAuthority: "self_attested_not_verified";
     readonly masteryEstablished: false;
     readonly abilityScored: false;
     readonly diagnosisAllowed: false;

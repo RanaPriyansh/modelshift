@@ -102,11 +102,12 @@ The context:
 The context does not create a combined readiness, risk, priority, progress,
 mastery, graduation, or next-action score.
 
-The degree, learning, and student-context projection classes are
-learner-declared inspection classes. Adult status and declaration ownership
-remain self-attested and unverified. A server binding can establish only
-authenticated account association and active-adult admission. It cannot
-establish declaration ownership, source truth, or institutional authority.
+The degree and learning raw child requests each carry self-attested, unverified
+adult status. Their projection classes remain learner-declared inspection
+classes. This adult-status declaration does not establish active-adult
+admission, entitlement, declaration ownership, source truth, or institutional
+authority. A server binding can establish only authenticated account
+association and active-adult admission.
 
 ### Authority vocabulary reset
 

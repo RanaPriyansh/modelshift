@@ -44,6 +44,10 @@ contract accepts only exact degree-map v2 and learning-map v2 raw requests.
 It validates the learning-course and degree-map course linkage. It recomputes
 both canonical child projections.
 
+Both raw child requests carry self-attested, unverified adult status. This
+status does not establish active-adult admission or entitlement. The document
+result must keep `adultEntitlementEstablished` false.
+
 The document contains only:
 
 - the exact accepted degree-map v2 raw request

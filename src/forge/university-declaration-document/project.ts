@@ -31,6 +31,7 @@ const MAXIMUM_SERIALIZED_JSON_BYTES = 512 * 1_024;
 const AUTHORITY = deepFreeze({
   ownerAuthorityEstablished: false,
   tenantAuthorityEstablished: false,
+  adultStatusAuthority: "self_attested_not_verified",
   adultEntitlementEstablished: false,
   institutionalAuthorityEstablished: false,
   sourceAuthorityEstablished: false,

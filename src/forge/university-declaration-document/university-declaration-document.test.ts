@@ -49,7 +49,7 @@ function learningRequest(): UniversityDeclarationDocumentRequestV1["learningMapR
     schemaVersion: "university-learning-map-request.v2",
     course: {
       courseRef: "course.cs100",
-      ownershipDeclaration: "learner_self_attested",
+      ownershipDeclaration: "adult_learner_self_attested",
       sourceAuthority: "learner_declared_unverified",
     },
     outcomes: [{
@@ -126,6 +126,7 @@ describe("university declaration document", () => {
       authority: {
         ownerAuthorityEstablished: false,
         tenantAuthorityEstablished: false,
+        adultStatusAuthority: "self_attested_not_verified",
         adultEntitlementEstablished: false,
         institutionalAuthorityEstablished: false,
         sourceAuthorityEstablished: false,
@@ -250,6 +251,38 @@ describe("university declaration document", () => {
     expect(results.every(
       (result) => result.inspection.status === "invalid",
     )).toBe(true);
+  });
+
+  it("rejects the retired non-adult child ownership literal", async () => {
+    const retiredOwnership = {
+      ...request(),
+      learningMapRequest: {
+        ...learningRequest(),
+        course: {
+          ...learningRequest().course,
+          ownershipDeclaration: "learner_self_attested",
+        },
+      },
+    };
+
+    const result = await projectUniversityDeclarationDocument(
+      retiredOwnership,
+    );
+
+    expect(result).toMatchObject({
+      document: null,
+      inspection: {
+        status: "invalid",
+        issues: [{
+          code: "child.invalid",
+          path: "learningMapRequest.course.ownershipDeclaration",
+        }],
+      },
+      authority: {
+        adultStatusAuthority: "self_attested_not_verified",
+        adultEntitlementEstablished: false,
+      },
+    });
   });
 
   it("rejects unknown fields at the outer and child boundaries", async () => {

@@ -17,6 +17,7 @@ const MAXIMUM_SERIALIZED_JSON_BYTES = 512 * 1_024;
 
 const AUTHORITY = deepFreeze({
   projectionClass: "learner_declared_learning_map_inspection",
+  adultStatusAuthority: "self_attested_not_verified",
   masteryEstablished: false,
   abilityScored: false,
   diagnosisAllowed: false,

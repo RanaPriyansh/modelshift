@@ -54,8 +54,8 @@ describe("UniversityLearningMapWorkspace", () => {
     );
     expect(presentation.authority).toEqual([
       {
-        label: "Ownership",
-        value: "Learner-declared and self-attested",
+        label: "Adult status",
+        value: "Self-attested; not verified",
       },
       { label: "Input", value: "Synthetic and learner-declared" },
       { label: "Source state", value: "Unverified" },

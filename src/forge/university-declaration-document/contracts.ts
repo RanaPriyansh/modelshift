@@ -97,6 +97,7 @@ export interface UniversityDeclarationDocumentInspection {
 export interface UniversityDeclarationDocumentAuthority {
   readonly ownerAuthorityEstablished: false;
   readonly tenantAuthorityEstablished: false;
+  readonly adultStatusAuthority: "self_attested_not_verified";
   readonly adultEntitlementEstablished: false;
   readonly institutionalAuthorityEstablished: false;
   readonly sourceAuthorityEstablished: false;
