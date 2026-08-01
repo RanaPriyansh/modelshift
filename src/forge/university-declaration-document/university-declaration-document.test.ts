@@ -285,28 +285,84 @@ describe("university declaration document", () => {
     });
   });
 
-  it("rejects unknown fields at the outer and child boundaries", async () => {
-    const cases = [
-      { ...request(), ownerId: "owner.local-01" },
-      { ...request(), status: "ready_for_inspection" },
-      { ...request(), recommendation: "Select this course." },
-      {
+  it.each([
+    {
+      boundary: "outer owner field",
+      candidate: { ...request(), ownerId: "owner.local-01" },
+    },
+    {
+      boundary: "outer tenant field",
+      candidate: { ...request(), tenantId: "tenant.local-01" },
+    },
+    {
+      boundary: "outer account identifier field",
+      candidate: { ...request(), accountId: "account.local-01" },
+    },
+    {
+      boundary: "outer account-binding field",
+      candidate: {
+        ...request(),
+        contextBinding: { bindingId: "binding.local-01" },
+      },
+    },
+    {
+      boundary: "outer time field",
+      candidate: { ...request(), acceptedAt: "2026-08-01T00:00:00.000Z" },
+    },
+    {
+      boundary: "outer revision field",
+      candidate: { ...request(), revisionId: "revision.local-01" },
+    },
+    {
+      boundary: "outer predecessor field",
+      candidate: { ...request(), predecessorId: "revision.local-00" },
+    },
+    {
+      boundary: "outer idempotency field",
+      candidate: { ...request(), idempotencyKey: "idempotency.local-01" },
+    },
+    {
+      boundary: "outer degree projection field",
+      candidate: { ...request(), degreeMapProjection: {} },
+    },
+    {
+      boundary: "outer learning projection field",
+      candidate: { ...request(), learningMapProjection: {} },
+    },
+    {
+      boundary: "outer status field",
+      candidate: { ...request(), status: "ready_for_inspection" },
+    },
+    {
+      boundary: "outer unknown recommendation field",
+      candidate: { ...request(), recommendation: "Select this course." },
+    },
+    {
+      boundary: "degree child projection field",
+      candidate: {
         ...request(),
         degreeMapRequest: { ...degreeRequest(), projection: {} },
       },
-      {
+    },
+    {
+      boundary: "degree child status field",
+      candidate: {
+        ...request(),
+        degreeMapRequest: { ...degreeRequest(), status: "valid" },
+      },
+    },
+    {
+      boundary: "learning child action field",
+      candidate: {
         ...request(),
         learningMapRequest: { ...learningRequest(), action: "start" },
       },
-    ];
+    },
+  ])("rejects the $boundary", async ({ candidate }) => {
+    const result = await projectUniversityDeclarationDocument(candidate);
 
-    const results = await Promise.all(
-      cases.map(projectUniversityDeclarationDocument),
-    );
-
-    expect(results.every(
-      (result) => result.inspection.status === "invalid",
-    )).toBe(true);
+    expect(result.inspection.status).toBe("invalid");
+    expect(result.document).toBeNull();
   });
 
   it("keeps the digest stable across object property order", async () => {

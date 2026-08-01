@@ -215,8 +215,13 @@ test("recomposes at exactly 320 CSS pixels without horizontal overflow", async (
   await expect(mixed).toBeFocused();
   await expect(mixed).toBeChecked();
   expect(await mixed.evaluate((control) => {
-    const bounds = control.getBoundingClientRect();
-    return bounds.top >= 0 && bounds.bottom <= window.innerHeight;
+    const focusLabel = control.closest("label");
+    if (!focusLabel) return false;
+    const bounds = focusLabel.getBoundingClientRect();
+    return bounds.top >= 0
+      && bounds.right <= window.innerWidth
+      && bounds.bottom <= window.innerHeight
+      && bounds.left >= 0;
   })).toBe(true);
 });
 

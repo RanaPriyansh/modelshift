@@ -9,6 +9,7 @@ import { boundedJsonSnapshot } from "@/src/forge/bounded-json-snapshot";
 import { deepFreeze } from "@/src/forge/deep-freeze";
 import {
   projectUniversityStudentContext,
+  type UniversityStudentContextProjectionV2,
   UNIVERSITY_STUDENT_CONTEXT_REQUEST_SCHEMA_VERSION,
 } from "@/src/forge/university-student-context";
 import { readForgeCloudIdentitySubject } from "@/src/lib/forge-auth/session.server";
@@ -28,6 +29,10 @@ const UNIVERSITY_ACCOUNT_CONTEXT_BINDING_DOMAIN =
   "forge.university-account-context.binding.hmac-sha256.v1";
 const UNIVERSITY_ACCOUNT_CONTEXT_BINDING_PREFIX =
   "learner.hmac-sha256.v1";
+const UNIVERSITY_ACCOUNT_CONTEXT_PREFLIGHT_BINDING = deepFreeze({
+  bindingId: "forge.account-context.preflight.v1",
+  ownershipDeclaration: "adult_learner_self_attested",
+} as const);
 const MINIMUM_BINDING_KEY_BYTES = 32;
 const MAXIMUM_BINDING_KEY_BYTES = 4_096;
 const MAX_RETURNED_ISSUES = 64;
@@ -137,6 +142,51 @@ function invalidInput(error?: ZodError): Readonly<UniversityAccountContextResult
   return invalid("input_invalid", issues);
 }
 
+type CompleteStudentContextProjection =
+  Readonly<UniversityStudentContextProjectionV2> & {
+    readonly status: Exclude<
+      UniversityStudentContextProjectionV2["status"],
+      "invalid"
+    >;
+    readonly contextBinding: NonNullable<
+      UniversityStudentContextProjectionV2["contextBinding"]
+    >;
+    readonly degreeAxis: NonNullable<
+      UniversityStudentContextProjectionV2["degreeAxis"]
+    >;
+    readonly learningAxis: NonNullable<
+      UniversityStudentContextProjectionV2["learningAxis"]
+    >;
+  };
+
+function isCompleteStudentContextProjection(
+  projection: Readonly<UniversityStudentContextProjectionV2>,
+): projection is CompleteStudentContextProjection {
+  return (
+    projection.status !== "invalid"
+    && projection.contextBinding !== null
+    && projection.degreeAxis !== null
+    && projection.learningAxis !== null
+  );
+}
+
+function invalidStudentContext(
+  projection: Readonly<UniversityStudentContextProjectionV2>,
+): Readonly<UniversityAccountContextResult> {
+  const issues = projection.issues.length > 0
+    ? projection.issues.map((entry) => ({
+      code: "student_context.invalid" as const,
+      path: entry.path,
+      message: "The canonical student context rejected this request.",
+    }))
+    : [{
+      code: "student_context.invalid" as const,
+      path: "",
+      message: "The canonical student context rejected this request.",
+    }];
+  return invalid("student_context_invalid", issues);
+}
+
 function opaqueBindingId(accountId: string, bindingKey: Uint8Array): string {
   try {
     const digest = createHmac("sha256", bindingKey)
@@ -212,6 +262,16 @@ export async function bindUniversityAccountContext(
     );
     if (!parsedInput.success) return invalidInput(parsedInput.error);
 
+    const preflightProjection = projectUniversityStudentContext({
+      schemaVersion: UNIVERSITY_STUDENT_CONTEXT_REQUEST_SCHEMA_VERSION,
+      contextBinding: UNIVERSITY_ACCOUNT_CONTEXT_PREFLIGHT_BINDING,
+      degreeMapRequest: parsedInput.data.degreeMapRequest,
+      learningMapRequest: parsedInput.data.learningMapRequest,
+    });
+    if (!isCompleteStudentContextProjection(preflightProjection)) {
+      return invalidStudentContext(preflightProjection);
+    }
+
     let rawIdentity: unknown;
     try {
       rawIdentity = await readForgeCloudIdentitySubject();
@@ -272,23 +332,10 @@ export async function bindUniversityAccountContext(
     });
 
     if (
-      projection.status === "invalid"
-      || !projection.contextBinding
-      || !projection.degreeAxis
-      || !projection.learningAxis
+      !isCompleteStudentContextProjection(projection)
+      || projection.status !== preflightProjection.status
     ) {
-      const issues = projection.issues.length > 0
-        ? projection.issues.map((entry) => ({
-          code: "student_context.invalid" as const,
-          path: entry.path,
-          message: "The canonical student context rejected this request.",
-        }))
-        : [{
-          code: "student_context.invalid" as const,
-          path: "",
-          message: "The canonical student context rejected this request.",
-        }];
-      return invalid("student_context_invalid", issues);
+      return invalidStudentContext(projection);
     }
 
     return deepFreeze({

@@ -15,8 +15,8 @@ type ScrollPosition = {
   readonly top: number;
 };
 
-function visibleControl(control: HTMLInputElement): boolean {
-  const bounds = control.getBoundingClientRect();
+function fullyVisible(element: HTMLElement): boolean {
+  const bounds = element.getBoundingClientRect();
   const clearance = 6;
   return bounds.top >= clearance
     && bounds.right <= window.innerWidth - clearance
@@ -104,8 +104,9 @@ export function UniversitySemesterOverviewWorkspace({
   const view = selected.view;
 
   function select(nextId: ScenarioId, control: HTMLInputElement) {
+    const focusContainer = control.closest("label") ?? control;
     pendingScrollPositionRef.current = (
-      document.activeElement === control && visibleControl(control)
+      document.activeElement === control && fullyVisible(focusContainer)
     )
       ? { left: window.scrollX, top: window.scrollY }
       : null;
@@ -114,15 +115,17 @@ export function UniversitySemesterOverviewWorkspace({
 
   function reset() {
     const firstRadio = firstRadioRef.current;
+    const focusContainer = firstRadio?.closest("label") ?? firstRadio;
     const keepScrollPosition = firstRadio !== null
-      && visibleControl(firstRadio);
+      && focusContainer !== null
+      && fullyVisible(focusContainer);
     pendingScrollPositionRef.current = keepScrollPosition
       ? { left: window.scrollX, top: window.scrollY }
       : null;
     setSelectedId(first?.id ?? "mixed-term");
     firstRadio?.focus({ preventScroll: true });
-    if (!keepScrollPosition) {
-      firstRadio?.scrollIntoView?.({
+    if (focusContainer && !keepScrollPosition) {
+      focusContainer.scrollIntoView?.({
         behavior: "instant" as ScrollBehavior,
         block: "nearest",
         inline: "nearest",

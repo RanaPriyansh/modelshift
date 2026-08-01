@@ -225,6 +225,7 @@ describe("bindUniversityAccountContext", () => {
 
   it("binds strict learner declarations with a versioned keyed identifier", async () => {
     const result = await bindUniversityAccountContext(request());
+    const serialized = JSON.stringify(result);
 
     expect(result).toMatchObject({
       schemaVersion: "university-account-context-result.v2",
@@ -270,6 +271,7 @@ describe("bindUniversityAccountContext", () => {
       },
       issues: [],
     });
+    expect(serialized).not.toContain("forge.account-context.preflight.v1");
   });
 
   it("rejects retired outer and child v1 schemas before server reads", async () => {
@@ -616,9 +618,10 @@ describe("bindUniversityAccountContext", () => {
       .not.toContain(ACCOUNT_ID);
   });
 
-  it("returns canonical context errors without account authority", async () => {
+  it("rejects a course mismatch before unavailable server readers", async () => {
     const value = request();
     value.learningMapRequest.course.courseRef = "course.unknown-999";
+    moduleReaders.identity.mockResolvedValueOnce(null);
 
     const result = await bindUniversityAccountContext(value);
 
@@ -637,6 +640,34 @@ describe("bindUniversityAccountContext", () => {
       path: "learningMapRequest.course.courseRef",
       message: "The canonical student context rejected this request.",
     }]);
+    expect(moduleReaders.identity).not.toHaveBeenCalled();
+    expect(moduleReaders.bindingKey.calls).toBe(0);
+  });
+
+  it("rejects invalid child references before server readers", async () => {
+    const invalidOutcomeReference = request();
+    invalidOutcomeReference.learningMapRequest.concepts[0]!
+      .outcomeRefs = ["outcome.unknown-999"];
+    const invalidEvidenceReference = request();
+    invalidEvidenceReference.learningMapRequest.attempts[0]!
+      .evidenceRefs = ["evidence.unknown-999"];
+
+    const results = await Promise.all([
+      bindUniversityAccountContext(invalidOutcomeReference),
+      bindUniversityAccountContext(invalidEvidenceReference),
+    ]);
+
+    expect(results).toHaveLength(2);
+    expect(results.every((result) => result.status === "invalid")).toBe(true);
+    expect(results.every(
+      (result) => result.reason === "student_context_invalid",
+    )).toBe(true);
+    expect(results.map((result) => result.issues[0]?.path)).toEqual([
+      "learningMapRequest",
+      "learningMapRequest",
+    ]);
+    expect(moduleReaders.identity).not.toHaveBeenCalled();
+    expect(moduleReaders.bindingKey.calls).toBe(0);
   });
 
   it("preserves canonical review status without creating recommendations", async () => {
@@ -653,7 +684,16 @@ describe("bindUniversityAccountContext", () => {
     expect(result.status).toBe("bound_for_inspection");
     expect(result.context?.canonicalStatus).toBe("review_required");
     expect(result.context?.learningAxis.status).toBe("review_required");
-    expect(JSON.stringify(result)).not.toContain("recommended");
+    expect(result.context?.contextBinding.bindingId).toBe(EXPECTED_BINDING_ID);
+    expect(result.authority).toMatchObject({
+      recommendationAllowed: false,
+      answerGenerationAllowed: false,
+      masteryInferenceAllowed: false,
+      externalEffectsAllowed: false,
+    });
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain("recommended");
+    expect(serialized).not.toContain("forge.account-context.preflight.v1");
   });
 
   it("snapshots caller input before it waits for server identity", async () => {

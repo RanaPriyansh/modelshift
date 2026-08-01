@@ -149,22 +149,9 @@ describe("UniversitySemesterOverviewWorkspace", () => {
     }
   });
 
-  it("keeps native focus, one announcement, and bounded scroll behavior", () => {
+  it("keeps native focus, one announcement, and visible-label scroll position", () => {
     vi.spyOn(window, "scrollX", "get").mockReturnValue(8);
     vi.spyOn(window, "scrollY", "get").mockReturnValue(412.5);
-    let controlsAreVisible = true;
-    vi.spyOn(HTMLInputElement.prototype, "getBoundingClientRect")
-      .mockImplementation(() => ({
-        bottom: controlsAreVisible ? 120 : 1_056,
-        height: 56,
-        left: 16,
-        right: 304,
-        top: controlsAreVisible ? 64 : 1_000,
-        width: 288,
-        x: 16,
-        y: controlsAreVisible ? 64 : 1_000,
-        toJSON: () => ({}),
-      }));
     render(<UniversitySemesterOverviewWorkspace fixture={fixture} />);
     const group = screen.getByRole("group", {
       name: "Select research scenario for this view",
@@ -172,8 +159,25 @@ describe("UniversitySemesterOverviewWorkspace", () => {
     const radios = within(group).getAllByRole("radio");
     const first = radios[0] as HTMLInputElement;
     const worldChanged = radios[3] as HTMLInputElement;
+    const firstLabel = first.closest("label");
+    const worldChangedLabel = worldChanged.closest("label");
+    expect(firstLabel).not.toBeNull();
+    expect(worldChangedLabel).not.toBeNull();
+    for (const label of [firstLabel!, worldChangedLabel!]) {
+      vi.spyOn(label, "getBoundingClientRect").mockReturnValue({
+        bottom: 120,
+        height: 56,
+        left: 16,
+        right: 304,
+        top: 64,
+        width: 288,
+        x: 16,
+        y: 64,
+        toJSON: () => ({}),
+      });
+    }
     const revealFirst = vi.fn();
-    Object.defineProperty(first, "scrollIntoView", {
+    Object.defineProperty(firstLabel!, "scrollIntoView", {
       configurable: true,
       value: revealFirst,
     });
@@ -216,22 +220,75 @@ describe("UniversitySemesterOverviewWorkspace", () => {
       top: 412.5,
     });
 
-    controlsAreVisible = false;
-    const scrollCallsBeforeReset = vi.mocked(window.scrollTo).mock.calls.length;
     fireEvent.click(screen.getByRole("button", { name: "Reset view" }));
     expect(first).toHaveFocus();
     expect(first).toBeChecked();
     expect(status.textContent).toBe(initialAnnouncement);
     expect(screen.getByRole("button", { name: "Reset view" })).toBeDisabled();
     expect(screen.getAllByRole("status")).toHaveLength(1);
-    expect(vi.mocked(window.scrollTo)).toHaveBeenCalledTimes(
-      scrollCallsBeforeReset,
-    );
-    expect(revealFirst).toHaveBeenCalledWith({
+    expect(vi.mocked(window.scrollTo)).toHaveBeenLastCalledWith({
+      behavior: "auto",
+      left: 8,
+      top: 412.5,
+    });
+    expect(vi.mocked(window.scrollTo)).toHaveBeenCalledTimes(2);
+    expect(revealFirst).not.toHaveBeenCalled();
+  });
+
+  it("scrolls the clipped focus label after reset and focuses the native radio", () => {
+    render(<UniversitySemesterOverviewWorkspace fixture={fixture} />);
+    const group = screen.getByRole("group", {
+      name: "Select research scenario for this view",
+    });
+    const radios = within(group).getAllByRole("radio");
+    const first = radios[0] as HTMLInputElement;
+    const worldChanged = radios[3] as HTMLInputElement;
+    const firstLabel = first.closest("label");
+    expect(firstLabel).not.toBeNull();
+    vi.spyOn(firstLabel!, "getBoundingClientRect").mockReturnValue({
+      bottom: 1_056,
+      height: 56,
+      left: 16,
+      right: 304,
+      top: 1_000,
+      width: 288,
+      x: 16,
+      y: 1_000,
+      toJSON: () => ({}),
+    });
+    vi.spyOn(first, "getBoundingClientRect").mockReturnValue({
+      bottom: 120,
+      height: 20,
+      left: 16,
+      right: 36,
+      top: 100,
+      width: 20,
+      x: 16,
+      y: 100,
+      toJSON: () => ({}),
+    });
+    const revealLabel = vi.fn();
+    const revealRadio = vi.fn();
+    Object.defineProperty(firstLabel!, "scrollIntoView", {
+      configurable: true,
+      value: revealLabel,
+    });
+    Object.defineProperty(first, "scrollIntoView", {
+      configurable: true,
+      value: revealRadio,
+    });
+
+    fireEvent.click(worldChanged);
+    fireEvent.click(screen.getByRole("button", { name: "Reset view" }));
+
+    expect(first).toHaveFocus();
+    expect(first).toBeChecked();
+    expect(revealLabel).toHaveBeenCalledWith({
       behavior: "instant",
       block: "nearest",
       inline: "nearest",
     });
+    expect(revealRadio).not.toHaveBeenCalled();
   });
 
   it("exposes no course action, raw identity, digest, or hidden authority", () => {
