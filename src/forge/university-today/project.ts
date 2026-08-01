@@ -24,6 +24,9 @@ import {
   universityTodayRequestSchema,
 } from "./contracts";
 
+const MAXIMUM_STRING_LENGTH = 4_096;
+const MAXIMUM_SERIALIZED_JSON_BYTES = 512 * 1_024;
+
 const AUTHORITY = deepFreeze({
   projectionClass: "fixture_only_research_projection",
   identityScopeAuthority: "caller_asserted_fixture_only",
@@ -122,6 +125,8 @@ export async function projectUniversityToday(
     let detached: unknown;
     try {
       detached = boundedJsonSnapshot(value, {
+        maximumStringLength: MAXIMUM_STRING_LENGTH,
+        maximumSerializedJsonBytes: MAXIMUM_SERIALIZED_JSON_BYTES,
         rejectObject: nodeUtilTypes.isProxy,
         allowNullPrototypeObjects: true,
       });

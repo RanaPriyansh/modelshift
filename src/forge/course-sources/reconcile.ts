@@ -38,6 +38,8 @@ export const COURSE_SOURCE_ISSUE_CODES = [
 const COURSE_SOURCE_SNAPSHOT_OPTIONS = {
   allowNullPrototypeObjects: true,
   rejectObject: nodeUtilTypes.isProxy,
+  maximumStringLength: 4_096,
+  maximumSerializedJsonBytes: 512 * 1_024,
 } as const;
 const MAX_RETURNED_SCHEMA_ISSUES = 64;
 

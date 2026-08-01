@@ -492,6 +492,43 @@ describe("projectUniversityPostAttemptRepair", () => {
     expect(arrayTrap).not.toHaveBeenCalled();
   });
 
+  it("rejects oversized nested Today input before protected-study validation", async () => {
+    const receipt = createUniversityPostAttemptFixtureReceipt(
+      "bounded-measures",
+      "color-choice",
+    );
+    const stringRequest = await request(receipt);
+    const aggregateRequest = await request(receipt);
+    const baseToday = await universityTodayFixtureRequest("ready");
+    stringRequest.todayRequest = {
+      oversizedText: "x".repeat(4_194_304),
+      ...baseToday,
+    } as typeof stringRequest.todayRequest;
+    aggregateRequest.todayRequest = {
+      oversizedAggregate: Array.from(
+        { length: 129 },
+        () => "x".repeat(4_096),
+      ),
+      ...baseToday,
+    } as typeof aggregateRequest.todayRequest;
+
+    const [stringResult, byteResult] = await Promise.all([
+      projectUniversityPostAttemptRepair(stringRequest),
+      projectUniversityPostAttemptRepair(aggregateRequest),
+    ]);
+
+    expect(stringResult).toMatchObject({
+      status: "invalid",
+      projectionDigest: null,
+      issues: [{ code: "request.invalid" }],
+    });
+    expect(byteResult).toMatchObject({
+      status: "invalid",
+      projectionDigest: null,
+      issues: [{ code: "request.invalid" }],
+    });
+  });
+
   it("authenticates the receipt before traversing nested Today input", async () => {
     const baseToday = await universityTodayFixtureRequest("ready");
     const trap = vi.fn(() => Object.prototype);

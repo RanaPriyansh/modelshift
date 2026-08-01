@@ -31,6 +31,8 @@ export const COURSE_SOURCE_INGESTION_LIMITS = deepFreeze({
   maximumCandidates: 128,
 });
 
+const MAXIMUM_SERIALIZED_JSON_BYTES = 512 * 1_024;
+
 const timestampSchema = z.string().datetime({ offset: true });
 const revisionIdSchema = z.string().trim().max(180).regex(/^course-source-revision\.[a-z0-9]+(?:[._-][a-z0-9]+)*$/);
 const candidateIdSchema = z.string().trim().max(180).regex(/^course-source-candidate\.[a-z0-9]+(?:[._-][a-z0-9]+)*$/);
@@ -235,7 +237,10 @@ function structuralRequest(
   value: unknown,
 ): { readonly request: ParsedIngestionRequest | null; readonly issues: readonly CourseSourceIngestionIssue[] } {
   try {
-    const result = ingestionRequestSchema.safeParse(boundedJsonSnapshot(value));
+    const result = ingestionRequestSchema.safeParse(boundedJsonSnapshot(value, {
+      maximumStringLength: COURSE_SOURCE_INGESTION_LIMITS.maximumInputBytes,
+      maximumSerializedJsonBytes: MAXIMUM_SERIALIZED_JSON_BYTES,
+    }));
     if (result.success) return { request: result.data, issues: [] };
     return {
       request: null,
