@@ -136,8 +136,17 @@ export function UniversityTodayWorkspace({
         </div>
       </fieldset>
 
+      <p
+        className="forge-visually-hidden"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {`${copy.label}. ${copy.title}`}
+      </p>
+
       <div className={styles.decisionPlane}>
-        <section className={styles.action} aria-labelledby="university-today-title" aria-live="polite">
+        <section className={styles.action} aria-labelledby="university-today-title">
           <p className={styles.stateLabel}>{copy.label}</p>
           <h1 id="university-today-title">{copy.title}</h1>
           <p className={styles.objective}>{copy.body}</p>

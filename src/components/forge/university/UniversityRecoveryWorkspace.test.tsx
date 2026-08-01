@@ -14,6 +14,40 @@ afterEach(() => {
 });
 
 describe("UniversityRecoveryWorkspace", () => {
+  it("announces one concise state change without making the visible panel live", async () => {
+    render(
+      <UniversityRecoveryWorkspace scenarios={await universityRecoveryFixtureScenarios()} />,
+    );
+
+    const status = screen.getByRole("status");
+    const initialPanel = screen.getByRole("heading", {
+      level: 1,
+      name: "Rebuild from what fits now.",
+    }).closest("section");
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(status).toHaveClass("forge-visually-hidden");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveAttribute("aria-atomic", "true");
+    expect(status).toHaveTextContent(
+      "A workable reset. Rebuild from what fits now.",
+    );
+    expect(initialPanel).not.toHaveAttribute("aria-live");
+    expect(initialPanel).not.toHaveAttribute("role", "status");
+
+    fireEvent.click(screen.getByRole("radio", { name: "Choice needed" }));
+
+    const changedPanel = screen.getByRole("heading", {
+      level: 1,
+      name: "Protect the learning. Choose the trade-off.",
+    }).closest("section");
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(status).toHaveTextContent(
+      "One choice is still open. Protect the learning. Choose the trade-off.",
+    );
+    expect(changedPanel).not.toHaveAttribute("aria-live");
+    expect(changedPanel).not.toHaveAttribute("role", "status");
+  });
+
   it("makes the workable reset legible without a backlog score", async () => {
     const { container } = render(
       <UniversityRecoveryWorkspace scenarios={await universityRecoveryFixtureScenarios()} />,

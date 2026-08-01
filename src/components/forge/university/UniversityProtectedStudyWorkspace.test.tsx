@@ -14,6 +14,45 @@ afterEach(() => {
 });
 
 describe("UniversityProtectedStudyWorkspace", () => {
+  it("announces one concise state change without making visible panels live", async () => {
+    render(
+      <UniversityProtectedStudyWorkspace
+        scenarios={await universityProtectedStudyFixtureScenarios()}
+      />,
+    );
+
+    const status = screen.getByRole("status");
+    const initialPanel = screen.getByRole("heading", {
+      level: 1,
+      name: "Understand it. Then prove it without help.",
+    }).closest("section");
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(status).toHaveClass("forge-visually-hidden");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveAttribute("aria-atomic", "true");
+    expect(status).toHaveTextContent(
+      "Protected study contract ready. Understand it. Then prove it without help.",
+    );
+    expect(initialPanel).not.toHaveAttribute("aria-live");
+    expect(initialPanel).not.toHaveAttribute("role", "status");
+
+    fireEvent.click(screen.getByRole("radio", { name: "Source blocked" }));
+
+    const changedPanel = screen.getByRole("heading", {
+      level: 1,
+      name: "Resolve the course context before studying.",
+    }).closest("section");
+    const refusalPanel = screen.getByText("Why entry stopped").closest("section");
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(status).toHaveTextContent(
+      "Today boundary stopped entry. Resolve the course context before studying.",
+    );
+    expect(changedPanel).not.toHaveAttribute("aria-live");
+    expect(changedPanel).not.toHaveAttribute("role", "status");
+    expect(refusalPanel).not.toHaveAttribute("aria-live");
+    expect(refusalPanel).not.toHaveAttribute("role", "status");
+  });
+
   it("explains the protected learning arc before exposing an exact preview", async () => {
     render(
       <UniversityProtectedStudyWorkspace

@@ -127,7 +127,16 @@ export function UniversityProtectedStudyWorkspace({
         </div>
       </fieldset>
 
-      <section className={styles.hero} aria-live="polite">
+      <p
+        className="forge-visually-hidden"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {`${copy.eyebrow}. ${copy.title}`}
+      </p>
+
+      <section className={styles.hero}>
         <p className={styles.stateLabel}>{copy.eyebrow}</p>
         <h1 id="university-protected-study-title">{copy.title}</h1>
         <p className={styles.objective}>{copy.body}</p>
@@ -275,7 +284,7 @@ export function UniversityProtectedStudyWorkspace({
           </section>
         </>
       ) : (
-        <section className={styles.refusal} role="status">
+        <section className={styles.refusal}>
           <p>Why entry stopped</p>
           <h2>{projection.issues[0]?.message ?? "No validated learning contract is available."}</h2>
           <dl>

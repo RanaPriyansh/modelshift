@@ -14,6 +14,38 @@ afterEach(() => {
 });
 
 describe("UniversityTodayWorkspace", () => {
+  it("announces one concise state change without making the visible panel live", async () => {
+    render(<UniversityTodayWorkspace scenarios={await universityTodayFixtureScenarios()} />);
+
+    const status = screen.getByRole("status");
+    const initialPanel = screen.getByRole("heading", {
+      level: 1,
+      name: "Test one claim against two sources",
+    }).closest("section");
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(status).toHaveClass("forge-visually-hidden");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveAttribute("aria-atomic", "true");
+    expect(status).toHaveTextContent(
+      "Your accepted path has one ready action. Test one claim against two sources",
+    );
+    expect(initialPanel).not.toHaveAttribute("aria-live");
+    expect(initialPanel).not.toHaveAttribute("role", "status");
+
+    fireEvent.click(screen.getByRole("radio", { name: "Source conflict" }));
+
+    const changedPanel = screen.getByRole("heading", {
+      level: 1,
+      name: "Resolve the course-source conflict first.",
+    }).closest("section");
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(status).toHaveTextContent(
+      "Source decision needed. Resolve the course-source conflict first.",
+    );
+    expect(changedPanel).not.toHaveAttribute("aria-live");
+    expect(changedPanel).not.toHaveAttribute("role", "status");
+  });
+
   it("makes one accepted-path action dominant without implying a source-based recommendation", async () => {
     render(<UniversityTodayWorkspace scenarios={await universityTodayFixtureScenarios()} />);
 

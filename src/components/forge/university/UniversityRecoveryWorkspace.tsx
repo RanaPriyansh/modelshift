@@ -200,7 +200,16 @@ export function UniversityRecoveryWorkspace({
         </div>
       </fieldset>
 
-      <section className={styles.summary} aria-live="polite">
+      <p
+        className="forge-visually-hidden"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {`${copy.label}. ${copy.title}`}
+      </p>
+
+      <section className={styles.summary}>
         <div className={styles.summaryCopy}>
           <p className={styles.stateLabel}>{copy.label}</p>
           <h1 id="university-recovery-title">{copy.title}</h1>
