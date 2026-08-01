@@ -36,50 +36,57 @@ This board replaces hackathon, judging, demo-video, submission, and deadline wor
 ## Latest verified implementation receipt
 
 The latest verified implementation candidate before this evidence-only record
-update is clean source `19c88c7d4ef3e1080632af78fefffef4bae597a3`
-and tree `3286d48b1eca014a25008ecd6c1d6c3f5642499d`.
+update is clean source `5b4f1c9c96c0ba77219d637889fef9e562224b5b`
+and tree `ba0cd663858a163e99e7c17f491f38a716adb085`.
 
 The candidate preserves the university foundation, production security, and
-release-evidence work. It includes the account-context preflight, Semester
-Overview focus, and declaration-document repairs from source
-`f77464b834179b46f87400aa3db9cf9f828e5330`.
+release-evidence work through source
+`19c88c7d4ef3e1080632af78fefffef4bae597a3`.
 
-It adds six bounded repairs from the next 1 August audit:
+It adds six implementation commits from the next 1 August audit:
 
-- University Today detaches raw input before Zod and rejects proxy input
-  without executing getters or proxy traps.
-- University Protected Study rejects proxy values before reflective property
-  inspection.
-- University Recovery rejects proxy input before snapshot reflection while it
-  keeps valid null-prototype records.
-- University Degree Map limits returned schema issues to 64.
-- University Source Review uses one concise, atomic, polite status region for
-  learner decisions.
-- University Source Review and Research Readiness use the active light-theme
-  deep text tokens. Pressed review controls use surface text.
+- `b64fccd5e0754c25a9cacee80f6fbf622a7951bb` reuses the validated account
+  preflight projection. Accepted input now runs the canonical student-context
+  projection once.
+- `400431d90ab1f37e3414fd68928bd40be0281a06` completes Source Review loading,
+  readiness, decision, disclosure, description, focus, control-scheme, and
+  light-theme contrast repairs.
+- `06b4a8d663d4f53eae0a685c2006facd7dd2eeed` rejects oversized arrays from
+  their length before six university snapshot helpers enumerate element keys.
+- `8ac15d80e73f05134a4b9844edfd06a59379264a` caps returned structural schema
+  issues at 64 before mapping and sorting.
+- `b15a6c59943d6a50115f3b775a8c5e596e9009c3` rejects course-source and
+  goal-context Proxy inputs before reflective traversal.
+- `5b4f1c9c96c0ba77219d637889fef9e562224b5b` adds explicit string and
+  serialized-byte limits to the remaining direct university snapshot
+  boundaries.
 
 The candidate adds no public route, database object, provider operation,
 identity activation, entitlement, persistence path, or participant operation.
 
-- Focused contracts for the six new repairs: 77 pass across six files.
+- Source Review focused contracts: 23 pass across three files.
+- Combined course-source boundary contracts: 45 pass across two files.
 - TypeScript: pass.
 - Zero-warning lint: pass.
-- Application contracts: 1,620 pass across 177 files.
+- Diff-integrity check: pass.
+- Application contracts: 1,639 pass across 177 files.
 - Evaluator contracts: 13 pass across two files.
-- Total contracts: 1,633 pass.
+- Total contracts: 1,652 pass.
 - Offline evaluation gate: pass across 54 authored fixtures.
 - Live model evaluation: not run.
-- CI workflow YAML parse and diff-integrity checks: pass.
-- Independent `gpt-5.6-luna` maximum-reasoning review found two contrast
-  defects. The candidate corrects both defects.
-- The final independent review found no remaining confirmed defect.
+- Four separate `gpt-5.6-luna` maximum-reasoning tasks implemented the bounded
+  repairs in isolated worktrees. The principal thread reviewed and integrated
+  each commit.
+- Independent `gpt-5.6-luna` maximum-reasoning review found one remaining
+  accepted-row contrast defect. The candidate corrects it.
+- The final accessibility re-review found no remaining confirmed source defect.
 - Optimized production build: pass.
 - Generated static pages: 67.
 - Public build boundary: 71 static assets pass.
 - Production build receipt: 1,472 files.
-- Build ID: `forge-source-v1-19c88c7d4ef3e1080632af78fefffef4bae597a3`.
-- Artifact digest: `sha256:7294629a5a9e40af4a90a0ac1b6870142ab3089b16a389c5df321e662570946e`.
-- Public asset digest: `sha256:132b267cb105b0360a34c2a089cc97daca7649967878773d6f4e25103281fa2f`.
+- Build ID: `forge-source-v1-5b4f1c9c96c0ba77219d637889fef9e562224b5b`.
+- Artifact digest: `sha256:4806b40246f2a7160fbadd638d058f1a5fdff06a194cfbea1b45005f6fe704a5`.
+- Public asset digest: `sha256:977b1f41d3cff036b8fc41abe7710e4be2c85124c3fb74f9085ceeaf5ccc37bb`.
 - Public directory digest: `sha256:e0096e369f47666ca5a3f962b71b6f5199a17117ac5ce4a598d1b77dc42abac9`.
 - Runtime configuration digest: `sha256:06e97d7ea5aaf83b90deef10f941678198a442a267e97f9f23a1a97603774e29`.
 - Build receipt schema: `forge-production-build-receipt.v3`.
@@ -93,10 +100,11 @@ The Semester Desk repair keeps evidence details inside their definitions. It
 hides decorative sequence numbers from assistive technology. Clear inspection
 returns focus to the exact course control and measures the visible label.
 
-The account-context adapter uses a fixed, module-owned binding only for the
+The account-context adapter uses a fixed, module-owned binding for one
 canonical preflight. Invalid semantic child data reaches no identity or key
-reader. The final projection recomputes with the server-derived HMAC binding,
-and the preflight binding never enters returned data.
+reader. Accepted data reuses the validated status and axes. The adapter derives
+and returns a fresh server HMAC binding. The preflight binding never enters
+returned data.
 
 Semester Overview reset keeps native radio focus. It preserves scroll position
 when the full label is visible and scrolls that label when it is clipped. The
@@ -112,9 +120,38 @@ The selected Chrome capture confirmed the unchanged visual composition. The
 capture was JPEG, so it is qualitative evidence only. The only browser log
 error was the known Dark Reader extension attribute hydration mismatch.
 
-The latest requirements audit found no additional confirmed source defect. It
-found missing browser and assistive-technology evidence and the unresolved
-Phase -1 target disposition.
+University Source Review now announces initial comparison and completed
+readiness through the same atomic polite status region. Learner decisions do
+not create a second live region. The correction disclosure binds its trigger,
+form, input, and description. Cancel returns focus to the exact trigger.
+
+The active light-theme dim token now passes 4.5:1 against the shell background
+and surface. Default review controls use that token for their borders. Accepted
+and corrected decision text uses the muted token. Its computed 5 percent cyan
+background ratio is approximately 5.25:1. The correction input uses the active
+light color scheme.
+
+Selected Chrome confirmed one live region, the exact decision announcement,
+pressed state, correction focus transfer, disclosure relationships, and focus
+return. A 320 by 844 CSS pixel capture showed no horizontal overflow. The final
+accepted-row check confirmed rendered text color `rgb(94, 99, 95)`. The only
+browser log error was the Dark Reader extension attribute hydration mismatch.
+
+The bounded input policy now rejects each general university snapshot string
+or object key above 4,096 UTF-16 code units. It rejects a snapshot above 512
+KiB of serialized UTF-8 JSON. Course ingestion keeps its separate 256 KiB
+calendar-text limit. These checks occur before schema parsing or child
+projection.
+
+Course-source reconciliation and goal-context composition reject Proxy inputs
+before `getPrototypeOf` or `ownKeys` traps run. Six snapshot helpers reject
+oversized dense arrays from `length` before element-name enumeration.
+Structural adapters return at most 64 mapped and sorted schema issues.
+
+The latest requirements audit found no additional confirmed source defect
+inside this repair set. It still found missing assistive-technology evidence,
+missing required CI browser evidence, and the unresolved Phase -1 target
+disposition.
 
 The configured university-foundation and production browser suites did not run
 locally. Product Design requires the selected Chrome workflow unless the user
@@ -125,11 +162,11 @@ or deployment occurred. GitHub environment protection, the least-privilege
 Vercel secret, required CI browser execution, and a live provider receipt
 remain external release gates.
 
-The account-context adapter performs the canonical projection twice for valid
-input. Input-limit performance remains unmeasured. No selected-Chrome capture
-or assistive-technology review covers the new contrast and status-region
-repairs. Fixture evidence does not establish production identity, key
-provisioning, deployment, or privacy operation.
+No screen-reader, forced-colors, dormant-dark-theme, or native date-control
+review occurred. The Source Review route has no enabled dedicated browser
+specification. Fixture evidence does not establish production identity, key
+provisioning, deployment, privacy operation, learning efficacy, or
+institutional authority.
 
 ## Current implementation order
 
