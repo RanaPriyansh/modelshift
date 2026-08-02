@@ -56,7 +56,9 @@ function retiredRouteResponse(request: NextRequest, contentSecurityPolicy: strin
   });
 }
 
-export async function proxy(request: NextRequest) {
+// Next.js identifies this compound-extension proxy only through an anonymous default export.
+// eslint-disable-next-line import/no-anonymous-default-export
+export default async function(request: NextRequest) {
   const route = classifyForgeReleaseRoute(request.method, request.nextUrl.pathname);
   if (!route.allowed) {
     const nonce = createRequestNonce();

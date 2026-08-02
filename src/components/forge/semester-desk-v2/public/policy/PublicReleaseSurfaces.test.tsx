@@ -4,9 +4,9 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { metadata as appMetadata } from "@/app/app/page";
-import ForgeError from "@/app/error";
-import NotFound from "@/app/not-found";
+import { metadata as appMetadata } from "@/app/app/page.release";
+import ForgeError from "@/app/error.release";
+import NotFound from "@/app/not-found.release";
 import manifest from "@/app/manifest";
 
 afterEach(() => {

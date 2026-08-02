@@ -42,3 +42,21 @@ export default function robots(): MetadataRoute.Robots {
       : {}),
   };
 }
+
+export function robotsText(): string {
+  const value = robots();
+  const rule = Array.isArray(value.rules) ? value.rules[0] : value.rules;
+  const lines = [
+    `User-agent: ${Array.isArray(rule.userAgent) ? rule.userAgent.join(" ") : rule.userAgent}`,
+    "allow" in rule ? `Allow: ${Array.isArray(rule.allow) ? rule.allow.join(" ") : rule.allow}` : null,
+    "disallow" in rule
+      ? `Disallow: ${Array.isArray(rule.disallow) ? rule.disallow.join(" ") : rule.disallow}`
+      : null,
+    value.host ? `Host: ${value.host}` : null,
+    value.sitemap
+      ? `Sitemap: ${Array.isArray(value.sitemap) ? value.sitemap.join(" ") : value.sitemap}`
+      : null,
+  ].filter((line): line is string => line !== null);
+
+  return `${lines.join("\n")}\n`;
+}

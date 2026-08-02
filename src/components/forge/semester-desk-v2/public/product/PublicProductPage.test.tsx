@@ -4,8 +4,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { metadata as howForgeWorksMetadata } from "@/app/how-forge-works/page";
-import { metadata as universityMetadata } from "@/app/university/page";
+import { metadata as howForgeWorksMetadata } from "@/app/how-forge-works/page.release";
+import { metadata as universityMetadata } from "@/app/university/page.release";
 
 import { PublicProductPage } from "./PublicProductPage";
 

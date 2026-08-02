@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { metadata } from "@/app/page";
+import { metadata } from "@/app/page.release";
 
 import { SemesterDeskV2PublicHome } from "./SemesterDeskV2PublicHome";
 

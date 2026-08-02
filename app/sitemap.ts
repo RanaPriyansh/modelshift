@@ -33,3 +33,34 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: new URL("/support", origin).toString(), changeFrequency: "monthly", priority: 0.4 },
   ];
 }
+
+function xmlEscape(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+}
+
+export function sitemapXML(): string {
+  const entries = sitemap().map((entry) => [
+    "  <url>",
+    `    <loc>${xmlEscape(entry.url)}</loc>`,
+    entry.changeFrequency
+      ? `    <changefreq>${entry.changeFrequency}</changefreq>`
+      : null,
+    typeof entry.priority === "number"
+      ? `    <priority>${entry.priority}</priority>`
+      : null,
+    "  </url>",
+  ].filter((line): line is string => line !== null).join("\n"));
+
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ...entries,
+    "</urlset>",
+    "",
+  ].join("\n");
+}

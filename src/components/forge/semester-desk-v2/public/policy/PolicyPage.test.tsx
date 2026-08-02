@@ -4,9 +4,9 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import PrivacyPage, { metadata as privacyMetadata } from "@/app/privacy/page";
-import SupportPage, { metadata as supportMetadata } from "@/app/support/page";
-import TermsPage, { metadata as termsMetadata } from "@/app/terms/page";
+import PrivacyPage, { metadata as privacyMetadata } from "@/app/privacy/page.release";
+import SupportPage, { metadata as supportMetadata } from "@/app/support/page.release";
+import TermsPage, { metadata as termsMetadata } from "@/app/terms/page.release";
 
 afterEach(() => {
   cleanup();
