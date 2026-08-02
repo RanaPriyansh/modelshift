@@ -4,7 +4,10 @@ import {
   createSemesterDesk,
   orderedPlanItems,
   progressEvidenceFor,
+  SEMESTER_DESK_MAX_COURSES,
+  SEMESTER_DESK_MAX_TEXT_UTF8_BYTES,
   transitionSemesterDesk,
+  validateSemesterDeskState,
   type SemesterDeskCommand,
   type SemesterDeskResult,
   type SemesterDeskRuntime,
@@ -733,5 +736,220 @@ describe("Semester Desk v2 domain engine", () => {
     expect(progressEvidenceFor(state)).toEqual(expect.arrayContaining([
       expect.objectContaining({ kind: "independent-proof-completed", outcome: "demonstrated" }),
     ]));
+  });
+
+  it("accepts the course limit and rejects state or output beyond the bound", () => {
+    const controlled = runtimeAt();
+    let state = createBase(controlled.runtime);
+    for (let index = 0; index < SEMESTER_DESK_MAX_COURSES; index += 1) {
+      state = command(state, {
+        kind: "add-course",
+        profileId: PROFILE_ID,
+        code: `C${index}`,
+        title: `Course ${index}`,
+      }, controlled.runtime);
+    }
+
+    expect(validateSemesterDeskState(state)).toMatchObject({ ok: true });
+    expect(transitionSemesterDesk(state, {
+      kind: "add-course",
+      profileId: PROFILE_ID,
+      code: "C-overflow",
+      title: "Overflow course",
+    }, controlled.runtime)).toMatchObject({ ok: false, error: { code: "invalid-input" } });
+  });
+
+  it("rejects invalid calendar values and oversized persisted text", () => {
+    const controlled = runtimeAt();
+    const base = withCourseAndPlan(controlled.runtime);
+    const invalidDate: SemesterDeskState = {
+      ...base.state,
+      planItems: base.state.planItems.map((item) => ({ ...item, currentDate: "2026-02-30" })),
+    };
+    const oversizedTitle: SemesterDeskState = {
+      ...base.state,
+      title: "x".repeat(SEMESTER_DESK_MAX_TEXT_UTF8_BYTES + 1),
+    };
+
+    expect(validateSemesterDeskState(invalidDate)).toMatchObject({ ok: false, error: { code: "invalid-input" } });
+    expect(validateSemesterDeskState(oversizedTitle)).toMatchObject({ ok: false, error: { code: "invalid-input" } });
+  });
+
+  it("rejects duplicate identifiers, missing links, and invalid checked facts", () => {
+    const controlled = runtimeAt();
+    let state = withCourseAndPlan(controlled.runtime).state;
+    const courseId = state.courses[0]?.id;
+    if (!courseId) throw new Error("Expected a course.");
+    state = command(state, {
+      kind: "add-course-fact",
+      profileId: PROFILE_ID,
+      courseId,
+      label: "Exam date",
+      value: "2026-08-21",
+      status: "checked",
+      sourceLabel: "Course outline",
+      checkedAt: "2026-08-03T09:00:00.000Z",
+    }, controlled.runtime);
+    const course = state.courses[0];
+    const fact = course?.facts[0];
+    if (!course || !fact) throw new Error("Expected a checked course fact.");
+
+    const duplicateFact: SemesterDeskState = {
+      ...state,
+      courses: [{ ...course, facts: [...course.facts, { ...fact }] }],
+    };
+    const missingCourseLink: SemesterDeskState = {
+      ...state,
+      planItems: state.planItems.map((item) => ({ ...item, courseId: "course.missing" })),
+    };
+    const missingCheckTime: SemesterDeskState = {
+      ...state,
+      courses: [{
+        ...course,
+        facts: course.facts.map((entry) => ({ ...entry, checkedAt: null })),
+      }],
+    };
+
+    expect(validateSemesterDeskState(duplicateFact)).toMatchObject({ ok: false });
+    expect(validateSemesterDeskState(missingCourseLink)).toMatchObject({ ok: false });
+    expect(validateSemesterDeskState(missingCheckTime)).toMatchObject({ ok: false });
+  });
+
+  it("rejects invalid recovery coverage and status-time state pairs", () => {
+    const controlled = runtimeAt();
+    const base = withCourseAndPlan(controlled.runtime);
+    const recovery = command(base.state, {
+      kind: "prepare-recovery",
+      profileId: PROFILE_ID,
+      summary: "Move this work later.",
+      decisions: [{
+        planItemId: base.planItemId,
+        outcome: "kept",
+        reason: "The date remains suitable.",
+      }],
+    }, controlled.runtime);
+    const draft = recovery.recoveryDraft;
+    if (!draft) throw new Error("Expected a recovery draft.");
+    const incompleteRecovery: SemesterDeskState = {
+      ...recovery,
+      recoveryDraft: { ...draft, decisions: [] },
+    };
+    expect(validateSemesterDeskState(incompleteRecovery)).toMatchObject({ ok: false });
+
+    const study = startStudy(base.state, base.planItemId, controlled.runtime);
+    const activeSession = study.protectedStudySessions[0];
+    if (!activeSession) throw new Error("Expected an active study session.");
+    const activeSessionWithCompletionTime: SemesterDeskState = {
+      ...study,
+      protectedStudySessions: [{
+        ...activeSession,
+        practiceCompletedAt: "2026-08-03T09:00:00.000Z",
+      }],
+    };
+    expect(validateSemesterDeskState(activeSessionWithCompletionTime)).toMatchObject({ ok: false });
+  });
+
+  it("rejects conflicts that repeat or omit course facts", () => {
+    const controlled = runtimeAt();
+    let state = createBase(controlled.runtime);
+    state = command(state, {
+      kind: "add-course",
+      profileId: PROFILE_ID,
+      code: "HIS122",
+      title: "Modern history",
+    }, controlled.runtime);
+    const courseId = state.courses[0]?.id;
+    if (!courseId) throw new Error("Expected a course.");
+    for (const [label, value] of [["Essay deadline", "2026-08-20"], ["Essay deadline", "2026-08-22"]]) {
+      state = command(state, {
+        kind: "add-course-fact",
+        profileId: PROFILE_ID,
+        courseId,
+        label,
+        value,
+        status: "checked",
+        sourceLabel: "Course outline",
+        checkedAt: "2026-08-03T09:00:00.000Z",
+      }, controlled.runtime);
+    }
+    const course = state.courses[0];
+    const [firstFact, secondFact] = course?.facts ?? [];
+    if (!course || !firstFact || !secondFact) throw new Error("Expected two course facts.");
+    state = command(state, {
+      kind: "record-source-conflict",
+      profileId: PROFILE_ID,
+      courseId,
+      factIds: [firstFact.id, secondFact.id],
+      summary: "The two dates do not match.",
+    }, controlled.runtime);
+    const conflict = state.courses[0]?.sourceConflicts[0];
+    if (!conflict) throw new Error("Expected a source conflict.");
+
+    const repeatedFacts: SemesterDeskState = {
+      ...state,
+      courses: [{ ...course, sourceConflicts: [{ ...conflict, factIds: [firstFact.id, firstFact.id] }] }],
+    };
+    const unavailableFact: SemesterDeskState = {
+      ...state,
+      courses: [{ ...course, sourceConflicts: [{ ...conflict, factIds: [firstFact.id, "fact.missing"] }] }],
+    };
+
+    expect(validateSemesterDeskState(repeatedFacts)).toMatchObject({ ok: false });
+    expect(validateSemesterDeskState(unavailableFact)).toMatchObject({ ok: false });
+  });
+
+  it("rejects incoherent study, proof, return, and progress records", () => {
+    const controlled = runtimeAt();
+    const base = withCourseAndPlan(controlled.runtime);
+    let state = reachProof(base.state, base.planItemId, controlled.runtime);
+    const progressWithNoStudy: SemesterDeskState = {
+      ...state,
+      protectedStudySessions: [],
+    };
+    const proofEvidence = state.progressEvidence.at(-1);
+    if (!proofEvidence) throw new Error("Expected independent proof evidence.");
+    const mismatchedEvidence: SemesterDeskState = {
+      ...state,
+      progressEvidence: state.progressEvidence.map((entry) => (
+        entry.id === proofEvidence.id ? { ...entry, outcome: "retained" } : entry
+      )),
+    };
+    expect(validateSemesterDeskState(progressWithNoStudy)).toMatchObject({ ok: false });
+    expect(validateSemesterDeskState(mismatchedEvidence)).toMatchObject({ ok: false });
+
+    state = command(state, {
+      kind: "schedule-delayed-return",
+      profileId: PROFILE_ID,
+      planItemId: base.planItemId,
+      dueAt: "2026-08-09T09:00:00.000Z",
+    }, controlled.runtime);
+    const delayedReturn = state.delayedReturns[0];
+    if (!delayedReturn) throw new Error("Expected a delayed return.");
+    const dueReturnWithOpenTime: SemesterDeskState = {
+      ...state,
+      delayedReturns: [{ ...delayedReturn, openedAt: "2026-08-09T09:00:00.000Z" }],
+    };
+    expect(validateSemesterDeskState(dueReturnWithOpenTime)).toMatchObject({ ok: false });
+  });
+
+  it("rejects invalid supplied state before an engine transition", () => {
+    const controlled = runtimeAt();
+    const base = withCourseAndPlan(controlled.runtime);
+    const invalidState: SemesterDeskState = {
+      ...base.state,
+      planItems: base.state.planItems.map((item) => ({ ...item, currentDate: "2026-02-30" })),
+    };
+
+    expect(transitionSemesterDesk(invalidState, {
+      kind: "draft-capacity",
+      profileId: PROFILE_ID,
+      availableMinutes: 120,
+    }, controlled.runtime)).toMatchObject({
+      ok: false,
+      error: {
+        code: "invalid-input",
+        message: "This Semester Desk data cannot be used.",
+      },
+    });
   });
 });

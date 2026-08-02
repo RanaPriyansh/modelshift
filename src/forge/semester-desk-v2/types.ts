@@ -1,5 +1,29 @@
 export const SEMESTER_DESK_V2_SCHEMA_VERSION = "forge-semester-desk-v2" as const;
 
+/**
+ * The local Semester Desk has one bounded JSON representation. These limits
+ * apply before storage parsing and to every decoded or created state.
+ */
+export const SEMESTER_DESK_MAX_RAW_JSON_UTF8_BYTES = 1_048_576;
+export const SEMESTER_DESK_MAX_IDENTIFIER_UTF8_BYTES = 240;
+export const SEMESTER_DESK_MAX_TEXT_UTF8_BYTES = 16_384;
+export const SEMESTER_DESK_MAX_COURSES = 64;
+export const SEMESTER_DESK_MAX_FACTS_PER_COURSE = 256;
+export const SEMESTER_DESK_MAX_CONFLICTS_PER_COURSE = 128;
+export const SEMESTER_DESK_MAX_CONFLICT_FACT_IDS = 256;
+export const SEMESTER_DESK_MAX_PLAN_ITEMS = 2_048;
+export const SEMESTER_DESK_MAX_RECOVERY_DECISIONS = 2_048;
+export const SEMESTER_DESK_MAX_RECOVERY_CHANGES = 4_096;
+export const SEMESTER_DESK_MAX_STUDY_SESSIONS = 4_096;
+export const SEMESTER_DESK_MAX_PROOFS = 4_096;
+export const SEMESTER_DESK_MAX_DELAYED_RETURNS = 4_096;
+export const SEMESTER_DESK_MAX_PROGRESS_EVIDENCE = 4_096;
+
+/** Return the UTF-8 size of one persisted string. */
+export function semesterDeskUtf8ByteLength(value: string): number {
+  return new TextEncoder().encode(value).length;
+}
+
 export const COURSE_FACT_STATUSES = [
   "checked",
   "needs-review",

@@ -1,7 +1,21 @@
 import {
   COURSE_FACT_STATUSES,
   RECOVERY_OUTCOMES,
+  SEMESTER_DESK_MAX_CONFLICT_FACT_IDS,
+  SEMESTER_DESK_MAX_CONFLICTS_PER_COURSE,
+  SEMESTER_DESK_MAX_COURSES,
+  SEMESTER_DESK_MAX_DELAYED_RETURNS,
+  SEMESTER_DESK_MAX_FACTS_PER_COURSE,
+  SEMESTER_DESK_MAX_IDENTIFIER_UTF8_BYTES,
+  SEMESTER_DESK_MAX_PLAN_ITEMS,
+  SEMESTER_DESK_MAX_PROOFS,
+  SEMESTER_DESK_MAX_PROGRESS_EVIDENCE,
+  SEMESTER_DESK_MAX_RECOVERY_CHANGES,
+  SEMESTER_DESK_MAX_RECOVERY_DECISIONS,
+  SEMESTER_DESK_MAX_STUDY_SESSIONS,
+  SEMESTER_DESK_MAX_TEXT_UTF8_BYTES,
   SEMESTER_DESK_V2_SCHEMA_VERSION,
+  semesterDeskUtf8ByteLength,
   type CapacityDraft,
   type CreateSemesterDeskInput,
   type DelayedReturn,
@@ -28,20 +42,32 @@ function failure<T>(code: SemesterDeskErrorCode, message: string): SemesterDeskR
   return { ok: false, error: { code, message } };
 }
 
-function nonBlank(value: string): boolean {
-  return value.trim().length > 0;
+function nonBlank(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }
 
-function isDateOnly(value: string): boolean {
+function isDateOnly(value: unknown): value is string {
+  if (typeof value !== "string") return false;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
+  if (Number(value.slice(0, 4)) < 1) return false;
+  try {
+    const parsed = new Date(`${value}T00:00:00.000Z`);
+    return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
+  } catch {
+    return false;
+  }
 }
 
-function isTimestamp(value: string): boolean {
+function isTimestamp(value: unknown): value is string {
+  if (typeof value !== "string") return false;
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) return false;
-  const parsed = new Date(value);
-  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString() === value;
+  if (Number(value.slice(0, 4)) < 1) return false;
+  try {
+    const parsed = new Date(value);
+    return !Number.isNaN(parsed.valueOf()) && parsed.toISOString() === value;
+  } catch {
+    return false;
+  }
 }
 
 function timestamp(runtime: SemesterDeskRuntime): SemesterDeskResult<string> {
@@ -62,7 +88,7 @@ function identifier(
 ): SemesterDeskResult<string> {
   try {
     const value = runtime.identifiers.next(kind);
-    if (typeof value !== "string" || !nonBlank(value)) {
+    if (!isBoundedIdentifier(value)) {
       return failure("invalid-input", "The identifier factory returned an empty identifier.");
     }
     return success(value);
@@ -243,6 +269,638 @@ function isRetentionOutcome(value: string): value is "retained" | "needs-more-wo
   return value === "retained" || value === "needs-more-work";
 }
 
+const semesterDeskStateKeys = [
+  "schemaVersion",
+  "id",
+  "profileId",
+  "title",
+  "createdAt",
+  "updatedAt",
+  "courses",
+  "capacity",
+  "capacityDraft",
+  "planItems",
+  "recoveryDraft",
+  "recoveryChanges",
+  "selectedNextActionId",
+  "protectedStudySessions",
+  "independentProofs",
+  "delayedReturns",
+  "progressEvidence",
+] as const;
+
+const courseKeys = ["id", "code", "title", "facts", "sourceConflicts"] as const;
+const courseFactKeys = ["id", "label", "value", "status", "sourceLabel", "checkedAt"] as const;
+const sourceConflictKeys = ["id", "factIds", "summary", "status", "detectedAt", "reviewedAt"] as const;
+const capacityKeys = ["availableMinutes", "declaredAt"] as const;
+const capacityDraftKeys = ["id", "availableMinutes", "draftedAt"] as const;
+const planItemKeys = [
+  "id",
+  "courseId",
+  "title",
+  "originalDate",
+  "currentDate",
+  "originalMinutes",
+  "currentMinutes",
+  "status",
+] as const;
+const recoveryDraftKeys = ["id", "summary", "createdAt", "decisions"] as const;
+const recoveryDecisionKeys = ["planItemId", "outcome", "nextDate", "nextMinutes", "reason"] as const;
+const recoveryChangeKeys = [
+  "id",
+  "recoveryDraftId",
+  "planItemId",
+  "outcome",
+  "reason",
+  "previousDate",
+  "currentDate",
+  "previousMinutes",
+  "currentMinutes",
+  "recordedAt",
+] as const;
+const protectedStudySessionKeys = [
+  "id",
+  "planItemId",
+  "status",
+  "startedAt",
+  "practiceCompletedAt",
+  "practiceOutcome",
+] as const;
+const independentProofKeys = ["id", "planItemId", "outcome", "completedAt"] as const;
+const delayedReturnKeys = [
+  "id",
+  "planItemId",
+  "dueAt",
+  "status",
+  "openedAt",
+  "completedAt",
+  "retentionOutcome",
+] as const;
+const progressEvidenceKeys = ["id", "planItemId", "kind", "outcome", "occurredAt"] as const;
+
+const planItemStatuses = new Set([
+  "planned",
+  "deferred",
+  "in-progress",
+  "practice-complete",
+  "proof-complete",
+  "return-complete",
+]);
+const sourceConflictStatuses = new Set(["open", "reviewed"]);
+const studySessionStatuses = new Set(["active", "practice-complete"]);
+const proofOutcomes = new Set(["demonstrated", "needs-return"]);
+const delayedReturnStatuses = new Set(["due", "open", "completed"]);
+const progressEvidenceKinds = new Set([
+  "practice-completed",
+  "independent-proof-completed",
+  "delayed-return-completed",
+]);
+const progressEvidenceOutcomes = new Set([
+  "completed",
+  "needs-more-work",
+  "demonstrated",
+  "needs-return",
+  "retained",
+]);
+
+type StateRecord = Record<string, unknown>;
+
+function isExactRecord(value: unknown, keys: readonly string[]): value is StateRecord {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return false;
+  const actualKeys = Object.keys(value);
+  return actualKeys.length === keys.length
+    && keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
+    && Object.getOwnPropertySymbols(value).length === 0;
+}
+
+function isDenseArray(value: unknown, maximum: number): value is readonly unknown[] {
+  if (!Array.isArray(value) || value.length > maximum || Object.getOwnPropertySymbols(value).length > 0) {
+    return false;
+  }
+  if (Object.keys(value).length !== value.length) return false;
+  for (let index = 0; index < value.length; index += 1) {
+    if (!Object.prototype.hasOwnProperty.call(value, index)) return false;
+  }
+  return true;
+}
+
+function isBoundedText(value: unknown): value is string {
+  return nonBlank(value) && semesterDeskUtf8ByteLength(value) <= SEMESTER_DESK_MAX_TEXT_UTF8_BYTES;
+}
+
+function isBoundedIdentifier(value: unknown): value is string {
+  return nonBlank(value) && semesterDeskUtf8ByteLength(value) <= SEMESTER_DESK_MAX_IDENTIFIER_UTF8_BYTES;
+}
+
+function isPositiveWhole(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+function isNonnegativeWhole(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+function isCourseFactStatus(value: unknown): value is string {
+  return typeof value === "string" && COURSE_FACT_STATUSES.includes(value as (typeof COURSE_FACT_STATUSES)[number]);
+}
+
+function isRecoveryOutcome(value: unknown): value is string {
+  return typeof value === "string" && RECOVERY_OUTCOMES.includes(value as (typeof RECOVERY_OUTCOMES)[number]);
+}
+
+function isKnownValue(value: unknown, values: ReadonlySet<string>): value is string {
+  return typeof value === "string" && values.has(value);
+}
+
+function registerIdentifier(value: unknown, identifiers: Set<string>): value is string {
+  if (!isBoundedIdentifier(value) || identifiers.has(value)) return false;
+  identifiers.add(value);
+  return true;
+}
+
+function isStateValid(state: unknown): boolean {
+  if (!isExactRecord(state, semesterDeskStateKeys)) return false;
+  if (state.schemaVersion !== SEMESTER_DESK_V2_SCHEMA_VERSION) return false;
+  if (!isBoundedIdentifier(state.id) || !isBoundedIdentifier(state.profileId) || !isBoundedText(state.title)) {
+    return false;
+  }
+  if (!isTimestamp(state.createdAt) || !isTimestamp(state.updatedAt) || state.createdAt > state.updatedAt) {
+    return false;
+  }
+  if (
+    !isDenseArray(state.courses, SEMESTER_DESK_MAX_COURSES)
+    || !isDenseArray(state.planItems, SEMESTER_DESK_MAX_PLAN_ITEMS)
+    || !isDenseArray(state.recoveryChanges, SEMESTER_DESK_MAX_RECOVERY_CHANGES)
+    || !isDenseArray(state.protectedStudySessions, SEMESTER_DESK_MAX_STUDY_SESSIONS)
+    || !isDenseArray(state.independentProofs, SEMESTER_DESK_MAX_PROOFS)
+    || !isDenseArray(state.delayedReturns, SEMESTER_DESK_MAX_DELAYED_RETURNS)
+    || !isDenseArray(state.progressEvidence, SEMESTER_DESK_MAX_PROGRESS_EVIDENCE)
+  ) {
+    return false;
+  }
+
+  const identifiers = new Set<string>();
+  if (!registerIdentifier(state.id, identifiers)) return false;
+  const courseIds = new Set<string>();
+  const courseCodes = new Set<string>();
+
+  for (const rawCourse of state.courses) {
+    if (!isExactRecord(rawCourse, courseKeys)) return false;
+    const courseId = rawCourse.id;
+    const courseCode = rawCourse.code;
+    if (!registerIdentifier(courseId, identifiers) || !isBoundedText(courseCode) || !isBoundedText(rawCourse.title)) {
+      return false;
+    }
+    if (courseIds.has(courseId) || courseCodes.has(courseCode)) return false;
+    courseIds.add(courseId);
+    courseCodes.add(courseCode);
+    if (
+      !isDenseArray(rawCourse.facts, SEMESTER_DESK_MAX_FACTS_PER_COURSE)
+      || !isDenseArray(rawCourse.sourceConflicts, SEMESTER_DESK_MAX_CONFLICTS_PER_COURSE)
+    ) {
+      return false;
+    }
+
+    const factIds = new Set<string>();
+    for (const rawFact of rawCourse.facts) {
+      if (!isExactRecord(rawFact, courseFactKeys)) return false;
+      const factId = rawFact.id;
+      const checkedAt = rawFact.checkedAt;
+      if (
+        !registerIdentifier(factId, identifiers)
+        || factIds.has(factId)
+        || !isBoundedText(rawFact.label)
+        || !isBoundedText(rawFact.value)
+        || !isCourseFactStatus(rawFact.status)
+        || !isBoundedText(rawFact.sourceLabel)
+        || (checkedAt !== null && !isTimestamp(checkedAt))
+        || (rawFact.status === "checked" && !isTimestamp(checkedAt))
+      ) {
+        return false;
+      }
+      factIds.add(factId);
+    }
+
+    for (const rawConflict of rawCourse.sourceConflicts) {
+      if (!isExactRecord(rawConflict, sourceConflictKeys)) return false;
+      const conflictId = rawConflict.id;
+      const factIdsForConflict = rawConflict.factIds;
+      const detectedAt = rawConflict.detectedAt;
+      const reviewedAt = rawConflict.reviewedAt;
+      if (
+        !registerIdentifier(conflictId, identifiers)
+        || !isDenseArray(factIdsForConflict, SEMESTER_DESK_MAX_CONFLICT_FACT_IDS)
+        || factIdsForConflict.length < 2
+        || !isBoundedText(rawConflict.summary)
+        || !isKnownValue(rawConflict.status, sourceConflictStatuses)
+        || !isTimestamp(detectedAt)
+      ) {
+        return false;
+      }
+      const referencedFacts = new Set<string>();
+      for (const factId of factIdsForConflict) {
+        if (!isBoundedIdentifier(factId) || !factIds.has(factId) || referencedFacts.has(factId)) {
+          return false;
+        }
+        referencedFacts.add(factId);
+      }
+      if (rawConflict.status === "open" && reviewedAt !== null) return false;
+      if (
+        rawConflict.status === "reviewed"
+        && (!isTimestamp(reviewedAt) || reviewedAt < detectedAt)
+      ) {
+        return false;
+      }
+    }
+  }
+
+  if (state.capacity !== null) {
+    if (
+      !isExactRecord(state.capacity, capacityKeys)
+      || !isNonnegativeWhole(state.capacity.availableMinutes)
+      || !isTimestamp(state.capacity.declaredAt)
+    ) {
+      return false;
+    }
+  }
+  if (state.capacityDraft !== null) {
+    if (
+      !isExactRecord(state.capacityDraft, capacityDraftKeys)
+      || !registerIdentifier(state.capacityDraft.id, identifiers)
+      || !isNonnegativeWhole(state.capacityDraft.availableMinutes)
+      || !isTimestamp(state.capacityDraft.draftedAt)
+    ) {
+      return false;
+    }
+  }
+
+  const planItems = new Map<string, StateRecord>();
+  const plannedItemIds = new Set<string>();
+  for (const rawPlanItem of state.planItems) {
+    if (!isExactRecord(rawPlanItem, planItemKeys)) return false;
+    const planItemId = rawPlanItem.id;
+    const courseId = rawPlanItem.courseId;
+    if (
+      !registerIdentifier(planItemId, identifiers)
+      || planItems.has(planItemId)
+      || !isBoundedIdentifier(courseId)
+      || !courseIds.has(courseId)
+      || !isBoundedText(rawPlanItem.title)
+      || !isDateOnly(rawPlanItem.originalDate)
+      || !isDateOnly(rawPlanItem.currentDate)
+      || !isPositiveWhole(rawPlanItem.originalMinutes)
+      || !isPositiveWhole(rawPlanItem.currentMinutes)
+      || !isKnownValue(rawPlanItem.status, planItemStatuses)
+    ) {
+      return false;
+    }
+    planItems.set(planItemId, rawPlanItem);
+    if (rawPlanItem.status === "planned") plannedItemIds.add(planItemId);
+  }
+
+  if (state.recoveryDraft !== null) {
+    if (!isExactRecord(state.recoveryDraft, recoveryDraftKeys)) return false;
+    const recoveryDraft = state.recoveryDraft;
+    if (
+      !registerIdentifier(recoveryDraft.id, identifiers)
+      || !isBoundedText(recoveryDraft.summary)
+      || !isTimestamp(recoveryDraft.createdAt)
+      || !isDenseArray(recoveryDraft.decisions, SEMESTER_DESK_MAX_RECOVERY_DECISIONS)
+      || plannedItemIds.size === 0
+      || recoveryDraft.decisions.length !== plannedItemIds.size
+    ) {
+      return false;
+    }
+    const decisionPlanItemIds = new Set<string>();
+    for (const rawDecision of recoveryDraft.decisions) {
+      if (!isExactRecord(rawDecision, recoveryDecisionKeys)) return false;
+      const planItemId = rawDecision.planItemId;
+      if (!isBoundedIdentifier(planItemId)) return false;
+      const item = planItems.get(planItemId);
+      if (
+        !item
+        || !plannedItemIds.has(planItemId)
+        || decisionPlanItemIds.has(planItemId)
+        || !isRecoveryOutcome(rawDecision.outcome)
+        || !isBoundedText(rawDecision.reason)
+      ) {
+        return false;
+      }
+      const nextDate = rawDecision.nextDate;
+      const nextMinutes = rawDecision.nextMinutes;
+      const currentDate = item.currentDate;
+      const currentMinutes = item.currentMinutes;
+      if (typeof currentDate !== "string" || typeof currentMinutes !== "number") return false;
+      switch (rawDecision.outcome) {
+        case "moved":
+        case "deferred":
+          if (!isDateOnly(nextDate) || nextDate === currentDate || nextMinutes !== null) return false;
+          break;
+        case "reduced":
+          if (nextDate !== null || !isPositiveWhole(nextMinutes) || nextMinutes >= currentMinutes) return false;
+          break;
+        case "kept":
+          if (nextDate !== null || nextMinutes !== null) return false;
+          break;
+      }
+      decisionPlanItemIds.add(planItemId);
+    }
+    if (decisionPlanItemIds.size !== plannedItemIds.size) return false;
+  }
+
+  for (const rawChange of state.recoveryChanges) {
+    if (!isExactRecord(rawChange, recoveryChangeKeys)) return false;
+    const planItemId = rawChange.planItemId;
+    if (
+      !registerIdentifier(rawChange.id, identifiers)
+      || !isBoundedIdentifier(rawChange.recoveryDraftId)
+      || !isBoundedIdentifier(planItemId)
+      || !planItems.has(planItemId)
+      || !isRecoveryOutcome(rawChange.outcome)
+      || !isBoundedText(rawChange.reason)
+      || !isDateOnly(rawChange.previousDate)
+      || !isDateOnly(rawChange.currentDate)
+      || !isPositiveWhole(rawChange.previousMinutes)
+      || !isPositiveWhole(rawChange.currentMinutes)
+      || !isTimestamp(rawChange.recordedAt)
+    ) {
+      return false;
+    }
+    switch (rawChange.outcome) {
+      case "moved":
+      case "deferred":
+        if (
+          rawChange.previousDate === rawChange.currentDate
+          || rawChange.previousMinutes !== rawChange.currentMinutes
+        ) {
+          return false;
+        }
+        break;
+      case "reduced":
+        if (
+          rawChange.previousDate !== rawChange.currentDate
+          || rawChange.currentMinutes >= rawChange.previousMinutes
+        ) {
+          return false;
+        }
+        break;
+      case "kept":
+        if (
+          rawChange.previousDate !== rawChange.currentDate
+          || rawChange.previousMinutes !== rawChange.currentMinutes
+        ) {
+          return false;
+        }
+        break;
+    }
+  }
+
+  if (
+    state.selectedNextActionId !== null
+    && (!isBoundedIdentifier(state.selectedNextActionId) || !planItems.has(state.selectedNextActionId))
+  ) {
+    return false;
+  }
+
+  const activeStudyPlanItemIds = new Set<string>();
+  const studySessionsByPlanItem = new Map<string, StateRecord[]>();
+  const completedStudySessionsByPlanItem = new Map<string, StateRecord[]>();
+  for (const rawSession of state.protectedStudySessions) {
+    if (!isExactRecord(rawSession, protectedStudySessionKeys)) return false;
+    const planItemId = rawSession.planItemId;
+    const startedAt = rawSession.startedAt;
+    if (
+      !registerIdentifier(rawSession.id, identifiers)
+      || !isBoundedIdentifier(planItemId)
+      || !planItems.has(planItemId)
+      || !isKnownValue(rawSession.status, studySessionStatuses)
+      || !isTimestamp(startedAt)
+    ) {
+      return false;
+    }
+    const sessions = studySessionsByPlanItem.get(planItemId) ?? [];
+    sessions.push(rawSession);
+    studySessionsByPlanItem.set(planItemId, sessions);
+    const planItem = planItems.get(planItemId);
+    if (!planItem || typeof planItem.status !== "string") return false;
+    if (rawSession.status === "active") {
+      if (
+        activeStudyPlanItemIds.size > 0
+        || activeStudyPlanItemIds.has(planItemId)
+        || rawSession.practiceCompletedAt !== null
+        || (rawSession.practiceOutcome !== null && rawSession.practiceOutcome !== "needs-more-work")
+        || planItem.status !== "in-progress"
+      ) {
+        return false;
+      }
+      activeStudyPlanItemIds.add(planItemId);
+      continue;
+    }
+    const completedAt = rawSession.practiceCompletedAt;
+    if (
+      !isTimestamp(completedAt)
+      || completedAt < startedAt
+      || rawSession.practiceOutcome !== "completed"
+    ) {
+      return false;
+    }
+    const completedSessions = completedStudySessionsByPlanItem.get(planItemId) ?? [];
+    completedSessions.push(rawSession);
+    completedStudySessionsByPlanItem.set(planItemId, completedSessions);
+  }
+
+  const proofsByPlanItem = new Map<string, StateRecord[]>();
+  for (const rawProof of state.independentProofs) {
+    if (!isExactRecord(rawProof, independentProofKeys)) return false;
+    const planItemId = rawProof.planItemId;
+    const completedAt = rawProof.completedAt;
+    if (
+      !registerIdentifier(rawProof.id, identifiers)
+      || !isBoundedIdentifier(planItemId)
+      || !planItems.has(planItemId)
+      || !isKnownValue(rawProof.outcome, proofOutcomes)
+      || !isTimestamp(completedAt)
+    ) {
+      return false;
+    }
+    const completedStudy = completedStudySessionsByPlanItem.get(planItemId) ?? [];
+    if (!completedStudy.some((session) => session.practiceCompletedAt === completedAt || (
+      isTimestamp(session.practiceCompletedAt) && session.practiceCompletedAt <= completedAt
+    ))) {
+      return false;
+    }
+    const proofs = proofsByPlanItem.get(planItemId) ?? [];
+    proofs.push(rawProof);
+    proofsByPlanItem.set(planItemId, proofs);
+  }
+
+  const delayedReturnsByPlanItem = new Map<string, StateRecord[]>();
+  const retainedReturnPlanItemIds = new Set<string>();
+  const unfinishedReturnPlanItemIds = new Set<string>();
+  for (const rawDelayedReturn of state.delayedReturns) {
+    if (!isExactRecord(rawDelayedReturn, delayedReturnKeys)) return false;
+    const planItemId = rawDelayedReturn.planItemId;
+    const dueAt = rawDelayedReturn.dueAt;
+    if (!isBoundedIdentifier(planItemId)) return false;
+    const planItem = planItems.get(planItemId);
+    if (
+      !registerIdentifier(rawDelayedReturn.id, identifiers)
+      || !planItem
+      || !isKnownValue(rawDelayedReturn.status, delayedReturnStatuses)
+      || !isTimestamp(dueAt)
+      || !proofsByPlanItem.has(planItemId)
+      || typeof planItem.status !== "string"
+    ) {
+      return false;
+    }
+    const returns = delayedReturnsByPlanItem.get(planItemId) ?? [];
+    returns.push(rawDelayedReturn);
+    delayedReturnsByPlanItem.set(planItemId, returns);
+    switch (rawDelayedReturn.status) {
+      case "due":
+        if (
+          rawDelayedReturn.openedAt !== null
+          || rawDelayedReturn.completedAt !== null
+          || rawDelayedReturn.retentionOutcome !== null
+          || unfinishedReturnPlanItemIds.has(planItemId)
+          || planItem.status !== "proof-complete"
+        ) {
+          return false;
+        }
+        unfinishedReturnPlanItemIds.add(planItemId);
+        break;
+      case "open": {
+        const openedAt = rawDelayedReturn.openedAt;
+        if (
+          !isTimestamp(openedAt)
+          || openedAt < dueAt
+          || rawDelayedReturn.completedAt !== null
+          || rawDelayedReturn.retentionOutcome !== null
+          || unfinishedReturnPlanItemIds.has(planItemId)
+          || planItem.status !== "proof-complete"
+        ) {
+          return false;
+        }
+        unfinishedReturnPlanItemIds.add(planItemId);
+        break;
+      }
+      case "completed": {
+        const openedAt = rawDelayedReturn.openedAt;
+        const completedAt = rawDelayedReturn.completedAt;
+        const retentionOutcome = rawDelayedReturn.retentionOutcome;
+        if (
+          !isTimestamp(openedAt)
+          || !isTimestamp(completedAt)
+          || openedAt < dueAt
+          || completedAt < openedAt
+          || (retentionOutcome !== "retained" && retentionOutcome !== "needs-more-work")
+        ) {
+          return false;
+        }
+        if (retentionOutcome === "retained") {
+          if (planItem.status !== "return-complete") return false;
+          retainedReturnPlanItemIds.add(planItemId);
+        } else if (planItem.status === "return-complete") {
+          return false;
+        }
+        break;
+      }
+    }
+  }
+
+  for (const [planItemId, planItem] of planItems) {
+    switch (planItem.status) {
+      case "in-progress":
+        if (!activeStudyPlanItemIds.has(planItemId)) return false;
+        break;
+      case "practice-complete":
+        if (!completedStudySessionsByPlanItem.has(planItemId)) return false;
+        break;
+      case "proof-complete":
+        if (!proofsByPlanItem.has(planItemId)) return false;
+        break;
+      case "return-complete":
+        if (!retainedReturnPlanItemIds.has(planItemId)) return false;
+        break;
+    }
+  }
+
+  for (const rawEvidence of state.progressEvidence) {
+    if (!isExactRecord(rawEvidence, progressEvidenceKeys)) return false;
+    const planItemId = rawEvidence.planItemId;
+    const occurredAt = rawEvidence.occurredAt;
+    if (
+      !registerIdentifier(rawEvidence.id, identifiers)
+      || !isBoundedIdentifier(planItemId)
+      || !planItems.has(planItemId)
+      || !isKnownValue(rawEvidence.kind, progressEvidenceKinds)
+      || !isKnownValue(rawEvidence.outcome, progressEvidenceOutcomes)
+      || !isTimestamp(occurredAt)
+    ) {
+      return false;
+    }
+    switch (rawEvidence.kind) {
+      case "practice-completed": {
+        if (rawEvidence.outcome !== "completed" && rawEvidence.outcome !== "needs-more-work") return false;
+        const sessions = studySessionsByPlanItem.get(planItemId) ?? [];
+        if (
+          !sessions.some((session) => (
+            isTimestamp(session.startedAt) && session.startedAt <= occurredAt
+          ))
+        ) {
+          return false;
+        }
+        if (
+          rawEvidence.outcome === "completed"
+          && !sessions.some((session) => (
+            session.practiceOutcome === "completed" && session.practiceCompletedAt === occurredAt
+          ))
+        ) {
+          return false;
+        }
+        break;
+      }
+      case "independent-proof-completed": {
+        if (rawEvidence.outcome !== "demonstrated" && rawEvidence.outcome !== "needs-return") return false;
+        const proofs = proofsByPlanItem.get(planItemId) ?? [];
+        if (!proofs.some((proof) => proof.outcome === rawEvidence.outcome && proof.completedAt === occurredAt)) {
+          return false;
+        }
+        break;
+      }
+      case "delayed-return-completed": {
+        if (rawEvidence.outcome !== "retained" && rawEvidence.outcome !== "needs-more-work") return false;
+        const returns = delayedReturnsByPlanItem.get(planItemId) ?? [];
+        if (!returns.some((delayedReturn) => (
+          delayedReturn.status === "completed"
+          && delayedReturn.retentionOutcome === rawEvidence.outcome
+          && delayedReturn.completedAt === occurredAt
+        ))) {
+          return false;
+        }
+        break;
+      }
+    }
+  }
+
+  return true;
+}
+
+function invalidState<T>(): SemesterDeskResult<T> {
+  return failure("invalid-input", "This Semester Desk data cannot be used.");
+}
+
+/** Validate one decoded or in-memory Semester Desk before use. */
+export function validateSemesterDeskState(state: unknown): SemesterDeskResult<SemesterDeskState> {
+  try {
+    return isStateValid(state) ? success(state as SemesterDeskState) : invalidState();
+  } catch {
+    return invalidState();
+  }
+}
+
 /**
  * Create one profile-bound semester desk. The supplied runtime provides all
  * timestamps and identifiers so that application code and tests remain deterministic.
@@ -259,7 +917,7 @@ export function createSemesterDesk(
   const id = identifier(runtime, "semester");
   if (!id.ok) return id;
 
-  return success({
+  return validateSemesterDeskState({
     schemaVersion: SEMESTER_DESK_V2_SCHEMA_VERSION,
     id: id.value,
     profileId: input.profileId,
@@ -284,7 +942,7 @@ export function createSemesterDesk(
  * Apply one explicit student action. The function never mutates the supplied
  * state, never sorts plan items, and never writes answer text into state.
  */
-export function transitionSemesterDesk(
+function transitionSemesterDeskUnchecked(
   state: SemesterDeskState,
   command: SemesterDeskCommand,
   runtime: SemesterDeskRuntime,
@@ -789,6 +1447,21 @@ export function transitionSemesterDesk(
       }));
     }
   }
+}
+
+/**
+ * Apply one explicit student action only when the supplied and resulting state
+ * both satisfy the Semester Desk integrity rules.
+ */
+export function transitionSemesterDesk(
+  state: SemesterDeskState,
+  command: SemesterDeskCommand,
+  runtime: SemesterDeskRuntime,
+): SemesterDeskResult<SemesterDeskState> {
+  const validatedInput = validateSemesterDeskState(state);
+  if (!validatedInput.ok) return validatedInput;
+  const result = transitionSemesterDeskUnchecked(validatedInput.value, command, runtime);
+  return result.ok ? validateSemesterDeskState(result.value) : result;
 }
 
 /**

@@ -1,17 +1,40 @@
 import { z } from "zod";
 
 import {
+  SEMESTER_DESK_MAX_CONFLICT_FACT_IDS,
+  SEMESTER_DESK_MAX_CONFLICTS_PER_COURSE,
+  SEMESTER_DESK_MAX_COURSES,
+  SEMESTER_DESK_MAX_DELAYED_RETURNS,
+  SEMESTER_DESK_MAX_FACTS_PER_COURSE,
+  SEMESTER_DESK_MAX_IDENTIFIER_UTF8_BYTES,
+  SEMESTER_DESK_MAX_PLAN_ITEMS,
+  SEMESTER_DESK_MAX_PROOFS,
+  SEMESTER_DESK_MAX_PROGRESS_EVIDENCE,
+  SEMESTER_DESK_MAX_RAW_JSON_UTF8_BYTES,
+  SEMESTER_DESK_MAX_RECOVERY_CHANGES,
+  SEMESTER_DESK_MAX_RECOVERY_DECISIONS,
+  SEMESTER_DESK_MAX_STUDY_SESSIONS,
+  SEMESTER_DESK_MAX_TEXT_UTF8_BYTES,
   SEMESTER_DESK_V2_SCHEMA_VERSION,
+  semesterDeskUtf8ByteLength,
   type SemesterDeskState,
+  validateSemesterDeskState,
 } from "@/src/forge/semester-desk-v2";
 
 const storagePrefix = "forge.semester-desk-v2.v1.profile";
 
-const identifierSchema = z.string().trim().min(1).max(240);
-const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+function boundedString(maximumBytes: number) {
+  return z.string().refine(
+    (value) => semesterDeskUtf8ByteLength(value) <= maximumBytes,
+  ).trim().min(1);
+}
+
+const identifierSchema = boundedString(SEMESTER_DESK_MAX_IDENTIFIER_UTF8_BYTES);
+const textSchema = boundedString(SEMESTER_DESK_MAX_TEXT_UTF8_BYTES);
+const dateSchema = z.string().max(10).regex(/^\d{4}-\d{2}-\d{2}$/);
 const timestampSchema = z.string().regex(
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
-);
+).max(24);
 const courseFactStatusSchema = z.enum([
   "checked",
   "needs-review",
@@ -22,17 +45,17 @@ const recoveryOutcomeSchema = z.enum(["moved", "reduced", "kept", "deferred"]);
 
 const courseFactSchema = z.object({
   id: identifierSchema,
-  label: z.string().trim().min(1),
-  value: z.string().trim().min(1),
+  label: textSchema,
+  value: textSchema,
   status: courseFactStatusSchema,
-  sourceLabel: z.string().trim().min(1),
+  sourceLabel: textSchema,
   checkedAt: timestampSchema.nullable(),
 }).strict();
 
 const sourceConflictSchema = z.object({
   id: identifierSchema,
-  factIds: z.array(identifierSchema).min(2),
-  summary: z.string().trim().min(1),
+  factIds: z.array(identifierSchema).min(2).max(SEMESTER_DESK_MAX_CONFLICT_FACT_IDS),
+  summary: textSchema,
   status: z.enum(["open", "reviewed"]),
   detectedAt: timestampSchema,
   reviewedAt: timestampSchema.nullable(),
@@ -40,16 +63,16 @@ const sourceConflictSchema = z.object({
 
 const courseSchema = z.object({
   id: identifierSchema,
-  code: z.string().trim().min(1),
-  title: z.string().trim().min(1),
-  facts: z.array(courseFactSchema),
-  sourceConflicts: z.array(sourceConflictSchema),
+  code: textSchema,
+  title: textSchema,
+  facts: z.array(courseFactSchema).max(SEMESTER_DESK_MAX_FACTS_PER_COURSE),
+  sourceConflicts: z.array(sourceConflictSchema).max(SEMESTER_DESK_MAX_CONFLICTS_PER_COURSE),
 }).strict();
 
 const planItemSchema = z.object({
   id: identifierSchema,
   courseId: identifierSchema,
-  title: z.string().trim().min(1),
+  title: textSchema,
   originalDate: dateSchema,
   currentDate: dateSchema,
   originalMinutes: z.number().int().positive(),
@@ -69,14 +92,14 @@ const recoveryDecisionSchema = z.object({
   outcome: recoveryOutcomeSchema,
   nextDate: dateSchema.nullable(),
   nextMinutes: z.number().int().positive().nullable(),
-  reason: z.string().trim().min(1),
+  reason: textSchema,
 }).strict();
 
 const recoveryDraftSchema = z.object({
   id: identifierSchema,
-  summary: z.string().trim().min(1),
+  summary: textSchema,
   createdAt: timestampSchema,
-  decisions: z.array(recoveryDecisionSchema),
+  decisions: z.array(recoveryDecisionSchema).max(SEMESTER_DESK_MAX_RECOVERY_DECISIONS),
 }).strict();
 
 const recoveryChangeSchema = z.object({
@@ -84,7 +107,7 @@ const recoveryChangeSchema = z.object({
   recoveryDraftId: identifierSchema,
   planItemId: identifierSchema,
   outcome: recoveryOutcomeSchema,
-  reason: z.string().trim().min(1),
+  reason: textSchema,
   previousDate: dateSchema,
   currentDate: dateSchema,
   previousMinutes: z.number().int().positive(),
@@ -140,10 +163,10 @@ export const semesterDeskStateSchema = z.object({
   schemaVersion: z.literal(SEMESTER_DESK_V2_SCHEMA_VERSION),
   id: identifierSchema,
   profileId: identifierSchema,
-  title: z.string().trim().min(1),
+  title: textSchema,
   createdAt: timestampSchema,
   updatedAt: timestampSchema,
-  courses: z.array(courseSchema),
+  courses: z.array(courseSchema).max(SEMESTER_DESK_MAX_COURSES),
   capacity: z.object({
     availableMinutes: z.number().int().nonnegative(),
     declaredAt: timestampSchema,
@@ -153,14 +176,14 @@ export const semesterDeskStateSchema = z.object({
     availableMinutes: z.number().int().nonnegative(),
     draftedAt: timestampSchema,
   }).strict().nullable(),
-  planItems: z.array(planItemSchema),
+  planItems: z.array(planItemSchema).max(SEMESTER_DESK_MAX_PLAN_ITEMS),
   recoveryDraft: recoveryDraftSchema.nullable(),
-  recoveryChanges: z.array(recoveryChangeSchema),
+  recoveryChanges: z.array(recoveryChangeSchema).max(SEMESTER_DESK_MAX_RECOVERY_CHANGES),
   selectedNextActionId: identifierSchema.nullable(),
-  protectedStudySessions: z.array(protectedStudySessionSchema),
-  independentProofs: z.array(independentProofSchema),
-  delayedReturns: z.array(delayedReturnSchema),
-  progressEvidence: z.array(progressEvidenceSchema),
+  protectedStudySessions: z.array(protectedStudySessionSchema).max(SEMESTER_DESK_MAX_STUDY_SESSIONS),
+  independentProofs: z.array(independentProofSchema).max(SEMESTER_DESK_MAX_PROOFS),
+  delayedReturns: z.array(delayedReturnSchema).max(SEMESTER_DESK_MAX_DELAYED_RETURNS),
+  progressEvidence: z.array(progressEvidenceSchema).max(SEMESTER_DESK_MAX_PROGRESS_EVIDENCE),
 }).strict();
 
 export type SemesterDeskPersistenceRead =
@@ -220,6 +243,9 @@ export class BrowserSemesterDeskPersistence implements SemesterDeskPersistence {
     }
 
     if (raw === null) return { kind: "missing" };
+    if (semesterDeskUtf8ByteLength(raw) > SEMESTER_DESK_MAX_RAW_JSON_UTF8_BYTES) {
+      return malformed(raw, "The local data is too large to use.");
+    }
 
     let parsed: unknown;
     try {
@@ -235,10 +261,14 @@ export class BrowserSemesterDeskPersistence implements SemesterDeskPersistence {
     if (checked.data.profileId !== profileId) {
       return malformed(raw, "The local data belongs to a different profile.");
     }
+    const validated = validateSemesterDeskState(checked.data);
+    if (!validated.ok) {
+      return malformed(raw, "The local data does not match this Semester Desk version.");
+    }
 
     return {
       kind: "loaded",
-      state: checked.data as SemesterDeskState,
+      state: validated.value,
       raw,
     };
   }
@@ -248,11 +278,25 @@ export class BrowserSemesterDeskPersistence implements SemesterDeskPersistence {
     if (!checked.success) {
       return { ok: false, message: "FORGE could not save data that did not pass its local check." };
     }
+    const validated = validateSemesterDeskState(checked.data);
+    if (!validated.ok) {
+      return { ok: false, message: "FORGE could not save data that did not pass its local check." };
+    }
+
+    let raw: string;
+    try {
+      raw = JSON.stringify(validated.value);
+    } catch {
+      return { ok: false, message: "FORGE could not save data that did not pass its local check." };
+    }
+    if (semesterDeskUtf8ByteLength(raw) > SEMESTER_DESK_MAX_RAW_JSON_UTF8_BYTES) {
+      return { ok: false, message: "FORGE could not save local data that is too large." };
+    }
 
     try {
       this.storage.setItem(
-        semesterDeskStorageKey(checked.data.profileId),
-        JSON.stringify(checked.data),
+        semesterDeskStorageKey(validated.value.profileId),
+        raw,
       );
       return { ok: true };
     } catch (error) {

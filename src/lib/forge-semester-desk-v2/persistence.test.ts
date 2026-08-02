@@ -4,6 +4,9 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   createSemesterDesk,
+  SEMESTER_DESK_MAX_COURSES,
+  SEMESTER_DESK_MAX_RAW_JSON_UTF8_BYTES,
+  SEMESTER_DESK_MAX_TEXT_UTF8_BYTES,
   type SemesterDeskResult,
   type SemesterDeskRuntime,
   type SemesterDeskState,
@@ -144,5 +147,79 @@ describe("BrowserSemesterDeskPersistence", () => {
       ok: false,
       message: "FORGE could not remove local data on this device. reset blocked",
     });
+  });
+
+  it("bounds raw UTF-8 data before JSON parsing and keeps the bytes available", async () => {
+    const persistence = new BrowserSemesterDeskPersistence(window.localStorage);
+    const profileId = "profile.oversized";
+    const raw = "😀".repeat(Math.floor(SEMESTER_DESK_MAX_RAW_JSON_UTF8_BYTES / 4) + 1);
+    const key = semesterDeskStorageKey(profileId);
+    window.localStorage.setItem(key, raw);
+
+    await expect(persistence.read(profileId)).resolves.toEqual({
+      kind: "malformed",
+      raw,
+      message: "The local data is too large to use.",
+    });
+    expect(window.localStorage.getItem(key)).toBe(raw);
+    await expect(persistence.exportRaw(profileId)).resolves.toEqual({ ok: true, raw });
+  });
+
+  it("accepts the course limit and rejects oversized arrays and strings without overwriting data", async () => {
+    const persistence = new BrowserSemesterDeskPersistence(window.localStorage);
+    const profileId = "profile.bounds";
+    const base = desk(profileId);
+    const courses = Array.from({ length: SEMESTER_DESK_MAX_COURSES }, (_, index) => ({
+      id: `course-${index}`,
+      code: `C${index}`,
+      title: `Course ${index}`,
+      facts: [],
+      sourceConflicts: [],
+    }));
+    const atLimit: SemesterDeskState = { ...base, courses };
+    await expect(persistence.save(atLimit)).resolves.toEqual({ ok: true });
+    const savedRaw = window.localStorage.getItem(semesterDeskStorageKey(profileId));
+    await expect(persistence.read(profileId)).resolves.toMatchObject({
+      kind: "loaded",
+      state: { courses: expect.arrayContaining([expect.objectContaining({ code: "C63" })]) },
+    });
+
+    const tooManyCourses: SemesterDeskState = {
+      ...atLimit,
+      courses: [...courses, {
+        id: "course-overflow",
+        code: "C-overflow",
+        title: "Overflow course",
+        facts: [],
+        sourceConflicts: [],
+      }],
+    };
+    const oversizedText: SemesterDeskState = {
+      ...atLimit,
+      title: "x".repeat(SEMESTER_DESK_MAX_TEXT_UTF8_BYTES + 1),
+    };
+
+    await expect(persistence.save(tooManyCourses)).resolves.toMatchObject({ ok: false });
+    await expect(persistence.save(oversizedText)).resolves.toMatchObject({ ok: false });
+    expect(window.localStorage.getItem(semesterDeskStorageKey(profileId))).toBe(savedRaw);
+  });
+
+  it("rejects structural-looking semantic corruption without replacing the saved raw data", async () => {
+    const persistence = new BrowserSemesterDeskPersistence(window.localStorage);
+    const state = desk("profile.semantic");
+    const invalid: SemesterDeskState = {
+      ...state,
+      createdAt: "2026-02-30T09:00:00.000Z",
+    };
+    const raw = JSON.stringify(invalid);
+    const key = semesterDeskStorageKey(invalid.profileId);
+    window.localStorage.setItem(key, raw);
+
+    await expect(persistence.read(invalid.profileId)).resolves.toEqual({
+      kind: "malformed",
+      raw,
+      message: "The local data does not match this Semester Desk version.",
+    });
+    expect(window.localStorage.getItem(key)).toBe(raw);
   });
 });
