@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 03:05 IST
+Updated: 2026-08-03 03:09 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -35,9 +35,10 @@ Milestone completion does not complete the product task.
 | Canonical route-boundary checkpoint | `32069d5be52d2ff25af81c6c9c0bd78c45eadead` | Only final release routes and Next.js assets are public |
 | Web state-integrity checkpoint | `8b5e734b859b2418a045e75d912c584dfe30c043` | Bounded profile state, semantic link validation, and validated engine transitions |
 | Previous root branch | `agent/forge-local-refoundation-snapshot` at `cd84e20f6f78d68a430666c185b00efa99c49a87` | Preserve, do not use as base |
-| iOS source lane | `agent/forge-ios-foundation-20260801` at committed `7f6cac4112c3017d9f06384303da8dc579da8f3e` plus reviewed dirty application work | Preserve and reconcile after review |
+| iOS source lane | `agent/forge-ios-foundation-20260801` at committed `f687e99d67e1d990264a2f82b39cc95a226fd9b3` | Verified native foundation; Semester Desk v2 shell implementation is running |
 | iOS Semester Desk domain checkpoint | `45b61c656c278886b63619103389a633d48fc98d` | Profile-bound Semester Desk state machine |
 | iOS university learning core checkpoint | `7f6cac4112c3017d9f06384303da8dc579da8f3e` | Bounded university learning core, shared projection, widget policy, and 156 passing tests |
+| iOS verified native-foundation checkpoint | `f687e99d67e1d990264a2f82b39cc95a226fd9b3` | Private state, app model, interruption safety, AXXXL access, device builds, tests, and Editorial Terrain assets |
 
 ## Accepted and rejected lineage inputs
 
@@ -149,13 +150,13 @@ Status: **Canonical Semester Desk v2 candidate is implemented and under integrat
 
 | Capability | Web status | iOS status | Completion rule |
 |---|---|---|---|
-| Account and onboarding | Device-local candidate complete | Partial local flow | Clear profile boundary and safe local adapter |
+| Account and onboarding | Device-local candidate complete | Profile-bound persistence complete; v2 UI running | Clear profile boundary and safe local adapter |
 | Add or import courses | Manual-input candidate complete | Starter course only | Supported manual method with honest source state |
-| Review facts, freshness, conflicts | Complete candidate | Domain complete; persistence integration running | Human terms and explicit student choice |
-| Whole-semester view | Candidate complete | Domain complete; persistence integration running | No hidden prioritisation |
-| Declare real capacity | Candidate complete | Domain complete; persistence integration running | Student controls available capacity |
-| Recover a broken week | Candidate complete | Domain complete; persistence integration running | Transparent changes with no shame |
-| Choose the next action | Candidate complete | Domain complete; persistence integration running | One honest action with visible reason |
+| Review facts, freshness, conflicts | Complete candidate | Domain and persistence complete; v2 UI running | Human terms and explicit student choice |
+| Whole-semester view | Candidate complete | Domain and persistence complete; v2 UI running | No hidden prioritisation |
+| Declare real capacity | Candidate complete | Domain and persistence complete; v2 UI running | Student controls available capacity |
+| Recover a broken week | Candidate complete | Domain and persistence complete; v2 UI running | Transparent changes with no shame |
+| Choose the next action | Candidate complete | Domain and persistence complete; v2 UI running | One honest action with visible reason |
 | Protected study | Candidate complete | Starter flow exists; v2 domain complete | Active learning before help |
 | Practice | Candidate complete | Starter flow exists; v2 domain complete | Deterministic check and no answer extraction |
 | Independent proof | Candidate complete | Starter flow exists; v2 domain complete | Proof after help |
@@ -167,15 +168,16 @@ Status: **Canonical Semester Desk v2 candidate is implemented and under integrat
 
 ## iOS status
 
-Status: **Substantial native work exists, but the application is not complete**
+Status: **The verified native foundation is durable, but the Semester Desk v2 application loop is still running**
 
 ### Current source state
 
 - Worktree: `/Users/Priyansh/Documents/codex-buildweek/worktrees/forge-ios-foundation-20260801`
 - Branch: `agent/forge-ios-foundation-20260801`
-- Committed HEAD: `7f6cac4112c3017d9f06384303da8dc579da8f3e`
-- Dirty application, storage, test, configuration, and document paths remain.
-- The current changes include ForgeCore, app screens, private storage, widgets, intents, tests, and release documents.
+- Verified foundation HEAD: `f687e99d67e1d990264a2f82b39cc95a226fd9b3`
+- The preserved external `AGENTS.md` change is outside the product checkpoint.
+- The checkpoint includes ForgeCore, private storage, app screens, widgets, intents, tests, assets, and release documents.
+- The reachable starter-course shell remains until the active native Semester Desk v2 implementation replaces it.
 
 ### Verified evidence
 
@@ -183,16 +185,17 @@ Status: **Substantial native work exists, but the application is not complete**
 |---|---|---|
 | Focused ForgeCore model and engine tests | 52 passed | Two focused university learning suites |
 | Complete ForgeCore package | 156 passed | Eleven suites passed after the source-review repair |
-| Focused private-state tests | 73 passed | XcodeBuildMCP result bundle from 2026-08-02 |
+| Focused private-state tests | 77 passed | XcodeBuildMCP result bundle from 2026-08-02 |
 | AppModel cancellation repair | Passed | The focused cancellation test passed. |
-| Full AppModel simulator suite | 109 passed | Zero failed and zero skipped. |
+| Full AppModel simulator suite | 120 passed | Zero failed and zero skipped. |
 | Semester Desk v2 core domain | 11 passed | Deterministic focused Swift package suite |
 | Release source boundary | 12 passed | `/tmp/forge-release-source-boundary-20260803-0236.xcresult` |
 | Activity draft preservation | 239 app tests and three UI flows passed | Raw text remains in process memory only |
 | Full app unit suite | Not passed on the current source | Open |
-| UI tests | Not run on the current source | Open |
-| Debug build | Earlier source evidence only | Re-run after source freeze. |
-| Release build | Earlier source evidence only | Re-run after source freeze. |
+| Activity UI tests | Five passed | One AXXXL journey and four draft or normal journeys |
+| Debug device build without signing | Passed | `ios/Scripts/verify.sh` on the foundation checkpoint |
+| Release device build without signing | Passed | `ios/Scripts/verify.sh` on the foundation checkpoint |
+| App and UI test-source builds | Passed | `ios/Scripts/verify.sh` on the foundation checkpoint |
 | Archive readiness | Not verified | Open |
 
 ### Known iOS defects
@@ -201,7 +204,8 @@ Status: **Substantial native work exists, but the application is not complete**
 |---|---|---|
 | P1 | Course-review boundary-cancellation test hangs because cancellation occurs after a blocked save. | Closed |
 | P1 | Model-driven activity dismissal can bypass draft confirmation and lose the local draft. | Closed with three UI flows and 239 app tests |
-| P1 | The Today course title is absent from the accessibility tree at AccessibilityXXXL. | Repair running |
+| P1 | The Today course title is absent from the accessibility tree at AccessibilityXXXL. | Closed |
+| P1 | The active-study choice control is not reachable at AccessibilityXXXL. | Closed with one AXXXL and four regression journeys |
 | P2 | A reset result can disappear when onboarding replaces Settings. | Open |
 | P2 | Final simulator, Dynamic Type, VoiceOver, interruption, widget, deep-link, and App Intent proof is missing. | Open |
 
@@ -234,13 +238,17 @@ The pnpm commands reported missing-bin repair warnings for `tsx` and `next`. The
 
 ### iOS baseline
 
-The private-state focused suite passed 73 tests.
+The private-state focused suite passed 77 tests.
 
 The cancellation repair passed one focused test and the complete AppModel suite.
 
-The complete AppModel suite passed 109 tests with zero failures and zero skips.
+The complete AppModel suite passed 120 tests with zero failures and zero skips.
 
 The complete ForgeCore package passed 156 tests in 11 suites.
+
+Five focused activity UI journeys passed on the verified native foundation.
+
+Unsigned arm64 Debug and Release device builds passed.
 
 ## Cross-platform parity matrix
 
@@ -266,10 +274,9 @@ No confirmed P0 defect exists at this baseline.
 ### P1
 
 1. Historical Next.js routes still compile into the production artifact.
-2. The iOS Today and activity AXXXL repairs are not yet in a durable iOS checkpoint.
-3. The iOS dirty work has no clean checkpoint identity.
-4. No current cross-platform release candidate exists.
-5. No final rendered accessibility or performance evidence exists.
+2. The native application still exposes the old starter-course shell.
+3. No current cross-platform release candidate exists.
+4. No final rendered accessibility or performance evidence exists.
 
 ### P2
 
@@ -330,7 +337,7 @@ These are not current reasons to stop internal work.
 
 1. Make Next.js compile only the canonical release routes.
 2. Complete the current rendered web-product repair loop.
-3. Establish an iOS checkpoint for private state, accessibility, and design assets.
-4. Implement the native Semester Desk v2 application loop.
+3. Implement and verify the native Semester Desk v2 application loop.
+4. Complete native system integrations against the v2 product model.
 5. Replace legacy browser and CI release gates with final product gates.
 6. Run full rendered, accessibility, performance, security, and release checks.
