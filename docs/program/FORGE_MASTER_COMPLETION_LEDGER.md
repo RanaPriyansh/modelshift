@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 02:05 IST
+Updated: 2026-08-03 02:25 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -28,6 +28,9 @@ Milestone completion does not complete the product task.
 | First Semester Desk v2 checkpoint | `c4c42b40d571763fbe80fd7ed1895017442fce5e` | Design, public site, policies, and web domain |
 | Device-local web-app checkpoint | `d7f1d82781799923d41951d8e1dd5961581da84e` | Canonical `/app`, profile-bound persistence, tests, and ledger |
 | Public release-surface checkpoint | `85575d2fe3f0e4b1002bb3310b24beb1d59b9a65` | Metadata, crawler files, manifest, error pages, and truthful policy links |
+| Persistent taste checkpoint | `6708807ab99cb2a9a9667d1b0a43a40a798b3abe` | Editorial Terrain rules in `.impeccable/design.json` |
+| Web brand-asset checkpoints | `b7296ae5f3843032e7143dee62f6080dd4a7558f` and `45c087ff377bace252d93b2031276c9723a4dc13` | Terrain icon and semantic social images |
+| Web truth-hardening checkpoint | `74377aa451612f6e317a202b581be0f4986b5633` | Conflict entry, freshness, save-before-ready onboarding, and storage failure tests |
 | Previous root branch | `agent/forge-local-refoundation-snapshot` at `cd84e20f6f78d68a430666c185b00efa99c49a87` | Preserve, do not use as base |
 | iOS source lane | `agent/forge-ios-foundation-20260801` at committed `388e889de4acadff3824cc4713b1ffd98c7861ec` plus 60 dirty paths | Preserve and reconcile after review |
 
@@ -79,6 +82,7 @@ Milestone completion does not complete the product task.
 | `PRI_TASTE_PROFILE.md` | `docs/design/PRI_TASTE_PROFILE.md` | Created and reviewed |
 | `PRI_TASTE_EVIDENCE_INDEX.md` | `docs/design/PRI_TASTE_EVIDENCE_INDEX.md` | Created and updated with the final exploration boards |
 | `FORGE_DESIGN_SYSTEM.md` | `docs/design/FORGE_DESIGN_SYSTEM.md` | Created and reviewed |
+| Persistent local taste profile | `.impeccable/design.json` | Replaced with the selected Semester Desk v2 system |
 
 ## Design-exploration status
 
@@ -115,7 +119,7 @@ Status: **Release-surface candidate complete, but rendered release QA remains**
 | Support and contact | Implemented self-service surface | No monitored contact channel exists. |
 | Download or access | Partial | Route users to the correct web or iOS entry. |
 | Authentication entry | Device-local only | Keep local operation clear until cloud identity exists. |
-| Metadata and social preview | Implemented | Final absolute origin is an external deployment value. |
+| Metadata and social preview | Implemented | Semantic Open Graph and Twitter images exist. Final absolute origin is external. |
 | Error and not-found states | Implemented | Focused semantic and recovery tests passed. |
 | Responsive and accessibility QA | Not run on the final design | Required. |
 | Performance and bundle QA | Not run on the final design | Required. |
@@ -140,7 +144,7 @@ Status: **Canonical Semester Desk v2 candidate is implemented and under integrat
 |---|---|---|---|
 | Account and onboarding | Device-local candidate complete | Partial local flow | Clear profile boundary and safe local adapter |
 | Add or import courses | Manual-input candidate complete | Starter course only | Supported manual method with honest source state |
-| Review facts, freshness, conflicts | Facts and review states complete; manual conflict entry repair running | Domain complete; persistence integration running | Human terms and explicit student choice |
+| Review facts, freshness, conflicts | Complete candidate | Domain complete; persistence integration running | Human terms and explicit student choice |
 | Whole-semester view | Candidate complete | Domain complete; persistence integration running | No hidden prioritisation |
 | Declare real capacity | Candidate complete | Domain complete; persistence integration running | Student controls available capacity |
 | Recover a broken week | Candidate complete | Domain complete; persistence integration running | Transparent changes with no shame |
@@ -207,6 +211,7 @@ Status: **Substantial native work exists, but the application is not complete**
 | Semester Desk v2 app focused tests | 3 files and 29 tests passed |
 | Public release-surface focused tests | 4 files and 19 tests passed |
 | Public release-surface scoped lint and typecheck | Pass |
+| Semester Desk v2 domain, app, and persistence focused tests | 3 files and 34 tests passed |
 | `pnpm build` | Not run in this course-correction pass |
 | Playwright | Not run in this course-correction pass |
 
@@ -244,23 +249,20 @@ No confirmed P0 defect exists at this baseline.
 ### P1
 
 1. Website and web-app information architecture remains fragmented.
-2. The web application cannot yet create a manual conflict between course facts.
-3. The iOS Today title is not accessible at AccessibilityXXXL.
-4. The iOS active-study choice control is not reachable at AccessibilityXXXL.
-5. The iOS dirty work has no clean checkpoint identity.
-6. No current cross-platform release candidate exists.
-7. No final rendered accessibility or performance evidence exists.
+2. The iOS Today title repair is not yet in a durable iOS checkpoint.
+3. The iOS active-study choice control is not reachable at AccessibilityXXXL.
+4. The iOS dirty work has no clean checkpoint identity.
+5. No current cross-platform release candidate exists.
+6. No final rendered accessibility or performance evidence exists.
 
 ### P2
 
 1. Several public routes are compatibility redirects or direct duplicates.
 2. Historical routes contain obsolete product language.
 3. Historical routes contain internal fixture and evidence language.
-4. The web course ledger does not show the date of the last course-fact check.
-5. A web onboarding save becomes visible before local persistence confirms success.
-6. The reset result can be hidden after an iOS navigation change.
-7. Current disk pressure can block large builds or simulator artifacts.
-8. The current public release record describes an older product.
+4. The reset result can be hidden after an iOS navigation change.
+5. Current disk pressure can block large builds or simulator artifacts.
+6. The current public release record describes an older product.
 
 ## Deployment and signing status
 
@@ -312,10 +314,10 @@ These are not current reasons to stop internal work.
 
 ## Next internally executable action
 
-1. Repair manual conflict entry, freshness display, and persistence edge cases.
+1. Enforce the canonical web route boundary and final root shell.
 2. Integrate native Semester Desk v2 into the private state envelope.
-3. Repair iOS Today and active study at AccessibilityXXXL.
+3. Repair active study at AccessibilityXXXL.
 4. Establish an iOS checkpoint.
 5. Implement the native Semester Desk v2 application loop.
-6. Consolidate public and application routes.
+6. Replace legacy browser and CI release gates with final product gates.
 7. Run full rendered, accessibility, performance, security, and release checks.
