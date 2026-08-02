@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 03:29 IST
+Updated: 2026-08-03 04:10 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -24,7 +24,7 @@ Milestone completion does not complete the product task.
 | Canonical branch | `agent/forge-semester-desk-v2-release-20260802` | Created |
 | Clean starting baseline | `3a11208d68e55179aaa3b54833a2376f0970be71` | Confirmed |
 | Local integration reference | `origin/main` at `c4abe33bc5bc611a02eded4288e2a2949a2808f3` | Stored locally, not fetched |
-| Current working state | Canonical web line is clean except for one preserved external `AGENTS.md` change | Confirmed at `378a18c54f36b90d2b8c7de7dbdb9d7ea84eb24e` |
+| Current working state | Canonical web line is at `e5dfdf11a5c456a229018519b246acb5dcf8afba`; one preserved external `AGENTS.md` change and the active public-browser test patch are not committed | Confirmed |
 | First Semester Desk v2 checkpoint | `c4c42b40d571763fbe80fd7ed1895017442fce5e` | Design, public site, policies, and web domain |
 | Device-local web-app checkpoint | `d7f1d82781799923d41951d8e1dd5961581da84e` | Canonical `/app`, profile-bound persistence, tests, and ledger |
 | Public release-surface checkpoint | `85575d2fe3f0e4b1002bb3310b24beb1d59b9a65` | Metadata, crawler files, manifest, error pages, and truthful policy links |
@@ -35,11 +35,17 @@ Milestone completion does not complete the product task.
 | Canonical route-boundary checkpoint | `32069d5be52d2ff25af81c6c9c0bd78c45eadead` | Only final release routes and Next.js assets are public |
 | Web state-integrity checkpoint | `8b5e734b859b2418a045e75d912c584dfe30c043` | Bounded profile state, semantic link validation, and validated engine transitions |
 | Release artifact checkpoint | `378a18c54f36b90d2b8c7de7dbdb9d7ea84eb24e` | Only 14 release routes and two framework routes compile into the Next.js artifact |
+| Canonical student-journey checkpoint | `c88530e5b4ee7a7a4079cbb7949907d5aaa5f22a` | Desktop and mobile Semester Desk journey, persistence, export, reset, and 320 px checks |
+| Rendered web-polish checkpoint | `3c3e5afd47d3ddd95c93b8550672f83d08da4823` | Reset focus containment, 44 pt actions, hierarchy, and mobile semester identity |
+| Local browser-origin checkpoint | `c0532bf99ddd9d5ea2a2e8290a7079380c10aa58` | The bounded `127.0.0.1` development origin is accepted |
+| Canonical browser-gate checkpoint | `be0f1ee7b5942bee003af96ac2f8a77d405696e9` | Local and production gates use one exact-SHA Semester Desk v2 browser contract |
+| Public social-preview checkpoint | `e5dfdf11a5c456a229018519b246acb5dcf8afba` | Six public routes emit complete Open Graph and Twitter image metadata |
 | Previous root branch | `agent/forge-local-refoundation-snapshot` at `cd84e20f6f78d68a430666c185b00efa99c49a87` | Preserve, do not use as base |
-| iOS source lane | `agent/forge-ios-foundation-20260801` at committed `f687e99d67e1d990264a2f82b39cc95a226fd9b3` | Verified native foundation; Semester Desk v2 shell implementation is running |
+| iOS source lane | `agent/forge-ios-foundation-20260801` at committed `690caddcaf4c919ca634c3b8ae1074da809be477` | Verified native Semester Desk v2 shell; integration repair is running |
 | iOS Semester Desk domain checkpoint | `45b61c656c278886b63619103389a633d48fc98d` | Profile-bound Semester Desk state machine |
 | iOS university learning core checkpoint | `7f6cac4112c3017d9f06384303da8dc579da8f3e` | Bounded university learning core, shared projection, widget policy, and 156 passing tests |
 | iOS verified native-foundation checkpoint | `f687e99d67e1d990264a2f82b39cc95a226fd9b3` | Private state, app model, interruption safety, AXXXL access, device builds, tests, and Editorial Terrain assets |
+| iOS Semester Desk v2 shell checkpoint | `690caddcaf4c919ca634c3b8ae1074da809be477` | Native Today, Semester, Progress, recovery, study, return, settings, and 255 passing app tests |
 
 ## Accepted and rejected lineage inputs
 
@@ -97,7 +103,7 @@ Milestone completion does not complete the product task.
 |---|---|---|
 | Existing FORGE Terrain exploration | Available for review | 16 images under `design-evidence/terrain-v2/design-exploration/2026-08-03` |
 | Current website and web-app captures | Available | Accepted current and target web evidence sets |
-| Current iOS captures | Missing | The accepted current-product set has no current iOS images. |
+| Current iOS captures | Available | Real native onboarding and Semester Desk simulator captures exist after the shell checkpoint. |
 | ChatGPT Images round 1 | Complete | Public, web-app, and native-iOS comparison boards captured locally. |
 | ChatGPT Images round 2 | Complete | Final cross-platform synthesis was captured locally. |
 | Actual ChatGPT quality control | Confirmed | Authenticated ChatGPT Pro account with `Extra High` selected. |
@@ -108,7 +114,7 @@ Milestone completion does not complete the product task.
 
 ## Website status
 
-Status: **Canonical public candidate and release artifact are complete, but final rendered release QA remains**
+Status: **Canonical public candidate and route artifact are complete; final production-artifact performance and keyboard QA remain**
 
 - The current application is one Next.js 16.2.11 repository.
 - Historical route source remains in the repository as inactive reference code.
@@ -120,7 +126,7 @@ Status: **Canonical public candidate and release artifact are complete, but fina
 
 | Website surface | Status | Required result |
 |---|---|---|
-| Home | Implemented candidate | Final integrated rendered review remains. |
+| Home | Implemented and rendered | Desktop, tablet, 430 px, 390 px, 320 px, reduced-motion, and forced-colour checks passed. |
 | Product and how it works | Implemented candidate | Focused tests, lint, responsive review, and truth review passed. |
 | University experience | Implemented candidate | Focused tests, lint, responsive review, and truth review passed. |
 | Privacy | Implemented candidate | Focused tests, lint, and local HTTP check passed. |
@@ -130,7 +136,7 @@ Status: **Canonical public candidate and release artifact are complete, but fina
 | Authentication entry | Device-local only | Keep local operation clear until cloud identity exists. |
 | Metadata and social preview | Implemented | Semantic Open Graph and Twitter images exist. Final absolute origin is external. |
 | Error and not-found states | Implemented | Focused semantic and recovery tests passed. |
-| Responsive and accessibility QA | 320 px route pass complete | Complete desktop, tablet, keyboard, screen-reader, and forced-colour checks. |
+| Responsive and accessibility QA | Rendered route sweep complete | Final restarted production keyboard and assistive-technology proof remains. |
 | Performance and bundle QA | Not run on the final design | Required. |
 
 ## Web-application status
@@ -152,34 +158,34 @@ Status: **Canonical Semester Desk v2 candidate is implemented and under integrat
 
 | Capability | Web status | iOS status | Completion rule |
 |---|---|---|---|
-| Account and onboarding | Device-local candidate complete | Profile-bound persistence complete; v2 UI running | Clear profile boundary and safe local adapter |
-| Add or import courses | Manual-input candidate complete | Starter course only | Supported manual method with honest source state |
-| Review facts, freshness, conflicts | Complete candidate | Domain and persistence complete; v2 UI running | Human terms and explicit student choice |
-| Whole-semester view | Candidate complete | Domain and persistence complete; v2 UI running | No hidden prioritisation |
-| Declare real capacity | Candidate complete | Domain and persistence complete; v2 UI running | Student controls available capacity |
-| Recover a broken week | Candidate complete | Domain and persistence complete; v2 UI running | Transparent changes with no shame |
-| Choose the next action | Candidate complete | Domain and persistence complete; v2 UI running | One honest action with visible reason |
-| Protected study | Candidate complete | Starter flow exists; v2 domain complete | Active learning before help |
-| Practice | Candidate complete | Starter flow exists; v2 domain complete | Deterministic check and no answer extraction |
-| Independent proof | Candidate complete | Starter flow exists; v2 domain complete | Proof after help |
-| Delayed return | Candidate complete | Starter flow exists; v2 domain complete | Schedule, remind, reopen, and complete |
-| Evidence and progress | Partial | Implemented locally | Useful learner language without internal jargon |
-| Settings and privacy | Partial | Partial | Export, deletion, reminders, support, and account state |
+| Account and onboarding | Device-local candidate complete | Save-gated local profile and native onboarding complete | Clear profile boundary and safe local adapter |
+| Add or import courses | Manual-input candidate complete | Manual course entry complete | Supported manual method with honest source state |
+| Review facts, freshness, conflicts | Complete candidate | Native facts, status, and conflicts complete | Human terms and explicit student choice |
+| Whole-semester view | Candidate complete | Native flat semester ledger complete | No hidden prioritisation |
+| Declare real capacity | Candidate complete | Native capacity draft and confirmation complete | Student controls available capacity |
+| Recover a broken week | Candidate complete | Native draft, review, and transparent change history complete | Transparent changes with no shame |
+| Choose the next action | Candidate complete | Native selection and Today priority complete | One honest action with visible reason |
+| Protected study | Candidate complete | Native full-screen study complete | Active learning before help |
+| Practice | Candidate complete | Native process-memory draft and outcome complete | Deterministic check and no answer extraction |
+| Independent proof | Candidate complete | Native independent check complete | Proof after help |
+| Delayed return | Candidate complete | Native schedule, open, and complete flow works; reminder integration is open | Schedule, remind, reopen, and complete |
+| Evidence and progress | Complete candidate | Native answer-free progress history complete | Useful learner language without internal jargon |
+| Settings and privacy | Partial | Reset and privacy complete; export and reminder controls are open | Export, deletion, reminders, support, and account state |
 | Offline and interruption | Device-local save path and transient reset tested; browser interruption remains | Partial | Recover without silent loss |
 | Production persistence | Local adapter only | Private local storage | Provider-neutral interface and exact external gate |
 
 ## iOS status
 
-Status: **The verified native foundation is durable, but the Semester Desk v2 application loop is still running**
+Status: **The native Semester Desk v2 loop is reachable and tested; system integration, schema cutover, UI automation, and release proof remain**
 
 ### Current source state
 
 - Worktree: `/Users/Priyansh/Documents/codex-buildweek/worktrees/forge-ios-foundation-20260801`
 - Branch: `agent/forge-ios-foundation-20260801`
-- Verified foundation HEAD: `f687e99d67e1d990264a2f82b39cc95a226fd9b3`
+- Current native HEAD: `690caddcaf4c919ca634c3b8ae1074da809be477`
 - The preserved external `AGENTS.md` change is outside the product checkpoint.
-- The checkpoint includes ForgeCore, private storage, app screens, widgets, intents, tests, assets, and release documents.
-- The reachable starter-course shell remains until the active native Semester Desk v2 implementation replaces it.
+- The checkpoint includes the native Today, Semester, Progress, recovery, protected-study, delayed-return, privacy, and reset surfaces.
+- Existing reminder, widget, App Intent, deep-link, and private-state systems still require the Semester Desk v2 cutover.
 
 ### Verified evidence
 
@@ -193,11 +199,12 @@ Status: **The verified native foundation is durable, but the Semester Desk v2 ap
 | Semester Desk v2 core domain | 11 passed | Deterministic focused Swift package suite |
 | Release source boundary | 12 passed | `/tmp/forge-release-source-boundary-20260803-0236.xcresult` |
 | Activity draft preservation | 239 app tests and three UI flows passed | Raw text remains in process memory only |
-| Full app unit suite | Not passed on the current source | Open |
+| Full app unit suite | 255 passed on the shell checkpoint | Zero failed and zero skipped |
 | Activity UI tests | Five passed | One AXXXL journey and four draft or normal journeys |
 | Debug device build without signing | Passed | `ios/Scripts/verify.sh` on the foundation checkpoint |
 | Release device build without signing | Passed | `ios/Scripts/verify.sh` on the foundation checkpoint |
 | App and UI test-source builds | Passed | `ios/Scripts/verify.sh` on the foundation checkpoint |
+| Modern and small simulator builds | Passed | Zero warnings and zero errors |
 | Archive readiness | Not verified | Open |
 
 ### Known iOS defects
@@ -209,7 +216,9 @@ Status: **The verified native foundation is durable, but the Semester Desk v2 ap
 | P1 | The Today course title is absent from the accessibility tree at AccessibilityXXXL. | Closed |
 | P1 | The active-study choice control is not reachable at AccessibilityXXXL. | Closed with one AXXXL and four regression journeys |
 | P2 | A reset result can disappear when onboarding replaces Settings. | Open |
-| P2 | Final simulator, Dynamic Type, VoiceOver, interruption, widget, deep-link, and App Intent proof is missing. | Open |
+| P1 | Reminder, widget, App Intent, deep-link, export, and private-state schema still use or expose legacy integration assumptions. | Open |
+| P1 | Semester Desk time prechecks and transitions can use different clock reads at a due boundary. | Repair running |
+| P2 | Final Dynamic Type, VoiceOver, Reduced Motion, interruption, and system-integration proof is missing. | Open |
 
 ## Current test and build evidence
 
@@ -232,7 +241,10 @@ Status: **The verified native foundation is durable, but the Semester Desk v2 ap
 | `CI=true pnpm build` from clean `cee6b67` | Pass: 15 static pages and exact clean-source receipt |
 | Release artifact verifier | Pass: 14 release routes, two framework routes, and 73 retired modules excluded |
 | Clean production artifact | 336 files; `sha256:695c42f86961fa937a52bd39831e931ee48114a9cc1e6c0d2a14d65c1f2ef6c2` |
-| Playwright | Not run in this course-correction pass |
+| Canonical Semester Desk Playwright journey | Two cases passed: desktop and mobile |
+| Rendered web route sweep | Seven routes passed at 1440, 1280, 768, 430, 390, and 320 px where applicable |
+| Browser console and horizontal overflow | Zero observed errors and zero observed overflow |
+| Browser release-gate tooling | 92 focused tests passed; exact-SHA local and production receipt rules retained |
 | Canonical route-policy test | 1 file and 5 tests passed |
 | Canonical route scoped lint and typecheck | Pass |
 | Canonical production route check | 14 routes returned `200`; three sampled retired routes returned `404` after artifact pruning |
@@ -246,11 +258,13 @@ The private-state focused suite passed 77 tests.
 
 The cancellation repair passed one focused test and the complete AppModel suite.
 
-The complete AppModel suite passed 120 tests with zero failures and zero skips.
+The complete application suite passed 255 tests with zero failures and zero skips on `690cadd`.
 
 The complete ForgeCore package passed 156 tests in 11 suites.
 
-Five focused activity UI journeys passed on the verified native foundation.
+The modern and small simulator builds passed with zero warnings and zero errors.
+
+The old UI test suite targets retired surfaces. Its Semester Desk v2 replacement is running.
 
 Unsigned arm64 Debug and Release device builds passed.
 
@@ -258,16 +272,16 @@ Unsigned arm64 Debug and Release device builds passed.
 
 | Contract | Website | Web app | iOS | Status |
 |---|---|---|---|---|
-| Semester Desk v2 promise | Candidate home implemented | Canonical implementation running | Partial | In progress |
-| Course-state terms | Candidate human terms | Domain complete; UI running | Adult-university terms | In progress |
-| Recovery logic | Explained in candidate copy | Domain complete; UI running | Not complete | In progress |
-| Capacity ownership | Explained in candidate copy | Domain complete; UI running | Missing | In progress |
-| Practice, proof, return | Partial explanation | Historical flows | Implemented starter loop | Open |
-| Privacy promise | Historical | Device-local | Private local store | Open |
-| Profile isolation | Not applicable | Device-local profile work | Local app profile boundary | Open |
-| Navigation | Historical site map | Fragmented routes | Native tabs and sheets | Open |
-| Design system | Mixed generations | Mixed generations | Early native Terrain | Open |
-| Accessibility | Historical evidence | Final pass missing | Final pass missing | Open |
+| Semester Desk v2 promise | Complete candidate | Complete local web loop | Complete native loop | Product parity complete |
+| Course-state terms | Human terms | Human terms | Human terms | Complete |
+| Recovery logic | Explained | Complete | Complete | Complete |
+| Capacity ownership | Explained | Complete | Complete | Complete |
+| Practice, proof, return | Explained | Complete | Complete except native reminders | In progress |
+| Privacy promise | Browser-local and truthful | Device-local | iPhone-local | Coherent |
+| Profile isolation | Not applicable | Local profile key | Local profile envelope | Complete locally |
+| Navigation | Public product map | One canonical `/app` | Today, Semester, Progress | Complete |
+| Design system | Editorial Terrain | Editorial Terrain | Native Editorial Terrain | Coherent |
+| Accessibility | Rendered sweep complete | Focus and responsive repairs complete | Unit and simulator baseline complete | Final runtime audit open |
 
 ## Open issues
 
@@ -277,16 +291,16 @@ No confirmed P0 defect exists at this baseline.
 
 ### P1
 
-1. The native application still exposes the old starter-course shell.
-2. No current cross-platform release candidate exists.
-3. No final rendered accessibility or performance evidence exists.
+1. Native system integrations and private state are not yet cut over to Semester Desk v2.
+2. Web and iOS lineages are not yet consolidated into one canonical release branch.
+3. Final production-artifact accessibility and performance evidence is incomplete.
 
 ### P2
 
 1. Historical route source remains in the repository.
-2. The reset result can be hidden after an iOS navigation change.
-3. Current disk pressure can block large builds or simulator artifacts.
-4. The current public release record describes an older product.
+2. Current disk pressure can block large builds or simulator artifacts.
+3. The current public deployment still describes an older product.
+4. Legal review is required before the draft Terms page can become final publication text.
 
 ## Deployment and signing status
 
@@ -299,9 +313,9 @@ No confirmed P0 defect exists at this baseline.
 | Public alias | `https://modelshift.vercel.app` |
 | Recorded deployment | `dpl_ET6nUWvjeVMEdacWJgCbxVsCT1qn` |
 | Recorded deployed SHA | `04eab4263658725d7a228c67682c40fc469757b1` |
-| Release status | `DEPLOYMENT_BLOCKED` |
-| Exact block | The deployment used CLI source and lacks provider-owned Git source and repository data. |
-| External action after final candidate | Authorize the Vercel GitHub App for `RanaPriyansh/modelshift`, connect `forge-learning-os`, and deploy the final branch from Git. |
+| Release status | Final Semester Desk v2 candidate is not deployed |
+| Exact block | The final branch exists only in the local repository. It is not pushed or deployed. |
+| External action after final candidate | Push the clean canonical branch, then deploy the saved final source through Vercel project `forge-learning-os`. |
 
 Do not deploy the final product until the final candidate is clean, tested, reviewed, and explicitly ready.
 
@@ -321,7 +335,7 @@ Do not deploy the final product until the final candidate is clean, tested, revi
 
 These are not current reasons to stop internal work.
 
-1. Vercel GitHub App authorization for a provider-owned Git deployment receipt.
+1. Authority to push the final branch and replace the current production Vercel deployment.
 2. Production cloud identity and persistence credentials, if the final product uses a cloud adapter.
 3. iOS distribution certificates, provisioning profiles, App Store Connect access, and physical-device access.
 4. Payment or billing authority, if a later release enables paid services.
@@ -338,8 +352,9 @@ These are not current reasons to stop internal work.
 
 ## Next internally executable action
 
-1. Complete the current rendered web-product repair loop.
-2. Implement and verify the native Semester Desk v2 application loop.
-3. Complete native system integrations against the v2 product model.
-4. Replace legacy browser and CI release gates with final product gates.
-5. Run full rendered, accessibility, performance, security, and release checks.
+1. Complete the native deterministic-time and duplicate-action repair.
+2. Complete native UI automation against the Semester Desk v2 shell.
+3. Cut reminder, widget, App Intent, deep-link, export, and private-state systems to Semester Desk v2.
+4. Complete the canonical public-route browser gate and full web production build.
+5. Consolidate web and iOS into one canonical release lineage.
+6. Run final rendered, accessibility, performance, security, archive, and release checks.
