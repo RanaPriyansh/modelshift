@@ -1,12 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { SEMESTER_DESK_V2_LOCAL_REPORT_DIRECTORY } from "./scripts/ops/semester-desk-v2-browser-contract";
+
 export type ForgePlaywrightEnvironment = Readonly<Record<string, string | undefined>>;
 
 export function resolvePlaywrightOutputDirectory(
   environment: ForgePlaywrightEnvironment = process.env,
 ): string {
   const outputDirectory =
-    environment.FORGE_PLAYWRIGHT_OUTPUT_DIR ?? "test-results/default";
+    environment.FORGE_PLAYWRIGHT_OUTPUT_DIR
+    ?? `test-results/${SEMESTER_DESK_V2_LOCAL_REPORT_DIRECTORY}`;
   if (!/^test-results\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(outputDirectory)) {
     throw new Error(
       "FORGE_PLAYWRIGHT_OUTPUT_DIR must be one bounded directory under test-results.",

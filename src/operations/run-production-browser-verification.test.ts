@@ -4,35 +4,47 @@ import { createRequire } from "node:module";
 
 import {
   appendBoundedServerLog,
+  assertCanonicalProductionBrowserArguments,
   assertProductionServerIdentity,
   PRODUCTION_BROWSER_SPECS,
   productionBrowserInvocation,
-  productionBrowserSpec,
   productionServerEnvironment,
   productionServerInvocation,
 } from "../../scripts/ops/run-production-browser-verification";
 
 describe("production browser command selection", () => {
-  it("runs the production allowlist when no focused spec is requested", () => {
-    expect(productionBrowserInvocation(undefined, "linux")).toEqual({
+  it("runs the canonical production browser contract", () => {
+    expect(productionBrowserInvocation("linux")).toEqual({
       command: "pnpm",
       args: ["exec", "playwright", "test", ...PRODUCTION_BROWSER_SPECS],
     });
   });
 
-  it("uses the platform package-manager command for the production allowlist", () => {
-    expect(productionBrowserInvocation(undefined, "win32")).toEqual({
+  it("uses the platform package-manager command for the canonical contract", () => {
+    expect(productionBrowserInvocation("win32")).toEqual({
       command: "pnpm.cmd",
       args: ["exec", "playwright", "test", ...PRODUCTION_BROWSER_SPECS],
     });
   });
 
-  it("preserves the direct Playwright command for a focused spec", () => {
-    const spec = "tests/e2e/university-semester-desk-production.spec.ts";
-    expect(productionBrowserInvocation(spec, "linux")).toEqual({
-      command: "pnpm",
-      args: ["exec", "playwright", "test", spec],
-    });
+  it("uses the canonical Semester Desk v2 spec only", () => {
+    expect(PRODUCTION_BROWSER_SPECS).toEqual([
+      "tests/e2e/semester-desk-v2-canonical.spec.ts",
+    ]);
+  });
+
+  it("rejects focused production spec selection", () => {
+    expect(() => assertCanonicalProductionBrowserArguments([
+      "--spec",
+      "tests/e2e/another.spec.ts",
+    ])).toThrow("always runs the Semester Desk v2 canonical spec");
+    expect(() => assertCanonicalProductionBrowserArguments([
+      "--spec=tests/e2e/another.spec.ts",
+    ])).toThrow("always runs the Semester Desk v2 canonical spec");
+    expect(() => assertCanonicalProductionBrowserArguments([
+      "--expected-sha",
+      "a".repeat(40),
+    ])).not.toThrow();
   });
 });
 
@@ -62,33 +74,13 @@ describe("production browser server-log buffer", () => {
     expect(log.length).toBeLessThanOrEqual(8);
   });
 
-  it("starts production with the exact Semester Desk denial fixture token", () => {
+  it("does not inherit retired fixture configuration", () => {
     const environment = productionServerEnvironment("A".repeat(40), {
       NODE_ENV: "test",
       FORGE_UNIVERSITY_SEMESTER_DESK_FIXTURE: "untrusted-override",
     });
-    expect(environment.FORGE_UNIVERSITY_SEMESTER_DESK_FIXTURE).toBe(
-      "forge-university-semester-desk.v1",
-    );
+    expect(environment.FORGE_UNIVERSITY_SEMESTER_DESK_FIXTURE).toBeUndefined();
     expect(environment.FORGE_RELEASE_SHA).toBe("a".repeat(40));
-  });
-
-  it("accepts only bounded repository-relative Playwright spec paths", () => {
-    expect(productionBrowserSpec(
-      "tests/e2e/university-research-readiness-production.spec.ts",
-    )).toBe("tests/e2e/university-research-readiness-production.spec.ts");
-    expect(productionBrowserSpec(undefined)).toBeUndefined();
-    for (const value of [
-      "../tests/e2e/production.spec.ts",
-      "tests/e2e/../../secret.spec.ts",
-      "/tests/e2e/production.spec.ts",
-      "tests\\e2e\\production.spec.ts",
-      "src/production.spec.ts",
-    ]) {
-      expect(() => productionBrowserSpec(value)).toThrow(
-        "--spec must be a repository-relative Playwright spec under tests/e2e",
-      );
-    }
   });
 
   it("binds both runtime and compiled build identity around browser execution", async () => {

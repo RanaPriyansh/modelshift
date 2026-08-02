@@ -18,49 +18,40 @@ import {
   playwrightCliInvocation,
   runPlaywrightWithReportDigest,
 } from "./run-playwright-with-report-digest";
+import {
+  SEMESTER_DESK_V2_CANONICAL_BROWSER_SPEC,
+  SEMESTER_DESK_V2_PRODUCTION_REPORT_DIRECTORY,
+} from "./semester-desk-v2-browser-contract";
 
 type ServerProcess = ChildProcessByStdio<null, Readable, Readable>;
 const STARTUP_TIMEOUT_MS = 90_000;
 export const MAX_SERVER_LOG_BYTES = 16_000;
 export const PRODUCTION_BROWSER_SPECS = Object.freeze([
-  "tests/e2e/production.spec.ts",
-  "tests/e2e/university-research-readiness-production.spec.ts",
-  "tests/e2e/university-semester-loop-production.spec.ts",
-  "tests/e2e/university-semester-desk-production.spec.ts",
-  "tests/e2e/university-semester-overview-production.spec.ts",
-  "tests/e2e/university-recovery-production.spec.ts",
-  "tests/e2e/university-post-attempt-repair-production.spec.ts",
-  "tests/e2e/university-foundation-production.spec.ts",
-  "tests/e2e/university-source-to-study-production.spec.ts",
+  SEMESTER_DESK_V2_CANONICAL_BROWSER_SPEC,
 ] as const);
 const arg = (name: string): string | undefined => { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : undefined; };
 const require = createRequire(import.meta.url);
 
-export function productionBrowserSpec(value: string | undefined): string | undefined {
-  if (value === undefined) return undefined;
-  if (
-    !/^tests\/e2e\/[A-Za-z0-9._/-]+\.spec\.ts$/.test(value)
-    || value.includes("..")
-    || value.includes("\\")
-  ) {
-    throw new Error(
-      "--spec must be a repository-relative Playwright spec under tests/e2e",
-    );
-  }
-  return value;
-}
-
 export function productionBrowserInvocation(
-  spec: string | undefined,
   platform: NodeJS.Platform = process.platform,
 ): { command: string; args: string[] } {
   const command = platform === "win32" ? "pnpm.cmd" : "pnpm";
   return {
     command,
-    args: spec
-      ? ["exec", "playwright", "test", spec]
-      : ["exec", "playwright", "test", ...PRODUCTION_BROWSER_SPECS],
+    args: ["exec", "playwright", "test", ...PRODUCTION_BROWSER_SPECS],
   };
+}
+
+export function assertCanonicalProductionBrowserArguments(
+  argumentsToCheck: readonly string[],
+): void {
+  if (argumentsToCheck.some((argument) => (
+    argument === "--spec" || argument.startsWith("--spec=")
+  ))) {
+    throw new Error(
+      "Production browser verification always runs the Semester Desk v2 canonical spec.",
+    );
+  }
 }
 
 /** Start the actual Next CLI process so shutdown cannot orphan a pnpm child. */
@@ -179,7 +170,8 @@ function browserEnvironment(
     PLAYWRIGHT_BASE_URL: baseUrl,
     FORGE_EXPECTED_RELEASE_SHA: expectedSha.toLowerCase(),
     FORGE_PLAYWRIGHT_PRODUCTION_BROWSER: "1",
-    FORGE_PLAYWRIGHT_OUTPUT_DIR: "test-results/production-browser",
+    FORGE_PLAYWRIGHT_OUTPUT_DIR:
+      `test-results/${SEMESTER_DESK_V2_PRODUCTION_REPORT_DIRECTORY}`,
     OPENAI_API_KEY: "",
     OPENAI_INTERPRETATION_ENABLED: "false",
     OPENAI_INTERPRETATION_DISABLED: "true",
@@ -208,10 +200,6 @@ export function productionServerEnvironment(
     OPENAI_INTERPRETATION_ENABLED: "false",
     OPENAI_FORGE_PLANNER_ENABLED: "false",
     FORGE_CLOUD_ACCOUNTS_ENABLED: "false",
-    FORGE_UNIVERSITY_RESEARCH_READINESS_FIXTURE:
-      "forge-university-research-readiness.v1",
-    FORGE_UNIVERSITY_SEMESTER_DESK_FIXTURE:
-      "forge-university-semester-desk.v1",
     FORGE_RELEASE_SHA: expectedSha.toLowerCase(),
     FORGE_BUILD_TIME: sourceEnvironment.FORGE_BUILD_TIME ?? "unknown",
     FORGE_LOCKFILE_DIGEST: sourceEnvironment.FORGE_LOCKFILE_DIGEST,
@@ -236,6 +224,7 @@ export function productionServerEnvironment(
 }
 
 async function main() {
+  assertCanonicalProductionBrowserArguments(process.argv.slice(2));
   const requestedSha = arg("--expected-sha");
   const currentSource = readProductionBuildSource();
   const expectedSha = requestedSha ?? (
@@ -248,7 +237,6 @@ async function main() {
       "--expected-sha must be a full 40-character Git SHA when the current checkout identity is unavailable",
     );
   }
-  const spec = productionBrowserSpec(arg("--spec"));
   const buildReceipt = assertExactProductionBuild(expectedSha);
   const runtimeSnapshot = createProductionRuntimeSnapshot(expectedSha);
   process.stdout.write(
@@ -273,10 +261,11 @@ async function main() {
     try {
       await waitForServer(baseUrl, child);
       await assertProductionServerIdentity(baseUrl, expectedSha);
-      const invocation = playwrightCliInvocation(spec ? [spec] : PRODUCTION_BROWSER_SPECS);
+      const invocation = playwrightCliInvocation(PRODUCTION_BROWSER_SPECS);
       const result = await runPlaywrightWithReportDigest({
         rootDirectory: process.cwd(),
-        reportFile: "test-results/production-browser/playwright-report.json",
+        reportFile:
+          `test-results/${SEMESTER_DESK_V2_PRODUCTION_REPORT_DIRECTORY}/playwright-report.json`,
         command: invocation.command,
         args: invocation.args,
         environment: browserEnvironment(baseUrl, expectedSha),

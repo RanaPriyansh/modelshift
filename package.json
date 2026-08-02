@@ -20,16 +20,8 @@
     "eval:live": "tsx evals/run-live-evals.ts",
     "eval:lesson-studio:live": "tsx evals/run-lesson-studio-live-evals.ts",
     "test:eval-runner": "vitest run --config evals/vitest.config.ts",
-    "test:e2e": "playwright test",
-    "test:e2e:research-readiness": "FORGE_UNIVERSITY_RESEARCH_READINESS_FIXTURE=forge-university-research-readiness.v1 playwright test tests/e2e/university-research-readiness.spec.ts",
-    "test:e2e:university-recovery": "FORGE_UNIVERSITY_RECOVERY_FIXTURE=forge-university-recovery.v1 playwright test tests/e2e/university-recovery.spec.ts",
-    "test:e2e:university-recovery-what-if": "FORGE_UNIVERSITY_RECOVERY_FIXTURE=forge-university-recovery-what-if.v1 playwright test tests/e2e/university-recovery-what-if.spec.ts",
-    "test:e2e:university-semester-desk": "FORGE_UNIVERSITY_SEMESTER_DESK_FIXTURE=forge-university-semester-desk.v1 playwright test tests/e2e/university-semester-desk.spec.ts",
-    "test:e2e:university-semester-overview": "FORGE_UNIVERSITY_SEMESTER_OVERVIEW_FIXTURE=forge-university-semester-overview.v1 playwright test tests/e2e/university-semester-overview.spec.ts",
-    "test:e2e:university-post-attempt-repair": "FORGE_UNIVERSITY_POST_ATTEMPT_REPAIR_FIXTURE=forge-university-post-attempt-repair.v1 playwright test tests/e2e/university-post-attempt-repair.spec.ts",
-    "test:e2e:university-foundation": "FORGE_UNIVERSITY_COMMAND_CENTER_FIXTURE=forge-university-command-center.v1 FORGE_UNIVERSITY_DEGREE_MAP_FIXTURE=forge-university-degree-map.v1 FORGE_UNIVERSITY_LEARNING_MAP_FIXTURE=forge-university-learning-map.v1 playwright test tests/e2e/university-foundation.spec.ts",
-    "test:e2e:prod": "PLAYWRIGHT_BASE_URL=${PLAYWRIGHT_BASE_URL:?Set PLAYWRIGHT_BASE_URL} FORGE_EXPECTED_RELEASE_SHA=${FORGE_EXPECTED_RELEASE_SHA:?Set FORGE_EXPECTED_RELEASE_SHA} playwright test tests/e2e/production.spec.ts tests/e2e/university-research-readiness-production.spec.ts tests/e2e/university-semester-loop-production.spec.ts tests/e2e/university-semester-desk-production.spec.ts tests/e2e/university-semester-overview-production.spec.ts tests/e2e/university-recovery-production.spec.ts tests/e2e/university-post-attempt-repair-production.spec.ts tests/e2e/university-foundation-production.spec.ts tests/e2e/university-source-to-study-production.spec.ts",
-    "test:e2e:research-readiness:prod": "tsx scripts/ops/run-production-browser-verification.ts --spec tests/e2e/university-research-readiness-production.spec.ts"
+    "test:e2e": "playwright test tests/e2e/semester-desk-v2-canonical.spec.ts",
+    "test:e2e:prod": "FORGE_EXPECTED_RELEASE_SHA=${FORGE_EXPECTED_RELEASE_SHA:?Set FORGE_EXPECTED_RELEASE_SHA} tsx scripts/ops/run-production-browser-verification.ts --expected-sha \"$FORGE_EXPECTED_RELEASE_SHA\""
   },
   "dependencies": {
     "@supabase/ssr": "0.12.3",

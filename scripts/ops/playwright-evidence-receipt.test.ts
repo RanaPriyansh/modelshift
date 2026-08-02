@@ -91,20 +91,20 @@ function reportForSpecs(
 
 // Faithful minimal Playwright 1.61.1 `--list --reporter=json` fixture.
 // The configured testDir is `./tests/e2e`, so the reporter emits a relative file.
-function foundationReport(
+function semesterDeskV2LocalReport(
   tests: readonly ReturnType<typeof testRecord>[] = [
     testRecord("desktop", "expected", ["passed"]),
     testRecord("mobile", "expected", ["passed"]),
   ],
 ) {
   return reportForSpecs({
-    "university-foundation.spec.ts": tests,
+    "semester-desk-v2-canonical.spec.ts": tests,
   });
 }
 
-function productionReport() {
+function semesterDeskV2ProductionReport() {
   const specs = Object.fromEntries(
-    PLAYWRIGHT_EVIDENCE_TARGETS.production.expected_specs.map((spec, index) => [
+    PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Production.expected_specs.map((spec, index) => [
       spec.slice("tests/e2e/".length),
       [
         testRecord("desktop", "expected", ["passed"]),
@@ -115,19 +115,19 @@ function productionReport() {
   return reportForSpecs(specs);
 }
 
-function foundationReceiptBytes(testedSha = SHA): Buffer {
+function semesterDeskV2LocalReceiptBytes(testedSha = SHA): Buffer {
   const receipt = buildPlaywrightEvidenceReceipt({
-    target: "foundation",
+    target: "semesterDeskV2Local",
     testedSha,
     requestedStatus: "pass",
-    summary: parsePlaywrightJsonReport(foundationReport()),
+    summary: parsePlaywrightJsonReport(semesterDeskV2LocalReport()),
     reportSha256: REPORT_SHA256,
   });
   return Buffer.from(`${JSON.stringify(receipt, null, 2)}\n`, "utf8");
 }
 
-function forgedFoundationReceiptBytes(): Buffer {
-  const receipt = JSON.parse(foundationReceiptBytes().toString("utf8")) as Record<string, unknown>;
+function forgedSemesterDeskV2LocalReceiptBytes(): Buffer {
+  const receipt = JSON.parse(semesterDeskV2LocalReceiptBytes().toString("utf8")) as Record<string, unknown>;
   receipt.tested_sha = FORGED_SHA;
   return Buffer.from(`${JSON.stringify(receipt, null, 2)}\n`, "utf8");
 }
@@ -235,13 +235,13 @@ describe("Playwright browser evidence receipt", () => {
   });
 
   it("records exact observed coverage and passed coverage without test text", () => {
-    const summary = parsePlaywrightJsonReport(foundationReport());
+    const summary = parsePlaywrightJsonReport(semesterDeskV2LocalReport());
 
     expect(summary).toEqual({
       observed: {
-        specs: ["tests/e2e/university-foundation.spec.ts"],
+        specs: ["tests/e2e/semester-desk-v2-canonical.spec.ts"],
         projects: ["desktop", "mobile"],
-        passed_specs: ["tests/e2e/university-foundation.spec.ts"],
+        passed_specs: ["tests/e2e/semester-desk-v2-canonical.spec.ts"],
         passed_projects: ["desktop", "mobile"],
       },
       counts: {
@@ -258,19 +258,19 @@ describe("Playwright browser evidence receipt", () => {
   });
 
   it("normalizes Playwright 1.61.1 testDir-relative reporter paths", () => {
-    const summary = parsePlaywrightJsonReport(foundationReport());
-    expect(summary.observed.specs).toEqual(["tests/e2e/university-foundation.spec.ts"]);
+    const summary = parsePlaywrightJsonReport(semesterDeskV2LocalReport());
+    expect(summary.observed.specs).toEqual(["tests/e2e/semester-desk-v2-canonical.spec.ts"]);
 
     for (const file of [
-      "/university-foundation.spec.ts",
-      "../university-foundation.spec.ts",
-      "nested/../university-foundation.spec.ts",
-      "tests/e2e/university-foundation.spec.ts",
-      "./university-foundation.spec.ts",
-      "nested//university-foundation.spec.ts",
-      "university-foundation.spec.ts\\replacement",
-      "university foundation.spec.ts",
-      "university-foundation.ts",
+      "/semester-desk-v2-canonical.spec.ts",
+      "../semester-desk-v2-canonical.spec.ts",
+      "nested/../semester-desk-v2-canonical.spec.ts",
+      "tests/e2e/semester-desk-v2-canonical.spec.ts",
+      "./semester-desk-v2-canonical.spec.ts",
+      "nested//semester-desk-v2-canonical.spec.ts",
+      "semester-desk-v2-canonical.spec.ts\\replacement",
+      "semester desk v2 canonical.spec.ts",
+      "semester-desk-v2-canonical.ts",
     ]) {
       expect(() => parsePlaywrightJsonReport(reportForSpecs({
         [file]: [testRecord("desktop", "expected", ["passed"])],
@@ -280,10 +280,10 @@ describe("Playwright browser evidence receipt", () => {
 
   it("does not inflate one-test coverage to the expected project set", () => {
     const receipt = buildPlaywrightEvidenceReceipt({
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
-      summary: parsePlaywrightJsonReport(foundationReport([
+      summary: parsePlaywrightJsonReport(semesterDeskV2LocalReport([
         testRecord("desktop", "expected", ["passed"]),
       ])),
     });
@@ -296,10 +296,10 @@ describe("Playwright browser evidence receipt", () => {
 
   it("records skipped cases but does not let them satisfy coverage", () => {
     const receipt = buildPlaywrightEvidenceReceipt({
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
-      summary: parsePlaywrightJsonReport(foundationReport([
+      summary: parsePlaywrightJsonReport(semesterDeskV2LocalReport([
         testRecord("desktop", "skipped", ["skipped"]),
         testRecord("mobile", "skipped", ["skipped"]),
       ])),
@@ -312,19 +312,19 @@ describe("Playwright browser evidence receipt", () => {
   });
 
   it("accepts zero-result intentional skips with expectedStatus skipped", () => {
-    const summary = parsePlaywrightJsonReport(foundationReport([
+    const summary = parsePlaywrightJsonReport(semesterDeskV2LocalReport([
       testRecord("desktop", "skipped", []),
       testRecord("mobile", "skipped", ["skipped"]),
     ]));
     const receipt = buildPlaywrightEvidenceReceipt({
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       summary,
     });
 
     expect(summary.counts).toMatchObject({ total: 2, passed: 0, skipped: 2 });
-    expect(summary.observed.specs).toEqual(["tests/e2e/university-foundation.spec.ts"]);
+    expect(summary.observed.specs).toEqual(["tests/e2e/semester-desk-v2-canonical.spec.ts"]);
     expect(summary.observed.projects).toEqual(["desktop", "mobile"]);
     expect(summary.observed.passed_specs).toEqual([]);
     expect(summary.observed.passed_projects).toEqual([]);
@@ -332,12 +332,12 @@ describe("Playwright browser evidence receipt", () => {
   });
 
   it("records list-mode did-not-run cases and fails mixed pass coverage", () => {
-    const summary = parsePlaywrightJsonReport(foundationReport([
+    const summary = parsePlaywrightJsonReport(semesterDeskV2LocalReport([
       testRecord("desktop", "skipped", [], "passed"),
       testRecord("mobile", "expected", ["passed"]),
     ]));
     const receipt = buildPlaywrightEvidenceReceipt({
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       summary,
@@ -354,7 +354,7 @@ describe("Playwright browser evidence receipt", () => {
     expect(receipt.status).toBe("fail");
     expect(receipt.counts.did_not_run).toBe(1);
 
-    const onlySkippedResult = parsePlaywrightJsonReport(foundationReport([
+    const onlySkippedResult = parsePlaywrightJsonReport(semesterDeskV2LocalReport([
       testRecord("desktop", "skipped", ["skipped"], "passed"),
       testRecord("mobile", "expected", ["passed"]),
     ]));
@@ -363,10 +363,10 @@ describe("Playwright browser evidence receipt", () => {
 
   it("rejects empty expected-passed results and contaminated skipped results", () => {
     const reports = [
-      foundationReport([
+      semesterDeskV2LocalReport([
         testRecord("desktop", "expected", []),
       ]),
-      foundationReport([
+      semesterDeskV2LocalReport([
         testRecord("desktop", "skipped", ["skipped", "passed"], "passed"),
       ]),
     ];
@@ -378,10 +378,10 @@ describe("Playwright browser evidence receipt", () => {
 
   it("rejects a timeout followed by a retry pass", () => {
     const receipt = buildPlaywrightEvidenceReceipt({
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
-      summary: parsePlaywrightJsonReport(foundationReport([
+      summary: parsePlaywrightJsonReport(semesterDeskV2LocalReport([
         testRecord("desktop", "flaky", ["timedOut", "passed"]),
         testRecord("mobile", "expected", ["passed"]),
       ])),
@@ -393,13 +393,13 @@ describe("Playwright browser evidence receipt", () => {
 
   it("fails closed for expected failures and unknown status values", () => {
     const reports = [
-      foundationReport([
+      semesterDeskV2LocalReport([
         testRecord("desktop", "expected", ["failed"], "failed"),
       ]),
-      foundationReport([
+      semesterDeskV2LocalReport([
         testRecord("desktop", "unknown" as TestStatus, ["passed"]),
       ]),
-      foundationReport([
+      semesterDeskV2LocalReport([
         testRecord("desktop", "expected", ["unknown" as ResultStatus]),
       ]),
     ];
@@ -411,14 +411,14 @@ describe("Playwright browser evidence receipt", () => {
 
   it("fails closed for an expected two-project retry history", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport([
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport([
       testRecord("desktop", "expected", ["failed", "passed"]),
       testRecord("mobile", "expected", ["failed", "passed"]),
     ]));
 
     const result = await writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
     });
@@ -438,13 +438,13 @@ describe("Playwright browser evidence receipt", () => {
 
   it("fails closed for root errors and interrupted results", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", {
+    await writeReport(root, "semesterDeskV2Local", {
       errors: [{ message: "worker could not start" }],
       suites: [],
     });
     const result = await writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
     });
@@ -456,7 +456,7 @@ describe("Playwright browser evidence receipt", () => {
       status: "fail",
     });
 
-    const interrupted = parsePlaywrightJsonReport(foundationReport([
+    const interrupted = parsePlaywrightJsonReport(semesterDeskV2LocalReport([
       testRecord("desktop", "unexpected", ["interrupted"]),
       testRecord("mobile", "expected", ["passed"]),
     ]));
@@ -472,11 +472,11 @@ describe("Playwright browser evidence receipt", () => {
     ["oversized", Buffer.alloc(MAX_PLAYWRIGHT_REPORT_BYTES + 1, 0x20), "oversized"],
   ] as const)("writes a bounded fail receipt for %s input", async (_name, report, inputStatus) => {
     const root = await temporaryRoot();
-    if (report !== undefined) await writeReport(root, "foundation", report);
+    if (report !== undefined) await writeReport(root, "semesterDeskV2Local", report);
 
     const result = await writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
     });
@@ -489,7 +489,7 @@ describe("Playwright browser evidence receipt", () => {
 
   it("rejects a report symlink and still writes a fail receipt", async () => {
     const root = await temporaryRoot();
-    const reportPath = await writeReport(root, "foundation", foundationReport());
+    const reportPath = await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
     const outside = resolve(root, "outside-report.json");
     await writeFile(outside, await readFile(reportPath));
     await rm(reportPath);
@@ -497,7 +497,7 @@ describe("Playwright browser evidence receipt", () => {
 
     const result = await writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
     });
@@ -508,14 +508,14 @@ describe("Playwright browser evidence receipt", () => {
 
   it("fails closed when the report inode changes between lstat and open", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
     const originalPath = resolve(root, "original-report.json");
     const replacementPath = resolve(root, "replacement-report.json");
-    await writeFile(replacementPath, JSON.stringify(foundationReport()));
+    await writeFile(replacementPath, JSON.stringify(semesterDeskV2LocalReport()));
 
     const result = await writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       hooks: {
@@ -532,7 +532,7 @@ describe("Playwright browser evidence receipt", () => {
 
   it("fails closed when the helper source changes between lstat and open", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
     const helperPath = resolve(root, "receipt-helper.py");
     const originalPath = resolve(root, "original-receipt-helper.py");
     const replacementPath = resolve(root, "replacement-receipt-helper.py");
@@ -541,7 +541,7 @@ describe("Playwright browser evidence receipt", () => {
 
     await expect(writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       hooks: {
@@ -555,20 +555,20 @@ describe("Playwright browser evidence receipt", () => {
 
     expect((await readReceipt(resolve(
       root,
-      PLAYWRIGHT_EVIDENCE_TARGETS.foundation.writer_error_output_file,
+      PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.writer_error_output_file,
     ))).input_status).toBe("writer_error");
   });
 
   it("does not execute a same-size in-place helper replacement", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
     const helperPath = resolve(root, "receipt-helper.py");
     const trustedHelperPath = resolve(process.cwd(), "scripts/ops/write-exclusive-receipt.py");
     const trustedHelper = await readFile(trustedHelperPath);
     await writeFile(helperPath, trustedHelper);
     const helperBefore = await lstat(helperPath);
     const marker = resolve(root, "untrusted-helper-marker.txt");
-    const primary = resolve(root, PLAYWRIGHT_EVIDENCE_TARGETS.foundation.output_file);
+    const primary = resolve(root, PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.output_file);
     const replacement = sameLengthPython(`
 import pathlib
 pathlib.Path(${JSON.stringify(marker)}).write_text("UNTRUSTED", encoding="utf-8")
@@ -577,7 +577,7 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
     await expect(writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       hooks: {
@@ -597,7 +597,7 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
     await expect(lstat(primary)).rejects.toMatchObject({ code: "ENOENT" });
     expect((await readReceipt(resolve(
       root,
-      PLAYWRIGHT_EVIDENCE_TARGETS.foundation.writer_error_output_file,
+      PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.writer_error_output_file,
     ))).input_status).toBe("writer_error");
   });
 
@@ -605,7 +605,7 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
     const cases = ["symlink", "oversized"] as const;
     for (const name of cases) {
       const root = await temporaryRoot();
-      await writeReport(root, "foundation", foundationReport());
+      await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
       const helperPath = resolve(root, `receipt-helper-${name}.py`);
       if (name === "symlink") {
         const outside = resolve(root, "outside-receipt-helper.py");
@@ -617,26 +617,26 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
       await expect(writePlaywrightEvidenceReceipt({
         rootDirectory: root,
-        target: "foundation",
+        target: "semesterDeskV2Local",
         testedSha: SHA,
         requestedStatus: "pass",
         hooks: { helperPath },
       })).rejects.toThrow();
       expect((await readReceipt(resolve(
         root,
-        PLAYWRIGHT_EVIDENCE_TARGETS.foundation.writer_error_output_file,
+        PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.writer_error_output_file,
       ))).input_status).toBe("writer_error");
     }
   });
 
   it("rejects a trusted parent replacement after report read", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
     const releaseOps = resolve(root, "test-results/release-ops");
 
     await expect(writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       hooks: {
@@ -650,12 +650,12 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
   it("rejects a trusted parent replacement after output write", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
     const releaseOps = resolve(root, "test-results/release-ops");
 
     await expect(writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       hooks: {
@@ -669,18 +669,18 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
   it("rejects a parent symlink before writing receipt bytes", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
     const releaseOps = resolve(root, "test-results/release-ops");
     const outside = resolve(root, "outside-release-ops");
     const outsideOutput = resolve(
       outside,
-      "forge-browser-foundation-receipt.json",
+      "forge-browser-semester-desk-v2-local-receipt.json",
     );
     await mkdir(outside);
 
     await expect(writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       hooks: {
@@ -696,13 +696,13 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
   it("writes relative to the opened directory and rejects a directory rename", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
     const releaseOps = resolve(root, "test-results/release-ops");
     const movedReleaseOps = resolve(root, "moved-release-ops");
 
     await expect(writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       hooks: {
@@ -712,7 +712,7 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
       },
     })).rejects.toThrow();
 
-    const movedOutput = resolve(movedReleaseOps, "forge-browser-foundation-receipt.json");
+    const movedOutput = resolve(movedReleaseOps, "forge-browser-semester-desk-v2-local-receipt.json");
     const movedReceipt = JSON.parse(await readFile(movedOutput, "utf8")) as Record<string, unknown>;
     expect(movedReceipt.status).toBe("pass");
     expect((await readFile(movedOutput)).byteLength).toBeGreaterThan(0);
@@ -720,12 +720,12 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
   it("does not leave a partial final receipt when the relative commit collides", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
-    const output = resolve(root, PLAYWRIGHT_EVIDENCE_TARGETS.foundation.output_file);
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
+    const output = resolve(root, PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.output_file);
 
     await expect(writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       hooks: {
@@ -737,8 +737,8 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
     expect(await readFile(output, "utf8")).toBe("collision");
     expect(await readdir(dirname(output))).toEqual([
-      "forge-browser-foundation-receipt.json",
-      "forge-browser-foundation-writer-error-receipt.json",
+      "forge-browser-semester-desk-v2-local-receipt.json",
+      "forge-browser-semester-desk-v2-local-writer-error-receipt.json",
     ]);
   });
 
@@ -751,25 +751,25 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
     for (const [name, helperSource, helperTimeoutMs] of cases) {
       const root = await temporaryRoot();
-      await writeReport(root, "foundation", foundationReport());
+      await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
       const helperPath = resolve(root, `receipt-helper-${name}.py`);
       await writeFile(helperPath, helperSource);
 
       await expect(writePlaywrightEvidenceReceipt({
         rootDirectory: root,
-        target: "foundation",
+        target: "semesterDeskV2Local",
         testedSha: SHA,
         requestedStatus: "pass",
         hooks: { helperPath, helperTimeoutMs },
       })).rejects.toThrow();
-      await expect(lstat(resolve(root, PLAYWRIGHT_EVIDENCE_TARGETS.foundation.output_file)))
+      await expect(lstat(resolve(root, PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.output_file)))
         .rejects.toMatchObject({ code: "ENOENT" });
       const fallback = await readReceipt(resolve(
         root,
-        PLAYWRIGHT_EVIDENCE_TARGETS.foundation.writer_error_output_file,
+        PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.writer_error_output_file,
       ));
       const expectedFallback = buildPlaywrightEvidenceReceipt({
-        target: "foundation",
+        target: "semesterDeskV2Local",
         testedSha: SHA,
         inputStatus: "writer_error",
         requestedStatus: "fail",
@@ -788,7 +788,7 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
       });
       const fallbackPath = resolve(
         root,
-        PLAYWRIGHT_EVIDENCE_TARGETS.foundation.writer_error_output_file,
+        PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.writer_error_output_file,
       );
       expect(await readFile(fallbackPath)).toEqual(Buffer.from(
         `${JSON.stringify(expectedFallback, null, 2)}\n`,
@@ -803,13 +803,13 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
   it("cleans exactly the bounded number of temporary entries", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
     const helperPath = resolve(root, "receipt-helper-cleanup-limit.py");
     await writeFile(helperPath, cleanupLimitProbeHelper(CLEANUP_ENTRY_LIMIT));
 
     await expect(writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       hooks: { helperPath },
@@ -817,7 +817,7 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
     const releaseOps = dirname(resolve(
       root,
-      PLAYWRIGHT_EVIDENCE_TARGETS.foundation.writer_error_output_file,
+      PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.writer_error_output_file,
     ));
     expect((await readdir(releaseOps))
       .filter((entry) => entry.startsWith(TEMP_RECEIPT_PREFIX))).toEqual([]);
@@ -825,13 +825,13 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
   it("fails closed before deleting any over-limit temporary entries", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
     const helperPath = resolve(root, "receipt-helper-cleanup-over-limit.py");
     await writeFile(helperPath, cleanupLimitProbeHelper(CLEANUP_ENTRY_LIMIT + 1));
 
     await expect(writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       hooks: { helperPath },
@@ -839,7 +839,7 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
     const releaseOps = dirname(resolve(
       root,
-      PLAYWRIGHT_EVIDENCE_TARGETS.foundation.writer_error_output_file,
+      PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.writer_error_output_file,
     ));
     expect((await readdir(releaseOps))
       .filter((entry) => entry.startsWith(TEMP_RECEIPT_PREFIX))).toHaveLength(CLEANUP_ENTRY_LIMIT + 1);
@@ -847,25 +847,25 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
   it("rejects helper stderr and preserves full receipt integrity", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
     const helperPath = resolve(root, "receipt-helper-stderr.py");
     await writeFile(helperPath, "import sys\nsys.stdin.buffer.read()\nprint('diagnostic', file=sys.stderr)\n");
 
     await expect(writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       hooks: { helperPath },
     })).rejects.toThrow();
 
     const successRoot = await temporaryRoot();
-    await writeReport(successRoot, "foundation", foundationReport());
+    await writeReport(successRoot, "semesterDeskV2Local", semesterDeskV2LocalReport());
     const githubOutput = resolve(successRoot, "github-output");
     await writeFile(githubOutput, "");
     const result = await writePlaywrightEvidenceReceipt({
       rootDirectory: successRoot,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       githubOutput,
@@ -877,19 +877,19 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
     expect(result.receiptSha256).toBe(reportDigest(receiptBytes));
     expect(await readFile(githubOutput, "utf8")).toBe(`receipt_sha256=${result.receiptSha256}\n`);
     expect(await readdir(dirname(result.outputPath))).toEqual([
-      "forge-browser-foundation-receipt.json",
+      "forge-browser-semester-desk-v2-local-receipt.json",
     ]);
   });
 
   it("rejects a malicious helper that writes a same-size forged pass receipt", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
     const helperPath = resolve(root, "malicious-receipt-helper.py");
     await writeFile(helperPath, MALICIOUS_HELPER_SOURCE);
 
     await expect(writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       hooks: { helperPath },
@@ -897,29 +897,29 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
     const primary = await readReceipt(resolve(
       root,
-      PLAYWRIGHT_EVIDENCE_TARGETS.foundation.output_file,
+      PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.output_file,
     ));
     expect(primary).toMatchObject({ status: "pass", tested_sha: FORGED_SHA });
     expect((await readFile(resolve(
       root,
-      PLAYWRIGHT_EVIDENCE_TARGETS.foundation.output_file,
-    ))).byteLength).toBe(forgedFoundationReceiptBytes().byteLength);
+      PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.output_file,
+    ))).byteLength).toBe(forgedSemesterDeskV2LocalReceiptBytes().byteLength);
     expect((await readReceipt(resolve(
       root,
-      PLAYWRIGHT_EVIDENCE_TARGETS.foundation.writer_error_output_file,
+      PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.writer_error_output_file,
     ))).input_status).toBe("writer_error");
   });
 
   it("rejects a same-size valid JSON replacement after the helper write", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
-    const forgedBytes = forgedFoundationReceiptBytes();
-    const expectedBytes = foundationReceiptBytes();
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
+    const forgedBytes = forgedSemesterDeskV2LocalReceiptBytes();
+    const expectedBytes = semesterDeskV2LocalReceiptBytes();
     expect(forgedBytes.byteLength).toBe(expectedBytes.byteLength);
 
     await expect(writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       hooks: {
@@ -931,25 +931,25 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
     })).rejects.toThrow();
     expect((await readReceipt(resolve(
       root,
-      PLAYWRIGHT_EVIDENCE_TARGETS.foundation.output_file,
+      PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.output_file,
     ))).tested_sha).toBe(FORGED_SHA);
   });
 
   it("rejects a same-size flaky-to-pass report replacement", async () => {
     const root = await temporaryRoot();
-    const flakyReport = foundationReport([
+    const flakyReport = semesterDeskV2LocalReport([
       testRecord("desktop", "flaky", ["failed", "passed"]),
       testRecord("mobile", "expected", ["passed"]),
     ]);
-    const passingReport = foundationReport();
+    const passingReport = semesterDeskV2LocalReport();
     const [flakyBytes, passingBytes] = sameSizeReports(flakyReport, passingReport);
     expect(flakyBytes.byteLength).toBe(passingBytes.byteLength);
-    const reportPath = await writeReport(root, "foundation", flakyBytes);
+    const reportPath = await writeReport(root, "semesterDeskV2Local", flakyBytes);
     const reportBefore = await lstat(reportPath);
 
     const result = await writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       reportSha256: reportDigest(flakyBytes),
       requestedStatus: "pass",
@@ -966,7 +966,7 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
     expect(reportPath).toBe(resolve(
       root,
-      "test-results/university-foundation/playwright-report.json",
+      "test-results/semester-desk-v2-local/playwright-report.json",
     ));
     expect(result.receipt).toMatchObject({
       input_status: "digest_mismatch",
@@ -984,10 +984,10 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
   it("fails closed when the report path changes after report bytes are read", async () => {
     const root = await temporaryRoot();
     const [originalBytes, replacementBytes] = sameSizeReports(
-      foundationReport(),
-      foundationReport([testRecord("desktop", "expected", ["passed"])]),
+      semesterDeskV2LocalReport(),
+      semesterDeskV2LocalReport([testRecord("desktop", "expected", ["passed"])]),
     );
-    const reportPath = await writeReport(root, "foundation", originalBytes);
+    const reportPath = await writeReport(root, "semesterDeskV2Local", originalBytes);
     const parkedPath = resolve(root, "original-report-after-read.json");
     const replacementPath = resolve(root, "replacement-report-after-read.json");
     await writeFile(replacementPath, replacementBytes);
@@ -998,7 +998,7 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
     const result = await writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       reportSha256: reportDigest(originalBytes),
       requestedStatus: "pass",
@@ -1025,13 +1025,13 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
   it("rejects an exact final-byte mismatch on the same inode", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
-    const forgedBytes = forgedFoundationReceiptBytes();
-    const output = resolve(root, PLAYWRIGHT_EVIDENCE_TARGETS.foundation.output_file);
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
+    const forgedBytes = forgedSemesterDeskV2LocalReceiptBytes();
+    const output = resolve(root, PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.output_file);
 
     await expect(writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       hooks: {
@@ -1045,11 +1045,11 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
   it("rejects an output path replacement after the exclusive write", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
 
     const result = await writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
       hooks: {
@@ -1061,7 +1061,7 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
     }).catch((error: unknown) => error);
 
     expect(result).toBeInstanceOf(Error);
-    expect(await readFile(resolve(root, PLAYWRIGHT_EVIDENCE_TARGETS.foundation.output_file), "utf8"))
+    expect(await readFile(resolve(root, PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.output_file), "utf8"))
       .toBe("replacement");
   });
 
@@ -1074,11 +1074,11 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
       ]),
     ));
     expect(Buffer.byteLength(JSON.stringify(report), "utf8")).toBeLessThan(MAX_PLAYWRIGHT_REPORT_BYTES);
-    await writeReport(root, "foundation", report);
+    await writeReport(root, "semesterDeskV2Local", report);
 
     const result = await writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
     });
@@ -1108,7 +1108,7 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
   it("writes an empty bounded fail receipt when the test count exceeds the limit", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport(
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport(
       Array.from({ length: MAX_PLAYWRIGHT_TESTS + 1 }, () => (
         testRecord("desktop", "expected", ["passed"])
       )),
@@ -1116,7 +1116,7 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
     const result = await writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
     });
@@ -1127,8 +1127,8 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
   it("rejects an output symlink without changing its target", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
-    const output = resolve(root, PLAYWRIGHT_EVIDENCE_TARGETS.foundation.output_file);
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
+    const output = resolve(root, PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.output_file);
     const outside = resolve(root, "outside-receipt.json");
     await mkdir(dirname(output), { recursive: true });
     await writeFile(outside, "keep this file");
@@ -1136,7 +1136,7 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
     await expect(writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
     })).rejects.toThrow();
@@ -1145,10 +1145,10 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
   it("validates the fixed output path before reading input and rejects output collisions", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "foundation", foundationReport());
+    await writeReport(root, "semesterDeskV2Local", semesterDeskV2LocalReport());
     const first = await writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
     });
@@ -1156,44 +1156,44 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
     await expect(writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
     })).rejects.toThrow();
     expect(await readFile(first.outputPath, "utf8")).toBe(original);
     expect((await readReceipt(resolve(
       root,
-      PLAYWRIGHT_EVIDENCE_TARGETS.foundation.writer_error_output_file,
+      PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Local.writer_error_output_file,
     ))).input_status).toBe("writer_error");
   });
 
   it("keeps development and production evidence in separate receipts", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "production", productionReport());
+    await writeReport(root, "semesterDeskV2Production", semesterDeskV2ProductionReport());
 
-    const foundation = await writePlaywrightEvidenceReceipt({
+    const local = await writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
     });
     const production = await writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "production",
+      target: "semesterDeskV2Production",
       testedSha: SHA,
       requestedStatus: "pass",
     });
 
-    expect(foundation.outputPath).not.toBe(production.outputPath);
-    expect(foundation.receipt).toMatchObject({
-      target: "foundation",
+    expect(local.outputPath).not.toBe(production.outputPath);
+    expect(local.receipt).toMatchObject({
+      target: "semesterDeskV2Local",
       evidence_environment: "development",
       artifact_class: "development_source",
       input_status: "missing",
       status: "fail",
     });
     expect(production.receipt).toMatchObject({
-      target: "production",
+      target: "semesterDeskV2Production",
       evidence_environment: "production",
       artifact_class: "production_build_artifact",
       input_status: "valid",
@@ -1203,18 +1203,18 @@ pathlib.Path(${JSON.stringify(primary)}).write_text("UNTRUSTED", encoding="utf-8
 
   it("passes exact production spec and project coverage", async () => {
     const root = await temporaryRoot();
-    await writeReport(root, "production", productionReport());
+    await writeReport(root, "semesterDeskV2Production", semesterDeskV2ProductionReport());
 
     const result = await writePlaywrightEvidenceReceipt({
       rootDirectory: root,
-      target: "production",
+      target: "semesterDeskV2Production",
       testedSha: SHA,
       requestedStatus: "pass",
     });
 
     expect(result.receipt.status).toBe("pass");
     expect(result.receipt.observed.specs).toEqual(
-      [...PLAYWRIGHT_EVIDENCE_TARGETS.production.expected_specs].sort(),
+      [...PLAYWRIGHT_EVIDENCE_TARGETS.semesterDeskV2Production.expected_specs].sort(),
     );
     expect(result.receipt.observed.projects).toEqual(["desktop", "mobile"]);
   });

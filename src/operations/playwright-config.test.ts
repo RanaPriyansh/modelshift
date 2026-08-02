@@ -8,23 +8,25 @@ import {
 
 describe("Playwright result isolation", () => {
   it("uses a bounded default directory", () => {
-    expect(resolvePlaywrightOutputDirectory({})).toBe("test-results/default");
+    expect(resolvePlaywrightOutputDirectory({})).toBe(
+      "test-results/semester-desk-v2-local",
+    );
   });
 
   it("accepts one direct child under test-results", () => {
     expect(
       resolvePlaywrightOutputDirectory({
-        FORGE_PLAYWRIGHT_OUTPUT_DIR: "test-results/university-foundation",
+        FORGE_PLAYWRIGHT_OUTPUT_DIR: "test-results/semester-desk-v2-local",
       }),
-    ).toBe("test-results/university-foundation");
+    ).toBe("test-results/semester-desk-v2-local");
   });
 
   it("writes the established JSON report inside the bounded output directory", () => {
     expect(
       resolvePlaywrightJsonOutputFile({
-        FORGE_PLAYWRIGHT_OUTPUT_DIR: "test-results/university-foundation",
+        FORGE_PLAYWRIGHT_OUTPUT_DIR: "test-results/semester-desk-v2-local",
       }),
-    ).toBe("test-results/university-foundation/playwright-report.json");
+    ).toBe("test-results/semester-desk-v2-local/playwright-report.json");
   });
 
   it.each([
@@ -39,7 +41,7 @@ describe("Playwright result isolation", () => {
     "test-results/..",
     "test-results/../outside",
     "test-results/nested/output",
-    "test-results\\university-foundation",
+    "test-results\\semester-desk-v2-local",
   ])("rejects unbounded output directory %j", (outputDirectory) => {
     expect(() =>
       resolvePlaywrightOutputDirectory({

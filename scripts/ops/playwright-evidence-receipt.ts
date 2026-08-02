@@ -12,6 +12,13 @@ import type { FileHandle } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import {
+  SEMESTER_DESK_V2_BROWSER_PROJECTS,
+  SEMESTER_DESK_V2_CANONICAL_BROWSER_SPEC,
+  SEMESTER_DESK_V2_LOCAL_REPORT_DIRECTORY,
+  SEMESTER_DESK_V2_PRODUCTION_REPORT_DIRECTORY,
+} from "./semester-desk-v2-browser-contract";
+
 const SHA = /^[0-9a-f]{40}$/i;
 const SAFE_REPOSITORY_PATH = /^[A-Za-z0-9._/-]+$/;
 const SAFE_PROJECT_NAME = /^[A-Za-z0-9._-]+$/;
@@ -47,46 +54,24 @@ const RECEIPT_HELPER_ENV: NodeJS.ProcessEnv = {
 export const PLAYWRIGHT_EVIDENCE_RECEIPT_SCHEMA_VERSION = "2.2" as const;
 export const PLAYWRIGHT_EVIDENCE_RECEIPT_KIND = "forge_ci_browser_evidence" as const;
 
-const DEVELOPMENT_PROJECTS = Object.freeze(["desktop", "mobile"] as const);
-const PRODUCTION_SPECS = Object.freeze([
-  "tests/e2e/production.spec.ts",
-  "tests/e2e/university-research-readiness-production.spec.ts",
-  "tests/e2e/university-semester-loop-production.spec.ts",
-  "tests/e2e/university-semester-desk-production.spec.ts",
-  "tests/e2e/university-semester-overview-production.spec.ts",
-  "tests/e2e/university-recovery-production.spec.ts",
-  "tests/e2e/university-post-attempt-repair-production.spec.ts",
-  "tests/e2e/university-foundation-production.spec.ts",
-  "tests/e2e/university-source-to-study-production.spec.ts",
-] as const);
-
 export const PLAYWRIGHT_EVIDENCE_TARGETS = Object.freeze({
-  foundation: Object.freeze({
-    report_directory: "university-foundation",
-    output_file: "test-results/release-ops/forge-browser-foundation-receipt.json",
-    writer_error_output_file: "test-results/release-ops/forge-browser-foundation-writer-error-receipt.json",
+  semesterDeskV2Local: Object.freeze({
+    report_directory: SEMESTER_DESK_V2_LOCAL_REPORT_DIRECTORY,
+    output_file: "test-results/release-ops/forge-browser-semester-desk-v2-local-receipt.json",
+    writer_error_output_file: "test-results/release-ops/forge-browser-semester-desk-v2-local-writer-error-receipt.json",
     evidence_environment: "development",
     artifact_class: "development_source",
-    expected_specs: Object.freeze(["tests/e2e/university-foundation.spec.ts"]),
-    expected_projects: DEVELOPMENT_PROJECTS,
+    expected_specs: Object.freeze([SEMESTER_DESK_V2_CANONICAL_BROWSER_SPEC]),
+    expected_projects: SEMESTER_DESK_V2_BROWSER_PROJECTS,
   }),
-  semesterDesk: Object.freeze({
-    report_directory: "university-semester-desk",
-    output_file: "test-results/release-ops/forge-browser-semester-desk-receipt.json",
-    writer_error_output_file: "test-results/release-ops/forge-browser-semester-desk-writer-error-receipt.json",
-    evidence_environment: "development",
-    artifact_class: "development_source",
-    expected_specs: Object.freeze(["tests/e2e/university-semester-desk.spec.ts"]),
-    expected_projects: DEVELOPMENT_PROJECTS,
-  }),
-  production: Object.freeze({
-    report_directory: "production-browser",
-    output_file: "test-results/release-ops/forge-browser-production-receipt.json",
-    writer_error_output_file: "test-results/release-ops/forge-browser-production-writer-error-receipt.json",
+  semesterDeskV2Production: Object.freeze({
+    report_directory: SEMESTER_DESK_V2_PRODUCTION_REPORT_DIRECTORY,
+    output_file: "test-results/release-ops/forge-browser-semester-desk-v2-production-receipt.json",
+    writer_error_output_file: "test-results/release-ops/forge-browser-semester-desk-v2-production-writer-error-receipt.json",
     evidence_environment: "production",
     artifact_class: "production_build_artifact",
-    expected_specs: PRODUCTION_SPECS,
-    expected_projects: DEVELOPMENT_PROJECTS,
+    expected_specs: Object.freeze([SEMESTER_DESK_V2_CANONICAL_BROWSER_SPEC]),
+    expected_projects: SEMESTER_DESK_V2_BROWSER_PROJECTS,
   }),
 } as const);
 
@@ -1662,10 +1647,10 @@ function optionalArgumentValue(name: string): string | undefined {
 }
 
 function targetFromValue(value: string | undefined): PlaywrightEvidenceTarget {
-  if (value === "foundation" || value === "semesterDesk" || value === "production") {
+  if (value === "semesterDeskV2Local" || value === "semesterDeskV2Production") {
     return value;
   }
-  throw new Error("--target must be foundation, semesterDesk, or production.");
+  throw new Error("--target must be semesterDeskV2Local or semesterDeskV2Production.");
 }
 
 function statusFromValue(value: string | undefined): PlaywrightEvidenceStatus | undefined {

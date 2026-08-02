@@ -21,12 +21,12 @@ const SHA = "0123456789abcdef0123456789abcdef01234567";
 const REPORT_SHA256 = "a".repeat(64);
 const roots: string[] = [];
 
-function foundationReport() {
+function semesterDeskV2LocalReport() {
   return {
     errors: [],
     suites: [{
       specs: [{
-        file: "university-foundation.spec.ts",
+        file: "semester-desk-v2-canonical.spec.ts",
         tests: [
           { projectName: "desktop", status: "expected", expectedStatus: "passed", results: [{ status: "passed" }] },
           { projectName: "mobile", status: "expected", expectedStatus: "passed", results: [{ status: "passed" }] },
@@ -36,18 +36,18 @@ function foundationReport() {
   };
 }
 
-function validFoundationReceipt() {
+function validSemesterDeskV2LocalReceipt() {
   return buildPlaywrightEvidenceReceipt({
-    target: "foundation",
+    target: "semesterDeskV2Local",
     testedSha: SHA,
     requestedStatus: "pass",
-    summary: parsePlaywrightJsonReport(foundationReport()),
+    summary: parsePlaywrightJsonReport(semesterDeskV2LocalReport()),
     reportSha256: REPORT_SHA256,
   });
 }
 
 function mutableReceipt(): Record<string, unknown> {
-  return JSON.parse(JSON.stringify(validFoundationReceipt())) as Record<string, unknown>;
+  return JSON.parse(JSON.stringify(validSemesterDeskV2LocalReceipt())) as Record<string, unknown>;
 }
 
 function passExpectation() {
@@ -83,9 +83,9 @@ function reportBytes(value: unknown): Buffer {
   return Buffer.from(JSON.stringify(value), "utf8");
 }
 
-async function writeFoundationReport(root: string, bytes: Buffer): Promise<string> {
-  const path = resolve(root, "test-results/university-foundation/playwright-report.json");
-  await mkdir(resolve(root, "test-results/university-foundation"), { recursive: true });
+async function writeSemesterDeskV2LocalReport(root: string, bytes: Buffer): Promise<string> {
+  const path = resolve(root, "test-results/semester-desk-v2-local/playwright-report.json");
+  await mkdir(resolve(root, "test-results/semester-desk-v2-local"), { recursive: true });
   await writeFile(path, bytes);
   return path;
 }
@@ -116,7 +116,7 @@ afterEach(async () => {
 describe("Playwright CI receipt enforcement", () => {
   it("accepts a complete pass receipt", () => {
     expect(() => validatePlaywrightEvidenceReceiptForCi(
-      validFoundationReceipt(),
+      validSemesterDeskV2LocalReceipt(),
       passExpectation(),
       SHA,
       REPORT_SHA256,
@@ -154,9 +154,9 @@ describe("Playwright CI receipt enforcement", () => {
   it("rejects project coverage inflation and invalid count arithmetic", () => {
     const forgedCoverage = mutableReceipt();
     forgedCoverage.observed = {
-      specs: ["tests/e2e/university-foundation.spec.ts"],
+      specs: ["tests/e2e/semester-desk-v2-canonical.spec.ts"],
       projects: ["desktop"],
-      passed_specs: ["tests/e2e/university-foundation.spec.ts"],
+      passed_specs: ["tests/e2e/semester-desk-v2-canonical.spec.ts"],
       passed_projects: ["desktop"],
     };
     expect(() => validatePlaywrightEvidenceReceiptForCi(
@@ -225,10 +225,10 @@ describe("Playwright CI receipt enforcement", () => {
 
   it("accepts a fail receipt only when the expected browser gate failed", () => {
     const failReceipt = buildPlaywrightEvidenceReceipt({
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "fail",
-      summary: parsePlaywrightJsonReport(foundationReport()),
+      summary: parsePlaywrightJsonReport(semesterDeskV2LocalReport()),
       reportSha256: REPORT_SHA256,
     });
     expect(() => validatePlaywrightEvidenceReceiptForCi(
@@ -246,7 +246,7 @@ describe("Playwright CI receipt enforcement", () => {
   });
 
   it("requires the producer report digest for a pass receipt", () => {
-    const receipt = validFoundationReceipt();
+    const receipt = validSemesterDeskV2LocalReceipt();
     expect(() => validatePlaywrightEvidenceReceiptForCi(
       receipt,
       passExpectation(),
@@ -262,14 +262,14 @@ describe("Playwright CI receipt enforcement", () => {
 
   it("validates current report bytes for valid pass and fail evidence", async () => {
     const root = await temporaryRoot();
-    const passBytes = reportBytes(foundationReport());
+    const passBytes = reportBytes(semesterDeskV2LocalReport());
     const passDigest = createHash("sha256").update(passBytes).digest("hex");
-    await writeFoundationReport(root, passBytes);
+    await writeSemesterDeskV2LocalReport(root, passBytes);
     const passReceipt = buildPlaywrightEvidenceReceipt({
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
-      summary: parsePlaywrightJsonReport(foundationReport()),
+      summary: parsePlaywrightJsonReport(semesterDeskV2LocalReport()),
       reportSha256: passDigest,
     });
     await writeReceiptFile(root, passReceipt);
@@ -285,7 +285,7 @@ describe("Playwright CI receipt enforcement", () => {
       errors: [],
       suites: [{
         specs: [{
-          file: "university-foundation.spec.ts",
+          file: "semester-desk-v2-canonical.spec.ts",
           tests: [
             { projectName: "desktop", status: "unexpected", expectedStatus: "passed", results: [{ status: "failed" }] },
             { projectName: "mobile", status: "unexpected", expectedStatus: "passed", results: [{ status: "failed" }] },
@@ -295,9 +295,9 @@ describe("Playwright CI receipt enforcement", () => {
     };
     const failBytes = reportBytes(failReport);
     const failDigest = createHash("sha256").update(failBytes).digest("hex");
-    await writeFoundationReport(root, failBytes);
+    await writeSemesterDeskV2LocalReport(root, failBytes);
     const failReceipt = buildPlaywrightEvidenceReceipt({
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "fail",
       summary: parsePlaywrightJsonReport(failReport),
@@ -315,7 +315,7 @@ describe("Playwright CI receipt enforcement", () => {
   it("preserves a useful fail receipt when no producer report digest exists", async () => {
     const root = await temporaryRoot();
     const receipt = buildPlaywrightEvidenceReceipt({
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       inputStatus: "missing",
       requestedStatus: "fail",
@@ -330,18 +330,18 @@ describe("Playwright CI receipt enforcement", () => {
 
   it("rejects a same-size report replacement after receipt creation", async () => {
     const root = await temporaryRoot();
-    const [originalBytes, replacementBytes] = sameSizeJson(foundationReport(), {
-      ...foundationReport(),
+    const [originalBytes, replacementBytes] = sameSizeJson(semesterDeskV2LocalReport(), {
+      ...semesterDeskV2LocalReport(),
       marker: "replacement",
     });
     expect(replacementBytes.byteLength).toBe(originalBytes.byteLength);
-    const reportPath = await writeFoundationReport(root, originalBytes);
+    const reportPath = await writeSemesterDeskV2LocalReport(root, originalBytes);
     const digest = createHash("sha256").update(originalBytes).digest("hex");
     const receipt = buildPlaywrightEvidenceReceipt({
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
-      summary: parsePlaywrightJsonReport(foundationReport()),
+      summary: parsePlaywrightJsonReport(semesterDeskV2LocalReport()),
       reportSha256: digest,
     });
     await writeReceiptFile(root, receipt);
@@ -361,14 +361,14 @@ describe("Playwright CI receipt enforcement", () => {
 
   it("rejects a deleted current report", async () => {
     const root = await temporaryRoot();
-    const bytes = reportBytes(foundationReport());
-    const reportPath = await writeFoundationReport(root, bytes);
+    const bytes = reportBytes(semesterDeskV2LocalReport());
+    const reportPath = await writeSemesterDeskV2LocalReport(root, bytes);
     const digest = createHash("sha256").update(bytes).digest("hex");
     const receipt = buildPlaywrightEvidenceReceipt({
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
-      summary: parsePlaywrightJsonReport(foundationReport()),
+      summary: parsePlaywrightJsonReport(semesterDeskV2LocalReport()),
       reportSha256: digest,
     });
     await rm(reportPath);
@@ -384,14 +384,14 @@ describe("Playwright CI receipt enforcement", () => {
 
   it("rejects a symlink replacement for the current report", async () => {
     const root = await temporaryRoot();
-    const bytes = reportBytes(foundationReport());
-    const reportPath = await writeFoundationReport(root, bytes);
+    const bytes = reportBytes(semesterDeskV2LocalReport());
+    const reportPath = await writeSemesterDeskV2LocalReport(root, bytes);
     const digest = createHash("sha256").update(bytes).digest("hex");
     const receipt = buildPlaywrightEvidenceReceipt({
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
-      summary: parsePlaywrightJsonReport(foundationReport()),
+      summary: parsePlaywrightJsonReport(semesterDeskV2LocalReport()),
       reportSha256: digest,
     });
     const outsidePath = resolve(root, "outside-report.json");
@@ -410,14 +410,14 @@ describe("Playwright CI receipt enforcement", () => {
 
   it("rejects a hard-link replacement for the current report", async () => {
     const root = await temporaryRoot();
-    const bytes = reportBytes(foundationReport());
-    const reportPath = await writeFoundationReport(root, bytes);
+    const bytes = reportBytes(semesterDeskV2LocalReport());
+    const reportPath = await writeSemesterDeskV2LocalReport(root, bytes);
     const digest = createHash("sha256").update(bytes).digest("hex");
     const receipt = buildPlaywrightEvidenceReceipt({
-      target: "foundation",
+      target: "semesterDeskV2Local",
       testedSha: SHA,
       requestedStatus: "pass",
-      summary: parsePlaywrightJsonReport(foundationReport()),
+      summary: parsePlaywrightJsonReport(semesterDeskV2LocalReport()),
       reportSha256: digest,
     });
     const replacementPath = resolve(root, "replacement-report.json");
@@ -438,18 +438,19 @@ describe("Playwright CI receipt enforcement", () => {
     const workflow = await readFile(resolve(process.cwd(), ".github/workflows/quality-gates.yml"), "utf8");
     expect(workflow).toContain("validate-playwright-evidence-receipts.ts");
     expect(workflow).toContain("run-playwright-with-report-digest.ts");
-    expect(workflow).toContain("steps.foundation_browser.outputs.report_sha256");
-    expect(workflow).toContain("steps.foundation_receipt.outputs.receipt_sha256");
-    expect(workflow).toContain("--foundation-report-sha256");
-    expect(workflow).toContain("--foundation-receipt-sha256");
+    expect(workflow).toContain("steps.semester_desk_v2_local_browser.outputs.report_sha256");
+    expect(workflow).toContain("steps.semester_desk_v2_local_receipt.outputs.receipt_sha256");
+    expect(workflow).toContain("--local-report-sha256");
+    expect(workflow).toContain("--local-receipt-sha256");
     for (const expectation of PLAYWRIGHT_CI_RECEIPT_EXPECTATIONS) {
-      const target = expectation.target;
-      expect(workflow).toContain(`forge-browser-${target === "semesterDesk" ? "semester-desk" : target}-writer-error-receipt.json`);
+      expect(workflow).toContain(
+        expectation.outputFile.replace("-receipt.json", "-writer-error-receipt.json"),
+      );
     }
   });
 
   it("rejects symlink, oversized, malformed, and swapped receipt input", async () => {
-    const valid = validFoundationReceipt();
+    const valid = validSemesterDeskV2LocalReceipt();
     const symlinkRoot = await temporaryRoot();
     const symlinkPath = await writeReceiptFile(symlinkRoot, valid);
     const outsidePath = resolve(symlinkRoot, "outside-receipt.json");
@@ -493,7 +494,7 @@ describe("Playwright CI receipt enforcement", () => {
 
   it("binds the exact receipt bytes before JSON parsing", async () => {
     const root = await temporaryRoot();
-    const receipt = validFoundationReceipt();
+    const receipt = validSemesterDeskV2LocalReceipt();
     const path = await writeReceiptFile(root, receipt);
     const bytes = await readFile(path);
     const digest = createHash("sha256").update(bytes).digest("hex");
@@ -508,7 +509,7 @@ describe("Playwright CI receipt enforcement", () => {
     forged.tested_sha = "fedcba9876543210fedcba9876543210fedcba98";
     const forgedBytes = Buffer.from(JSON.stringify(forged));
     expect(forgedBytes.byteLength).toBe(bytes.byteLength);
-    expect(() => assertTrustedReceiptDigest(forgedBytes, digest, "foundation receipt"))
+    expect(() => assertTrustedReceiptDigest(forgedBytes, digest, "local receipt"))
       .toThrow();
     await writeFile(path, forgedBytes);
     expect(createHash("sha256").update(forgedBytes).digest("hex")).not.toBe(digest);
@@ -524,11 +525,11 @@ describe("Playwright CI receipt enforcement", () => {
     const tooManySpecs = mutableReceipt();
     tooManySpecs.observed = {
       specs: [
-        "tests/e2e/university-foundation.spec.ts",
+        "tests/e2e/semester-desk-v2-canonical.spec.ts",
         ...Array.from({ length: 64 }, (_, index) => `tests/e2e/overflow-${index}.spec.ts`),
       ],
       projects: ["desktop", "mobile"],
-      passed_specs: ["tests/e2e/university-foundation.spec.ts"],
+      passed_specs: ["tests/e2e/semester-desk-v2-canonical.spec.ts"],
       passed_projects: ["desktop", "mobile"],
     };
     expect(() => validatePlaywrightEvidenceReceiptForCi(

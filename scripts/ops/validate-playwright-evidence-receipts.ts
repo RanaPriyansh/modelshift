@@ -5,9 +5,16 @@ import type { FileHandle } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import {
+  SEMESTER_DESK_V2_BROWSER_PROJECTS,
+  SEMESTER_DESK_V2_CANONICAL_BROWSER_SPEC,
+  SEMESTER_DESK_V2_LOCAL_REPORT_DIRECTORY,
+  SEMESTER_DESK_V2_PRODUCTION_REPORT_DIRECTORY,
+} from "./semester-desk-v2-browser-contract";
+
 type JsonObject = Record<string, unknown>;
 type ExpectedStatus = "pass" | "fail";
-type PlaywrightCiTarget = "foundation" | "semesterDesk" | "production";
+type PlaywrightCiTarget = "semesterDeskV2Local" | "semesterDeskV2Production";
 
 const RECEIPT_ROOT = "test-results/release-ops";
 const PLAYWRIGHT_REPORT_ROOT = "test-results";
@@ -30,45 +37,28 @@ export type PlaywrightCiReceiptExpectation = Readonly<{
 }>;
 
 const PLAYWRIGHT_REPORT_FILES: Readonly<Record<PlaywrightCiTarget, string>> = Object.freeze({
-  foundation: "test-results/university-foundation/playwright-report.json",
-  semesterDesk: "test-results/university-semester-desk/playwright-report.json",
-  production: "test-results/production-browser/playwright-report.json",
+  semesterDeskV2Local:
+    `test-results/${SEMESTER_DESK_V2_LOCAL_REPORT_DIRECTORY}/playwright-report.json`,
+  semesterDeskV2Production:
+    `test-results/${SEMESTER_DESK_V2_PRODUCTION_REPORT_DIRECTORY}/playwright-report.json`,
 });
 
 export const PLAYWRIGHT_CI_RECEIPT_EXPECTATIONS = Object.freeze([
   {
-    outputFile: "test-results/release-ops/forge-browser-foundation-receipt.json",
-    target: "foundation",
+    outputFile: "test-results/release-ops/forge-browser-semester-desk-v2-local-receipt.json",
+    target: "semesterDeskV2Local",
     evidenceEnvironment: "development",
     artifactClass: "development_source",
-    expectedSpecs: ["tests/e2e/university-foundation.spec.ts"],
-    expectedProjects: ["desktop", "mobile"],
+    expectedSpecs: [SEMESTER_DESK_V2_CANONICAL_BROWSER_SPEC],
+    expectedProjects: SEMESTER_DESK_V2_BROWSER_PROJECTS,
   },
   {
-    outputFile: "test-results/release-ops/forge-browser-semester-desk-receipt.json",
-    target: "semesterDesk",
-    evidenceEnvironment: "development",
-    artifactClass: "development_source",
-    expectedSpecs: ["tests/e2e/university-semester-desk.spec.ts"],
-    expectedProjects: ["desktop", "mobile"],
-  },
-  {
-    outputFile: "test-results/release-ops/forge-browser-production-receipt.json",
-    target: "production",
+    outputFile: "test-results/release-ops/forge-browser-semester-desk-v2-production-receipt.json",
+    target: "semesterDeskV2Production",
     evidenceEnvironment: "production",
     artifactClass: "production_build_artifact",
-    expectedSpecs: [
-      "tests/e2e/production.spec.ts",
-      "tests/e2e/university-foundation-production.spec.ts",
-      "tests/e2e/university-post-attempt-repair-production.spec.ts",
-      "tests/e2e/university-recovery-production.spec.ts",
-      "tests/e2e/university-research-readiness-production.spec.ts",
-      "tests/e2e/university-semester-desk-production.spec.ts",
-      "tests/e2e/university-semester-loop-production.spec.ts",
-      "tests/e2e/university-semester-overview-production.spec.ts",
-      "tests/e2e/university-source-to-study-production.spec.ts",
-    ],
-    expectedProjects: ["desktop", "mobile"],
+    expectedSpecs: [SEMESTER_DESK_V2_CANONICAL_BROWSER_SPEC],
+    expectedProjects: SEMESTER_DESK_V2_BROWSER_PROJECTS,
   },
 ] as const);
 
@@ -610,16 +600,18 @@ function optionalArgumentValue(name: string): string | undefined {
   return value && !value.startsWith("--") ? value : undefined;
 }
 
-function targetArgument(target: string, kind: "report" | "receipt"): string {
-  return `--${target === "semesterDesk" ? "semester-desk" : target}-${kind}-sha256`;
+function targetArgument(target: PlaywrightCiTarget, kind: "report" | "receipt"): string {
+  const name = target === "semesterDeskV2Local"
+    ? "local"
+    : "production";
+  return `--${name}-${kind}-sha256`;
 }
 
 async function main(): Promise<void> {
   const testedSha = argumentValue("--tested-sha");
-  const statuses: Record<string, ExpectedStatus> = {
-    foundation: argumentValue("--foundation-status") as ExpectedStatus,
-    semesterDesk: argumentValue("--semester-desk-status") as ExpectedStatus,
-    production: argumentValue("--production-status") as ExpectedStatus,
+  const statuses: Record<PlaywrightCiTarget, ExpectedStatus> = {
+    semesterDeskV2Local: argumentValue("--local-status") as ExpectedStatus,
+    semesterDeskV2Production: argumentValue("--production-status") as ExpectedStatus,
   };
   if (Object.values(statuses).some((status) => status !== "pass" && status !== "fail")) {
     throw new Error("receipt status must be pass or fail");

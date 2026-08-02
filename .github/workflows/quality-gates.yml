@@ -72,38 +72,20 @@ jobs:
         run: pnpm eval
       - name: Install Chromium test runtime
         run: pnpm exec playwright install --with-deps chromium
-      - name: University foundation browser acceptance
-        id: foundation_browser
+      - name: Semester Desk v2 local browser contract
+        id: semester_desk_v2_local_browser
         continue-on-error: true
         env:
-          FORGE_PLAYWRIGHT_OUTPUT_DIR: test-results/university-foundation
-          FORGE_UNIVERSITY_COMMAND_CENTER_FIXTURE: forge-university-command-center.v1
-          FORGE_UNIVERSITY_DEGREE_MAP_FIXTURE: forge-university-degree-map.v1
-          FORGE_UNIVERSITY_LEARNING_MAP_FIXTURE: forge-university-learning-map.v1
-        run: pnpm exec tsx scripts/ops/run-playwright-with-report-digest.ts --report-file test-results/university-foundation/playwright-report.json -- tests/e2e/university-foundation.spec.ts
-      - name: Write foundation browser evidence receipt
-        id: foundation_receipt
+          FORGE_PLAYWRIGHT_OUTPUT_DIR: test-results/semester-desk-v2-local
+        run: pnpm exec tsx scripts/ops/run-playwright-with-report-digest.ts --report-file test-results/semester-desk-v2-local/playwright-report.json -- tests/e2e/semester-desk-v2-canonical.spec.ts
+      - name: Write Semester Desk v2 local browser receipt
+        id: semester_desk_v2_local_receipt
         if: always()
         continue-on-error: true
         env:
-          FORGE_BROWSER_GATE_STATUS: ${{ steps.foundation_browser.outcome == 'success' && 'pass' || 'fail' }}
-          FORGE_PLAYWRIGHT_REPORT_SHA256: ${{ steps.foundation_browser.outputs.report_sha256 }}
-        run: pnpm exec tsx scripts/ops/playwright-evidence-receipt.ts --target foundation --tested-sha "$GITHUB_SHA" --status "$FORGE_BROWSER_GATE_STATUS" --report-sha256 "$FORGE_PLAYWRIGHT_REPORT_SHA256"
-      - name: Semester Desk active-surface browser acceptance
-        id: semester_desk_browser
-        continue-on-error: true
-        env:
-          FORGE_PLAYWRIGHT_OUTPUT_DIR: test-results/university-semester-desk
-          FORGE_UNIVERSITY_SEMESTER_DESK_FIXTURE: forge-university-semester-desk.v1
-        run: pnpm exec tsx scripts/ops/run-playwright-with-report-digest.ts --report-file test-results/university-semester-desk/playwright-report.json -- tests/e2e/university-semester-desk.spec.ts
-      - name: Write Semester Desk browser evidence receipt
-        id: semester_desk_receipt
-        if: always()
-        continue-on-error: true
-        env:
-          FORGE_BROWSER_GATE_STATUS: ${{ steps.semester_desk_browser.outcome == 'success' && 'pass' || 'fail' }}
-          FORGE_PLAYWRIGHT_REPORT_SHA256: ${{ steps.semester_desk_browser.outputs.report_sha256 }}
-        run: pnpm exec tsx scripts/ops/playwright-evidence-receipt.ts --target semesterDesk --tested-sha "$GITHUB_SHA" --status "$FORGE_BROWSER_GATE_STATUS" --report-sha256 "$FORGE_PLAYWRIGHT_REPORT_SHA256"
+          FORGE_BROWSER_GATE_STATUS: ${{ steps.semester_desk_v2_local_browser.outcome == 'success' && 'pass' || 'fail' }}
+          FORGE_PLAYWRIGHT_REPORT_SHA256: ${{ steps.semester_desk_v2_local_browser.outputs.report_sha256 }}
+        run: pnpm exec tsx scripts/ops/playwright-evidence-receipt.ts --target semesterDeskV2Local --tested-sha "$GITHUB_SHA" --status "$FORGE_BROWSER_GATE_STATUS" --report-sha256 "$FORGE_PLAYWRIGHT_REPORT_SHA256"
       - name: Capture immutable build identity
         run: |
           printf 'FORGE_BUILD_TIME=%s\n' "$(date -u -d "$(git show -s --format=%cI "$GITHUB_SHA")" +%Y-%m-%dT%H:%M:%S.000Z)" >> "$GITHUB_ENV"
@@ -112,18 +94,18 @@ jobs:
           printf 'FORGE_DATABASE_MIGRATION_IDENTITY=not_configured\n' >> "$GITHUB_ENV"
       - name: Build production artifact
         run: pnpm build
-      - name: Browser release contract
-        id: browser
+      - name: Semester Desk v2 production browser contract
+        id: semester_desk_v2_production_browser
         continue-on-error: true
         run: pnpm exec tsx scripts/ops/run-production-browser-verification.ts --expected-sha "$GITHUB_SHA"
-      - name: Write production browser evidence receipt
-        id: production_receipt
+      - name: Write Semester Desk v2 production browser receipt
+        id: semester_desk_v2_production_receipt
         if: always()
         continue-on-error: true
         env:
-          FORGE_BROWSER_GATE_STATUS: ${{ steps.browser.outcome == 'success' && 'pass' || 'fail' }}
-          FORGE_PLAYWRIGHT_REPORT_SHA256: ${{ steps.browser.outputs.report_sha256 }}
-        run: pnpm exec tsx scripts/ops/playwright-evidence-receipt.ts --target production --tested-sha "$GITHUB_SHA" --status "$FORGE_BROWSER_GATE_STATUS" --report-sha256 "$FORGE_PLAYWRIGHT_REPORT_SHA256"
+          FORGE_BROWSER_GATE_STATUS: ${{ steps.semester_desk_v2_production_browser.outcome == 'success' && 'pass' || 'fail' }}
+          FORGE_PLAYWRIGHT_REPORT_SHA256: ${{ steps.semester_desk_v2_production_browser.outputs.report_sha256 }}
+        run: pnpm exec tsx scripts/ops/playwright-evidence-receipt.ts --target semesterDeskV2Production --tested-sha "$GITHUB_SHA" --status "$FORGE_BROWSER_GATE_STATUS" --report-sha256 "$FORGE_PLAYWRIGHT_REPORT_SHA256"
       - name: Write sanitized evaluation report
         id: evaluation_report
         if: always()
@@ -145,12 +127,10 @@ jobs:
         with:
           name: forge-playwright-evidence-${{ github.run_id }}
           path: |
-            test-results/release-ops/forge-browser-foundation-receipt.json
-            test-results/release-ops/forge-browser-foundation-writer-error-receipt.json
-            test-results/release-ops/forge-browser-semester-desk-receipt.json
-            test-results/release-ops/forge-browser-semester-desk-writer-error-receipt.json
-            test-results/release-ops/forge-browser-production-receipt.json
-            test-results/release-ops/forge-browser-production-writer-error-receipt.json
+            test-results/release-ops/forge-browser-semester-desk-v2-local-receipt.json
+            test-results/release-ops/forge-browser-semester-desk-v2-local-writer-error-receipt.json
+            test-results/release-ops/forge-browser-semester-desk-v2-production-receipt.json
+            test-results/release-ops/forge-browser-semester-desk-v2-production-writer-error-receipt.json
           if-no-files-found: error
           retention-days: 14
       - name: Upload sanitized operations reports
@@ -162,7 +142,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Upload bounded Playwright failure evidence
-        if: always() && (steps.foundation_browser.outcome == 'failure' || steps.semester_desk_browser.outcome == 'failure' || steps.browser.outcome == 'failure') && steps.failure_manifest.outcome == 'success' && hashFiles('test-results/release-ops/playwright-artifact-manifest.json') != ''
+        if: always() && (steps.semester_desk_v2_local_browser.outcome == 'failure' || steps.semester_desk_v2_production_browser.outcome == 'failure') && steps.failure_manifest.outcome == 'success' && hashFiles('test-results/release-ops/playwright-artifact-manifest.json') != ''
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: forge-playwright-failure-${{ github.run_id }}
@@ -174,26 +154,21 @@ jobs:
       - name: Enforce release gate outcomes
         if: always()
         env:
-          FORGE_EXPECTED_FOUNDATION_RECEIPT_STATUS: ${{ steps.foundation_browser.outcome == 'success' && 'pass' || 'fail' }}
-          FORGE_EXPECTED_SEMESTER_RECEIPT_STATUS: ${{ steps.semester_desk_browser.outcome == 'success' && 'pass' || 'fail' }}
-          FORGE_EXPECTED_PRODUCTION_RECEIPT_STATUS: ${{ steps.browser.outcome == 'success' && 'pass' || 'fail' }}
-          FORGE_EXPECTED_FOUNDATION_REPORT_SHA256: ${{ steps.foundation_browser.outputs.report_sha256 }}
-          FORGE_EXPECTED_SEMESTER_REPORT_SHA256: ${{ steps.semester_desk_browser.outputs.report_sha256 }}
-          FORGE_EXPECTED_PRODUCTION_REPORT_SHA256: ${{ steps.browser.outputs.report_sha256 }}
-          FORGE_EXPECTED_FOUNDATION_RECEIPT_SHA256: ${{ steps.foundation_receipt.outputs.receipt_sha256 }}
-          FORGE_EXPECTED_SEMESTER_RECEIPT_SHA256: ${{ steps.semester_desk_receipt.outputs.receipt_sha256 }}
-          FORGE_EXPECTED_PRODUCTION_RECEIPT_SHA256: ${{ steps.production_receipt.outputs.receipt_sha256 }}
+          FORGE_EXPECTED_LOCAL_RECEIPT_STATUS: ${{ steps.semester_desk_v2_local_browser.outcome == 'success' && 'pass' || 'fail' }}
+          FORGE_EXPECTED_PRODUCTION_RECEIPT_STATUS: ${{ steps.semester_desk_v2_production_browser.outcome == 'success' && 'pass' || 'fail' }}
+          FORGE_EXPECTED_LOCAL_REPORT_SHA256: ${{ steps.semester_desk_v2_local_browser.outputs.report_sha256 }}
+          FORGE_EXPECTED_PRODUCTION_REPORT_SHA256: ${{ steps.semester_desk_v2_production_browser.outputs.report_sha256 }}
+          FORGE_EXPECTED_LOCAL_RECEIPT_SHA256: ${{ steps.semester_desk_v2_local_receipt.outputs.receipt_sha256 }}
+          FORGE_EXPECTED_PRODUCTION_RECEIPT_SHA256: ${{ steps.semester_desk_v2_production_receipt.outputs.receipt_sha256 }}
         run: |
-          if test "${{ steps.foundation_browser.outcome }}" = failure || test "${{ steps.semester_desk_browser.outcome }}" = failure || test "${{ steps.browser.outcome }}" = failure; then
+          if test "${{ steps.semester_desk_v2_local_browser.outcome }}" = failure || test "${{ steps.semester_desk_v2_production_browser.outcome }}" = failure; then
             test "${{ steps.failure_manifest.outcome }}" = success
             node -e 'const fs = require("node:fs"); const report = JSON.parse(fs.readFileSync("test-results/release-ops/playwright-artifact-manifest.json", "utf8")); if (report.schema_version !== "2.0" || !Array.isArray(report.artifacts) || report.artifacts.length === 0) process.exit(1)'
           fi
-          test "${{ steps.foundation_receipt.outcome }}" = success
-          test "${{ steps.semester_desk_receipt.outcome }}" = success
-          test "${{ steps.production_receipt.outcome }}" = success
-          pnpm exec tsx scripts/ops/validate-playwright-evidence-receipts.ts --tested-sha "$GITHUB_SHA" --foundation-status "$FORGE_EXPECTED_FOUNDATION_RECEIPT_STATUS" --semester-desk-status "$FORGE_EXPECTED_SEMESTER_RECEIPT_STATUS" --production-status "$FORGE_EXPECTED_PRODUCTION_RECEIPT_STATUS" --foundation-report-sha256 "$FORGE_EXPECTED_FOUNDATION_REPORT_SHA256" --semester-desk-report-sha256 "$FORGE_EXPECTED_SEMESTER_REPORT_SHA256" --production-report-sha256 "$FORGE_EXPECTED_PRODUCTION_REPORT_SHA256" --foundation-receipt-sha256 "$FORGE_EXPECTED_FOUNDATION_RECEIPT_SHA256" --semester-desk-receipt-sha256 "$FORGE_EXPECTED_SEMESTER_RECEIPT_SHA256" --production-receipt-sha256 "$FORGE_EXPECTED_PRODUCTION_RECEIPT_SHA256"
-          test "${{ steps.foundation_browser.outcome }}" = success
-          test "${{ steps.semester_desk_browser.outcome }}" = success
-          test "${{ steps.browser.outcome }}" = success
+          test "${{ steps.semester_desk_v2_local_receipt.outcome }}" = success
+          test "${{ steps.semester_desk_v2_production_receipt.outcome }}" = success
+          pnpm exec tsx scripts/ops/validate-playwright-evidence-receipts.ts --tested-sha "$GITHUB_SHA" --local-status "$FORGE_EXPECTED_LOCAL_RECEIPT_STATUS" --production-status "$FORGE_EXPECTED_PRODUCTION_RECEIPT_STATUS" --local-report-sha256 "$FORGE_EXPECTED_LOCAL_REPORT_SHA256" --production-report-sha256 "$FORGE_EXPECTED_PRODUCTION_REPORT_SHA256" --local-receipt-sha256 "$FORGE_EXPECTED_LOCAL_RECEIPT_SHA256" --production-receipt-sha256 "$FORGE_EXPECTED_PRODUCTION_RECEIPT_SHA256"
+          test "${{ steps.semester_desk_v2_local_browser.outcome }}" = success
+          test "${{ steps.semester_desk_v2_production_browser.outcome }}" = success
           test "${{ steps.evaluation_report.outcome }}" = success
           test "${{ steps.local_verify.outcome }}" = success
