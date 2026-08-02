@@ -14,6 +14,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   createSemesterDesk,
+  SEMESTER_DESK_MAX_IDENTIFIER_UTF8_BYTES,
   transitionSemesterDesk,
   type CourseFactStatus,
   type SemesterDeskResult,
@@ -25,6 +26,10 @@ import type {
   SemesterDeskPersistence,
   SemesterDeskPersistenceRead,
   SemesterDeskPersistenceResult,
+} from "@/src/lib/forge-semester-desk-v2/persistence";
+import {
+  semesterDeskActiveProfileStorageKey,
+  semesterDeskStorageKey,
 } from "@/src/lib/forge-semester-desk-v2/persistence";
 
 import { SemesterDeskV2App } from "./SemesterDeskV2App";
@@ -157,6 +162,24 @@ function renderApp(persistence: SemesterDeskPersistence, profileId: string | nul
   );
 }
 
+function renderBrowserApp() {
+  return render(
+    <SemesterDeskV2App
+      now={() => currentTime}
+      makeId={() => `ui-${sequence++}`}
+    />,
+  );
+}
+
+function saveBrowserDesk(state: SemesterDeskState, activeProfileId: string | null = state.profileId) {
+  window.localStorage.setItem(semesterDeskStorageKey(state.profileId), JSON.stringify(state));
+  if (activeProfileId === null) {
+    window.localStorage.removeItem(semesterDeskActiveProfileStorageKey);
+    return;
+  }
+  window.localStorage.setItem(semesterDeskActiveProfileStorageKey, activeProfileId);
+}
+
 function fillOnboarding() {
   fireEvent.change(screen.getByLabelText("Semester title"), { target: { value: "Autumn 2026" } });
   fireEvent.change(screen.getByLabelText("Course code"), { target: { value: "CS201" } });
@@ -175,6 +198,7 @@ afterEach(() => {
   sequence = 0;
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  window.localStorage.clear();
   window.history.replaceState(null, "", "/app");
 });
 
@@ -260,6 +284,110 @@ describe("SemesterDeskV2App", () => {
     expect(await screen.findByRole("main")).toHaveAttribute("id", "semester-desk-main");
     expect(screen.getByText("No courses are in this desk yet.")).toBeInTheDocument();
     expect(screen.getByText("No work is in this desk yet.")).toBeInTheDocument();
+  });
+
+  it("opens local data from a direct policy route and keeps the selected desk through reload and history navigation", async () => {
+    const state = makeDesk();
+    saveBrowserDesk(state);
+    window.history.replaceState(null, "", "/app?section=settings");
+
+    const firstRender = renderBrowserApp();
+    const settings = await screen.findByRole("heading", { name: "Your desk stays under your control." });
+    await waitFor(() => expect(document.activeElement).toBe(settings.parentElement));
+    expect(window.location.search).toBe("?section=settings");
+    expect(window.location.hash).toBe(`#forge-profile=${encodeURIComponent(PROFILE_ID)}`);
+    expect(screen.getByText("Algorithms")).toBeInTheDocument();
+
+    firstRender.unmount();
+    renderBrowserApp();
+    const reloadedSettings = await screen.findByRole("heading", { name: "Your desk stays under your control." });
+    await waitFor(() => expect(document.activeElement).toBe(reloadedSettings.parentElement));
+    expect(window.location.hash).toBe(`#forge-profile=${encodeURIComponent(PROFILE_ID)}`);
+
+    window.history.pushState(null, "", `/app#forge-profile=${encodeURIComponent(PROFILE_ID)}`);
+    fireEvent.popState(window);
+    await waitFor(() => expect(window.location.search).toBe(""));
+    expect(screen.getByText("Algorithms")).toBeInTheDocument();
+
+    window.history.pushState(null, "", `/app?section=settings#forge-profile=${encodeURIComponent(PROFILE_ID)}`);
+    fireEvent.popState(window);
+    await waitFor(() => expect(document.activeElement).toBe(document.getElementById("settings")));
+    expect(window.location.search).toBe("?section=settings");
+  });
+
+  it("enforces the UTF-8 profile byte bound before it reads a local desk fragment", async () => {
+    const state = makeDesk();
+    saveBrowserDesk(state);
+    const oversizedProfileId = "€".repeat(Math.floor(SEMESTER_DESK_MAX_IDENTIFIER_UTF8_BYTES / 3) + 1);
+    window.history.replaceState(
+      null,
+      "",
+      `/app?section=settings#forge-profile=${encodeURIComponent(oversizedProfileId)}`,
+    );
+
+    renderBrowserApp();
+
+    expect(await screen.findByRole("heading", { name: "FORGE did not change local data." })).toBeInTheDocument();
+    expect(within(screen.getByRole("main")).getByText("FORGE could not use this local desk link. It did not change local data.")).toBeInTheDocument();
+    expect(window.localStorage.getItem(semesterDeskStorageKey(PROFILE_ID))).toBe(JSON.stringify(state));
+    expect(window.localStorage.getItem(semesterDeskActiveProfileStorageKey)).toBe(PROFILE_ID);
+    expect(screen.queryByText("Algorithms")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open your Semester Desk" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open saved local desk" }));
+    expect(await screen.findByText("Algorithms")).toBeInTheDocument();
+  });
+
+  it("fails safely for an invalid active local profile reference without changing saved data", async () => {
+    const state = makeDesk();
+    saveBrowserDesk(state);
+    const oversizedProfileId = "€".repeat(Math.floor(SEMESTER_DESK_MAX_IDENTIFIER_UTF8_BYTES / 3) + 1);
+    window.localStorage.setItem(semesterDeskActiveProfileStorageKey, oversizedProfileId);
+    window.history.replaceState(null, "", "/app?section=settings");
+
+    renderBrowserApp();
+
+    expect(await screen.findByRole("heading", { name: "FORGE did not change local data." })).toBeInTheDocument();
+    expect(within(screen.getByRole("main")).getByText("FORGE could not identify the saved local desk. It did not change local data.")).toBeInTheDocument();
+    expect(window.localStorage.getItem(semesterDeskStorageKey(PROFILE_ID))).toBe(JSON.stringify(state));
+    expect(window.localStorage.getItem(semesterDeskActiveProfileStorageKey)).toBe(oversizedProfileId);
+    expect(screen.queryByRole("button", { name: "Open your Semester Desk" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open saved local desk" })).not.toBeInTheDocument();
+  });
+
+  it("does not open a different local profile from a copied fragment", async () => {
+    const currentDesk = makeDesk();
+    const otherDesk = { ...makeDesk(), profileId: "profile.other" };
+    saveBrowserDesk(currentDesk);
+    window.localStorage.setItem(semesterDeskStorageKey(otherDesk.profileId), JSON.stringify(otherDesk));
+    window.history.replaceState(null, "", "/app#forge-profile=profile.other");
+
+    renderBrowserApp();
+
+    expect(await screen.findByRole("heading", { name: "FORGE did not change local data." })).toBeInTheDocument();
+    expect(within(screen.getByRole("main")).getByText("FORGE could not open that local desk from this link. It did not change local data.")).toBeInTheDocument();
+    expect(screen.queryByText("Algorithms")).not.toBeInTheDocument();
+    expect(window.localStorage.getItem(semesterDeskStorageKey(otherDesk.profileId))).toBe(JSON.stringify(otherDesk));
+    expect(screen.queryByRole("button", { name: "Open your Semester Desk" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open saved local desk" }));
+    expect(await screen.findByText("Algorithms")).toBeInTheDocument();
+    expect(window.location.hash).toBe(`#forge-profile=${encodeURIComponent(PROFILE_ID)}`);
+  });
+
+  it("clears the active profile reference only after the browser-local reset completes", async () => {
+    const state = makeDesk();
+    saveBrowserDesk(state);
+    window.history.replaceState(null, "", `/app#forge-profile=${encodeURIComponent(PROFILE_ID)}`);
+    renderBrowserApp();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Reset this device" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Remove local desk" }));
+
+    expect(await screen.findByRole("heading", { name: "Start with what is real." })).toBeInTheDocument();
+    expect(window.localStorage.getItem(semesterDeskStorageKey(PROFILE_ID))).toBeNull();
+    expect(window.localStorage.getItem(semesterDeskActiveProfileStorageKey)).toBeNull();
+    expect(window.location.hash).toBe("");
   });
 
   it("requires a checked course detail before a student can choose the work", async () => {

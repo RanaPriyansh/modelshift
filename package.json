@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build && tsx scripts/ops/verify-semester-desk-v2-release-artifact.ts && tsx scripts/ops/verify-public-build-boundary.ts",
+    "build": "next build && tsx scripts/ops/verify-semester-desk-v2-release-artifact.ts && tsx scripts/ops/verify-semester-desk-v2-release-budgets.ts && tsx scripts/ops/verify-public-build-boundary.ts",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",

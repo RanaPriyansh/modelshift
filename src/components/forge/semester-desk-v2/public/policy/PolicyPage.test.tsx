@@ -51,7 +51,7 @@ describe("FORGE policy and support routes", () => {
     expect(screen.getByRole("heading", { name: "Your study plan is not a profile." })).toBeInTheDocument();
     expect(screen.getByText("No online sign-in or sync")).toBeInTheDocument();
     expect(screen.getByText("No university connection")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Local data" })).toHaveAttribute("href", "/app#settings");
+    expect(screen.getByRole("link", { name: "Local data" })).toHaveAttribute("href", "/app?section=settings");
     expectPublicLandmarks();
     expectNoUnsupportedPublicClaims();
   });

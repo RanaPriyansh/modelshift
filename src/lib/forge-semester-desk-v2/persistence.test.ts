@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   createSemesterDesk,
   SEMESTER_DESK_MAX_COURSES,
+  SEMESTER_DESK_MAX_IDENTIFIER_UTF8_BYTES,
   SEMESTER_DESK_MAX_RAW_JSON_UTF8_BYTES,
   SEMESTER_DESK_MAX_TEXT_UTF8_BYTES,
   type SemesterDeskResult,
@@ -147,6 +148,29 @@ describe("BrowserSemesterDeskPersistence", () => {
       ok: false,
       message: "FORGE could not remove local data on this device. reset blocked",
     });
+  });
+
+  it("rejects an invalid UTF-8 profile identifier before it reaches a storage key", async () => {
+    const getItem = vi.fn<Storage["getItem"]>();
+    const removeItem = vi.fn<Storage["removeItem"]>();
+    const persistence = new BrowserSemesterDeskPersistence(storageWith({ getItem, removeItem }));
+    const oversizedProfileId = "€".repeat(Math.floor(SEMESTER_DESK_MAX_IDENTIFIER_UTF8_BYTES / 3) + 1);
+
+    await expect(persistence.read(oversizedProfileId)).resolves.toEqual({
+      kind: "malformed",
+      raw: "",
+      message: "The local profile reference is invalid.",
+    });
+    await expect(persistence.exportRaw(oversizedProfileId)).resolves.toEqual({
+      ok: false,
+      message: "The local profile reference is invalid.",
+    });
+    await expect(persistence.reset(oversizedProfileId)).resolves.toEqual({
+      ok: false,
+      message: "The local profile reference is invalid.",
+    });
+    expect(getItem).not.toHaveBeenCalled();
+    expect(removeItem).not.toHaveBeenCalled();
   });
 
   it("bounds raw UTF-8 data before JSON parsing and keeps the bytes available", async () => {

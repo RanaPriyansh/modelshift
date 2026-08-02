@@ -24,6 +24,8 @@ import {
 } from "@/src/forge/semester-desk-v2";
 import {
   BrowserSemesterDeskPersistence,
+  normalizeSemesterDeskProfileIdentifier,
+  semesterDeskActiveProfileStorageKey,
   type SemesterDeskPersistence,
   type SemesterDeskPersistenceRead,
   type SemesterDeskPersistenceResult,
@@ -31,8 +33,25 @@ import {
 
 import styles from "./SemesterDeskV2App.module.css";
 
-type AppScreen = "loading" | "onboarding" | "ready" | "malformed";
+type AppScreen = "loading" | "onboarding" | "ready" | "malformed" | "blocked";
 type SaveStatus = "saved" | "saving" | "error";
+type AppSection = "overview" | "settings";
+
+type BlockedLocalReference = {
+  readonly message: string;
+  readonly activeProfileId: string | null;
+};
+
+type ProfileLocation =
+  | { readonly kind: "missing"; readonly section: AppSection }
+  | { readonly kind: "profile"; readonly profileId: string; readonly section: AppSection }
+  | { readonly kind: "invalid"; readonly section: AppSection };
+
+type ActiveProfileReference =
+  | { readonly kind: "missing" }
+  | { readonly kind: "profile"; readonly profileId: string }
+  | { readonly kind: "invalid" }
+  | { readonly kind: "unavailable" };
 
 type OnboardingDraft = {
   readonly semesterTitle: string;
@@ -127,16 +146,94 @@ export type SemesterDeskV2AppProps = {
   readonly makeId?: () => string;
 };
 
-function profileIdFromLocation(): string | null {
-  const hash = window.location.hash.replace(/^#/, "");
-  const profileId = new URLSearchParams(hash).get("forge-profile")?.trim();
-  return profileId && profileId.length > 0 ? profileId : null;
+function sectionFromLocation(): AppSection {
+  return new URL(window.location.href).searchParams.get("section") === "settings"
+    ? "settings"
+    : "overview";
 }
 
-function writeProfileIdToLocation(profileId: string | null) {
+function profileLocationFromWindow(): ProfileLocation {
+  const section = sectionFromLocation();
+  const hash = window.location.hash.replace(/^#/, "");
+  if (hash.length === 0) return { kind: "missing", section };
+
+  const parameters = new URLSearchParams(hash);
+  const profileIds = parameters.getAll("forge-profile");
+  const parameterEntries = [...parameters.entries()];
+  if (
+    profileIds.length !== 1
+    || parameterEntries.length !== 1
+    || parameterEntries[0]?.[0] !== "forge-profile"
+  ) {
+    return { kind: "invalid", section };
+  }
+
+  const profileId = normalizeSemesterDeskProfileIdentifier(profileIds[0] ?? "");
+  return profileId
+    ? { kind: "profile", profileId, section }
+    : { kind: "invalid", section };
+}
+
+function activeProfileReferenceFromStorage(): ActiveProfileReference {
+  try {
+    const storedProfileId = window.localStorage.getItem(semesterDeskActiveProfileStorageKey);
+    if (storedProfileId === null) return { kind: "missing" };
+    const profileId = normalizeSemesterDeskProfileIdentifier(storedProfileId);
+    return profileId ? { kind: "profile", profileId } : { kind: "invalid" };
+  } catch {
+    return { kind: "unavailable" };
+  }
+}
+
+function writeActiveProfileReference(profileId: string | null): boolean {
+  try {
+    if (profileId === null) {
+      window.localStorage.removeItem(semesterDeskActiveProfileStorageKey);
+      return true;
+    }
+    const normalized = normalizeSemesterDeskProfileIdentifier(profileId);
+    if (!normalized) return false;
+    window.localStorage.setItem(semesterDeskActiveProfileStorageKey, normalized);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function clearActiveProfileReference(profileId: string): boolean {
+  const activeReference = activeProfileReferenceFromStorage();
+  if (activeReference.kind === "profile" && activeReference.profileId !== profileId) return true;
+  return writeActiveProfileReference(null);
+}
+
+function writeProfileIdToLocation(profileId: string | null, section: AppSection): boolean {
+  const normalized = profileId === null
+    ? null
+    : normalizeSemesterDeskProfileIdentifier(profileId);
+  if (profileId !== null && !normalized) return false;
   const url = new URL(window.location.href);
-  url.hash = profileId ? `forge-profile=${encodeURIComponent(profileId)}` : "";
+  if (section === "settings") url.searchParams.set("section", "settings");
+  else url.searchParams.delete("section");
+  url.hash = normalized ? `forge-profile=${encodeURIComponent(normalized)}` : "";
   window.history.replaceState(null, "", url);
+  return true;
+}
+
+function focusSettingsAfterRender(isCurrent: () => boolean) {
+  const focusSettings = () => {
+    if (!isCurrent()) return;
+    const settings = document.getElementById("settings");
+    if (!settings) return;
+    settings.focus({ preventScroll: true });
+    if (typeof settings.scrollIntoView === "function") {
+      settings.scrollIntoView({ block: "start" });
+    }
+  };
+  if (typeof window.requestAnimationFrame === "function") {
+    window.requestAnimationFrame(focusSettings);
+    return;
+  }
+  window.setTimeout(focusSettings, 0);
 }
 
 function createLocalProfileId(): string {
@@ -476,6 +573,33 @@ function MalformedStorage({
             Reset this device
           </button>
         </div>
+      </section>
+    </main>
+  );
+}
+
+function BlockedLocalReferenceState({
+  blockedReference,
+  onOpenSavedDesk,
+}: {
+  readonly blockedReference: BlockedLocalReference;
+  readonly onOpenSavedDesk: (() => void) | null;
+}) {
+  return (
+    <main id="semester-desk-main" className={styles.recoveryState} tabIndex={-1}>
+      <section aria-labelledby="blocked-local-data-title">
+        <p className={styles.sectionMarker}>LOCAL DESK NEEDS REVIEW</p>
+        <h1 id="blocked-local-data-title">FORGE did not change local data.</h1>
+        <p>{blockedReference.message}</p>
+        <p>FORGE did not create a new desk while this local reference needs review.</p>
+        {onOpenSavedDesk ? (
+          <div className={styles.actionRow}>
+            <button className={styles.commitAction} type="button" onClick={onOpenSavedDesk}>
+              Open saved local desk
+              <ArrowIcon />
+            </button>
+          </div>
+        ) : null}
       </section>
     </main>
   );
@@ -1387,7 +1511,7 @@ function LocalDataSection({
   readonly onReset: () => void;
 }) {
   return (
-    <section className={styles.settingsSection} id="settings" aria-labelledby="local-data-settings-title">
+    <section className={styles.settingsSection} id="settings" tabIndex={-1} aria-labelledby="local-data-settings-title">
       <p className={styles.sectionMarker}>LOCAL DATA</p>
       <h2 id="local-data-settings-title">Your desk stays under your control.</h2>
       <p>Download the unchanged saved JSON before you reset this device.</p>
@@ -1602,8 +1726,10 @@ export function SemesterDeskV2App({
   const [delayedReturnDate, setDelayedReturnDate] = useState("");
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
+  const [blockedReference, setBlockedReference] = useState<BlockedLocalReference | null>(null);
 
   const persistenceRef = useRef<SemesterDeskPersistence | null>(null);
+  const browserPersistenceRef = useRef<BrowserSemesterDeskPersistence | null>(null);
   const resetOpenerRef = useRef<HTMLElement | null>(null);
   const deskRef = useRef<SemesterDeskState | null>(null);
   const profileIdRef = useRef<string | null>(null);
@@ -1655,16 +1781,42 @@ export function SemesterDeskV2App({
     return queued;
   }
 
-  const showRead = useCallback((read: SemesterDeskPersistenceRead, profileId: string) => {
+  const showOnboarding = useCallback((message: string) => {
+    profileIdRef.current = null;
+    deskRef.current = null;
+    setDesk(null);
+    clearTransientExperience({ includeOnboarding: true });
+    setBlockedReference(null);
+    setSaveStatus("saved");
+    setSaveError(null);
+    setScreen("onboarding");
+    setNotice(message);
+  }, [clearTransientExperience]);
+
+  const showBlockedReference = useCallback((message: string, activeProfileId: string | null = null) => {
+    profileIdRef.current = null;
+    deskRef.current = null;
+    setDesk(null);
+    clearTransientExperience({ includeOnboarding: true });
+    setBlockedReference({ message, activeProfileId });
+    setSaveStatus("saved");
+    setSaveError(null);
+    setScreen("blocked");
+    setNotice(message);
+  }, [clearTransientExperience]);
+
+  const showRead = useCallback((
+    read: SemesterDeskPersistenceRead,
+    profileId: string,
+    readyNotice = "Your Semester Desk is ready.",
+  ) => {
     profileIdRef.current = profileId;
     clearTransientExperience({ includeOnboarding: true });
+    setBlockedReference(null);
     setSaveStatus("saved");
     setSaveError(null);
     if (read.kind === "missing") {
-      deskRef.current = null;
-      setDesk(null);
-      setScreen("onboarding");
-      setNotice("Start a new Semester Desk on this device.");
+      showOnboarding("Start a new Semester Desk on this device.");
       return;
     }
     if (read.kind === "malformed") {
@@ -1679,35 +1831,121 @@ export function SemesterDeskV2App({
     setDesk(read.state);
     setCapacityMinutes(String(read.state.capacityDraft?.availableMinutes ?? read.state.capacity?.availableMinutes ?? ""));
     setScreen("ready");
-    setNotice("Your Semester Desk is ready.");
-  }, [clearTransientExperience]);
+    setNotice(readyNotice);
+  }, [clearTransientExperience, showOnboarding]);
+
+  const loadLocation = useCallback(() => {
+    const loadEpoch = ++loadEpochRef.current;
+    const usesBrowserStorage = persistence === undefined;
+    if (usesBrowserStorage && !browserPersistenceRef.current) {
+      browserPersistenceRef.current = new BrowserSemesterDeskPersistence(window.localStorage);
+    }
+    const devicePersistence = persistence ?? browserPersistenceRef.current;
+    if (!devicePersistence) return;
+    persistenceRef.current = devicePersistence;
+    const currentSection = sectionFromLocation();
+    const explicitProfileId = initialProfileId === undefined || initialProfileId === null
+      ? null
+      : normalizeSemesterDeskProfileIdentifier(initialProfileId);
+    if (initialProfileId !== undefined && initialProfileId !== null && !explicitProfileId) {
+      showBlockedReference("FORGE could not use this local desk reference. It did not change local data.");
+      return;
+    }
+
+    const location = explicitProfileId
+      ? { kind: "profile" as const, profileId: explicitProfileId, section: currentSection }
+      : profileLocationFromWindow();
+    const activeReference = usesBrowserStorage && !explicitProfileId
+      ? activeProfileReferenceFromStorage()
+      : null;
+    if (location.kind === "invalid") {
+      showBlockedReference(
+        "FORGE could not use this local desk link. It did not change local data.",
+        activeReference?.kind === "profile" ? activeReference.profileId : null,
+      );
+      return;
+    }
+
+    let profileId: string | null = location.kind === "profile" ? location.profileId : null;
+    if (activeReference) {
+      if (location.kind === "profile") {
+        if (
+          activeReference.kind === "profile"
+          && activeReference.profileId !== location.profileId
+        ) {
+          showBlockedReference(
+            "FORGE could not open that local desk from this link. It did not change local data.",
+            activeReference.profileId,
+          );
+          return;
+        }
+        if (activeReference.kind === "invalid" || activeReference.kind === "unavailable") {
+          showBlockedReference("FORGE could not identify the saved local desk. It did not change local data.");
+          return;
+        }
+      } else if (activeReference.kind === "profile") {
+        profileId = activeReference.profileId;
+      } else if (activeReference.kind === "invalid" || activeReference.kind === "unavailable") {
+        showBlockedReference("FORGE could not identify the saved local desk. It did not change local data.");
+        return;
+      }
+    }
+
+    if (!profileId) {
+      showOnboarding("Start a new Semester Desk on this device.");
+      return;
+    }
+
+    void devicePersistence.read(profileId).then((read) => {
+      if (!mountedRef.current || loadEpochRef.current !== loadEpoch) return;
+      let readyNotice = "Your Semester Desk is ready.";
+      if (read.kind === "loaded" && usesBrowserStorage && !writeActiveProfileReference(profileId)) {
+        readyNotice = "Your Semester Desk is ready. FORGE could not save its local return reference.";
+      }
+      showRead(read, profileId, readyNotice);
+      if (read.kind === "loaded" && location.section === "settings") {
+        writeProfileIdToLocation(profileId, "settings");
+        focusSettingsAfterRender(() => (
+          mountedRef.current && loadEpochRef.current === loadEpoch
+        ));
+      }
+    }).catch((error: unknown) => {
+      if (!mountedRef.current || loadEpochRef.current !== loadEpoch) return;
+      const detail = error instanceof Error && error.message.trim().length > 0
+        ? ` ${error.message.trim()}`
+        : "";
+      showBlockedReference(
+        `FORGE could not read local data on this device.${detail}`,
+        usesBrowserStorage ? profileId : null,
+      );
+    });
+  }, [initialProfileId, persistence, showBlockedReference, showOnboarding, showRead]);
+
+  function openBlockedSavedDesk() {
+    const profileId = blockedReference?.activeProfileId;
+    if (!profileId) return;
+    if (!writeProfileIdToLocation(profileId, sectionFromLocation())) {
+      showBlockedReference("FORGE could not use the saved local desk reference. It did not change local data.");
+      return;
+    }
+    loadLocation();
+  }
 
   useEffect(() => {
     mountedRef.current = true;
-    const loadEpoch = ++loadEpochRef.current;
-    const devicePersistence = persistence ?? new BrowserSemesterDeskPersistence(window.localStorage);
-    persistenceRef.current = devicePersistence;
-    const profileId = initialProfileId ?? profileIdFromLocation();
-    if (!profileId) {
-      void Promise.resolve().then(() => {
-        if (!mountedRef.current || loadEpochRef.current !== loadEpoch) return;
-        profileIdRef.current = null;
-        deskRef.current = null;
-        setDesk(null);
-        clearTransientExperience({ includeOnboarding: true });
-        setSaveStatus("saved");
-        setSaveError(null);
-        setScreen("onboarding");
-        setNotice("Start a new Semester Desk on this device.");
-      });
-      return () => { mountedRef.current = false; };
-    }
-    void devicePersistence.read(profileId).then((read) => {
-      if (!mountedRef.current || loadEpochRef.current !== loadEpoch) return;
-      showRead(read, profileId);
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (active) loadLocation();
     });
-    return () => { mountedRef.current = false; };
-  }, [clearTransientExperience, initialProfileId, persistence, showRead]);
+    window.addEventListener("popstate", loadLocation);
+    window.addEventListener("hashchange", loadLocation);
+    return () => {
+      active = false;
+      window.removeEventListener("popstate", loadLocation);
+      window.removeEventListener("hashchange", loadLocation);
+      mountedRef.current = false;
+    };
+  }, [loadLocation]);
 
   useEffect(() => {
     function updateOnlineStatus() {
@@ -1888,8 +2126,13 @@ export function SemesterDeskV2App({
     setOnboardingDraft(emptyOnboardingDraft);
     setCapacityMinutes("");
     setScreen("ready");
-    setNotice("Your Semester Desk is open.");
-    writeProfileIdToLocation(profileId);
+    const savedReturnReference = persistence === undefined
+      ? writeActiveProfileReference(profileId)
+      : true;
+    setNotice(savedReturnReference
+      ? "Your Semester Desk is open."
+      : "Your Semester Desk is open. FORGE could not save its local return reference.");
+    writeProfileIdToLocation(profileId, "overview");
   }
 
   function prepareRecovery() {
@@ -1955,7 +2198,10 @@ export function SemesterDeskV2App({
       setNotice(result.message);
       return;
     }
-    writeProfileIdToLocation(null);
+    const clearedReturnReference = persistence === undefined
+      ? clearActiveProfileReference(profileId)
+      : true;
+    writeProfileIdToLocation(null, "overview");
     deskRef.current = null;
     profileIdRef.current = null;
     setDesk(null);
@@ -1964,7 +2210,9 @@ export function SemesterDeskV2App({
     setSaveStatus("saved");
     setResetOpen(false);
     setScreen("onboarding");
-    setNotice("The local desk was removed from this device.");
+    setNotice(clearedReturnReference
+      ? "The local desk was removed from this device."
+      : "The local desk was removed. FORGE could not clear its local return reference.");
   }
 
   if (screen === "loading") {
@@ -2004,6 +2252,18 @@ export function SemesterDeskV2App({
             actionError={saveError}
           />
         ) : null}
+      </AppFrame>
+    );
+  }
+
+  if (screen === "blocked" && blockedReference) {
+    return (
+      <AppFrame>
+        <Notice message={notice} />
+        <BlockedLocalReferenceState
+          blockedReference={blockedReference}
+          onOpenSavedDesk={blockedReference.activeProfileId ? openBlockedSavedDesk : null}
+        />
       </AppFrame>
     );
   }

@@ -98,7 +98,7 @@ function PrivacyPageContent() {
           <div>
             <dt>Download or remove your desk</dt>
             <dd>
-              Open <Link href="/app#settings">Local data</Link> to download the saved JSON or reset this local desk.
+              Open <Link href="/app?section=settings">Local data</Link> to download the saved JSON or reset this local desk.
             </dd>
           </div>
           <div>
@@ -199,13 +199,13 @@ function SupportPageContent() {
           <div>
             <dt>Keep a copy first</dt>
             <dd>
-              Open <Link href="/app#settings">Local data</Link> and select <span className={styles.quotedAction}>Download local JSON</span> before you clear browser data.
+              Open <Link href="/app?section=settings">Local data</Link> and select <span className={styles.quotedAction}>Download local JSON</span> before you clear browser data.
             </dd>
           </div>
           <div>
             <dt>Remove a local desk</dt>
             <dd>
-              Open <Link href="/app#settings">Local data</Link> and select <span className={styles.quotedAction}>Reset this device</span>. Confirm the removal before you continue.
+              Open <Link href="/app?section=settings">Local data</Link> and select <span className={styles.quotedAction}>Reset this device</span>. Confirm the removal before you continue.
             </dd>
           </div>
         </PolicyList>

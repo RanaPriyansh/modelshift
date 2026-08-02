@@ -23,6 +23,27 @@ import {
 
 const storagePrefix = "forge.semester-desk-v2.v1.profile";
 
+/**
+ * This stores one opaque local return reference. It is not a profile list and
+ * it must never be used to discover another local desk.
+ */
+export const semesterDeskActiveProfileStorageKey =
+  "forge.semester-desk-v2.v1.active-profile";
+
+/** Normalize one profile identifier before it reaches a local storage key. */
+export function normalizeSemesterDeskProfileIdentifier(value: string): string | null {
+  const normalized = value.trim();
+  if (normalized.length === 0) return null;
+  return semesterDeskUtf8ByteLength(normalized) <= SEMESTER_DESK_MAX_IDENTIFIER_UTF8_BYTES
+    ? normalized
+    : null;
+}
+
+function boundedProfileIdentifier(value: string): string | null {
+  const normalized = normalizeSemesterDeskProfileIdentifier(value);
+  return normalized === value ? normalized : null;
+}
+
 function boundedString(maximumBytes: number) {
   return z.string().refine(
     (value) => semesterDeskUtf8ByteLength(value) <= maximumBytes,
@@ -231,13 +252,17 @@ export class BrowserSemesterDeskPersistence implements SemesterDeskPersistence {
   constructor(private readonly storage: Storage) {}
 
   async read(profileId: string): Promise<SemesterDeskPersistenceRead> {
+    const boundedProfileId = boundedProfileIdentifier(profileId);
     if (profileId.trim().length === 0) {
       return malformed("", "The local profile reference is empty.");
+    }
+    if (!boundedProfileId) {
+      return malformed("", "The local profile reference is invalid.");
     }
 
     let raw: string | null;
     try {
-      raw = this.storage.getItem(semesterDeskStorageKey(profileId));
+      raw = this.storage.getItem(semesterDeskStorageKey(boundedProfileId));
     } catch (error) {
       return malformed("", storageFailure(error, "read local data").message);
     }
@@ -258,7 +283,7 @@ export class BrowserSemesterDeskPersistence implements SemesterDeskPersistence {
     if (!checked.success) {
       return malformed(raw, "The local data does not match this Semester Desk version.");
     }
-    if (checked.data.profileId !== profileId) {
+    if (checked.data.profileId !== boundedProfileId) {
       return malformed(raw, "The local data belongs to a different profile.");
     }
     const validated = validateSemesterDeskState(checked.data);
@@ -308,8 +333,12 @@ export class BrowserSemesterDeskPersistence implements SemesterDeskPersistence {
     if (profileId.trim().length === 0) {
       return { ok: false, message: "The local profile reference is empty." };
     }
+    const boundedProfileId = boundedProfileIdentifier(profileId);
+    if (!boundedProfileId) {
+      return { ok: false, message: "The local profile reference is invalid." };
+    }
     try {
-      const raw = this.storage.getItem(semesterDeskStorageKey(profileId));
+      const raw = this.storage.getItem(semesterDeskStorageKey(boundedProfileId));
       if (raw === null) {
         return { ok: false, message: "There is no saved local data to download." };
       }
@@ -323,8 +352,12 @@ export class BrowserSemesterDeskPersistence implements SemesterDeskPersistence {
     if (profileId.trim().length === 0) {
       return { ok: false, message: "The local profile reference is empty." };
     }
+    const boundedProfileId = boundedProfileIdentifier(profileId);
+    if (!boundedProfileId) {
+      return { ok: false, message: "The local profile reference is invalid." };
+    }
     try {
-      this.storage.removeItem(semesterDeskStorageKey(profileId));
+      this.storage.removeItem(semesterDeskStorageKey(boundedProfileId));
       return { ok: true };
     } catch (error) {
       return storageFailure(error, "remove local data");
