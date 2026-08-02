@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 
-import { ForgeToday } from "@/src/components/forge/ForgeLearnerWorkspace";
-import { ForgeShell } from "@/src/components/forge/ForgeShell";
+import { SemesterDeskV2App } from "@/src/components/forge/semester-desk-v2/app/SemesterDeskV2App";
 
 export const metadata: Metadata = {
-  title: "Today — FORGE",
-  description: "One deterministic next meaningful action from a learner-accepted device-local path.",
+  title: "Semester Desk — FORGE",
+  description: "A calm private desk for university students to rebuild a broken week from today.",
 };
 
 export default function ForgeAppPage() {
-  return <ForgeShell active="today" surface="app"><ForgeToday /></ForgeShell>;
+  return <SemesterDeskV2App />;
 }

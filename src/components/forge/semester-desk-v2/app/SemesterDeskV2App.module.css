@@ -1,0 +1,1154 @@
+.page {
+  --paper: #f2eddd;
+  --paper-bright: #fffdf6;
+  --ink: #14231b;
+  --muted: #526258;
+  --line: #b7b59f;
+  --line-dark: #78806c;
+  --forest: #1e4934;
+  --cobalt: #113d9d;
+  --orange: #bc5a32;
+  --orange-dark: #8d3f23;
+  --review: #8a451d;
+  --danger: #8f2e23;
+  min-width: 320px;
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
+  color-scheme: light;
+  font-family: var(--forge-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+}
+
+.page * {
+  box-sizing: border-box;
+}
+
+.page :focus-visible {
+  outline: 3px solid var(--cobalt);
+  outline-offset: 4px;
+}
+
+.skipLink {
+  position: fixed;
+  z-index: 10;
+  top: 12px;
+  left: 16px;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 10px 16px;
+  transform: translateY(-160%);
+  background: var(--forest);
+  color: var(--paper-bright);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.skipLink:focus {
+  transform: translateY(0);
+}
+
+.header,
+.main,
+.onboarding,
+.loading,
+.recoveryState {
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: minmax(96px, 1fr) minmax(0, 2fr) minmax(130px, 1fr);
+  min-height: 76px;
+  align-items: center;
+  gap: 20px;
+  border-bottom: 1px solid var(--line-dark);
+}
+
+.wordmark,
+.termName,
+.saveState,
+.textButton,
+.headerTools {
+  margin: 0;
+}
+
+.wordmark {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--forest);
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: -0.065em;
+  text-decoration: none;
+}
+
+.termName {
+  overflow: hidden;
+  color: var(--forest);
+  font-family: var(--forge-sans, ui-sans-serif, system-ui, sans-serif);
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerTools {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 16px;
+}
+
+.saveState {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.textButton,
+.secondaryAction,
+.selectedAction,
+.dangerAction,
+.commitAction,
+.factStatus button,
+.conflictList button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.textButton {
+  padding: 8px 0;
+  background: transparent;
+  color: var(--cobalt);
+  text-decoration: underline;
+  text-underline-offset: 0.22em;
+}
+
+.main {
+  padding: 52px 0 96px;
+}
+
+.loading,
+.recoveryState {
+  display: grid;
+  min-height: calc(100dvh - 76px);
+  align-items: center;
+  padding: 56px 0;
+}
+
+.loading p {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--forge-sans, ui-sans-serif, system-ui, sans-serif);
+  font-size: clamp(1.8rem, 5vw, 3.5rem);
+  letter-spacing: -0.05em;
+}
+
+.onboarding {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: clamp(36px, 7vw, 110px);
+  padding: clamp(54px, 8vw, 104px) 0 100px;
+}
+
+.onboardingIntro {
+  align-self: start;
+  padding-top: 10px;
+}
+
+.sectionMarker {
+  margin: 0 0 12px;
+  color: var(--forest);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+}
+
+.onboardingIntro h1,
+.recoveryState h1,
+.sectionHeading h2,
+.focusRegion h3,
+.returnForm h3,
+.settingsSection h2,
+.dialog h2 {
+  margin: 0;
+  color: var(--forest);
+  font-family: var(--forge-sans, ui-sans-serif, system-ui, sans-serif);
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  text-wrap: balance;
+}
+
+.onboardingIntro h1,
+.recoveryState h1 {
+  max-width: 9ch;
+  font-size: clamp(3rem, 6.5vw, 6rem);
+  line-height: 0.88;
+}
+
+.onboardingIntro > p:last-child,
+.recoveryState p,
+.sectionHeading > p,
+.focusRegion > p,
+.returnForm > p,
+.settingsSection > p,
+.formNote {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.onboardingIntro > p:last-child {
+  max-width: 27rem;
+  margin: 28px 0 0;
+}
+
+.onboardingForm {
+  display: grid;
+  border-top: 2px solid var(--forest);
+}
+
+.onboardingForm fieldset {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  margin: 0;
+  padding: 28px 0 30px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.onboardingForm legend {
+  padding: 0;
+  color: var(--forest);
+  font-family: var(--forge-sans, ui-sans-serif, system-ui, sans-serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.twoColumns,
+.threeColumns,
+.factFields {
+  display: grid;
+  gap: 16px;
+}
+
+.twoColumns {
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+}
+
+.threeColumns {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.95fr) minmax(0, 0.8fr);
+}
+
+.factFields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.onboardingForm label,
+.capacityForm label,
+.recoveryEditor label,
+.focusRegion label,
+.returnForm label,
+.addCourseForm label,
+.addDetail label,
+.addPlanItemForm label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 0.87rem;
+  font-weight: 800;
+}
+
+.onboardingForm input,
+.onboardingForm select,
+.capacityForm input,
+.recoveryEditor input,
+.recoveryEditor select,
+.focusRegion textarea,
+.returnForm input,
+.addCourseForm input,
+.addDetail input,
+.addDetail select,
+.addPlanItemForm input,
+.addPlanItemForm select {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--line-dark);
+  border-radius: 0;
+  background: var(--paper-bright);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.onboardingForm input,
+.onboardingForm select,
+.capacityForm input,
+.recoveryEditor input,
+.recoveryEditor select,
+.returnForm input,
+.addCourseForm input,
+.addDetail input,
+.addDetail select,
+.addPlanItemForm input,
+.addPlanItemForm select {
+  padding: 10px 12px;
+}
+
+.focusRegion textarea {
+  min-height: 132px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.onboardingForm .commitAction {
+  justify-self: start;
+  margin-top: 28px;
+}
+
+.formNote {
+  margin: 16px 0 0;
+  font-size: 0.9rem;
+}
+
+.commitAction,
+.secondaryAction,
+.selectedAction,
+.dangerAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 17px;
+  text-decoration: none;
+}
+
+.commitAction {
+  background: var(--orange);
+  color: #fffaf4;
+  box-shadow: 0 7px 0 color-mix(in srgb, var(--orange) 24%, transparent);
+}
+
+.commitAction:hover:not(:disabled) {
+  background: var(--orange-dark);
+}
+
+.commitAction:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--orange) 24%, transparent);
+}
+
+.commitAction svg,
+.secondaryAction svg {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+}
+
+.secondaryAction,
+.selectedAction {
+  border: 1px solid var(--forest);
+  background: transparent;
+  color: var(--forest);
+}
+
+.secondaryAction:hover:not(:disabled),
+.selectedAction:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--forest) 8%, transparent);
+}
+
+.selectedAction {
+  border-color: var(--cobalt);
+  background: var(--cobalt);
+  color: #fdfdf8;
+}
+
+.selectedAction:hover:not(:disabled) {
+  background: #0c307c;
+}
+
+.dangerAction {
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+}
+
+.dangerAction:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.commitAction:disabled,
+.secondaryAction:disabled,
+.selectedAction:disabled,
+.dangerAction:disabled,
+.factStatus button:disabled,
+.conflictList button:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+.offlineMessage {
+  width: min(1180px, calc(100% - 48px));
+  margin: 16px auto -16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--review);
+  border-bottom: 1px solid var(--review);
+  color: var(--review);
+  font-size: 0.92rem;
+  font-weight: 750;
+}
+
+.saveError,
+.inlineError {
+  color: var(--danger);
+}
+
+.saveError {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+  padding: 16px 0;
+  border-top: 2px solid var(--danger);
+  border-bottom: 1px solid var(--danger);
+}
+
+.saveError p,
+.inlineError {
+  margin: 0;
+  font-weight: 750;
+}
+
+.ruledSection,
+.settingsSection {
+  padding: 40px 0 48px;
+  border-top: 1px solid var(--line-dark);
+}
+
+.sectionHeading {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(180px, 0.8fr);
+  align-items: end;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.sectionHeading h2 {
+  max-width: 14ch;
+  font-size: clamp(2.2rem, 4.6vw, 4.5rem);
+  line-height: 0.95;
+}
+
+.sectionHeading > p {
+  max-width: 24rem;
+  margin: 0 0 5px auto;
+  font-size: 0.95rem;
+  text-align: right;
+}
+
+.courseLedger,
+.workList,
+.recoveryEditor ol,
+.recoveryReview ol,
+.recoveryLog ol,
+.progressList,
+.courseDetails ul,
+.conflictList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.courseLedger {
+  border-top: 1px solid var(--line);
+}
+
+.courseRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.42fr) minmax(0, 1fr);
+  gap: 28px;
+  padding: 23px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.courseRow > header p,
+.courseRow > header h3,
+.courseRow > header span,
+.courseDetails h4 {
+  margin: 0;
+}
+
+.courseRow > header p {
+  color: var(--cobalt);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.courseRow > header h3 {
+  margin-top: 5px;
+  color: var(--forest);
+  font-family: var(--forge-sans, ui-sans-serif, system-ui, sans-serif);
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.checked,
+.needsReview,
+.factStatus > span {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 24px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 3px 7px;
+  border: 1px solid currentColor;
+  font-size: 0.73rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.checked {
+  color: var(--forest);
+}
+
+.needsReview {
+  color: var(--review);
+}
+
+.courseDetails {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(180px, 0.7fr);
+  gap: 26px;
+}
+
+.courseDetails h4 {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.courseDetails li,
+.conflictList li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px dotted var(--line);
+}
+
+.courseDetails li:first-child,
+.conflictList li:first-child {
+  border-top: 0;
+}
+
+.courseDetails li > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.courseDetails strong,
+.courseDetails span,
+.courseDetails small,
+.conflictList span {
+  display: block;
+}
+
+.courseDetails strong,
+.conflictList span {
+  font-size: 0.9rem;
+}
+
+.courseDetails span,
+.courseDetails small {
+  color: var(--muted);
+  font-size: 0.83rem;
+}
+
+.factStatus {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.factStatus > span {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.factStatus > span[data-status="checked"] {
+  color: var(--forest);
+}
+
+.factStatus > span[data-status="needs-review"],
+.factStatus > span[data-status="not-confirmed"],
+.factStatus > span[data-status="changed-since-last-check"] {
+  color: var(--review);
+}
+
+.factStatus button,
+.conflictList button {
+  min-height: 36px;
+  padding: 5px 0;
+  background: transparent;
+  color: var(--cobalt);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.emptyLine {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.capacityForm {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.65fr) auto auto;
+  align-items: end;
+  gap: 14px;
+}
+
+.capacityForm .commitAction {
+  white-space: nowrap;
+}
+
+.addCourseForm,
+.addPlanItemForm {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.55fr) minmax(220px, 1.1fr) auto;
+  align-items: end;
+  gap: 14px;
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.addCourseForm .sectionMarker,
+.addPlanItemForm .sectionMarker {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+}
+
+.addPlanItemForm {
+  grid-template-columns: minmax(160px, 0.8fr) minmax(180px, 1.15fr) minmax(145px, 0.7fr) minmax(105px, 0.45fr) auto;
+}
+
+.addDetail {
+  grid-column: 1 / -1;
+  margin-top: 20px;
+  border-top: 1px dotted var(--line);
+}
+
+.addDetail summary {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  cursor: pointer;
+  color: var(--cobalt);
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.22em;
+}
+
+.addDetail form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 10px 0 2px;
+}
+
+.addDetail .secondaryAction {
+  justify-self: start;
+}
+
+.recoveryEditor > ol,
+.recoveryReview > ol,
+.recoveryLog > ol {
+  border-top: 1px solid var(--line);
+}
+
+.recoveryEditor > ol > li {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.25fr) minmax(160px, 0.8fr) minmax(130px, 0.55fr) minmax(0, 1.1fr);
+  align-items: end;
+  gap: 14px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.workIdentity {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.workIdentity strong {
+  color: var(--forest);
+  font-family: var(--forge-sans, ui-sans-serif, system-ui, sans-serif);
+  font-size: 1.2rem;
+  letter-spacing: -0.025em;
+}
+
+.workIdentity span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.recoveryReason {
+  grid-column: auto;
+}
+
+.recoveryEditor > .secondaryAction {
+  margin-top: 22px;
+}
+
+.recoveryReview,
+.focusRegion,
+.returnForm {
+  padding: 28px 0 4px;
+}
+
+.recoverySummary {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.recoveryReview li,
+.recoveryLog li,
+.progressList li {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr) minmax(0, 1.35fr);
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.recoveryReview strong,
+.recoveryLog strong {
+  color: var(--cobalt);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.recoveryReview span,
+.recoveryLog span,
+.recoveryReview small,
+.recoveryLog small,
+.progressList span {
+  font-size: 0.9rem;
+}
+
+.recoveryReview small,
+.recoveryLog small,
+.progressList span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.recoveryReview .commitAction {
+  margin-top: 22px;
+}
+
+.recoveryLog {
+  margin-top: 32px;
+}
+
+.recoveryLog h3 {
+  margin: 0 0 12px;
+  color: var(--forest);
+  font-family: var(--forge-sans, ui-sans-serif, system-ui, sans-serif);
+  font-size: 1.55rem;
+  letter-spacing: -0.035em;
+}
+
+.workList {
+  border-top: 1px solid var(--line);
+}
+
+.workList li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 17px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.workList li[data-selected] {
+  border-left: 4px solid var(--cobalt);
+  padding-left: 15px;
+}
+
+.workList li > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.workList strong {
+  color: var(--forest);
+  font-family: var(--forge-sans, ui-sans-serif, system-ui, sans-serif);
+  font-size: 1.3rem;
+  letter-spacing: -0.035em;
+}
+
+.workList span,
+.workList small {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.workList small {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.focusRegion,
+.returnForm {
+  max-width: 760px;
+  margin-top: 34px;
+  border-top: 2px solid var(--forest);
+}
+
+.focusRegion h3,
+.returnForm h3 {
+  font-size: clamp(1.8rem, 3.5vw, 2.7rem);
+  line-height: 0.98;
+}
+
+.focusRegion > p:not(.sectionMarker),
+.returnForm > p:not(.sectionMarker) {
+  max-width: 45rem;
+  margin: 14px 0 20px;
+}
+
+.focusRegion label,
+.returnForm label {
+  max-width: 620px;
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.returnForm {
+  display: grid;
+  gap: 16px;
+}
+
+.returnForm .sectionMarker,
+.returnForm h3,
+.returnForm > p {
+  margin: 0;
+}
+
+.returnForm .secondaryAction {
+  justify-self: start;
+}
+
+.progressList {
+  border-top: 1px solid var(--line);
+}
+
+.progressList li {
+  grid-template-columns: minmax(200px, 1fr) minmax(0, 1fr);
+}
+
+.progressList strong {
+  color: var(--forest);
+  font-family: var(--forge-sans, ui-sans-serif, system-ui, sans-serif);
+  font-size: 1.15rem;
+  letter-spacing: -0.025em;
+}
+
+.settingsSection {
+  padding-bottom: 0;
+}
+
+.settingsSection h2 {
+  max-width: 13ch;
+  font-size: clamp(2rem, 3.8vw, 3.5rem);
+  line-height: 0.96;
+}
+
+.settingsSection > p:not(.sectionMarker) {
+  max-width: 34rem;
+  margin: 16px 0 0;
+}
+
+.recoveryState > section {
+  max-width: 640px;
+  border-top: 2px solid var(--forest);
+  padding-top: 28px;
+}
+
+.recoveryState h1 {
+  max-width: 12ch;
+}
+
+.recoveryState p:not(.sectionMarker) {
+  max-width: 40rem;
+  margin: 24px 0 0;
+}
+
+.dialogBackdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(20 35 27 / 62%);
+}
+
+.dialog {
+  width: min(560px, 100%);
+  padding: 30px;
+  border: 1px solid var(--forest);
+  background: var(--paper-bright);
+  box-shadow: 12px 12px 0 color-mix(in srgb, var(--forest) 24%, transparent);
+}
+
+.dialog h2 {
+  font-size: clamp(2rem, 6vw, 3.3rem);
+  line-height: 0.93;
+}
+
+.dialog > p:not(.sectionMarker):not(.inlineError) {
+  margin: 18px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.dialog .inlineError {
+  margin-top: 16px;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 840px) {
+  .onboarding {
+    grid-template-columns: 1fr;
+  }
+
+  .onboardingIntro h1 {
+    max-width: 13ch;
+  }
+
+  .courseRow,
+  .courseDetails,
+  .sectionHeading {
+    grid-template-columns: 1fr;
+  }
+
+  .sectionHeading > p {
+    max-width: 38rem;
+    margin: 0;
+    text-align: left;
+  }
+
+  .recoveryEditor > ol > li {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .addPlanItemForm {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workIdentity,
+  .recoveryReason {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 620px) {
+  .header,
+  .main,
+  .onboarding,
+  .loading,
+  .recoveryState,
+  .offlineMessage {
+    width: min(100% - 32px, 1180px);
+  }
+
+  .header {
+    grid-template-columns: 1fr auto;
+    min-height: 68px;
+    gap: 8px 14px;
+  }
+
+  .termName {
+    display: none;
+  }
+
+  .saveState {
+    display: none;
+  }
+
+  .headerTools {
+    gap: 8px;
+  }
+
+  .main {
+    padding: 35px 0 64px;
+  }
+
+  .onboarding {
+    padding: 44px 0 64px;
+  }
+
+  .onboardingIntro h1,
+  .recoveryState h1 {
+    font-size: clamp(2.8rem, 15vw, 4.2rem);
+  }
+
+  .twoColumns,
+  .threeColumns,
+  .factFields,
+  .capacityForm,
+  .recoveryEditor > ol > li,
+  .addCourseForm,
+  .addPlanItemForm,
+  .addDetail form {
+    grid-template-columns: 1fr;
+  }
+
+  .workIdentity,
+  .recoveryReason {
+    grid-column: auto;
+  }
+
+  .addCourseForm .sectionMarker,
+  .addPlanItemForm .sectionMarker {
+    grid-column: auto;
+  }
+
+  .sectionHeading h2 {
+    font-size: clamp(2.25rem, 12vw, 3.35rem);
+  }
+
+  .courseRow {
+    gap: 16px;
+  }
+
+  .courseDetails {
+    gap: 20px;
+  }
+
+  .workList li {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 12px;
+  }
+
+  .workList .secondaryAction,
+  .workList .selectedAction {
+    justify-self: start;
+  }
+
+  .recoveryReview li,
+  .recoveryLog li,
+  .progressList li {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .actionRow {
+    align-items: stretch;
+  }
+
+  .actionRow > * {
+    width: 100%;
+  }
+
+  .dialog {
+    padding: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before,
+  .page *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .page {
+    forced-color-adjust: auto;
+  }
+
+  .commitAction,
+  .secondaryAction,
+  .selectedAction,
+  .dangerAction,
+  .onboardingForm input,
+  .onboardingForm select,
+  .capacityForm input,
+  .recoveryEditor input,
+  .recoveryEditor select,
+  .focusRegion textarea,
+  .returnForm input,
+  .addCourseForm input,
+  .addDetail input,
+  .addDetail select,
+  .addPlanItemForm input,
+  .addPlanItemForm select {
+    border: 1px solid ButtonText;
+  }
+
+  .commitAction,
+  .selectedAction {
+    background: ButtonFace;
+    color: ButtonText;
+    box-shadow: none;
+  }
+}
