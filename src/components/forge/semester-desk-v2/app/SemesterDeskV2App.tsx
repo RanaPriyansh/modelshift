@@ -26,6 +26,7 @@ import {
   BrowserSemesterDeskPersistence,
   type SemesterDeskPersistence,
   type SemesterDeskPersistenceRead,
+  type SemesterDeskPersistenceResult,
 } from "@/src/lib/forge-semester-desk-v2/persistence";
 
 import styles from "./SemesterDeskV2App.module.css";
@@ -65,6 +66,11 @@ type CourseFactDraft = {
   readonly sourceLabel: string;
 };
 
+type ConflictDraft = {
+  readonly factIds: readonly string[];
+  readonly summary: string;
+};
+
 type PlanItemDraft = {
   readonly courseId: string;
   readonly title: string;
@@ -92,6 +98,7 @@ const emptyCourseFactDraft: CourseFactDraft = {
   status: "not-confirmed",
   sourceLabel: "",
 };
+const emptyConflictDraft: ConflictDraft = { factIds: [], summary: "" };
 const emptyPlanItemDraft: PlanItemDraft = {
   courseId: "",
   title: "",
@@ -189,6 +196,16 @@ function minutesLabel(minutes: number): string {
 
 function factNeedsReview(status: CourseFactStatus): boolean {
   return status !== "checked";
+}
+
+function factFreshnessLabel(checkedAt: string | null): string {
+  if (!checkedAt) return "Not yet checked";
+  const date = new Date(checkedAt);
+  if (Number.isNaN(date.getTime())) return "Check time needs review";
+  return `Last checked ${new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date)}`;
 }
 
 function courseNeedsReview(course: SemesterDeskState["courses"][number]): boolean {
@@ -476,12 +493,15 @@ function OfflineMessage({ offline }: { readonly offline: boolean }) {
 function CourseLedger({
   desk,
   onCommand,
+  now,
 }: {
   readonly desk: SemesterDeskState;
   readonly onCommand: (command: SemesterDeskCommand, successMessage: string) => boolean;
+  readonly now: () => string;
 }) {
   const [courseDraft, setCourseDraft] = useState<CourseDraft>(emptyCourseDraft);
   const [factDrafts, setFactDrafts] = useState<Record<string, CourseFactDraft>>({});
+  const [conflictDrafts, setConflictDrafts] = useState<Record<string, ConflictDraft>>({});
 
   function factDraftFor(courseId: string): CourseFactDraft {
     return factDrafts[courseId] ?? emptyCourseFactDraft;
@@ -489,6 +509,14 @@ function CourseLedger({
 
   function updateFactDraft(courseId: string, next: CourseFactDraft) {
     setFactDrafts((current) => ({ ...current, [courseId]: next }));
+  }
+
+  function conflictDraftFor(courseId: string): ConflictDraft {
+    return conflictDrafts[courseId] ?? emptyConflictDraft;
+  }
+
+  function updateConflictDraft(courseId: string, next: ConflictDraft) {
+    setConflictDrafts((current) => ({ ...current, [courseId]: next }));
   }
 
   return (
@@ -523,6 +551,7 @@ function CourseLedger({
                             <strong>{fact.label}</strong>
                             <span>{fact.value}</span>
                             <small>{fact.sourceLabel}</small>
+                            <small>{factFreshnessLabel(fact.checkedAt)}</small>
                           </div>
                           <div className={styles.factStatus}>
                             <span data-status={fact.status}>{factStatusLabels[fact.status]}</span>
@@ -535,7 +564,7 @@ function CourseLedger({
                                   courseId: course.id,
                                   factId: fact.id,
                                   status: "checked",
-                                  checkedAt: new Date().toISOString(),
+                                  checkedAt: now(),
                                 }, `${fact.label} is marked as checked.`)}
                               >
                                 Mark checked
@@ -587,7 +616,7 @@ function CourseLedger({
                       value: factDraft.value,
                       status: factDraft.status,
                       sourceLabel: factDraft.sourceLabel,
-                      ...(factDraft.status === "checked" ? { checkedAt: new Date().toISOString() } : {}),
+                      ...(factDraft.status === "checked" ? { checkedAt: now() } : {}),
                     }, `A new detail was added to ${course.title}.`);
                     if (saved) updateFactDraft(course.id, emptyCourseFactDraft);
                   }}
@@ -642,6 +671,71 @@ function CourseLedger({
                   </label>
                   <button className={styles.secondaryAction} type="submit">Add course detail</button>
                 </form>
+              </details>
+              <details className={styles.addDetail}>
+                <summary>Record a conflict</summary>
+                {course.facts.length < 2 ? (
+                  <p className={styles.emptyLine}>Add at least two course details before you record a conflict.</p>
+                ) : (
+                  <form
+                    className={styles.conflictForm}
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const conflictDraft = conflictDraftFor(course.id);
+                      const saved = onCommand({
+                        kind: "record-source-conflict",
+                        profileId: desk.profileId,
+                        courseId: course.id,
+                        factIds: conflictDraft.factIds,
+                        summary: conflictDraft.summary,
+                      }, `That conflict is recorded for ${course.title}.`);
+                      if (saved) updateConflictDraft(course.id, emptyConflictDraft);
+                    }}
+                  >
+                    <fieldset>
+                      <legend>Choose the two or more details that conflict</legend>
+                      <div className={styles.conflictChoices}>
+                        {course.facts.map((fact) => {
+                          const conflictDraft = conflictDraftFor(course.id);
+                          const selected = conflictDraft.factIds.includes(fact.id);
+                          return (
+                            <label key={fact.id}>
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={() => updateConflictDraft(course.id, {
+                                  ...conflictDraft,
+                                  factIds: selected
+                                    ? conflictDraft.factIds.filter((factId) => factId !== fact.id)
+                                    : [...conflictDraft.factIds, fact.id],
+                                })}
+                              />
+                              <span>{fact.label}: {fact.value}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
+                    <label>
+                      Describe the conflict
+                      <input
+                        value={conflictDraftFor(course.id).summary}
+                        onChange={(event) => updateConflictDraft(course.id, {
+                          ...conflictDraftFor(course.id),
+                          summary: event.target.value,
+                        })}
+                        required
+                      />
+                    </label>
+                    <button
+                      className={styles.secondaryAction}
+                      type="submit"
+                      disabled={conflictDraftFor(course.id).factIds.length < 2 || conflictDraftFor(course.id).summary.trim().length === 0}
+                    >
+                      Record conflict
+                    </button>
+                  </form>
+                )}
               </details>
             </li>
           ))}
@@ -1388,6 +1482,7 @@ function SemesterDeskReady({
   onOpenReset,
   onCancelReset,
   onConfirmReset,
+  now,
 }: {
   readonly desk: SemesterDeskState;
   readonly saveStatus: SaveStatus;
@@ -1415,6 +1510,7 @@ function SemesterDeskReady({
   readonly onOpenReset: () => void;
   readonly onCancelReset: () => void;
   readonly onConfirmReset: () => void;
+  readonly now: () => string;
 }) {
   return (
     <AppFrame title={desk.title} saveStatus={saveStatus} onReset={onOpenReset}>
@@ -1427,7 +1523,7 @@ function SemesterDeskReady({
             <button className={styles.secondaryAction} type="button" onClick={onRetrySave}>Try save again</button>
           </section>
         ) : null}
-        <CourseLedger desk={desk} onCommand={onCommand} />
+        <CourseLedger desk={desk} onCommand={onCommand} now={now} />
         <CapacitySection
           desk={desk}
           minutes={capacityMinutes}
@@ -1662,9 +1758,9 @@ export function SemesterDeskV2App({
     return true;
   }
 
-  function submitOnboarding(event: FormEvent<HTMLFormElement>) {
+  async function submitOnboarding(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    clearTransientExperience();
+    setOnboardingError(null);
     const profileId = createLocalProfileId();
     const initial = createSemesterDesk({
       profileId,
@@ -1716,6 +1812,45 @@ export function SemesterDeskV2App({
       return;
     }
 
+    const activePersistence = persistenceRef.current;
+    if (!activePersistence) {
+      setSaveStatus("error");
+      setOnboardingError("FORGE could not open this desk on this device. Try again.");
+      return;
+    }
+
+    setSaveStatus("saving");
+    setNotice("Saving your new Semester Desk on this device.");
+
+    let saved: SemesterDeskPersistenceResult;
+    try {
+      saved = await enqueueStorage(() => activePersistence.save(completed.value));
+    } catch (error) {
+      const detail = error instanceof Error && error.message.trim().length > 0
+        ? ` ${error.message.trim()}`
+        : "";
+      saved = { ok: false, message: `FORGE could not save local data on this device.${detail}` };
+    }
+
+    if (!saved.ok || !mountedRef.current) {
+      let resetResult: SemesterDeskPersistenceResult = { ok: true };
+      try {
+        resetResult = await enqueueStorage(() => activePersistence.reset(profileId));
+      } catch (error) {
+        const detail = error instanceof Error && error.message.trim().length > 0
+          ? ` ${error.message.trim()}`
+          : "";
+        resetResult = { ok: false, message: `FORGE could not remove incomplete local data.${detail}` };
+      }
+      if (!mountedRef.current) return;
+      setSaveStatus("error");
+      const cleanupMessage = resetResult.ok ? "" : ` ${resetResult.message}`;
+      const errorMessage = `${saved.ok ? "FORGE could not finish opening this desk." : saved.message} Your desk did not open.${cleanupMessage}`;
+      setOnboardingError(errorMessage);
+      setNotice(errorMessage);
+      return;
+    }
+
     profileIdRef.current = profileId;
     deskRef.current = completed.value;
     setDesk(completed.value);
@@ -1724,7 +1859,6 @@ export function SemesterDeskV2App({
     setScreen("ready");
     setNotice("Your Semester Desk is open.");
     writeProfileIdToLocation(profileId);
-    void persist(completed.value);
   }
 
   function prepareRecovery() {
@@ -1880,6 +2014,7 @@ export function SemesterDeskV2App({
       onOpenReset={() => setResetOpen(true)}
       onCancelReset={() => setResetOpen(false)}
       onConfirmReset={() => { void resetLocalDesk(); }}
+      now={now}
     />
   );
 }

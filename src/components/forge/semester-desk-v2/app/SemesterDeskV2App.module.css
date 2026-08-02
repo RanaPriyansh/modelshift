@@ -690,6 +690,50 @@
   justify-self: start;
 }
 
+.addDetail form.conflictForm {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.conflictForm fieldset {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.conflictForm legend {
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.87rem;
+  font-weight: 800;
+}
+
+.conflictChoices {
+  display: grid;
+  gap: 8px;
+}
+
+.conflictChoices label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.conflictChoices input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin: 1px 0 0;
+  accent-color: var(--forest);
+}
+
 .recoveryEditor > ol,
 .recoveryReview > ol,
 .recoveryLog > ol {

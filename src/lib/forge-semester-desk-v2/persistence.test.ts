@@ -32,6 +32,18 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
+function storageWith(overrides: Partial<Storage>): Storage {
+  return {
+    get length() { return 0; },
+    clear() {},
+    getItem() { return null; },
+    key() { return null; },
+    removeItem() {},
+    setItem() {},
+    ...overrides,
+  } as Storage;
+}
+
 describe("BrowserSemesterDeskPersistence", () => {
   it("uses one versioned profile-bound key and keeps profiles separate", async () => {
     const persistence = new BrowserSemesterDeskPersistence(window.localStorage);
@@ -68,6 +80,7 @@ describe("BrowserSemesterDeskPersistence", () => {
       kind: "malformed",
       message: "The local data belongs to a different profile.",
     });
+    expect(window.localStorage.getItem(key)).toBe(JSON.stringify({ ...first, profileId: "profile.other" }));
   });
 
   it("exports the exact saved JSON before a targeted reset", async () => {
@@ -86,6 +99,50 @@ describe("BrowserSemesterDeskPersistence", () => {
     expect(await persistence.read(second.profileId)).toMatchObject({
       kind: "loaded",
       state: { profileId: second.profileId },
+    });
+  });
+
+  it("exports raw local data byte for byte, even when the data needs review", async () => {
+    const persistence = new BrowserSemesterDeskPersistence(window.localStorage);
+    const profileId = "profile.exact";
+    const raw = '{\n  "kept": "exact bytes",\n  "invalidForDesk": true\n}';
+    window.localStorage.setItem(semesterDeskStorageKey(profileId), raw);
+
+    await expect(persistence.exportRaw(profileId)).resolves.toEqual({ ok: true, raw });
+    expect(await persistence.read(profileId)).toMatchObject({ kind: "malformed", raw });
+    expect(window.localStorage.getItem(semesterDeskStorageKey(profileId))).toBe(raw);
+  });
+
+  it("reports local storage read, save, and reset failures without changing stored data", async () => {
+    const profileId = "profile.failures";
+    const state = desk(profileId);
+    const readPersistence = new BrowserSemesterDeskPersistence(storageWith({
+      getItem() { throw new Error("read blocked"); },
+    }));
+    await expect(readPersistence.read(profileId)).resolves.toMatchObject({
+      kind: "malformed",
+      raw: "",
+      message: "FORGE could not read local data on this device. read blocked",
+    });
+    await expect(readPersistence.exportRaw(profileId)).resolves.toEqual({
+      ok: false,
+      message: "FORGE could not read local data on this device. read blocked",
+    });
+
+    const savePersistence = new BrowserSemesterDeskPersistence(storageWith({
+      setItem() { throw new Error("save blocked"); },
+    }));
+    await expect(savePersistence.save(state)).resolves.toEqual({
+      ok: false,
+      message: "FORGE could not save local data on this device. save blocked",
+    });
+
+    const resetPersistence = new BrowserSemesterDeskPersistence(storageWith({
+      removeItem() { throw new Error("reset blocked"); },
+    }));
+    await expect(resetPersistence.reset(profileId)).resolves.toEqual({
+      ok: false,
+      message: "FORGE could not remove local data on this device. reset blocked",
     });
   });
 });

@@ -102,8 +102,13 @@ class MemoryPersistence implements SemesterDeskPersistence {
   readonly saved: SemesterDeskState[] = [];
   readonly resets: string[] = [];
   failSave = false;
+  failSaveAfterWrite = false;
 
   constructor(private state: SemesterDeskState | null, private malformed: string | null = null) {}
+
+  get storedState(): SemesterDeskState | null {
+    return this.state;
+  }
 
   async read(profileId: string): Promise<SemesterDeskPersistenceRead> {
     if (this.malformed !== null) {
@@ -118,7 +123,10 @@ class MemoryPersistence implements SemesterDeskPersistence {
   }
 
   async save(state: SemesterDeskState): Promise<SemesterDeskPersistenceResult> {
-    if (this.failSave) return { ok: false, message: "FORGE could not save local data on this device." };
+    if (this.failSave) {
+      if (this.failSaveAfterWrite) this.state = state;
+      return { ok: false, message: "FORGE could not save local data on this device." };
+    }
     this.state = state;
     this.saved.push(state);
     return { ok: true };
@@ -149,6 +157,18 @@ function renderApp(persistence: SemesterDeskPersistence, profileId: string | nul
   );
 }
 
+function fillOnboarding() {
+  fireEvent.change(screen.getByLabelText("Semester title"), { target: { value: "Autumn 2026" } });
+  fireEvent.change(screen.getByLabelText("Course code"), { target: { value: "CS201" } });
+  fireEvent.change(screen.getByLabelText("Course name"), { target: { value: "Algorithms" } });
+  fireEvent.change(screen.getByLabelText("Course detail"), { target: { value: "Problem set date" } });
+  fireEvent.change(screen.getByLabelText("What it says"), { target: { value: "2026-08-07" } });
+  fireEvent.change(screen.getByLabelText("Where you saw it"), { target: { value: "Course outline" } });
+  fireEvent.change(screen.getByLabelText("Work title"), { target: { value: "Graph proof practice" } });
+  fireEvent.change(screen.getByLabelText("Planned date"), { target: { value: "2026-08-05" } });
+  fireEvent.change(screen.getByLabelText("Minutes you expect"), { target: { value: "75" } });
+}
+
 afterEach(() => {
   cleanup();
   currentTime = "2026-08-03T09:00:00.000Z";
@@ -168,21 +188,58 @@ describe("SemesterDeskV2App", () => {
     expect(screen.getByLabelText("Course code")).toHaveValue("");
     expect(screen.getByLabelText("Work title")).toHaveValue("");
 
-    fireEvent.change(screen.getByLabelText("Semester title"), { target: { value: "Autumn 2026" } });
-    fireEvent.change(screen.getByLabelText("Course code"), { target: { value: "CS201" } });
-    fireEvent.change(screen.getByLabelText("Course name"), { target: { value: "Algorithms" } });
-    fireEvent.change(screen.getByLabelText("Course detail"), { target: { value: "Problem set date" } });
-    fireEvent.change(screen.getByLabelText("What it says"), { target: { value: "2026-08-07" } });
-    fireEvent.change(screen.getByLabelText("Where you saw it"), { target: { value: "Course outline" } });
-    fireEvent.change(screen.getByLabelText("Work title"), { target: { value: "Graph proof practice" } });
-    fireEvent.change(screen.getByLabelText("Planned date"), { target: { value: "2026-08-05" } });
-    fireEvent.change(screen.getByLabelText("Minutes you expect"), { target: { value: "75" } });
+    fillOnboarding();
     fireEvent.click(screen.getByRole("button", { name: "Open your Semester Desk" }));
 
     expect(await screen.findByRole("heading", { name: "Every course stays visible." })).toBeInTheDocument();
     expect(screen.getByText("Algorithms")).toBeInTheDocument();
     await waitFor(() => expect(persistence.saved).toHaveLength(1));
     expect(persistence.saved[0]?.courses).toHaveLength(1);
+  });
+
+  it("keeps onboarding visible until the first local save finishes", async () => {
+    let resolveSave!: (result: SemesterDeskPersistenceResult) => void;
+    const firstSave = new Promise<SemesterDeskPersistenceResult>((resolve) => {
+      resolveSave = resolve;
+    });
+    const persistence: SemesterDeskPersistence = {
+      read: async () => ({ kind: "missing" }),
+      save: async () => firstSave,
+      exportRaw: async () => ({ ok: false, message: "There is no saved local data to download." }),
+      reset: async () => ({ ok: true }),
+    };
+    renderApp(persistence, null);
+
+    await screen.findByRole("heading", { name: "Start with what is real." });
+    fillOnboarding();
+    fireEvent.click(screen.getByRole("button", { name: "Open your Semester Desk" }));
+
+    expect(screen.getByRole("heading", { name: "Start with what is real." })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Opening your desk…" })).toBeDisabled();
+    expect(window.location.hash).toBe("");
+
+    resolveSave({ ok: true });
+    expect(await screen.findByRole("heading", { name: "Every course stays visible." })).toBeInTheDocument();
+    expect(window.location.hash).toContain("forge-profile=");
+  });
+
+  it("keeps onboarding open and removes an incomplete local profile when the first save fails", async () => {
+    const persistence = new MemoryPersistence(null);
+    persistence.failSave = true;
+    persistence.failSaveAfterWrite = true;
+    renderApp(persistence, null);
+
+    await screen.findByRole("heading", { name: "Start with what is real." });
+    fillOnboarding();
+    fireEvent.click(screen.getByRole("button", { name: "Open your Semester Desk" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your desk did not open.");
+    expect(screen.getByRole("heading", { name: "Start with what is real." })).toBeInTheDocument();
+    expect(screen.getByLabelText("Semester title")).toHaveValue("Autumn 2026");
+    expect(screen.getByLabelText("Course name")).toHaveValue("Algorithms");
+    expect(persistence.resets).toHaveLength(1);
+    expect(persistence.storedState).toBeNull();
+    expect(window.location.hash).toBe("");
   });
 
   it("keeps a local profile isolated and fails closed for malformed storage", async () => {
@@ -213,6 +270,50 @@ describe("SemesterDeskV2App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Mark checked" }));
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Choose this work" })).toBeEnabled());
+  });
+
+  it("shows fact freshness and lets the student record a conflict from two course details", async () => {
+    let state = makeDesk();
+    const courseId = state.courses[0]?.id;
+    if (!courseId) throw new Error("Expected course.");
+    state = command(state, {
+      kind: "add-course-fact",
+      profileId: PROFILE_ID,
+      courseId,
+      label: "Problem set date",
+      value: "2026-08-10",
+      status: "not-confirmed",
+      sourceLabel: "Course page",
+    });
+    const persistence = new MemoryPersistence(state);
+    renderApp(persistence);
+
+    expect(await screen.findByText(/^Last checked /)).toBeInTheDocument();
+    expect(screen.getByText("Not yet checked")).toBeInTheDocument();
+
+    const conflictDisclosure = screen.getByText("Record a conflict").closest("details");
+    if (!conflictDisclosure) throw new Error("Expected the conflict form.");
+    fireEvent.click(within(conflictDisclosure).getByText("Record a conflict"));
+    const recordButton = within(conflictDisclosure).getByRole("button", { name: "Record conflict" });
+    expect(recordButton).toBeDisabled();
+    fireEvent.click(within(conflictDisclosure).getByLabelText("Problem set date: 2026-08-07"));
+    fireEvent.click(within(conflictDisclosure).getByLabelText("Problem set date: 2026-08-10"));
+    fireEvent.change(within(conflictDisclosure).getByLabelText("Describe the conflict"), {
+      target: { value: "The two pages show different due dates." },
+    });
+    expect(recordButton).toBeEnabled();
+    fireEvent.click(recordButton);
+
+    expect(await screen.findByText("The two pages show different due dates.")).toBeInTheDocument();
+    await waitFor(() => expect(persistence.saved.at(-1)?.courses[0]?.sourceConflicts).toMatchObject([{
+      factIds: expect.arrayContaining([expect.any(String), expect.any(String)]),
+      summary: "The two pages show different due dates.",
+      status: "open",
+    }]));
+
+    fireEvent.click(screen.getByRole("button", { name: "Mark reviewed" }));
+    expect(await screen.findByText("Reviewed")).toBeInTheDocument();
+    await waitFor(() => expect(persistence.saved.at(-1)?.courses[0]?.sourceConflicts[0]?.status).toBe("reviewed"));
   });
 
   it("keeps capacity as a draft until the student confirms it", async () => {
@@ -268,7 +369,9 @@ describe("SemesterDeskV2App", () => {
     const biologyCourseId = persistence.saved.at(-1)?.courses[1]?.id;
     if (!biologyCourseId) throw new Error("Expected the added course.");
 
-    const detailForms = rendered.container.querySelectorAll("details");
+    const detailForms = Array.from(rendered.container.querySelectorAll("details")).filter((element) => (
+      element.querySelector("summary")?.textContent === "Add a course detail"
+    ));
     const newCourseDetails = detailForms[1];
     if (!newCourseDetails) throw new Error("Expected the new course detail form.");
     fireEvent.click(within(newCourseDetails).getByText("Add a course detail"));
