@@ -29,7 +29,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: new URL("/", origin).toString(), changeFrequency: "weekly", priority: 1 },
     { url: new URL("/how-forge-works", origin).toString(), changeFrequency: "monthly", priority: 0.8 },
     { url: new URL("/university", origin).toString(), changeFrequency: "monthly", priority: 0.8 },
-    { url: new URL("/app", origin).toString(), changeFrequency: "monthly", priority: 0.7 },
     { url: new URL("/privacy", origin).toString(), changeFrequency: "yearly", priority: 0.4 },
     { url: new URL("/support", origin).toString(), changeFrequency: "monthly", priority: 0.4 },
   ];

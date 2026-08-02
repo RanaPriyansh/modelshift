@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { metadata as appMetadata } from "@/app/app/page";
 import ForgeError from "@/app/error";
 import NotFound from "@/app/not-found";
 import manifest from "@/app/manifest";
@@ -48,6 +49,8 @@ describe("FORGE public release surfaces", () => {
       theme_color: "#173c29",
       icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml" }],
     });
+    expect(appMetadata.alternates?.canonical).toBe("/app");
+    expect(appMetadata.robots).toEqual({ index: false, follow: false });
   });
 
   it("creates public crawler files only when the deployment has an explicit origin", async () => {
@@ -68,7 +71,6 @@ describe("FORGE public release surfaces", () => {
       "https://forge.example.test/",
       "https://forge.example.test/how-forge-works",
       "https://forge.example.test/university",
-      "https://forge.example.test/app",
       "https://forge.example.test/privacy",
       "https://forge.example.test/support",
     ]);

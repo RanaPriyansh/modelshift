@@ -5,6 +5,13 @@ import { SemesterDeskV2App } from "@/src/components/forge/semester-desk-v2/app/S
 export const metadata: Metadata = {
   title: "Semester Desk — FORGE",
   description: "A calm private desk for university students to rebuild a broken week from today.",
+  alternates: {
+    canonical: "/app",
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function ForgeAppPage() {
