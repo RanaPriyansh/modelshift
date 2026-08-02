@@ -12,6 +12,12 @@ on:
       - "ios/**"
       - ".github/workflows/ios-quality.yml"
   workflow_dispatch:
+    inputs:
+      require_store_metadata:
+        description: Run the release-candidate store metadata gate.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -22,22 +28,65 @@ concurrency:
 
 jobs:
   verify:
-    name: Verify iOS foundation
-    runs-on: macos-15
-    timeout-minutes: 30
+    name: Verify iOS source, build, and simulator tests
+    runs-on: macos-26
+    timeout-minutes: 45
 
     steps:
       - name: Check out the repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        timeout-minutes: 5
         with:
           persist-credentials: false
 
-      - name: Show the Apple toolchain
+      - name: Select Xcode 26.6
+        timeout-minutes: 5
         run: |
+          xcode_path="/Applications/Xcode_26.6.app/Contents/Developer"
+          if [[ ! -d "$xcode_path" ]]; then
+            printf 'Xcode 26.6 is not installed at: %s\n' "$xcode_path" >&2
+            exit 1
+          fi
+
+          sudo xcode-select --switch "$xcode_path"
+          selected_xcode_version="$(xcodebuild -version | sed -n '1p')"
+          if [[ "$selected_xcode_version" != "Xcode 26.6" ]]; then
+            printf 'Expected Xcode 26.6. Found: %s\n' "$selected_xcode_version" >&2
+            exit 1
+          fi
+
           xcodebuild -version
           swift --version
 
-      - name: Run iOS verification
+      - name: Run static iOS verification
+        timeout-minutes: 5
+        run: ios/Scripts/verify.sh --static
+
+      - name: Run iOS build and deterministic simulator tests
+        timeout-minutes: 35
         run: ios/Scripts/verify.sh
         env:
           FORGE_REQUIRE_ASSET_BUILD: "1"
+          FORGE_REQUIRE_SIMULATOR_TESTS: "1"
+
+  release-candidate-store-metadata:
+    name: Validate iOS release-candidate store metadata
+    needs: verify
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.require_store_metadata == true }}
+    runs-on: macos-26
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        timeout-minutes: 5
+        with:
+          persist-credentials: false
+
+      - name: Validate release-candidate store metadata
+        timeout-minutes: 5
+        run: ios/Scripts/verify.sh --static
+        env:
+          FORGE_REQUIRE_STORE_METADATA: "1"
+          FORGE_PRIVACY_POLICY_URL: ${{ vars.FORGE_PRIVACY_POLICY_URL }}
+          FORGE_SUPPORT_URL: ${{ vars.FORGE_SUPPORT_URL }}

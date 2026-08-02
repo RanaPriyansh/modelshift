@@ -45,6 +45,7 @@ if [[ "$verify_mode" == "full" ]]; then
     mktemp
     rm
     swift
+    xcrun
     xcodebuild
   )
 fi
@@ -224,12 +225,20 @@ export XDG_CACHE_HOME="$task_cache"
 
 step "Check iOS device SDK"
 iphoneos_sdk_log="$scratch_root/iphoneos-sdk.log"
-if ! xcodebuild -sdk iphoneos -version >"$iphoneos_sdk_log" 2>&1; then
+if ! iphoneos_sdk_version="$(xcrun --sdk iphoneos --show-sdk-version 2>"$iphoneos_sdk_log")"; then
   printf 'The required iOS device SDK is not available.\n' >&2
   printf 'Select an Xcode installation with the iphoneos SDK.\n' >&2
   cat "$iphoneos_sdk_log" >&2
   exit 1
 fi
+
+iphoneos_sdk_major="${iphoneos_sdk_version%%.*}"
+if [[ ! "$iphoneos_sdk_major" =~ ^[0-9]+$ ]] || (( 10#$iphoneos_sdk_major < 26 )); then
+  printf 'The iphoneos SDK major version must be 26 or later. Found: %s\n' "$iphoneos_sdk_version" >&2
+  exit 1
+fi
+
+printf 'The iphoneos SDK version is %s.\n' "$iphoneos_sdk_version"
 
 step "Run ForgeCore tests"
 swift test \
@@ -361,5 +370,39 @@ xcodebuild \
   ASSETCATALOG_COMPILER_APPICON_NAME= \
   -quiet \
   build
+
+require_simulator_tests="${FORGE_REQUIRE_SIMULATOR_TESTS:-0}"
+case "$require_simulator_tests" in
+  0)
+    ;;
+  1)
+    step "Run deterministic iOS Simulator tests"
+    simulator_destination="platform=iOS Simulator,OS=latest,name=iPhone 17 Pro"
+    simulator_result_bundle="$scratch_root/FORGE-simulator-tests.xcresult"
+
+    xcodebuild \
+      -project "$ios_root/FORGE.xcodeproj" \
+      -packageCachePath "$package_cache" \
+      -scheme FORGE \
+      -configuration Debug \
+      -sdk iphonesimulator \
+      -destination "$simulator_destination" \
+      -destination-timeout 180 \
+      -only-testing:FORGEAppTests \
+      -only-testing:FORGEUITests \
+      -parallel-testing-enabled NO \
+      -maximum-parallel-testing-workers 1 \
+      -derivedDataPath "$scratch_root/SimulatorDerivedData" \
+      -resultBundlePath "$simulator_result_bundle" \
+      CODE_SIGNING_ALLOWED=NO \
+      COMPILER_INDEX_STORE_ENABLE=NO \
+      "${store_metadata_build_arguments[@]}" \
+      test
+    ;;
+  *)
+    printf 'FORGE_REQUIRE_SIMULATOR_TESTS must be 0 or 1.\n' >&2
+    exit 2
+    ;;
+esac
 
 step "iOS verification completed"
