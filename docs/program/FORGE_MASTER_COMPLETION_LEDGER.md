@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 01:47 IST
+Updated: 2026-08-03 02:05 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -24,8 +24,10 @@ Milestone completion does not complete the product task.
 | Canonical branch | `agent/forge-semester-desk-v2-release-20260802` | Created |
 | Clean starting baseline | `3a11208d68e55179aaa3b54833a2376f0970be71` | Confirmed |
 | Local integration reference | `origin/main` at `c4abe33bc5bc611a02eded4288e2a2949a2808f3` | Stored locally, not fetched |
-| Current working state | Semester Desk v2 design, domain, public-site, and web-app changes after the tested baseline | In progress |
+| Current working state | Three reviewed Semester Desk v2 web checkpoints plus one preserved external `AGENTS.md` change | In progress |
 | First Semester Desk v2 checkpoint | `c4c42b40d571763fbe80fd7ed1895017442fce5e` | Design, public site, policies, and web domain |
+| Device-local web-app checkpoint | `d7f1d82781799923d41951d8e1dd5961581da84e` | Canonical `/app`, profile-bound persistence, tests, and ledger |
+| Public release-surface checkpoint | `85575d2fe3f0e4b1002bb3310b24beb1d59b9a65` | Metadata, crawler files, manifest, error pages, and truthful policy links |
 | Previous root branch | `agent/forge-local-refoundation-snapshot` at `cd84e20f6f78d68a430666c185b00efa99c49a87` | Preserve, do not use as base |
 | iOS source lane | `agent/forge-ios-foundation-20260801` at committed `388e889de4acadff3824cc4713b1ffd98c7861ec` plus 60 dirty paths | Preserve and reconcile after review |
 
@@ -95,17 +97,17 @@ Milestone completion does not complete the product task.
 
 ## Website status
 
-Status: **Partial and not final**
+Status: **Release-surface candidate complete, but rendered release QA remains**
 
 - The current application is one Next.js 16.2.11 repository.
 - The public site contains many historical product routes.
-- Public copy and structure still reflect ModelShift and earlier FORGE phases.
+- Historical public routes still reflect ModelShift and earlier FORGE phases.
 - The current public deployment is not the final Semester Desk v2 product.
 - Final screenshots must come from the implemented product.
 
 | Website surface | Status | Required result |
 |---|---|---|
-| Home | Implemented candidate | Final copy, link, typography, and rendered integration review remain. |
+| Home | Implemented candidate | Final integrated rendered review remains. |
 | Product and how it works | Implemented candidate | Focused tests, lint, responsive review, and truth review passed. |
 | University experience | Implemented candidate | Focused tests, lint, responsive review, and truth review passed. |
 | Privacy | Implemented candidate | Focused tests, lint, and local HTTP check passed. |
@@ -113,8 +115,8 @@ Status: **Partial and not final**
 | Support and contact | Implemented self-service surface | No monitored contact channel exists. |
 | Download or access | Partial | Route users to the correct web or iOS entry. |
 | Authentication entry | Device-local only | Keep local operation clear until cloud identity exists. |
-| Metadata and social preview | Not implemented for Semester Desk v2 | Complete and test. |
-| Error and not-found states | Present but not final | Align them with the final product system. |
+| Metadata and social preview | Implemented | Final absolute origin is an external deployment value. |
+| Error and not-found states | Implemented | Focused semantic and recovery tests passed. |
 | Responsive and accessibility QA | Not run on the final design | Required. |
 | Performance and bundle QA | Not run on the final design | Required. |
 
@@ -138,15 +140,15 @@ Status: **Canonical Semester Desk v2 candidate is implemented and under integrat
 |---|---|---|---|
 | Account and onboarding | Device-local candidate complete | Partial local flow | Clear profile boundary and safe local adapter |
 | Add or import courses | Manual-input candidate complete | Starter course only | Supported manual method with honest source state |
-| Review facts, freshness, conflicts | Facts and review states complete; manual conflict entry missing | New domain implementation running | Human terms and explicit student choice |
-| Whole-semester view | Candidate complete | New domain implementation running | No hidden prioritisation |
-| Declare real capacity | Candidate complete | New domain implementation running | Student controls available capacity |
-| Recover a broken week | Candidate complete | New domain implementation running | Transparent changes with no shame |
-| Choose the next action | Candidate complete | New domain implementation running | One honest action with visible reason |
-| Protected study | Candidate complete | Starter flow exists; v2 domain running | Active learning before help |
-| Practice | Candidate complete | Starter flow exists; v2 domain running | Deterministic check and no answer extraction |
-| Independent proof | Candidate complete | Starter flow exists; v2 domain running | Proof after help |
-| Delayed return | Candidate complete | Starter flow exists; v2 domain running | Schedule, remind, reopen, and complete |
+| Review facts, freshness, conflicts | Facts and review states complete; manual conflict entry repair running | Domain complete; persistence integration running | Human terms and explicit student choice |
+| Whole-semester view | Candidate complete | Domain complete; persistence integration running | No hidden prioritisation |
+| Declare real capacity | Candidate complete | Domain complete; persistence integration running | Student controls available capacity |
+| Recover a broken week | Candidate complete | Domain complete; persistence integration running | Transparent changes with no shame |
+| Choose the next action | Candidate complete | Domain complete; persistence integration running | One honest action with visible reason |
+| Protected study | Candidate complete | Starter flow exists; v2 domain complete | Active learning before help |
+| Practice | Candidate complete | Starter flow exists; v2 domain complete | Deterministic check and no answer extraction |
+| Independent proof | Candidate complete | Starter flow exists; v2 domain complete | Proof after help |
+| Delayed return | Candidate complete | Starter flow exists; v2 domain complete | Schedule, remind, reopen, and complete |
 | Evidence and progress | Partial | Implemented locally | Useful learner language without internal jargon |
 | Settings and privacy | Partial | Partial | Export, deletion, reminders, support, and account state |
 | Offline and interruption | Device-local save path and transient reset tested; browser interruption remains | Partial | Recover without silent loss |
@@ -172,6 +174,8 @@ Status: **Substantial native work exists, but the application is not complete**
 | Focused private-state tests | 73 passed | XcodeBuildMCP result bundle from 2026-08-02 |
 | AppModel cancellation repair | Passed | The focused cancellation test passed. |
 | Full AppModel simulator suite | 109 passed | Zero failed and zero skipped. |
+| Semester Desk v2 core domain | 10 passed | Deterministic focused Swift package suite |
+| Activity draft preservation | 239 app tests and three UI flows passed | Raw text remains in process memory only |
 | Full app unit suite | Not passed on the current source | Open |
 | UI tests | Not run on the current source | Open |
 | Debug build | Earlier source evidence only | Re-run after source freeze. |
@@ -201,6 +205,8 @@ Status: **Substantial native work exists, but the application is not complete**
 | Semester Desk v2 domain focused test | 1 file and 14 tests passed |
 | Semester Desk v2 public focused tests | 3 files and 15 tests passed |
 | Semester Desk v2 app focused tests | 3 files and 29 tests passed |
+| Public release-surface focused tests | 4 files and 19 tests passed |
+| Public release-surface scoped lint and typecheck | Pass |
 | `pnpm build` | Not run in this course-correction pass |
 | Playwright | Not run in this course-correction pass |
 
@@ -237,10 +243,10 @@ No confirmed P0 defect exists at this baseline.
 
 ### P1
 
-1. The final product has no canonical production Semester Desk route.
-2. Website and web-app information architecture remains fragmented.
-3. The web application cannot yet create a manual conflict between course facts.
-4. The iOS Today title is not accessible at AccessibilityXXXL.
+1. Website and web-app information architecture remains fragmented.
+2. The web application cannot yet create a manual conflict between course facts.
+3. The iOS Today title is not accessible at AccessibilityXXXL.
+4. The iOS active-study choice control is not reachable at AccessibilityXXXL.
 5. The iOS dirty work has no clean checkpoint identity.
 6. No current cross-platform release candidate exists.
 7. No final rendered accessibility or performance evidence exists.
@@ -248,8 +254,8 @@ No confirmed P0 defect exists at this baseline.
 ### P2
 
 1. Several public routes are compatibility redirects or direct duplicates.
-2. Public copy contains obsolete product language.
-3. Internal fixture and evidence language remains too visible.
+2. Historical routes contain obsolete product language.
+3. Historical routes contain internal fixture and evidence language.
 4. The web course ledger does not show the date of the last course-fact check.
 5. A web onboarding save becomes visible before local persistence confirms success.
 6. The reset result can be hidden after an iOS navigation change.
@@ -306,12 +312,10 @@ These are not current reasons to stop internal work.
 
 ## Next internally executable action
 
-1. Checkpoint the reviewed canonical `/app` candidate.
-2. Complete public metadata and error surfaces.
-3. Repair manual conflict entry, freshness display, and persistence edge cases.
-4. Review the native Semester Desk v2 domain.
-5. Repair iOS Today at AccessibilityXXXL.
-6. Establish an iOS checkpoint.
-7. Implement the remaining native Semester Desk v2 application loop.
-8. Consolidate public and application routes.
-9. Run full rendered, accessibility, performance, security, and release checks.
+1. Repair manual conflict entry, freshness display, and persistence edge cases.
+2. Integrate native Semester Desk v2 into the private state envelope.
+3. Repair iOS Today and active study at AccessibilityXXXL.
+4. Establish an iOS checkpoint.
+5. Implement the native Semester Desk v2 application loop.
+6. Consolidate public and application routes.
+7. Run full rendered, accessibility, performance, security, and release checks.
