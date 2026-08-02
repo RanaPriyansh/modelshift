@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 @MainActor
@@ -5,48 +6,40 @@ struct OnboardingView: View {
   @Environment(AppModel.self) private var model
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-  private static let courseLoop = [
-    CourseLoopStep(
-      id: "practice",
-      title: "Practice",
-      detail: "Begin with one local practice activity."
-    ),
-    CourseLoopStep(
-      id: "independent-check",
-      title: "Independent check",
-      detail: "Complete an independent check after practice."
-    ),
-    CourseLoopStep(
-      id: "delayed-return",
-      title: "Delayed return",
-      detail: "Return after the course delay for one local check."
-    ),
-  ]
+  @FocusState private var semesterNameIsFocused: Bool
+  @AccessibilityFocusState private var statusIsFocused: Bool
 
   init(model _: AppModel) {}
 
   var body: some View {
+    @Bindable var model = model
+
     NavigationStack {
       ScrollView {
-        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.section) {
-          courseHeader
-          courseOverview
-          privacySupportSurface
-          courseLoop
-          limitations
-          localBoundary
+        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.large) {
+          thresholdHeader
+          semesterForm(name: $model.semesterNameDraft)
+          localDataBoundary
+
+          if let message = model.localDataResetStatusMessage, !message.isEmpty {
+            resetResult(message)
+          }
+
+          if let message = model.semesterDeskStatusMessage, !message.isEmpty {
+            saveStatus(message)
+          }
         }
         .frame(maxWidth: ForgeDesign.Layout.contentMaxWidth, alignment: .leading)
         .padding(.horizontal, ForgeDesign.Spacing.regular)
-        .padding(.vertical, ForgeDesign.Spacing.section)
+        .padding(.vertical, ForgeDesign.Spacing.large)
         .frame(maxWidth: .infinity, alignment: .leading)
       }
+      .scrollDismissesKeyboard(.interactively)
       .background(ForgeDesign.canvas.ignoresSafeArea())
-      .navigationTitle("Course setup")
+      .navigationTitle("New Semester Desk")
       .navigationBarTitleDisplayMode(.inline)
-      .safeAreaInset(edge: .bottom) {
-        startSection
+      .safeAreaInset(edge: .bottom, spacing: 0) {
+        createAction
       }
     }
     .interactiveDismissDisabled(true)
@@ -57,279 +50,188 @@ struct OnboardingView: View {
         transaction.disablesAnimations = true
       }
     }
-    .onChange(of: model.courseStartStatusMessage, initial: true) { _, message in
+    .onChange(of: model.semesterDeskStatusMessage, initial: false) { _, message in
       guard let message, !message.isEmpty else {
         return
       }
-
+      statusIsFocused = true
       AccessibilityNotification.Announcement(message).post()
     }
   }
 
-  private var courseHeader: some View {
+  private var thresholdHeader: some View {
     Group {
       if dynamicTypeSize.isAccessibilitySize {
         VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
-          courseSymbol
-          courseHeaderCopy
+          thresholdLandmark
+          thresholdCopy
         }
       } else {
-        HStack(alignment: .top, spacing: ForgeDesign.Spacing.regular) {
-          courseSymbol
-          courseHeaderCopy
+        HStack(alignment: .top, spacing: ForgeDesign.Spacing.large) {
+          thresholdLandmark
+          thresholdCopy
         }
       }
     }
+    .padding(ForgeDesign.Spacing.large)
     .frame(maxWidth: .infinity, alignment: .leading)
+    .background(ForgeDesign.deepCanvas)
+    .clipShape(.rect(cornerRadius: ForgeDesign.Radius.inset))
+    .accessibilityElement(children: .contain)
   }
 
-  private var courseSymbol: some View {
-    Image(systemName: "book.closed.fill")
-      .font(.title2.weight(.semibold))
-      .foregroundStyle(ForgeDesign.navigationCommitment)
-      .frame(width: 48, height: 48)
-      .background(ForgeDesign.navigationCommitmentSurface, in: Circle())
-      .accessibilityHidden(true)
+  private var thresholdLandmark: some View {
+    ZStack(alignment: .bottom) {
+      RoundedRectangle(cornerRadius: ForgeDesign.Radius.inset)
+        .fill(ForgeDesign.strongSurface)
+
+      Rectangle()
+        .fill(ForgeDesign.checkedEvidence)
+        .frame(height: 18)
+
+      Image(systemName: "signpost.right.fill")
+        .font(.title2)
+        .foregroundStyle(ForgeDesign.Action.commitment)
+        .padding(.bottom, ForgeDesign.Spacing.small)
+    }
+    .frame(width: 72, height: 72)
+    .accessibilityHidden(true)
   }
 
-  private var courseHeaderCopy: some View {
-    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
-      Text("One local course")
-        .font(.largeTitle.weight(.semibold))
+  private var thresholdCopy: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
+      Text("Build from today")
+        .font(.largeTitle.weight(.bold))
+        .foregroundStyle(ForgeDesign.text)
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityAddTraits(.isHeader)
 
-      Text("Review the bounded starter course before you start.")
+      Text("Name the semester that you want to plan, study, and rebuild.")
         .font(.body)
         .foregroundStyle(ForgeDesign.secondaryText)
         .fixedSize(horizontal: false, vertical: true)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .layoutPriority(1)
   }
 
-  private var courseOverview: some View {
-    UniversitySurface {
-      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
-        UniversityStatusBadge(
-          label: "Starter course",
-          symbolName: "graduationcap.fill",
-          colorRole: .commitment
-        )
-
-        Text(model.courseTitle)
-          .font(.title2.weight(.semibold))
-          .fixedSize(horizontal: false, vertical: true)
-          .accessibilityAddTraits(.isHeader)
-          .accessibilityIdentifier("onboarding.course-title")
-
-        Text(model.courseSummary)
-          .font(.body)
-          .foregroundStyle(ForgeDesign.secondaryText)
-          .fixedSize(horizontal: false, vertical: true)
-      }
-    }
-  }
-
-  private var privacySupportSurface: some View {
-    UniversitySurface {
-      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
-        UniversitySectionLabel(title: "Privacy and Support")
-
-        NavigationLink {
-          PrivacySupportView()
-        } label: {
-          HStack(spacing: ForgeDesign.Spacing.regular) {
-            Image(systemName: "hand.raised.fill")
-              .font(.title3)
-              .foregroundStyle(ForgeDesign.navigationCommitment)
-              .frame(width: 32, height: 32)
-              .background(ForgeDesign.navigationCommitmentSurface, in: Circle())
-              .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
-              Text("Privacy and Support")
-                .font(.headline)
-
-              Text("Review local-data and support information before course start.")
-                .font(.subheadline)
-                .foregroundStyle(ForgeDesign.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Image(systemName: "chevron.right")
-              .font(.subheadline.weight(.semibold))
-              .foregroundStyle(ForgeDesign.secondaryText)
-              .accessibilityHidden(true)
-          }
-          .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
-          .contentShape(Rectangle())
-        }
-        .accessibilityLabel("Privacy and Support")
-        .accessibilityHint("Opens privacy and support information before you start the course.")
-        .accessibilityIdentifier("onboarding.privacy-support")
-      }
-    }
-  }
-
-  private var courseLoop: some View {
+  private func semesterForm(name: Binding<String>) -> some View {
     VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
-      UniversitySectionLabel(title: "Course loop")
+      Text("Semester name")
+        .font(.title2.weight(.semibold))
+        .accessibilityAddTraits(.isHeader)
 
-      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
-        ForEach(Self.courseLoop) { step in
-          CourseLoopStepRow(step: step)
+      TextField("For example, Autumn 2026", text: name)
+        .textInputAutocapitalization(.words)
+        .autocorrectionDisabled()
+        .submitLabel(.done)
+        .focused($semesterNameIsFocused)
+        .padding(.horizontal, ForgeDesign.Spacing.regular)
+        .frame(minHeight: 48)
+        .background(ForgeDesign.surface)
+        .clipShape(.rect(cornerRadius: ForgeDesign.Radius.inset))
+        .overlay {
+          RoundedRectangle(cornerRadius: ForgeDesign.Radius.inset)
+            .stroke(ForgeDesign.boundary, lineWidth: 1)
         }
-      }
-      .padding(.horizontal, ForgeDesign.Spacing.tight)
-    }
-  }
-
-  private var limitations: some View {
-    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
-      UniversitySectionLabel(title: "Limits")
-
-      UniversitySurface {
-        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
-          UniversityStatusBadge(
-            label: "Course limits",
-            symbolName: "exclamationmark.triangle.fill",
-            colorRole: .caution
-          )
-
-          ForEach(model.catalog.limitations.indices, id: \.self) { index in
-            Text(model.catalog.limitations[index].statement)
-              .font(.body)
-              .fixedSize(horizontal: false, vertical: true)
+        .accessibilityLabel("Semester name")
+        .accessibilityHint("Enter the name that will identify this Semester Desk.")
+        .accessibilityIdentifier("onboarding.semester-name")
+        .onSubmit {
+          guard canCreateSemesterDesk else {
+            return
           }
+          createSemesterDesk()
         }
-      }
+
+      Text("You can add courses, planned work, and capacity after this desk is saved.")
+        .font(.subheadline)
+        .foregroundStyle(ForgeDesign.secondaryText)
+        .fixedSize(horizontal: false, vertical: true)
     }
-    .accessibilityIdentifier("onboarding.limitations")
+    .frame(maxWidth: .infinity, alignment: .leading)
   }
 
-  private var localBoundary: some View {
+  private var localDataBoundary: some View {
     VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
       Divider()
 
-      UniversitySectionLabel(title: "Local boundary")
+      Label("Private on this iPhone", systemImage: "lock.fill")
+        .font(.headline)
 
-      Text("Learning data stays in local app storage.")
+      Text("Your Semester Desk stays on this iPhone.")
         .font(.body)
         .fixedSize(horizontal: false, vertical: true)
 
-      Text("No production AI runs in this course.")
+      Text("Web and iPhone data do not sync.")
         .font(.body)
         .fixedSize(horizontal: false, vertical: true)
 
-      Text("Receipts are unsigned local records.")
+      Text("Private practice and independent-check text is not saved.")
         .font(.body)
         .fixedSize(horizontal: false, vertical: true)
     }
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("onboarding.local-data")
   }
 
-  private var startSection: some View {
-    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
-      UniversitySectionLabel(title: "Start")
+  private func resetResult(_ message: String) -> some View {
+    Label(message, systemImage: "checkmark.circle")
+      .font(.body)
+      .foregroundStyle(ForgeDesign.checkedEvidence)
+      .fixedSize(horizontal: false, vertical: true)
+      .accessibilityElement(children: .combine)
+      .accessibilityIdentifier("onboarding.reset-result")
+  }
 
-      if let message = model.courseStartStatusMessage, !message.isEmpty {
-        courseStartStatus(message)
+  private func saveStatus(_ message: String) -> some View {
+    Label(message, systemImage: "exclamationmark.circle")
+      .font(.body)
+      .fixedSize(horizontal: false, vertical: true)
+      .accessibilityElement(children: .combine)
+      .accessibilityFocused($statusIsFocused)
+      .accessibilityIdentifier("onboarding.save-status")
+  }
+
+  private var createAction: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
+      if model.isSemesterDeskOperationRunning {
+        ProgressView("Saving your Semester Desk")
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .accessibilityIdentifier("onboarding.saving")
       }
 
-      Button(action: startCourse) {
-        HStack(spacing: ForgeDesign.Spacing.small) {
-          if model.isCourseStartRunning {
-            startProgressIndicator
-          } else {
-            Image(systemName: "arrow.right.circle.fill")
-              .accessibilityHidden(true)
-          }
-
-          Text(model.isCourseStartRunning ? "Starting course" : "Start course")
-            .frame(maxWidth: .infinity, alignment: .center)
-        }
-        .frame(maxWidth: .infinity, minHeight: 48)
-      }
-      .buttonStyle(ForgeCommitmentButtonStyle())
-      .disabled(model.isCourseStartRunning)
-      .accessibilityHint(
-        "Starts the bounded local course. This setup surface stays open until the course starts."
+      SemesterDeskPrimaryButton(
+        title: model.isSemesterDeskOperationRunning
+          ? "Saving Semester Desk"
+          : "Create Semester Desk",
+        systemImage: "arrow.right.circle.fill",
+        hint: "Saves this Semester Desk before Today opens.",
+        identifier: "onboarding.create-semester-desk",
+        isDisabled: !canCreateSemesterDesk,
+        action: createSemesterDesk
       )
-      .accessibilityIdentifier("onboarding.start-course")
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.horizontal, ForgeDesign.Spacing.regular)
     .padding(.vertical, ForgeDesign.Spacing.small)
+    .frame(maxWidth: .infinity)
     .background(ForgeDesign.canvas)
-  }
-
-  private func courseStartStatus(_ message: String) -> some View {
-    UniversitySurface {
-      HStack(alignment: .top, spacing: ForgeDesign.Spacing.small) {
-        Image(systemName: "xmark.octagon.fill")
-          .foregroundStyle(ForgeDesign.failedCheck)
-          .accessibilityHidden(true)
-
-        Text(message)
-          .font(.body)
-          .fixedSize(horizontal: false, vertical: true)
-      }
-      .accessibilityElement(children: .combine)
-      .accessibilityLabel("Course start error")
-      .accessibilityValue(message)
+    .overlay(alignment: .top) {
+      Rectangle()
+        .fill(ForgeDesign.boundary)
+        .frame(height: 1)
     }
   }
 
-  @ViewBuilder
-  private var startProgressIndicator: some View {
-    if reduceMotion {
-      Image(systemName: "clock")
-        .accessibilityHidden(true)
-    } else {
-      ProgressView()
-        .tint(ForgeDesign.primaryActionForeground)
-        .accessibilityHidden(true)
-    }
+  private var canCreateSemesterDesk: Bool {
+    !model.semesterNameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      && !model.isSemesterDeskOperationRunning
+      && !model.isLocalDataResetRunning
   }
 
-  private func startCourse() {
+  private func createSemesterDesk() {
+    semesterNameIsFocused = false
     Task { @MainActor in
-      _ = await model.startUniversityCourse()
+      _ = await model.createSemesterDesk(title: model.semesterNameDraft)
     }
-  }
-}
-
-private struct CourseLoopStep: Identifiable {
-  let id: String
-  let title: String
-  let detail: String
-}
-
-private struct CourseLoopStepRow: View {
-  let step: CourseLoopStep
-
-  var body: some View {
-    HStack(alignment: .top, spacing: ForgeDesign.Spacing.regular) {
-      Image(systemName: "checkmark.circle")
-        .font(.title3)
-        .foregroundStyle(ForgeDesign.navigationCommitment)
-        .frame(width: 24)
-        .accessibilityHidden(true)
-
-      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
-        Text(step.title)
-          .font(.headline)
-          .fixedSize(horizontal: false, vertical: true)
-
-        Text(step.detail)
-          .font(.body)
-          .foregroundStyle(ForgeDesign.secondaryText)
-          .fixedSize(horizontal: false, vertical: true)
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .layoutPriority(1)
-    }
-    .accessibilityElement(children: .combine)
   }
 }

@@ -36,13 +36,81 @@ private struct SystemSemesterDeskIdentifierFactory:
 
 enum AppTab: Hashable, Sendable {
   case today
-  case path
-  case evidence
+  case semester
+  case progress
 }
 
 enum AppRoute: Hashable, Sendable {
   case settings
   case privacySupport
+}
+
+enum SemesterDeskSheet: Equatable, Identifiable, Sendable {
+  case addCourse
+  case addCourseFact(courseID: String)
+  case changeFactStatus(courseID: String, factID: String)
+  case recordFactConflict(courseID: String)
+  case capacity
+  case addPlannedWork(courseID: String?)
+  case prepareRecovery
+  case reviewRecovery
+  case chooseNextAction
+
+  var id: String {
+    switch self {
+    case .addCourse:
+      "add-course"
+    case .addCourseFact(let courseID):
+      "add-course-fact-\(courseID)"
+    case .changeFactStatus(let courseID, let factID):
+      "change-fact-status-\(courseID)-\(factID)"
+    case .recordFactConflict(let courseID):
+      "record-fact-conflict-\(courseID)"
+    case .capacity:
+      "capacity"
+    case .addPlannedWork(let courseID):
+      "add-planned-work-\(courseID ?? "choose-course")"
+    case .prepareRecovery:
+      "prepare-recovery"
+    case .reviewRecovery:
+      "review-recovery"
+    case .chooseNextAction:
+      "choose-next-action"
+    }
+  }
+}
+
+enum SemesterDeskTodayAction: Equatable, Sendable {
+  case finishRecovery
+  case delayedReturn(
+    delayedReturnID: String,
+    planItemID: String,
+    dueAt: String,
+    isDue: Bool
+  )
+  case selectedAction(planItemID: String)
+  case choosePlannedWork
+  case confirmCapacity
+  case addPlannedWork(courseID: String?)
+  case addCourse
+}
+
+struct SemesterDeskStudyDraft: Equatable, Sendable {
+  static let empty = SemesterDeskStudyDraft(
+    practiceText: "",
+    independentCheckText: "",
+    delayedReturnText: ""
+  )
+
+  let practiceText: String
+  let independentCheckText: String
+  let delayedReturnText: String
+
+  var hasContent: Bool {
+    !practiceText.isEmpty
+      || !independentCheckText.isEmpty
+      || !delayedReturnText.isEmpty
+  }
 }
 
 enum ActivitySubmissionOutcome: Equatable, Sendable {
@@ -384,6 +452,7 @@ final class AppModel {
   @ObservationIgnored private var privateNamespaceSynchronizationPending = false
   @ObservationIgnored private var pendingLaunchDestination: ForgeDestination?
   private var activityDrafts: [ActivityID: ActivityDraft]
+  private var semesterDeskStudyDrafts: [String: SemesterDeskStudyDraft]
 
   let catalog: ReleasedCatalogSnapshot
   var learnerState: LocalLearnerState
@@ -391,8 +460,8 @@ final class AppModel {
   var experienceErrorMessage: String?
   var selectedTab: AppTab
   var todayPath: [AppRoute]
-  var pathPath: [AppRoute]
-  var evidencePath: [AppRoute]
+  var semesterPath: [AppRoute]
+  var progressPath: [AppRoute]
   var isCourseStarted: Bool
   var isActivityPresented: Bool
   var isCourseStartRunning: Bool
@@ -421,6 +490,10 @@ final class AppModel {
   var semesterDesk: UniversitySemesterDeskState?
   var isSemesterDeskOperationRunning: Bool
   var semesterDeskStatusMessage: String?
+  var semesterNameDraft: String
+  var activeSemesterDeskSheet: SemesterDeskSheet?
+  var isProtectedStudyPresented: Bool
+  var protectedStudyPlanItemID: String?
 
   init(
     catalog: ReleasedCatalogSnapshot,
@@ -490,8 +563,8 @@ final class AppModel {
     self.experienceErrorMessage = nil
     self.selectedTab = .today
     self.todayPath = []
-    self.pathPath = []
-    self.evidencePath = []
+    self.semesterPath = []
+    self.progressPath = []
     self.isCourseStarted = false
     self.isActivityPresented = false
     self.isCourseStartRunning = false
@@ -513,10 +586,15 @@ final class AppModel {
     self.semesterDesk = nil
     self.isSemesterDeskOperationRunning = false
     self.semesterDeskStatusMessage = nil
+    self.semesterNameDraft = ""
+    self.activeSemesterDeskSheet = nil
+    self.isProtectedStudyPresented = false
+    self.protectedStudyPlanItemID = nil
     self.lastPersistedEnvelope = nil
     self.recoveryOrigin = nil
     self.sharedIntegrationIssue = nil
     self.activityDrafts = [:]
+    self.semesterDeskStudyDrafts = [:]
   }
 
   deinit {
@@ -742,6 +820,337 @@ final class AppModel {
     recoveryState?.allowsClearLocalData ?? true
   }
 
+  var semesterDeskTodayAction: SemesterDeskTodayAction? {
+    semesterDeskTodayAction(at: now())
+  }
+
+  var protectedStudyPlanItem: UniversitySemesterDeskPlanItem? {
+    guard let protectedStudyPlanItemID else {
+      return nil
+    }
+    return semesterDesk?.planItems.first { $0.id == protectedStudyPlanItemID }
+  }
+
+  var protectedStudyCourse: UniversitySemesterDeskCourse? {
+    guard let courseID = protectedStudyPlanItem?.courseID else {
+      return nil
+    }
+    return semesterDesk?.courses.first { $0.id == courseID }
+  }
+
+  var activeProtectedStudySession: UniversitySemesterDeskProtectedStudySession? {
+    guard let protectedStudyPlanItemID else {
+      return nil
+    }
+    return semesterDesk?.protectedStudySessions.last {
+      $0.planItemID == protectedStudyPlanItemID && $0.status == .active
+    }
+  }
+
+  var protectedStudyDelayedReturn: UniversitySemesterDeskDelayedReturn? {
+    guard let protectedStudyPlanItemID else {
+      return nil
+    }
+    return semesterDesk?.delayedReturns.first {
+      $0.planItemID == protectedStudyPlanItemID && $0.status != .completed
+    }
+  }
+
+  var semesterDeskCurrentDate: Date {
+    now()
+  }
+
+  func semesterDeskTodayAction(at date: Date) -> SemesterDeskTodayAction? {
+    guard let semesterDesk else {
+      return nil
+    }
+    if semesterDesk.recoveryDraft != nil {
+      return .finishRecovery
+    }
+
+    let currentTimestamp = Self.semesterDeskTimestamp(for: date)
+    let incompleteReturns = semesterDesk.delayedReturns
+      .filter { $0.status != .completed }
+      .sorted { $0.dueAt < $1.dueAt }
+    if let delayedReturn = incompleteReturns.first(where: {
+      $0.status == .open || $0.dueAt <= currentTimestamp
+    }) {
+      return .delayedReturn(
+        delayedReturnID: delayedReturn.id,
+        planItemID: delayedReturn.planItemID,
+        dueAt: delayedReturn.dueAt,
+        isDue: true
+      )
+    }
+
+    if let selectedID = semesterDesk.selectedNextActionID,
+      let selectedItem = semesterDesk.planItems.first(where: { $0.id == selectedID }),
+      selectedItem.status != .deferred,
+      selectedItem.status != .returnComplete
+    {
+      if selectedItem.status == .proofComplete,
+        let delayedReturn = incompleteReturns.first(where: {
+          $0.planItemID == selectedItem.id
+        })
+      {
+        return .delayedReturn(
+          delayedReturnID: delayedReturn.id,
+          planItemID: delayedReturn.planItemID,
+          dueAt: delayedReturn.dueAt,
+          isDue: false
+        )
+      }
+      return .selectedAction(planItemID: selectedID)
+    }
+    if semesterDesk.planItems.contains(where: { $0.status == .planned }) {
+      return .choosePlannedWork
+    }
+    if let delayedReturn = incompleteReturns.first {
+      return .delayedReturn(
+        delayedReturnID: delayedReturn.id,
+        planItemID: delayedReturn.planItemID,
+        dueAt: delayedReturn.dueAt,
+        isDue: false
+      )
+    }
+    if semesterDesk.capacity == nil {
+      return .confirmCapacity
+    }
+    if let course = semesterDesk.courses.first {
+      return .addPlannedWork(courseID: course.id)
+    }
+    return .addCourse
+  }
+
+  func canChooseAsNextAction(_ item: UniversitySemesterDeskPlanItem) -> Bool {
+    guard item.status == .planned,
+      let course = semesterDesk?.courses.first(where: { $0.id == item.courseID })
+    else {
+      return false
+    }
+    return !course.facts.contains(where: { $0.status != .checked })
+      && !course.factConflicts.contains(where: { $0.status == .open })
+  }
+
+  func presentSemesterDeskSheet(_ sheet: SemesterDeskSheet) {
+    guard
+      launchState == .ready,
+      semesterDesk != nil,
+      recoveryState == nil,
+      !isLocalDataResetRunning,
+      !isSemesterDeskOperationRunning,
+      !isProtectedStudyPresented
+    else {
+      return
+    }
+    activeSemesterDeskSheet = sheet
+  }
+
+  func dismissSemesterDeskSheet() {
+    activeSemesterDeskSheet = nil
+  }
+
+  func semesterDeskStudyDraft(for planItemID: String) -> SemesterDeskStudyDraft {
+    semesterDeskStudyDrafts[planItemID] ?? .empty
+  }
+
+  func updateSemesterDeskStudyDraft(
+    for planItemID: String,
+    practiceText: String,
+    independentCheckText: String,
+    delayedReturnText: String
+  ) {
+    guard
+      launchState == .ready,
+      recoveryState == nil,
+      !isLocalDataResetRunning,
+      isProtectedStudyPresented,
+      protectedStudyPlanItemID == planItemID,
+      semesterDesk?.planItems.contains(where: { $0.id == planItemID }) == true
+    else {
+      return
+    }
+    let draft = SemesterDeskStudyDraft(
+      practiceText: practiceText,
+      independentCheckText: independentCheckText,
+      delayedReturnText: delayedReturnText
+    )
+    if draft.hasContent {
+      semesterDeskStudyDrafts[planItemID] = draft
+    } else {
+      semesterDeskStudyDrafts.removeValue(forKey: planItemID)
+    }
+  }
+
+  func beginProtectedStudy(planItemID: String) async -> Bool {
+    guard
+      await applySemesterDeskCommand(
+        .startProtectedStudy(
+          profileID: localProfileID,
+          planItemID: planItemID
+        )
+      )
+    else {
+      return false
+    }
+    protectedStudyPlanItemID = planItemID
+    isProtectedStudyPresented = true
+    activeSemesterDeskSheet = nil
+    return true
+  }
+
+  func continueProtectedStudy(planItemID: String) {
+    guard
+      launchState == .ready,
+      recoveryState == nil,
+      !isLocalDataResetRunning,
+      !isSemesterDeskOperationRunning,
+      let item = semesterDesk?.planItems.first(where: { $0.id == planItemID }),
+      item.status == .inProgress
+        || item.status == .practiceComplete
+        || item.status == .proofComplete
+    else {
+      return
+    }
+    protectedStudyPlanItemID = planItemID
+    isProtectedStudyPresented = true
+    activeSemesterDeskSheet = nil
+  }
+
+  func openProtectedDelayedReturn(
+    delayedReturnID: String,
+    planItemID: String
+  ) async -> Bool {
+    guard
+      launchState == .ready,
+      recoveryState == nil,
+      !isLocalDataResetRunning,
+      !isSemesterDeskOperationRunning,
+      let delayedReturn = semesterDesk?.delayedReturns.first(where: {
+        $0.id == delayedReturnID && $0.planItemID == planItemID
+      })
+    else {
+      return false
+    }
+
+    if delayedReturn.status == .due {
+      let currentTimestamp = Self.semesterDeskTimestamp(for: now())
+      guard delayedReturn.dueAt <= currentTimestamp else {
+        semesterDeskStatusMessage = "Come back on this date before you open the return."
+        return false
+      }
+      guard
+        await applySemesterDeskCommand(
+          .openDelayedReturn(
+            profileID: localProfileID,
+            delayedReturnID: delayedReturnID
+          )
+        )
+      else {
+        return false
+      }
+    } else if delayedReturn.status != .open {
+      return false
+    }
+
+    protectedStudyPlanItemID = planItemID
+    isProtectedStudyPresented = true
+    activeSemesterDeskSheet = nil
+    return true
+  }
+
+  func completeProtectedPractice(
+    outcome: UniversitySemesterDeskPracticeOutcome
+  ) async -> Bool {
+    guard let session = activeProtectedStudySession else {
+      return false
+    }
+    return await applySemesterDeskCommand(
+      .completePractice(
+        profileID: localProfileID,
+        studySessionID: session.id,
+        outcome: outcome
+      )
+    )
+  }
+
+  func submitProtectedIndependentCheck(
+    outcome: UniversitySemesterDeskProofOutcome
+  ) async -> Bool {
+    guard let planItemID = protectedStudyPlanItemID else {
+      return false
+    }
+    let didSave = await applySemesterDeskCommand(
+      .submitIndependentProof(
+        profileID: localProfileID,
+        planItemID: planItemID,
+        outcome: outcome
+      )
+    )
+    if didSave {
+      let draft = semesterDeskStudyDraft(for: planItemID)
+      updateSemesterDeskStudyDraft(
+        for: planItemID,
+        practiceText: draft.practiceText,
+        independentCheckText: "",
+        delayedReturnText: draft.delayedReturnText
+      )
+    }
+    return didSave
+  }
+
+  func scheduleProtectedDelayedReturn(at dueDate: Date) async -> Bool {
+    guard let planItemID = protectedStudyPlanItemID else {
+      return false
+    }
+    let currentDate = now()
+    guard dueDate > currentDate else {
+      semesterDeskStatusMessage = "Choose a return date and time in the future."
+      return false
+    }
+    let didSave = await applySemesterDeskCommand(
+      .scheduleDelayedReturn(
+        profileID: localProfileID,
+        planItemID: planItemID,
+        dueAt: Self.semesterDeskTimestamp(for: dueDate)
+      )
+    )
+    if didSave {
+      discardSemesterDeskStudyDraft(for: planItemID)
+      dismissProtectedStudy()
+    }
+    return didSave
+  }
+
+  func completeProtectedDelayedReturn(
+    outcome: UniversitySemesterDeskRetentionOutcome
+  ) async -> Bool {
+    guard let delayedReturn = protectedStudyDelayedReturn else {
+      return false
+    }
+    let didSave = await applySemesterDeskCommand(
+      .completeDelayedReturn(
+        profileID: localProfileID,
+        delayedReturnID: delayedReturn.id,
+        outcome: outcome
+      )
+    )
+    if didSave {
+      discardSemesterDeskStudyDraft(for: delayedReturn.planItemID)
+      dismissProtectedStudy()
+    }
+    return didSave
+  }
+
+  func dismissProtectedStudy() {
+    isProtectedStudyPresented = false
+    protectedStudyPlanItemID = nil
+  }
+
+  static func semesterDeskTimestamp(for date: Date) -> String {
+    Date.ISO8601FormatStyle(includingFractionalSeconds: true).format(date)
+  }
+
   func choiceLabel(for choice: String) -> String {
     UniversityStarterCourse.choiceLabel(for: choice)
   }
@@ -762,6 +1171,7 @@ final class AppModel {
       return false
     }
 
+    semesterNameDraft = title
     let mutationToken = beginStateMutation()
     isSemesterDeskOperationRunning = true
     semesterDeskStatusMessage = nil
@@ -800,6 +1210,8 @@ final class AppModel {
     }
 
     apply(candidate)
+    semesterNameDraft = ""
+    localDataResetStatusMessage = nil
     semesterDeskStatusMessage = "Your Semester Desk is ready."
     return true
   }
@@ -1191,11 +1603,15 @@ final class AppModel {
     courseStartStatusMessage = nil
     activityStatusMessage = nil
     semesterDeskStatusMessage = nil
+    semesterNameDraft = ""
     recoveryOrigin = nil
     isLocalDataResetRunning = true
     isRecoveryOperationRunning = true
     discardAllActivityDrafts()
+    discardAllSemesterDeskStudyDrafts()
     isActivityPresented = false
+    activeSemesterDeskSheet = nil
+    dismissProtectedStudy()
     resetNavigation()
     let priorSharedProjectionOperation = cancelSharedProjectionOperation()
     let priorFocusOperation = cancelFocusOperation()
@@ -1370,15 +1786,19 @@ final class AppModel {
     case .today:
       handleRootRoute(tab: .today, route: nil)
     case .path:
-      handleRootRoute(tab: .path, route: nil)
+      handleRootRoute(tab: .semester, route: nil)
     case .evidence:
-      handleRootRoute(tab: .evidence, route: nil)
+      handleRootRoute(tab: .progress, route: nil)
     case .settings:
       handleRootRoute(tab: .today, route: .settings)
     case .returns:
       handleRootRoute(tab: .today, route: nil)
     case .focus:
-      presentActivityAfterRefreshingEligibility()
+      if semesterDesk != nil {
+        handleRootRoute(tab: .today, route: nil)
+      } else {
+        presentActivityAfterRefreshingEligibility()
+      }
     }
   }
 
@@ -1554,7 +1974,7 @@ final class AppModel {
 
   private var routesAreEligible: Bool {
     launchState == .ready
-      && isCourseStarted
+      && (semesterDesk != nil || isCourseStarted)
       && !isLocalDataResetRunning
       && recoveryState == nil
   }
@@ -1820,6 +2240,14 @@ final class AppModel {
 
   private func discardAllActivityDrafts() {
     activityDrafts.removeAll()
+  }
+
+  private func discardSemesterDeskStudyDraft(for planItemID: String) {
+    semesterDeskStudyDrafts.removeValue(forKey: planItemID)
+  }
+
+  private func discardAllSemesterDeskStudyDrafts() {
+    semesterDeskStudyDrafts.removeAll()
   }
 
   private func refreshExperience(at capturedNow: Date) {
@@ -2563,7 +2991,11 @@ final class AppModel {
       guard presentsActivity, didConsume, routesAreEligible else {
         return
       }
-      presentActivityAfterRefreshingEligibility()
+      if semesterDesk != nil {
+        handleRootRoute(tab: .today, route: nil)
+      } else {
+        presentActivityAfterRefreshingEligibility()
+      }
     case .unavailable, .failure:
       setSharedIntegrationIssue(.focusRead)
     }
@@ -2617,8 +3049,8 @@ final class AppModel {
 
   private func resetNavigation() {
     todayPath = []
-    pathPath = []
-    evidencePath = []
+    semesterPath = []
+    progressPath = []
   }
 
   private static func clearPrivateState(
@@ -2796,6 +3228,10 @@ final class AppModel {
       semesterDesk = nil
       isCourseStarted = false
       remindersEnabled = false
+      semesterNameDraft = ""
+      activeSemesterDeskSheet = nil
+      dismissProtectedStudy()
+      discardAllSemesterDeskStudyDrafts()
       lastPersistedEnvelope = nil
       privateNamespaceSynchronizationPending = false
       stateRevision += 1

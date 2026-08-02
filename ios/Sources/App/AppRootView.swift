@@ -18,54 +18,52 @@ struct AppRootView: View {
           .accessibilityIdentifier("launch.loading")
       } else if model.recoveryState != nil {
         LocalDataRecoveryView(model: model)
-      } else if !model.isCourseStarted {
+      } else if model.semesterDesk == nil {
         OnboardingView(model: model)
       } else {
         TabView(selection: $model.selectedTab) {
-          NavigationStack(path: $model.todayPath) {
-            TodayView()
-              .navigationDestination(for: AppRoute.self) { route in
-                destination(for: route)
-              }
-              .toolbar {
-                SettingsToolbar(path: $model.todayPath)
-              }
+          Tab("Today", systemImage: "sun.max", value: AppTab.today) {
+            NavigationStack(path: $model.todayPath) {
+              TodayView()
+                .navigationDestination(for: AppRoute.self) { route in
+                  destination(for: route)
+                }
+                .toolbar {
+                  SettingsToolbar(path: $model.todayPath)
+                }
+            }
+            .accessibilityIdentifier("tab.today")
           }
-          .tabItem {
-            Label("Today", systemImage: "sun.max")
-              .accessibilityIdentifier("tab.today")
-          }
-          .tag(AppTab.today)
 
-          NavigationStack(path: $model.pathPath) {
-            PathView()
-              .navigationDestination(for: AppRoute.self) { route in
-                destination(for: route)
-              }
-              .toolbar {
-                SettingsToolbar(path: $model.pathPath)
-              }
+          Tab("Semester", systemImage: "calendar", value: AppTab.semester) {
+            NavigationStack(path: $model.semesterPath) {
+              SemesterView()
+                .navigationDestination(for: AppRoute.self) { route in
+                  destination(for: route)
+                }
+                .toolbar {
+                  SettingsToolbar(path: $model.semesterPath)
+                }
+            }
+            .accessibilityIdentifier("tab.semester")
           }
-          .tabItem {
-            Label("Path", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
-              .accessibilityIdentifier("tab.path")
-          }
-          .tag(AppTab.path)
 
-          NavigationStack(path: $model.evidencePath) {
-            EvidenceView()
-              .navigationDestination(for: AppRoute.self) { route in
-                destination(for: route)
-              }
-              .toolbar {
-                SettingsToolbar(path: $model.evidencePath)
-              }
+          Tab(
+            "Progress",
+            systemImage: "chart.line.uptrend.xyaxis",
+            value: AppTab.progress
+          ) {
+            NavigationStack(path: $model.progressPath) {
+              SemesterProgressView()
+                .navigationDestination(for: AppRoute.self) { route in
+                  destination(for: route)
+                }
+                .toolbar {
+                  SettingsToolbar(path: $model.progressPath)
+                }
+            }
+            .accessibilityIdentifier("tab.progress")
           }
-          .tabItem {
-            Label("Evidence", systemImage: "doc.text.magnifyingglass")
-              .accessibilityIdentifier("tab.evidence")
-          }
-          .tag(AppTab.evidence)
         }
         .tint(ForgeDesign.tabSelection)
         .toolbarBackground(ForgeDesign.canvas, for: .tabBar)
@@ -73,12 +71,21 @@ struct AppRootView: View {
       }
     }
     .sheet(
-      isPresented: $model.isActivityPresented,
+      item: $model.activeSemesterDeskSheet,
       onDismiss: {
-        model.dismissActivity()
+        model.dismissSemesterDeskSheet()
+      }
+    ) { sheet in
+      SemesterDeskSheetView(sheet: sheet)
+        .environment(model)
+    }
+    .fullScreenCover(
+      isPresented: $model.isProtectedStudyPresented,
+      onDismiss: {
+        model.dismissProtectedStudy()
       }
     ) {
-      UniversityActivityView()
+      ProtectedStudyView()
         .environment(model)
     }
     .onOpenURL { url in
@@ -124,9 +131,9 @@ struct AppRootView: View {
   private func destination(for route: AppRoute) -> some View {
     switch route {
     case .settings:
-      SettingsView()
+      SemesterDeskSettingsView()
     case .privacySupport:
-      PrivacySupportView()
+      SemesterDeskPrivacySupportView()
     }
   }
 }

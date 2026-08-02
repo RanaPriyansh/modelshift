@@ -26,6 +26,8 @@ targets:
       - path: Sources/App
       - path: Sources/SystemIntegration
       - path: Resources
+        excludes:
+          - Brand
     info:
       path: Config/FORGE-Info.plist
       properties:

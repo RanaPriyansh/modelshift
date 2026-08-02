@@ -79,7 +79,7 @@ struct AppModelTests {
       await launchTask.value
 
       #expect(model.launchState == .ready)
-      #expect(model.selectedTab == .path)
+      #expect(model.selectedTab == .semester)
       #expect(model.todayPath.isEmpty)
     }
   }
@@ -371,6 +371,247 @@ struct AppModelTests {
       #expect(reader.semesterDesk == stored.semesterDesk)
       #expect(reader.semesterDesk?.profileID == reader.localProfileID)
       #expect(reader.semesterDesk?.courses.map(\.code) == ["MAT220"])
+    }
+  }
+
+  @Test("Semester Desk creation retains the name after failure and blocks a duplicate")
+  func semesterDeskCreationRetainsNameAndBlocksDuplicate() async throws {
+    try await withEnvironmentCleanup { environments in
+      let failedEnvironment = try environments.makeEnvironment()
+      let failedModel = try await failedEnvironment.makeModel()
+      await failedEnvironment.privateStore.setSaveError(.writeVerification)
+
+      #expect(!(await failedModel.createSemesterDesk(title: "Autumn 2026")))
+      #expect(failedModel.semesterNameDraft == "Autumn 2026")
+      #expect(failedModel.semesterDesk == nil)
+
+      let successfulEnvironment = try environments.makeEnvironment()
+      let successfulModel = try await successfulEnvironment.makeModel()
+      #expect(await successfulModel.createSemesterDesk(title: "Autumn 2026"))
+      let firstDesk = try #require(successfulModel.semesterDesk)
+
+      #expect(!(await successfulModel.createSemesterDesk(title: "Spring 2027")))
+      #expect(successfulModel.semesterDesk == firstDesk)
+      #expect(successfulModel.semesterNameDraft.isEmpty)
+    }
+  }
+
+  @Test("Today selects one Semester Desk action in the required priority")
+  func semesterDeskTodayActionPriority() async throws {
+    try await withEnvironmentCleanup { environments in
+      let environment = try environments.makeEnvironment()
+      let model = try await environment.makeModel()
+      #expect(await model.createSemesterDesk(title: "Autumn 2026"))
+      #expect(model.semesterDeskTodayAction == .confirmCapacity)
+
+      #expect(
+        await model.applySemesterDeskCommand(
+          .draftCapacity(
+            profileID: model.localProfileID,
+            availableMinutes: 120
+          )
+        )
+      )
+      #expect(
+        await model.applySemesterDeskCommand(
+          .confirmCapacity(profileID: model.localProfileID)
+        )
+      )
+      #expect(model.semesterDeskTodayAction == .addCourse)
+
+      #expect(
+        await model.applySemesterDeskCommand(
+          .addCourse(
+            profileID: model.localProfileID,
+            code: "MAT220",
+            title: "Linear algebra"
+          )
+        )
+      )
+      let courseID = try #require(model.semesterDesk?.courses.first?.id)
+      #expect(model.semesterDeskTodayAction == .addPlannedWork(courseID: courseID))
+
+      #expect(
+        await model.applySemesterDeskCommand(
+          .addPlanItem(
+            profileID: model.localProfileID,
+            courseID: courseID,
+            title: "Matrix transformations",
+            date: "2033-05-18",
+            minutes: 45
+          )
+        )
+      )
+      let planItemID = try #require(model.semesterDesk?.planItems.first?.id)
+      #expect(model.semesterDeskTodayAction == .choosePlannedWork)
+
+      #expect(
+        await model.applySemesterDeskCommand(
+          .chooseNextAction(
+            profileID: model.localProfileID,
+            planItemID: planItemID
+          )
+        )
+      )
+      #expect(model.semesterDeskTodayAction == .selectedAction(planItemID: planItemID))
+
+      #expect(
+        await model.applySemesterDeskCommand(
+          .prepareRecovery(
+            profileID: model.localProfileID,
+            summary: "The available study time changed.",
+            decisions: [
+              UniversitySemesterDeskRecoveryDecisionInput(
+                planItemID: planItemID,
+                outcome: .kept,
+                reason: "This item still fits the available time."
+              )
+            ]
+          )
+        )
+      )
+      #expect(model.semesterDeskTodayAction == .finishRecovery)
+    }
+  }
+
+  @Test("Protected study text stays out of durable Semester Desk state")
+  func semesterDeskStudyTextIsProcessOnly() async throws {
+    try await withEnvironmentCleanup { environments in
+      let writerEnvironment = try environments.makeEnvironment()
+      let writer = try await writerEnvironment.makeModel()
+      let planItemID = try await makeSemesterDeskPlan(writer)
+
+      #expect(await writer.beginProtectedStudy(planItemID: planItemID))
+      writer.updateSemesterDeskStudyDraft(
+        for: planItemID,
+        practiceText: "private practice words",
+        independentCheckText: "private explanation words",
+        delayedReturnText: ""
+      )
+
+      #expect(
+        writer.semesterDeskStudyDraft(for: planItemID)
+          == SemesterDeskStudyDraft(
+            practiceText: "private practice words",
+            independentCheckText: "private explanation words",
+            delayedReturnText: ""
+          )
+      )
+      let stored = try #require(try await writerEnvironment.privateStore.load())
+      let storedData = try await writerEnvironment.privateStore.rawData()
+      let storedText = try #require(String(data: storedData, encoding: .utf8))
+      #expect(!storedText.contains("private practice words"))
+      #expect(!storedText.contains("private explanation words"))
+
+      let readerEnvironment = try environments.makeEnvironment()
+      try await readerEnvironment.privateStore.seed(stored)
+      let reader = try await readerEnvironment.makeModel()
+      #expect(reader.semesterDeskStudyDraft(for: planItemID) == .empty)
+    }
+  }
+
+  @Test("Protected study wrappers complete a delayed-return cycle")
+  func semesterDeskProtectedStudyCycle() async throws {
+    try await withEnvironmentCleanup { environments in
+      let environment = try environments.makeEnvironment()
+      let model = try await environment.makeModel()
+      let planItemID = try await makeSemesterDeskPlan(model)
+
+      #expect(await model.beginProtectedStudy(planItemID: planItemID))
+      model.updateSemesterDeskStudyDraft(
+        for: planItemID,
+        practiceText: "working notes",
+        independentCheckText: "",
+        delayedReturnText: ""
+      )
+
+      #expect(await model.completeProtectedPractice(outcome: .needsMoreWork))
+      #expect(model.protectedStudyPlanItem?.status == .inProgress)
+      #expect(model.isProtectedStudyPresented)
+      #expect(model.semesterDesk?.progressEvidence.last?.outcome == .needsMoreWork)
+
+      #expect(await model.completeProtectedPractice(outcome: .completed))
+      #expect(model.protectedStudyPlanItem?.status == .practiceComplete)
+
+      model.updateSemesterDeskStudyDraft(
+        for: planItemID,
+        practiceText: "working notes",
+        independentCheckText: "new independent explanation",
+        delayedReturnText: ""
+      )
+      #expect(await model.submitProtectedIndependentCheck(outcome: .needsReturn))
+      #expect(model.protectedStudyPlanItem?.status == .proofComplete)
+      #expect(
+        model.semesterDeskStudyDraft(for: planItemID).independentCheckText.isEmpty
+      )
+
+      let returnDate = Date(timeIntervalSince1970: 2_000_100_000)
+      #expect(await model.scheduleProtectedDelayedReturn(at: returnDate))
+      #expect(!model.isProtectedStudyPresented)
+      #expect(model.semesterDeskStudyDraft(for: planItemID) == .empty)
+      let delayedReturn = try #require(
+        model.semesterDesk?.delayedReturns.first { $0.planItemID == planItemID }
+      )
+      #expect(delayedReturn.status == .due)
+      #expect(
+        model.semesterDeskTodayAction
+          == .delayedReturn(
+            delayedReturnID: delayedReturn.id,
+            planItemID: planItemID,
+            dueAt: delayedReturn.dueAt,
+            isDue: false
+          )
+      )
+
+      #expect(
+        !(await model.openProtectedDelayedReturn(
+          delayedReturnID: delayedReturn.id,
+          planItemID: planItemID
+        ))
+      )
+      #expect(!model.isProtectedStudyPresented)
+
+      let openedAt = returnDate.addingTimeInterval(1)
+      environment.clock.setNext(to: openedAt)
+      environment.semesterDeskClock.setTimestamp(
+        AppModel.semesterDeskTimestamp(for: openedAt)
+      )
+      #expect(
+        await model.openProtectedDelayedReturn(
+          delayedReturnID: delayedReturn.id,
+          planItemID: planItemID
+        )
+      )
+      #expect(model.protectedStudyDelayedReturn?.status == .open)
+
+      model.updateSemesterDeskStudyDraft(
+        for: planItemID,
+        practiceText: "",
+        independentCheckText: "",
+        delayedReturnText: "fresh return explanation"
+      )
+      #expect(await model.completeProtectedDelayedReturn(outcome: .needsMoreWork))
+
+      let completedItem = try #require(
+        model.semesterDesk?.planItems.first { $0.id == planItemID }
+      )
+      let completedReturn = try #require(
+        model.semesterDesk?.delayedReturns.first { $0.id == delayedReturn.id }
+      )
+      #expect(completedItem.status == .planned)
+      #expect(completedReturn.status == .completed)
+      #expect(completedReturn.retentionOutcome == .needsMoreWork)
+      #expect(!model.isProtectedStudyPresented)
+      #expect(model.semesterDeskStudyDraft(for: planItemID) == .empty)
+      #expect(
+        model.semesterDesk?.progressEvidence.map(\.kind)
+          == [
+            .practiceCompleted,
+            .practiceCompleted,
+            .independentProofCompleted,
+            .delayedReturnCompleted,
+          ]
+      )
     }
   }
 
@@ -2082,16 +2323,16 @@ struct AppModelTests {
       let environment = try environments.makeEnvironment()
 
       let model = try await environment.makeModel()
-      model.selectedTab = .evidence
-      model.evidencePath = [.privacySupport]
+      model.selectedTab = .progress
+      model.progressPath = [.privacySupport]
 
       model.route(try validURL("forge://settings"))
       model.route(try validURL("forge://focus"))
 
-      #expect(model.selectedTab == .evidence)
+      #expect(model.selectedTab == .progress)
       #expect(model.todayPath.isEmpty)
-      #expect(model.pathPath.isEmpty)
-      #expect(model.evidencePath == [.privacySupport])
+      #expect(model.semesterPath.isEmpty)
+      #expect(model.progressPath == [.privacySupport])
       #expect(!model.isActivityPresented)
     }
   }
@@ -2103,8 +2344,8 @@ struct AppModelTests {
 
       let model = try await environment.makeModel()
       try await startCourse(model)
-      model.pathPath = [.privacySupport]
-      model.evidencePath = [.settings]
+      model.semesterPath = [.privacySupport]
+      model.progressPath = [.settings]
       model.presentActivity()
       try environment.sharedStore.setPendingFocus()
 
@@ -2114,8 +2355,8 @@ struct AppModelTests {
 
       #expect(model.selectedTab == .today)
       #expect(model.todayPath == [.settings])
-      #expect(model.pathPath.isEmpty)
-      #expect(model.evidencePath.isEmpty)
+      #expect(model.semesterPath.isEmpty)
+      #expect(model.progressPath.isEmpty)
       #expect(!model.isActivityPresented)
       #expect(!(try environment.sharedStore.consumePendingFocus()))
 
@@ -2264,8 +2505,8 @@ struct AppModelTests {
   func directRootRoutes() async throws {
     try await withEnvironmentCleanup { environments in
       try await assertRootRoute("forge://today", expectedTab: .today)
-      try await assertRootRoute("forge://path", expectedTab: .path)
-      try await assertRootRoute("forge://evidence", expectedTab: .evidence)
+      try await assertRootRoute("forge://path", expectedTab: .semester)
+      try await assertRootRoute("forge://evidence", expectedTab: .progress)
       try await assertRootRoute("forge://returns", expectedTab: .today)
     }
   }
@@ -2641,7 +2882,7 @@ struct AppModelTests {
       )
       await recoveryModel.waitForRecoveryOperationForTesting()
 
-      #expect(recoveryModel.selectedTab == .path)
+      #expect(recoveryModel.selectedTab == .semester)
       #expect(recoveryModel.todayPath.isEmpty)
       #expect(!recoveryModel.isActivityPresented)
       #expect(!(try recoveryEnvironment.sharedStore.consumePendingFocus()))
@@ -3867,8 +4108,8 @@ struct AppModelTests {
       let model = try await environment.makeModel()
       try await startCourse(model)
       model.todayPath = [.settings]
-      model.pathPath = [.privacySupport]
-      model.evidencePath = [.settings]
+      model.semesterPath = [.privacySupport]
+      model.progressPath = [.settings]
       model.presentActivity()
       try environment.sharedStore.setPendingFocus()
 
@@ -3877,11 +4118,54 @@ struct AppModelTests {
 
       #expect(model.selectedTab == expectedTab)
       #expect(model.todayPath.isEmpty)
-      #expect(model.pathPath.isEmpty)
-      #expect(model.evidencePath.isEmpty)
+      #expect(model.semesterPath.isEmpty)
+      #expect(model.progressPath.isEmpty)
       #expect(!model.isActivityPresented)
       #expect(!(try environment.sharedStore.consumePendingFocus()))
     }
+  }
+
+  private func makeSemesterDeskPlan(_ model: AppModel) async throws -> String {
+    guard await model.createSemesterDesk(title: "Autumn 2026") else {
+      throw AppModelTestError.semesterDeskSetupFailed
+    }
+    guard
+      await model.applySemesterDeskCommand(
+        .addCourse(
+          profileID: model.localProfileID,
+          code: "MAT220",
+          title: "Linear algebra"
+        )
+      ),
+      let courseID = model.semesterDesk?.courses.first?.id
+    else {
+      throw AppModelTestError.semesterDeskSetupFailed
+    }
+    guard
+      await model.applySemesterDeskCommand(
+        .addPlanItem(
+          profileID: model.localProfileID,
+          courseID: courseID,
+          title: "Matrix transformations",
+          date: "2033-05-18",
+          minutes: 45
+        )
+      ),
+      let planItemID = model.semesterDesk?.planItems.first?.id
+    else {
+      throw AppModelTestError.semesterDeskSetupFailed
+    }
+    guard
+      await model.applySemesterDeskCommand(
+        .chooseNextAction(
+          profileID: model.localProfileID,
+          planItemID: planItemID
+        )
+      )
+    else {
+      throw AppModelTestError.semesterDeskSetupFailed
+    }
+    return planItemID
   }
 
   private func startCourse(_ model: AppModel) async throws {
@@ -4028,6 +4312,7 @@ private enum AppModelTestError: Error {
   case lockAcquisitionFailed
   case missingDelayedReturn
   case operationTimedOut
+  case semesterDeskSetupFailed
   case unexpectedSubmissionOutcome
 }
 
@@ -4545,14 +4830,18 @@ private final class TestSemesterDeskClock:
   UniversitySemesterDeskClock,
   Sendable
 {
-  private let timestamp: String
+  private let timestamp: Mutex<String>
 
   init(timestamp: String) {
-    self.timestamp = timestamp
+    self.timestamp = Mutex(timestamp)
   }
 
   func now() -> String {
-    timestamp
+    timestamp.withLock { $0 }
+  }
+
+  func setTimestamp(_ value: String) {
+    timestamp.withLock { $0 = value }
   }
 }
 

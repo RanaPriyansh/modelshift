@@ -16,7 +16,9 @@ struct SettingsToolbar: ToolbarContent {
             .contentShape(Rectangle())
         }
         .accessibilityLabel("Settings")
-        .accessibilityHint("Opens return reminder, privacy, and support settings.")
+        .accessibilityHint(
+          "Opens reminder status, local data, privacy, support, and application version."
+        )
         .accessibilityIdentifier("settings.toolbar-button")
       }
     }

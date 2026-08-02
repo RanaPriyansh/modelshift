@@ -7,28 +7,21 @@ struct TodayView: View {
   @ScaledMetric(relativeTo: .body) private var bottomContentClearance: CGFloat = 88
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.large) {
-        activityContent
-        courseContext
-
-        if let message = model.localIntegrationStatusMessage {
-          localIntegrationStatus(message)
+    TimelineView(.periodic(from: .now, by: 60)) { _ in
+      ScrollView {
+        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.large) {
+          semesterHeader
+          nextAction
+          SemesterDeskOperationStatus()
         }
-
-        if let message = model.localPersistenceStatusMessage {
-          localIntegrationStatus(message)
-        }
-
-        sourceAndLocalLimits
+        .frame(maxWidth: ForgeDesign.Layout.contentMaxWidth, alignment: .leading)
+        .padding(.horizontal, ForgeDesign.Spacing.regular)
+        .padding(.vertical, ForgeDesign.Spacing.large)
+        .frame(maxWidth: .infinity, alignment: .leading)
       }
-      .frame(maxWidth: ForgeDesign.Layout.contentMaxWidth, alignment: .leading)
-      .padding(.horizontal, ForgeDesign.Spacing.regular)
-      .padding(.vertical, ForgeDesign.Spacing.large)
-      .frame(maxWidth: .infinity)
+      .contentMargins(.bottom, bottomContentClearance, for: .scrollContent)
+      .background(ForgeDesign.canvas)
     }
-    .contentMargins(.bottom, bottomContentClearance, for: .scrollContent)
-    .background(ForgeDesign.canvas)
     .navigationTitle("Today")
     .transaction { transaction in
       if reduceMotion {
@@ -36,406 +29,309 @@ struct TodayView: View {
         transaction.disablesAnimations = true
       }
     }
-    .onChange(of: model.localIntegrationStatusMessage, initial: false) { oldMessage, newMessage in
-      announceLocalIntegrationStatusChange(from: oldMessage, to: newMessage)
-    }
-    .onChange(of: model.localPersistenceStatusMessage, initial: false) {
-      oldMessage,
-      newMessage in
-      announceLocalIntegrationStatusChange(from: oldMessage, to: newMessage)
-    }
-    .onChange(of: model.isCourseReviewRunning, initial: false) { _, isRunning in
-      announceCourseReviewProgress(isRunning)
+    .onChange(of: model.semesterDeskStatusMessage, initial: false) { _, message in
+      guard let message, !message.isEmpty else {
+        return
+      }
+      AccessibilityNotification.Announcement(message).post()
     }
   }
 
-  private var courseContext: some View {
+  private var semesterHeader: some View {
     VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
-      Divider()
-
-      UniversitySectionLabel(title: "Course context")
-
-      Text(model.courseTitle)
-        .font(.headline.weight(.semibold))
+      Text(model.semesterDesk?.title ?? "Semester Desk")
+        .font(.largeTitle.weight(.bold))
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityAddTraits(.isHeader)
-        .accessibilityIdentifier("today.course-title")
+        .accessibilityIdentifier("today.semester-name")
 
-      Text(model.courseSummary)
-        .font(.subheadline)
+      if let capacity = model.semesterDesk?.capacity {
+        Label(
+          "Confirmed capacity: \(SemesterDeskDisplay.duration(capacity.availableMinutes))",
+          systemImage: "clock"
+        )
+        .font(.body)
         .foregroundStyle(ForgeDesign.secondaryText)
         .fixedSize(horizontal: false, vertical: true)
-
-      UniversityMetadataRow(
-        label: "Last local update",
-        value: exactDateTime(model.learnerState.updatedAt)
-      )
-      .accessibilityIdentifier("today.updated-at-visual")
-
-      reviewCourseSetupButton
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .accessibilityElement(children: .contain)
-  }
-
-  @ViewBuilder
-  private var activityContent: some View {
-    if let experience = model.experience {
-      activeActivityCard(experience)
-    } else if let message = model.experienceErrorMessage {
-      activityUnavailableCard(message)
-    } else {
-      activityUnavailableCard("Current activity data is not available.")
-    }
-  }
-
-  private func activeActivityCard(
-    _ experience: UniversityExperienceProjection.Projection
-  ) -> some View {
-    UniversitySurface {
-      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
-        UniversitySectionLabel(title: "Next action")
-
-        nextActionContent(for: experience)
-
-        Divider()
-
-        UniversitySectionLabel(title: "Activity details")
-
-        UniversityMetadataRow(
-          label: "Activity kind",
-          value: activityKindText(for: experience.activeActivity.kind)
-        )
-
-        UniversityMetadataRow(
-          label: "Activity state",
-          value: activityStateText(for: experience.nextActionState)
-        )
-        .accessibilityIdentifier("today.activity-state-active")
-
-        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
-          Text("Prompt")
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(ForgeDesign.secondaryText)
-
-          Text(experience.activeActivity.prompt)
-            .font(.body)
-            .fixedSize(horizontal: false, vertical: true)
-        }
-      }
-    }
-  }
-
-  private func activityUnavailableCard(_ message: String) -> some View {
-    UniversitySurface {
-      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
-        UniversitySectionLabel(title: "Next action")
-
-        Text(message)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("today.confirmed-capacity")
+      } else {
+        Label("Capacity is not yet confirmed", systemImage: "clock.badge.questionmark")
           .font(.body)
           .foregroundStyle(ForgeDesign.secondaryText)
           .fixedSize(horizontal: false, vertical: true)
-          .accessibilityIdentifier("today.activity-state-unavailable")
-
-        activityAccessButton(
-          title: "Open current activity",
-          hint: "Activity data is not available.",
-          isEnabled: false
-        )
+          .accessibilityElement(children: .combine)
+          .accessibilityIdentifier("today.confirmed-capacity")
       }
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
   }
 
   @ViewBuilder
-  private func nextActionContent(
-    for experience: UniversityExperienceProjection.Projection
-  ) -> some View {
-    switch experience.nextActionState {
-    case .activeActivity:
-      currentActivityAction
+  private var nextAction: some View {
+    if let action = model.semesterDeskTodayAction {
+      actionSurface(action)
+    } else {
+      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+        Text("Today is not available")
+          .font(.title2.weight(.semibold))
+          .accessibilityAddTraits(.isHeader)
 
-    case .delayedReturn:
-      if let delayedReturn = model.currentDelayedReturn {
-        delayedReturnAction(delayedReturn)
-      } else {
-        delayedReturnAccess(
-          message: "Delayed return data is not available.",
-          isEnabled: false
-        )
+        Text("FORGE could not find a safe next action.")
+          .font(.body)
+          .foregroundStyle(ForgeDesign.secondaryText)
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .accessibilityIdentifier("today.action-unavailable")
     }
   }
 
-  private var currentActivityAction: some View {
-    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
-      activityAccessButton(
-        title: "Open current activity",
-        hint: model.canPresentCurrentActivity
-          ? "Opens the current activity."
-          : "Activity access is not available.",
-        isEnabled: model.canPresentCurrentActivity
-      )
-
-      Text(
-        model.canPresentCurrentActivity
-          ? "This activity is ready to open."
-          : "Activity access is not available."
-      )
-      .font(.subheadline)
-      .foregroundStyle(ForgeDesign.secondaryText)
-    }
-  }
-
-  private func delayedReturnAction(
-    _ delayedReturn: UniversityExperienceProjection.DelayedReturnRow
-  ) -> some View {
-    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
-      delayedReturnActionDetails(for: delayedReturn.status)
-
-      UniversityMetadataRow(
-        label: "Return state",
-        value: delayedReturnStateText(for: delayedReturn.status)
-      )
-      .accessibilityIdentifier("today.return-status-visual")
-
-      UniversityMetadataRow(
-        label: "Opens",
-        value: exactDateTime(delayedReturn.opensAt)
-      )
-      .accessibilityIdentifier("today.return-opens-at")
-
-      UniversityMetadataRow(
-        label: "Due",
-        value: exactDateTime(delayedReturn.dueAt)
-      )
-      .accessibilityIdentifier("today.return-date-visual")
-    }
-  }
-
-  @ViewBuilder
-  private func delayedReturnActionDetails(
-    for status: DelayedReturnStatus
-  ) -> some View {
-    switch status {
-    case .scheduled:
-      delayedReturnAccess(
-        message: "The return is scheduled.",
-        isEnabled: false
-      )
-
-    case .open:
-      delayedReturnAccess(
-        message: "The return is open.",
-        isEnabled: model.canPresentCurrentActivity
-      )
-
-    case .due:
-      delayedReturnAccess(
-        message: "The return is due.",
-        isEnabled: model.canPresentCurrentActivity
-      )
-
-    case .expired:
-      delayedReturnAccess(
-        message: "The return window is closed.",
-        isEnabled: false
-      )
-
-    case .completed:
-      delayedReturnAccess(
-        message: "The return is recorded.",
-        isEnabled: false
-      )
-    }
-  }
-
-  private func delayedReturnAccess(
-    message: String,
-    isEnabled: Bool
-  ) -> some View {
-    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
-      activityAccessButton(
-        title: "Open delayed return",
-        hint: isEnabled
-          ? "Opens the delayed return activity."
-          : "This delayed return cannot open now.",
-        isEnabled: isEnabled
-      )
-
-      Text(message)
-        .font(.subheadline)
-        .foregroundStyle(ForgeDesign.secondaryText)
-    }
-  }
-
-  private func activityAccessButton(
-    title: String,
-    hint: String,
-    isEnabled: Bool
-  ) -> some View {
-    Button {
-      model.presentActivity()
-    } label: {
-      Label(title, systemImage: "arrow.right.circle.fill")
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: 48)
+  private func actionSurface(_ action: SemesterDeskTodayAction) -> some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+      Label(actionHeading(action), systemImage: actionSymbol(action))
+        .font(.title2.weight(.semibold))
         .fixedSize(horizontal: false, vertical: true)
-        .multilineTextAlignment(.center)
-    }
-    .buttonStyle(ForgeCommitmentButtonStyle())
-    .disabled(!isEnabled)
-    .accessibilityHint(hint)
-    .accessibilityIdentifier("today.open-activity")
-  }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityIdentifier("today.primary-heading")
 
-  private var reviewCourseSetupButton: some View {
-    Button {
-      Task { @MainActor in
-        await model.reviewCourseSetup()
-      }
-    } label: {
-      HStack(spacing: ForgeDesign.Spacing.small) {
-        if model.isCourseReviewRunning {
-          ProgressView()
-            .controlSize(.small)
-            .accessibilityHidden(true)
-        } else {
-          Image(systemName: "slider.horizontal.3")
-            .accessibilityHidden(true)
+      if let item = planItem(for: action) {
+        Text(item.title)
+          .font(.headline)
+          .fixedSize(horizontal: false, vertical: true)
+          .accessibilityIdentifier("today.plan-item-title")
+
+        if let course = course(for: item) {
+          Text("\(course.code) · \(course.title)")
+            .font(.subheadline)
+            .foregroundStyle(ForgeDesign.secondaryText)
+            .fixedSize(horizontal: false, vertical: true)
         }
+      }
 
-        Text(
-          model.isCourseReviewRunning
-            ? "Opening course setup\u{2026}"
-            : "Review course setup"
-        )
-        .frame(maxWidth: .infinity, alignment: .leading)
+      Text(actionReason(action))
+        .font(.body)
+        .foregroundStyle(ForgeDesign.secondaryText)
         .fixedSize(horizontal: false, vertical: true)
-        .multilineTextAlignment(.leading)
+        .accessibilityIdentifier("today.primary-reason")
+
+      primaryAction(action)
+    }
+    .padding(.vertical, ForgeDesign.Spacing.large)
+    .overlay(alignment: .top) {
+      Rectangle()
+        .fill(actionBoundary(action))
+        .frame(height: 3)
+    }
+    .overlay(alignment: .bottom) {
+      Rectangle()
+        .fill(ForgeDesign.boundary)
+        .frame(height: 1)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("today.primary-action")
+  }
+
+  @ViewBuilder
+  private func primaryAction(_ action: SemesterDeskTodayAction) -> some View {
+    switch action {
+    case .finishRecovery:
+      primaryButton(
+        title: "Review recovery changes",
+        systemImage: "list.bullet.clipboard",
+        hint: "Shows every proposed change before confirmation."
+      ) {
+        model.presentSemesterDeskSheet(.reviewRecovery)
+      }
+
+    case .delayedReturn(let delayedReturnID, let planItemID, _, let isDue):
+      primaryButton(
+        title: isDue ? "Open delayed return" : "Return is not open yet",
+        systemImage: isDue ? "arrow.right.circle.fill" : "calendar.badge.clock",
+        hint: isDue
+          ? "Opens a fresh independent check."
+          : "This return stays blocked until its saved date and time.",
+        isDisabled: !isDue
+      ) {
+        Task { @MainActor in
+          _ = await model.openProtectedDelayedReturn(
+            delayedReturnID: delayedReturnID,
+            planItemID: planItemID
+          )
+        }
+      }
+
+    case .selectedAction(let planItemID):
+      let status = model.semesterDesk?.planItems.first { $0.id == planItemID }?.status
+      if status == .planned {
+        primaryButton(
+          title: "Start protected study",
+          systemImage: "arrow.right.circle.fill",
+          hint: "Opens a quiet practice surface for this planned work."
+        ) {
+          Task { @MainActor in
+            _ = await model.beginProtectedStudy(planItemID: planItemID)
+          }
+        }
+      } else {
+        primaryButton(
+          title: "Continue protected study",
+          systemImage: "arrow.right.circle.fill",
+          hint: "Returns to the current protected study stage."
+        ) {
+          model.continueProtectedStudy(planItemID: planItemID)
+        }
+      }
+
+    case .choosePlannedWork:
+      primaryButton(
+        title: "Choose planned work",
+        systemImage: "checkmark.circle",
+        hint: "Shows planned work in your authored order."
+      ) {
+        model.presentSemesterDeskSheet(.chooseNextAction)
+      }
+
+    case .confirmCapacity:
+      primaryButton(
+        title: "Confirm capacity",
+        systemImage: "clock",
+        hint: "Opens the capacity draft and confirmation steps."
+      ) {
+        model.presentSemesterDeskSheet(.capacity)
+      }
+
+    case .addPlannedWork(let courseID):
+      primaryButton(
+        title: "Add planned work",
+        systemImage: "plus.circle",
+        hint: "Adds one planned item to the semester."
+      ) {
+        model.presentSemesterDeskSheet(.addPlannedWork(courseID: courseID))
+      }
+
+    case .addCourse:
+      primaryButton(
+        title: "Add a course",
+        systemImage: "plus.circle",
+        hint: "Adds the first course to this Semester Desk."
+      ) {
+        model.presentSemesterDeskSheet(.addCourse)
       }
     }
-    .buttonStyle(ForgeSecondaryButtonStyle())
-    .disabled(model.isCourseReviewRunning)
-    .accessibilityLabel(
-      model.isCourseReviewRunning ? "Opening course setup" : "Review course setup"
+  }
+
+  private func primaryButton(
+    title: String,
+    systemImage: String,
+    hint: String,
+    isDisabled: Bool = false,
+    action: @escaping @MainActor () -> Void
+  ) -> some View {
+    SemesterDeskPrimaryButton(
+      title: title,
+      systemImage: systemImage,
+      hint: hint,
+      identifier: "today.primary-button",
+      isDisabled: isDisabled || model.isSemesterDeskOperationRunning,
+      action: action
     )
-    .accessibilityValue(model.isCourseReviewRunning ? "In progress" : "")
-    .accessibilityHint(
-      model.isCourseReviewRunning
-        ? "FORGE is opening the local course setup."
-        : "Opens the local course setup."
-    )
-    .accessibilityIdentifier("today.change-direction")
   }
 
-  private func localIntegrationStatus(_ message: String) -> some View {
-    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
-      Divider()
-
-      UniversitySectionLabel(title: "Local data status")
-
-      Text(message)
-        .font(.subheadline)
-        .foregroundStyle(ForgeDesign.secondaryText)
-        .fixedSize(horizontal: false, vertical: true)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .accessibilityElement(children: .contain)
-  }
-
-  private func announceLocalIntegrationStatusChange(
-    from oldMessage: String?,
-    to newMessage: String?
-  ) {
-    guard oldMessage != newMessage, let newMessage, !newMessage.isEmpty else {
-      return
-    }
-
-    AccessibilityNotification.Announcement(newMessage).post()
-  }
-
-  private func announceCourseReviewProgress(_ isRunning: Bool) {
-    guard isRunning else {
-      return
-    }
-
-    AccessibilityNotification.Announcement(
-      "Opening local course setup."
-    ).post()
-  }
-
-  private var sourceAndLocalLimits: some View {
-    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
-      Divider()
-
-      UniversitySectionLabel(title: "Source and local limits")
-
-      Text(sourceProvenanceMessage)
-        .font(.subheadline)
-        .foregroundStyle(ForgeDesign.secondaryText)
-        .fixedSize(horizontal: false, vertical: true)
-
-      Text("Activity records stay on this device. They do not establish a learning result.")
-        .font(.subheadline)
-        .foregroundStyle(ForgeDesign.secondaryText)
-        .fixedSize(horizontal: false, vertical: true)
-        .accessibilityIdentifier("today.boundary-copy-visual")
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .accessibilityElement(children: .contain)
-  }
-
-  private var sourceProvenanceMessage: String {
-    model.catalog.sourceBindings.contains { $0.provenance == .provenanceIncomplete }
-      ? "Source provenance is incomplete."
-      : "Source provenance is recorded in the local course data."
-  }
-
-  private func activityStateText(
-    for nextActionState: UniversityExperienceProjection.NextActionState
-  ) -> String {
-    switch nextActionState {
-    case .activeActivity:
-      "Active"
-
-    case .delayedReturn(let status):
-      delayedReturnStateText(for: status)
-    }
-  }
-
-  private func activityKindText(for kind: ActivityKind) -> String {
-    switch kind {
-    case .practice:
-      "Practice"
-
-    case .proof:
-      "Independent check"
-
+  private func actionHeading(_ action: SemesterDeskTodayAction) -> String {
+    switch action {
+    case .finishRecovery:
+      "Recovery needs your review"
     case .delayedReturn:
-      "Delayed return"
+      "Come back on this date"
+    case .selectedAction:
+      "Ready to work on"
+    case .choosePlannedWork:
+      "Your choice"
+    case .confirmCapacity:
+      "Confirm your available time"
+    case .addPlannedWork:
+      "Add the work you intend to do"
+    case .addCourse:
+      "Add your first course"
     }
   }
 
-  private func delayedReturnStateText(for status: DelayedReturnStatus) -> String {
-    switch status {
-    case .scheduled:
-      "Scheduled"
-
-    case .open:
-      "Open"
-
-    case .due:
-      "Due"
-
-    case .expired:
-      "Window closed"
-
-    case .completed:
-      "Return recorded"
+  private func actionReason(_ action: SemesterDeskTodayAction) -> String {
+    switch action {
+    case .finishRecovery:
+      return "A saved recovery draft is open. Confirm nothing until you review every change."
+    case .delayedReturn(_, _, let dueAt, let isDue):
+      if isDue {
+        return
+          "The saved return date has arrived. Use a new explanation without your earlier notes."
+      }
+      return
+        "This return opens \(SemesterDeskDisplay.dateTime(dueAt)). FORGE blocks it before that time."
+    case .selectedAction(let planItemID):
+      let status = model.semesterDesk?.planItems.first { $0.id == planItemID }?.status
+      return status == .planned
+        ? "You selected this item as the next action."
+        : "This protected study is still active."
+    case .choosePlannedWork:
+      return "Planned work exists, but you have not selected the next action."
+    case .confirmCapacity:
+      return "State the time that you can use before you add more planned work."
+    case .addPlannedWork:
+      return "Your capacity is confirmed. Add one item in the order that you authored it."
+    case .addCourse:
+      return "A course is required before you can add planned work."
     }
   }
 
-  private func exactDateTime(_ date: Date) -> String {
-    date.formatted(date: .long, time: .shortened)
+  private func actionSymbol(_ action: SemesterDeskTodayAction) -> String {
+    switch action {
+    case .finishRecovery:
+      "arrow.triangle.2.circlepath"
+    case .delayedReturn:
+      "calendar.badge.clock"
+    case .selectedAction:
+      "scope"
+    case .choosePlannedWork:
+      "checkmark.circle"
+    case .confirmCapacity:
+      "clock"
+    case .addPlannedWork, .addCourse:
+      "plus.circle"
+    }
+  }
+
+  private func actionBoundary(_ action: SemesterDeskTodayAction) -> Color {
+    switch action {
+    case .finishRecovery, .delayedReturn:
+      ForgeDesign.Action.commitment
+    case .selectedAction:
+      ForgeDesign.focus
+    case .choosePlannedWork, .confirmCapacity, .addPlannedWork, .addCourse:
+      ForgeDesign.boundary
+    }
+  }
+
+  private func planItem(
+    for action: SemesterDeskTodayAction
+  ) -> UniversitySemesterDeskPlanItem? {
+    let planItemID: String?
+    switch action {
+    case .delayedReturn(_, let value, _, _), .selectedAction(let value):
+      planItemID = value
+    case .finishRecovery, .choosePlannedWork, .confirmCapacity, .addPlannedWork, .addCourse:
+      planItemID = nil
+    }
+    guard let planItemID else {
+      return nil
+    }
+    return model.semesterDesk?.planItems.first { $0.id == planItemID }
+  }
+
+  private func course(
+    for item: UniversitySemesterDeskPlanItem
+  ) -> UniversitySemesterDeskCourse? {
+    model.semesterDesk?.courses.first { $0.id == item.courseID }
   }
 }
