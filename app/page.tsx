@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 
-import { PublicHome } from "@/src/components/forge/refoundation/public/PublicHome";
+import { SemesterDeskV2PublicHome } from "@/src/components/forge/semester-desk-v2/public/SemesterDeskV2PublicHome";
 
 export const metadata: Metadata = {
-  title: "FORGE — A path from ambition to capability",
+  title: "FORGE | Semester Desk for university students",
   description:
-    "Turn a real learning goal into focused work, ModelShift experiences, and evidence that distinguishes supported practice from independent proof.",
+    "FORGE helps university students rebuild a broken week from today with checked course facts, honest capacity, active study, and later return.",
 };
 
 export default function HomePage() {
-  return <PublicHome />;
+  return <SemesterDeskV2PublicHome />;
 }

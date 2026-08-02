@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 
-import { HowForgeWorks } from "@/src/components/forge/ForgeMethodPages";
-import { ForgeShell } from "@/src/components/forge/ForgeShell";
+import { PublicProductPage } from "@/src/components/forge/semester-desk-v2/public/product/PublicProductPage";
 
 export const metadata: Metadata = {
-  title: "How FORGE works",
-  description: "The FORGE learning loop, active study operations, personalization boundary, and proof-after-help method.",
+  title: "How FORGE works | Semester Desk",
+  description:
+    "See how FORGE helps university students check course facts, state capacity, recover a broken week, study actively, and return later.",
 };
 
 export default function HowForgeWorksPage() {
-  return <ForgeShell active="learn" surface="public"><HowForgeWorks /></ForgeShell>;
+  return <PublicProductPage kind="how-forge-works" />;
 }
