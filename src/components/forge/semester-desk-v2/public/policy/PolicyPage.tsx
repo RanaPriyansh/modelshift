@@ -58,13 +58,13 @@ function PrivacyPageContent() {
           <div>
             <dt>Device access</dt>
             <dd>
-              FORGE can keep a random device ID and your selected learning mode in this browser. It does not ask for your name, school, or location.
+              FORGE can keep a random local profile ID and your Semester Desk in this browser. It does not ask for your name, school, or location.
             </dd>
           </div>
           <div>
-            <dt>Study evidence</dt>
+            <dt>Semester Desk data</dt>
             <dd>
-              The Evidence page can keep limited study records in this browser. It does not keep raw explanations, chat, confidence, or mastery scores.
+              FORGE can keep course facts, recovery choices, and completed learning actions in this browser. It does not save raw practice notes or independent answers to browser storage.
             </dd>
           </div>
         </PolicyList>
@@ -96,21 +96,15 @@ function PrivacyPageContent() {
       <PolicySection title="Your choices">
         <PolicyList>
           <div>
-            <dt>Remove device access</dt>
+            <dt>Download or remove your desk</dt>
             <dd>
-              Open <Link href="/app/settings">Settings</Link> and select <span className={styles.quotedAction}>Remove device profile</span> when you no longer want this browser profile.
-            </dd>
-          </div>
-          <div>
-            <dt>Download or remove evidence</dt>
-            <dd>
-              Open <Link href="/app/evidence">Evidence</Link> to download your local evidence, remove one record, or clear the local evidence ledger.
+              Open <Link href="/app#settings">Local data</Link> to download the saved JSON or reset this local desk.
             </dd>
           </div>
           <div>
             <dt>Clear browser data carefully</dt>
             <dd>
-              Clearing browser site data can remove FORGE data stored on this device. Download evidence first if you may need it later.
+              Clearing browser site data can remove FORGE data stored on this device. Download the saved JSON first if you may need it later.
             </dd>
           </div>
         </PolicyList>
@@ -205,19 +199,13 @@ function SupportPageContent() {
           <div>
             <dt>Keep a copy first</dt>
             <dd>
-              Open <Link href="/app/evidence">Evidence</Link> and select <span className={styles.quotedAction}>Download my copy</span> before you clear browser data.
+              Open <Link href="/app#settings">Local data</Link> and select <span className={styles.quotedAction}>Download local JSON</span> before you clear browser data.
             </dd>
           </div>
           <div>
-            <dt>Remove a device profile</dt>
+            <dt>Remove a local desk</dt>
             <dd>
-              Open <Link href="/app/settings">Settings</Link> and select <span className={styles.quotedAction}>Remove device profile</span>. This action only removes the device profile.
-            </dd>
-          </div>
-          <div>
-            <dt>Remove evidence</dt>
-            <dd>
-              Use Evidence to remove one record or clear the local evidence ledger. Confirm each removal before you continue.
+              Open <Link href="/app#settings">Local data</Link> and select <span className={styles.quotedAction}>Reset this device</span>. Confirm the removal before you continue.
             </dd>
           </div>
         </PolicyList>
@@ -233,8 +221,8 @@ function SupportPageContent() {
         <ol className={styles.steps}>
           <li>Refresh the page and open it again in the same browser profile.</li>
           <li>Check that the browser can use local storage.</li>
-          <li>Do not clear browser data before you download any evidence that you need.</li>
-          <li>If FORGE cannot read local evidence, download the unchanged recovery copy before you remove it.</li>
+          <li>Do not clear browser data before you download any saved JSON that you need.</li>
+          <li>If FORGE cannot read local data, download the unchanged JSON before you reset this device.</li>
         </ol>
       </PolicySection>
 

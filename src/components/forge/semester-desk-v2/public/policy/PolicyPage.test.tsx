@@ -51,8 +51,7 @@ describe("FORGE policy and support routes", () => {
     expect(screen.getByRole("heading", { name: "Your study plan is not a profile." })).toBeInTheDocument();
     expect(screen.getByText("No online sign-in or sync")).toBeInTheDocument();
     expect(screen.getByText("No university connection")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/app/settings");
-    expect(screen.getByRole("link", { name: "Evidence" })).toHaveAttribute("href", "/app/evidence");
+    expect(screen.getByRole("link", { name: "Local data" })).toHaveAttribute("href", "/app#settings");
     expectPublicLandmarks();
     expectNoUnsupportedPublicClaims();
   });
@@ -86,7 +85,10 @@ describe("FORGE policy and support routes", () => {
   it("uses route metadata that matches the current product boundary", () => {
     expect(privacyMetadata.title).toBe("Privacy — FORGE");
     expect(privacyMetadata.description).toContain("browser-local");
+    expect(privacyMetadata.alternates?.canonical).toBe("/privacy");
     expect(termsMetadata.description).toContain("Legal review");
+    expect(termsMetadata.robots).toEqual({ index: false, follow: false });
     expect(supportMetadata.description).toContain("browser-local data");
+    expect(supportMetadata.alternates?.canonical).toBe("/support");
   });
 });

@@ -5,6 +5,19 @@ import { PolicyPage } from "@/src/components/forge/semester-desk-v2/public/polic
 export const metadata: Metadata = {
   title: "Support — FORGE",
   description: "Self-service help for FORGE access, browser-local data, return dates, and page failures.",
+  alternates: {
+    canonical: "/support",
+  },
+  openGraph: {
+    url: "/support",
+    title: "Support — FORGE",
+    description: "Self-service help for FORGE access, browser-local data, return dates, and page failures.",
+  },
+  twitter: {
+    card: "summary",
+    title: "Support — FORGE",
+    description: "Self-service help for FORGE access, browser-local data, return dates, and page failures.",
+  },
 };
 
 export default function SupportPage() {
