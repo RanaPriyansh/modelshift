@@ -446,6 +446,29 @@ describe("SemesterDeskV2App", () => {
     expect(persistence.resets).toEqual([PROFILE_ID]);
   });
 
+  it("keeps focus in the reset dialog and returns it after Escape", async () => {
+    const persistence = new MemoryPersistence(makeDesk());
+    renderApp(persistence);
+
+    const resetButton = await screen.findByRole("button", { name: "Reset this device" });
+    resetButton.focus();
+    fireEvent.click(resetButton);
+
+    const dialog = await screen.findByRole("alertdialog", { name: "Remove this local desk?" });
+    const cancelButton = within(dialog).getByRole("button", { name: "Cancel" });
+    const downloadButton = within(dialog).getByRole("button", { name: "Download JSON" });
+    expect(cancelButton).toHaveFocus();
+
+    fireEvent.keyDown(window, { key: "Tab" });
+    expect(downloadButton).toHaveFocus();
+    fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+    expect(cancelButton).toHaveFocus();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(resetButton).toHaveFocus());
+  });
+
   it("uses human product language in the mobile-ready landmark surface", async () => {
     const persistence = new MemoryPersistence(makeDesk());
     renderApp(persistence);

@@ -1415,6 +1415,7 @@ function ResetDialog({
   readonly onConfirm: () => void;
   readonly actionError: string | null;
 }) {
+  const dialogRef = useRef<HTMLElement>(null);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const onCancelRef = useRef(onCancel);
 
@@ -1424,18 +1425,34 @@ function ResetDialog({
 
   useEffect(() => {
     cancelButtonRef.current?.focus();
-    function cancelOnEscape(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
+
+    function keepFocusInDialog(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCancelRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+        "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])",
+      ) ?? []);
+      if (focusable.length === 0) return;
+      const currentIndex = focusable.indexOf(document.activeElement as HTMLElement);
+      const nextIndex = event.shiftKey ? focusable.length - 1 : 0;
+      if (currentIndex !== -1 && !((event.shiftKey && currentIndex === 0) || (!event.shiftKey && currentIndex === focusable.length - 1))) {
+        return;
+      }
       event.preventDefault();
-      onCancelRef.current();
+      focusable[nextIndex]?.focus();
     }
-    window.addEventListener("keydown", cancelOnEscape);
-    return () => window.removeEventListener("keydown", cancelOnEscape);
+
+    window.addEventListener("keydown", keepFocusInDialog);
+    return () => window.removeEventListener("keydown", keepFocusInDialog);
   }, []);
 
   return (
     <div className={styles.dialogBackdrop} role="presentation">
-      <section className={styles.dialog} role="alertdialog" aria-modal="true" aria-labelledby="reset-title" aria-describedby="reset-description">
+      <section ref={dialogRef} className={styles.dialog} role="alertdialog" aria-modal="true" aria-labelledby="reset-title" aria-describedby="reset-description">
         <p className={styles.sectionMarker}>RESET THIS DEVICE</p>
         <h2 id="reset-title">Remove this local desk?</h2>
         <p id="reset-description">This removes only the data for this local profile. Download the unchanged JSON first if you want a copy.</p>
@@ -1587,6 +1604,7 @@ export function SemesterDeskV2App({
   const [resetOpen, setResetOpen] = useState(false);
 
   const persistenceRef = useRef<SemesterDeskPersistence | null>(null);
+  const resetOpenerRef = useRef<HTMLElement | null>(null);
   const deskRef = useRef<SemesterDeskState | null>(null);
   const profileIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
@@ -1612,6 +1630,19 @@ export function SemesterDeskV2App({
     setFocusedItemId(null);
     setResetOpen(false);
   }, []);
+
+  function openResetDialog() {
+    resetOpenerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setResetOpen(true);
+  }
+
+  function closeResetDialog() {
+    setResetOpen(false);
+    const opener = resetOpenerRef.current;
+    window.requestAnimationFrame(() => {
+      if (opener?.isConnected) opener.focus();
+    });
+  }
 
   function enqueueStorage<T>(operation: () => Promise<T>): Promise<T> {
     const queued = storageQueueRef.current
@@ -1957,17 +1988,17 @@ export function SemesterDeskV2App({
 
   if (screen === "malformed") {
     return (
-      <AppFrame onReset={() => setResetOpen(true)}>
+      <AppFrame onReset={openResetDialog}>
         <Notice message={notice} />
         <MalformedStorage
           message={saveError ?? "The saved data needs review."}
           onDownload={() => { void downloadLocalData(); }}
-          onReset={() => setResetOpen(true)}
+          onReset={openResetDialog}
           actionError={saveError}
         />
         {resetOpen ? (
           <ResetDialog
-            onCancel={() => setResetOpen(false)}
+            onCancel={closeResetDialog}
             onDownload={() => { void downloadLocalData(); }}
             onConfirm={() => { void resetLocalDesk(); }}
             actionError={saveError}
@@ -2011,8 +2042,8 @@ export function SemesterDeskV2App({
         if (deskRef.current) void persist(deskRef.current);
       }}
       onDownload={() => { void downloadLocalData(); }}
-      onOpenReset={() => setResetOpen(true)}
-      onCancelReset={() => setResetOpen(false)}
+      onOpenReset={openResetDialog}
+      onCancelReset={closeResetDialog}
       onConfirmReset={() => { void resetLocalDesk(); }}
       now={now}
     />

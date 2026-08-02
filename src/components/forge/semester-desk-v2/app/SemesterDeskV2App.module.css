@@ -454,8 +454,8 @@
 
 .sectionHeading h2 {
   max-width: 14ch;
-  font-size: clamp(2.2rem, 4.6vw, 4.5rem);
-  line-height: 0.95;
+  font-size: clamp(1.9rem, 3.2vw, 3.2rem);
+  line-height: 0.98;
 }
 
 .sectionHeading > p {
@@ -614,7 +614,7 @@
 
 .factStatus button,
 .conflictList button {
-  min-height: 36px;
+  min-height: 44px;
   padding: 5px 0;
   background: transparent;
   color: var(--cobalt);
@@ -1065,8 +1065,23 @@
     gap: 8px 14px;
   }
 
+  .wordmark {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
   .termName {
-    display: none;
+    display: block;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    font-size: 0.92rem;
+    line-height: 1.2;
+    text-align: left;
+  }
+
+  .headerTools {
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .saveState {
@@ -1112,7 +1127,7 @@
   }
 
   .sectionHeading h2 {
-    font-size: clamp(2.25rem, 12vw, 3.35rem);
+    font-size: clamp(1.9rem, 9.2vw, 2.4rem);
   }
 
   .courseRow {

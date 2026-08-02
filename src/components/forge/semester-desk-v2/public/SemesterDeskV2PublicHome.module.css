@@ -558,7 +558,16 @@
   }
 
   .header {
+    align-items: flex-start;
+    flex-direction: column;
     min-height: 64px;
+    justify-content: center;
+    padding: 14px 0;
+  }
+
+  .navigation {
+    width: 100%;
+    gap: 0 16px;
   }
 
   .hero {
@@ -622,7 +631,7 @@
 
 @media (max-width: 470px) {
   .navigation {
-    gap: 4px 12px;
+    gap: 0 12px;
   }
 
   .navigation a {
