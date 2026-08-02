@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 02:25 IST
+Updated: 2026-08-03 02:37 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -24,13 +24,15 @@ Milestone completion does not complete the product task.
 | Canonical branch | `agent/forge-semester-desk-v2-release-20260802` | Created |
 | Clean starting baseline | `3a11208d68e55179aaa3b54833a2376f0970be71` | Confirmed |
 | Local integration reference | `origin/main` at `c4abe33bc5bc611a02eded4288e2a2949a2808f3` | Stored locally, not fetched |
-| Current working state | Three reviewed Semester Desk v2 web checkpoints plus one preserved external `AGENTS.md` change | In progress |
+| Current working state | Canonical web line is clean except for one preserved external `AGENTS.md` change | In progress |
 | First Semester Desk v2 checkpoint | `c4c42b40d571763fbe80fd7ed1895017442fce5e` | Design, public site, policies, and web domain |
 | Device-local web-app checkpoint | `d7f1d82781799923d41951d8e1dd5961581da84e` | Canonical `/app`, profile-bound persistence, tests, and ledger |
 | Public release-surface checkpoint | `85575d2fe3f0e4b1002bb3310b24beb1d59b9a65` | Metadata, crawler files, manifest, error pages, and truthful policy links |
 | Persistent taste checkpoint | `6708807ab99cb2a9a9667d1b0a43a40a798b3abe` | Editorial Terrain rules in `.impeccable/design.json` |
 | Web brand-asset checkpoints | `b7296ae5f3843032e7143dee62f6080dd4a7558f` and `45c087ff377bace252d93b2031276c9723a4dc13` | Terrain icon and semantic social images |
 | Web truth-hardening checkpoint | `74377aa451612f6e317a202b581be0f4986b5633` | Conflict entry, freshness, save-before-ready onboarding, and storage failure tests |
+| Private route indexing checkpoint | `4c0d54fb4af4fa662fcf48dfe78318a6461c404f` | `/app` is `noindex` and is absent from the sitemap |
+| Canonical route-boundary checkpoint | `32069d5be52d2ff25af81c6c9c0bd78c45eadead` | Only final release routes and Next.js assets are public |
 | Previous root branch | `agent/forge-local-refoundation-snapshot` at `cd84e20f6f78d68a430666c185b00efa99c49a87` | Preserve, do not use as base |
 | iOS source lane | `agent/forge-ios-foundation-20260801` at committed `388e889de4acadff3824cc4713b1ffd98c7861ec` plus 60 dirty paths | Preserve and reconcile after review |
 
@@ -101,12 +103,12 @@ Milestone completion does not complete the product task.
 
 ## Website status
 
-Status: **Release-surface candidate complete, but rendered release QA remains**
+Status: **Canonical public candidate complete, but final rendered release QA remains**
 
 - The current application is one Next.js 16.2.11 repository.
-- The public site contains many historical product routes.
-- Historical public routes still reflect ModelShift and earlier FORGE phases.
-- The current public deployment is not the final Semester Desk v2 product.
+- Historical route source remains in the repository.
+- The release boundary returns `404` for historical, fixture, and unused API routes.
+- The current public deployment is not the Semester Desk v2 candidate.
 - Final screenshots must come from the implemented product.
 
 | Website surface | Status | Required result |
@@ -121,7 +123,7 @@ Status: **Release-surface candidate complete, but rendered release QA remains**
 | Authentication entry | Device-local only | Keep local operation clear until cloud identity exists. |
 | Metadata and social preview | Implemented | Semantic Open Graph and Twitter images exist. Final absolute origin is external. |
 | Error and not-found states | Implemented | Focused semantic and recovery tests passed. |
-| Responsive and accessibility QA | Not run on the final design | Required. |
+| Responsive and accessibility QA | 320 px route pass complete | Complete desktop, tablet, keyboard, screen-reader, and forced-colour checks. |
 | Performance and bundle QA | Not run on the final design | Required. |
 
 ## Web-application status
@@ -131,7 +133,6 @@ Status: **Canonical Semester Desk v2 candidate is implemented and under integrat
 - `/app/**` used the older learner shell at the clean baseline.
 - A newer refoundation application surface exists but has no production route import.
 - `/app` now provides the canonical device-local Semester Desk v2 candidate.
-- The Semester Desk route is a development fixture and renders an unavailable production shell.
 - A strict profile-bound local persistence adapter is implemented.
 - Browser persistence is device-wide and local.
 - Cloud authentication is structurally disabled.
@@ -214,6 +215,10 @@ Status: **Substantial native work exists, but the application is not complete**
 | Semester Desk v2 domain, app, and persistence focused tests | 3 files and 34 tests passed |
 | `pnpm build` | Not run in this course-correction pass |
 | Playwright | Not run in this course-correction pass |
+| Canonical route-policy test | 1 file and 5 tests passed |
+| Canonical route scoped lint and typecheck | Pass |
+| Canonical production route check | 14 routes returned `200`; seven retired routes returned `404` |
+| Canonical 320 px route check | Seven page routes passed without console errors or horizontal overflow |
 
 The pnpm commands reported missing-bin repair warnings for `tsx` and `next`. The commands still completed successfully.
 
@@ -248,21 +253,20 @@ No confirmed P0 defect exists at this baseline.
 
 ### P1
 
-1. Website and web-app information architecture remains fragmented.
-2. The iOS Today title repair is not yet in a durable iOS checkpoint.
-3. The iOS active-study choice control is not reachable at AccessibilityXXXL.
-4. The iOS dirty work has no clean checkpoint identity.
-5. No current cross-platform release candidate exists.
-6. No final rendered accessibility or performance evidence exists.
+1. Decoded web state has no semantic relationship validation.
+2. Browser state has no raw-byte or collection bounds before `JSON.parse`.
+3. The iOS Today title repair is not yet in a durable iOS checkpoint.
+4. The iOS active-study choice control is not reachable at AccessibilityXXXL.
+5. The iOS dirty work has no clean checkpoint identity.
+6. No current cross-platform release candidate exists.
+7. No final rendered accessibility or performance evidence exists.
 
 ### P2
 
-1. Several public routes are compatibility redirects or direct duplicates.
-2. Historical routes contain obsolete product language.
-3. Historical routes contain internal fixture and evidence language.
-4. The reset result can be hidden after an iOS navigation change.
-5. Current disk pressure can block large builds or simulator artifacts.
-6. The current public release record describes an older product.
+1. Historical route source remains in the repository, but the source is not public.
+2. The reset result can be hidden after an iOS navigation change.
+3. Current disk pressure can block large builds or simulator artifacts.
+4. The current public release record describes an older product.
 
 ## Deployment and signing status
 
@@ -314,9 +318,9 @@ These are not current reasons to stop internal work.
 
 ## Next internally executable action
 
-1. Enforce the canonical web route boundary and final root shell.
-2. Integrate native Semester Desk v2 into the private state envelope.
-3. Repair active study at AccessibilityXXXL.
+1. Add semantic and bounded validation to the web Semester Desk state.
+2. Complete native Semester Desk v2 persistence integration.
+3. Complete the active-study AccessibilityXXXL repair.
 4. Establish an iOS checkpoint.
 5. Implement the native Semester Desk v2 application loop.
 6. Replace legacy browser and CI release gates with final product gates.
