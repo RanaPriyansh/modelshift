@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 04:10 IST
+Updated: 2026-08-03 04:33 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -24,7 +24,7 @@ Milestone completion does not complete the product task.
 | Canonical branch | `agent/forge-semester-desk-v2-release-20260802` | Created |
 | Clean starting baseline | `3a11208d68e55179aaa3b54833a2376f0970be71` | Confirmed |
 | Local integration reference | `origin/main` at `c4abe33bc5bc611a02eded4288e2a2949a2808f3` | Stored locally, not fetched |
-| Current working state | Canonical web line is at `e5dfdf11a5c456a229018519b246acb5dcf8afba`; one preserved external `AGENTS.md` change and the active public-browser test patch are not committed | Confirmed |
+| Current working state | Canonical web line is at `4a1d24243d36d58db8ad98bbe74075e3e4ad4065`; only the preserved external `AGENTS.md` change is outside the current product checkpoint | Confirmed |
 | First Semester Desk v2 checkpoint | `c4c42b40d571763fbe80fd7ed1895017442fce5e` | Design, public site, policies, and web domain |
 | Device-local web-app checkpoint | `d7f1d82781799923d41951d8e1dd5961581da84e` | Canonical `/app`, profile-bound persistence, tests, and ledger |
 | Public release-surface checkpoint | `85575d2fe3f0e4b1002bb3310b24beb1d59b9a65` | Metadata, crawler files, manifest, error pages, and truthful policy links |
@@ -40,12 +40,14 @@ Milestone completion does not complete the product task.
 | Local browser-origin checkpoint | `c0532bf99ddd9d5ea2a2e8290a7079380c10aa58` | The bounded `127.0.0.1` development origin is accepted |
 | Canonical browser-gate checkpoint | `be0f1ee7b5942bee003af96ac2f8a77d405696e9` | Local and production gates use one exact-SHA Semester Desk v2 browser contract |
 | Public social-preview checkpoint | `e5dfdf11a5c456a229018519b246acb5dcf8afba` | Six public routes emit complete Open Graph and Twitter image metadata |
+| Public browser-route checkpoint | `4a1d24243d36d58db8ad98bbe74075e3e4ad4065` | Desktop and mobile release gates cover every public route, 320 px stress width, console errors, and retired-route rejection |
 | Previous root branch | `agent/forge-local-refoundation-snapshot` at `cd84e20f6f78d68a430666c185b00efa99c49a87` | Preserve, do not use as base |
-| iOS source lane | `agent/forge-ios-foundation-20260801` at committed `690caddcaf4c919ca634c3b8ae1074da809be477` | Verified native Semester Desk v2 shell; integration repair is running |
+| iOS source lane | `agent/forge-ios-foundation-20260801` at committed `f3ac00023f843b228f19549d46a4850741c52c47` | Verified native Semester Desk v2 shell and deterministic action runtime; system integration repair is running |
 | iOS Semester Desk domain checkpoint | `45b61c656c278886b63619103389a633d48fc98d` | Profile-bound Semester Desk state machine |
 | iOS university learning core checkpoint | `7f6cac4112c3017d9f06384303da8dc579da8f3e` | Bounded university learning core, shared projection, widget policy, and 156 passing tests |
 | iOS verified native-foundation checkpoint | `f687e99d67e1d990264a2f82b39cc95a226fd9b3` | Private state, app model, interruption safety, AXXXL access, device builds, tests, and Editorial Terrain assets |
 | iOS Semester Desk v2 shell checkpoint | `690caddcaf4c919ca634c3b8ae1074da809be477` | Native Today, Semester, Progress, recovery, study, return, settings, and 255 passing app tests |
+| iOS deterministic action checkpoint | `f3ac00023f843b228f19549d46a4850741c52c47` | One captured time per action, duplicate-action rejection, cancellation boundaries, and 130 passing AppModel tests |
 
 ## Accepted and rejected lineage inputs
 
@@ -182,10 +184,12 @@ Status: **The native Semester Desk v2 loop is reachable and tested; system integ
 
 - Worktree: `/Users/Priyansh/Documents/codex-buildweek/worktrees/forge-ios-foundation-20260801`
 - Branch: `agent/forge-ios-foundation-20260801`
-- Current native HEAD: `690caddcaf4c919ca634c3b8ae1074da809be477`
+- Current native HEAD: `f3ac00023f843b228f19549d46a4850741c52c47`
 - The preserved external `AGENTS.md` change is outside the product checkpoint.
 - The checkpoint includes the native Today, Semester, Progress, recovery, protected-study, delayed-return, privacy, and reset surfaces.
+- The current native action runtime uses one injected time for each Semester Desk transition and rejects overlapping writes.
 - Existing reminder, widget, App Intent, deep-link, and private-state systems still require the Semester Desk v2 cutover.
+- A replacement UI suite exists in the working tree. It has seven canonical Semester Desk journeys and still needs final simulator execution.
 
 ### Verified evidence
 
@@ -194,8 +198,8 @@ Status: **The native Semester Desk v2 loop is reachable and tested; system integ
 | Focused ForgeCore model and engine tests | 52 passed | Two focused university learning suites |
 | Complete ForgeCore package | 156 passed | Eleven suites passed after the source-review repair |
 | Focused private-state tests | 77 passed | XcodeBuildMCP result bundle from 2026-08-02 |
-| AppModel cancellation repair | Passed | The focused cancellation test passed. |
-| Full AppModel simulator suite | 120 passed | Zero failed and zero skipped. |
+| AppModel deterministic action repair | Passed | 130 focused tests cover captured time, overlap, focus, and cancellation boundaries. |
+| Full AppModel simulator suite | 130 passed | Zero failed and zero skipped at `f3ac000`. |
 | Semester Desk v2 core domain | 11 passed | Deterministic focused Swift package suite |
 | Release source boundary | 12 passed | `/tmp/forge-release-source-boundary-20260803-0236.xcresult` |
 | Activity draft preservation | 239 app tests and three UI flows passed | Raw text remains in process memory only |
@@ -217,7 +221,10 @@ Status: **The native Semester Desk v2 loop is reachable and tested; system integ
 | P1 | The active-study choice control is not reachable at AccessibilityXXXL. | Closed with one AXXXL and four regression journeys |
 | P2 | A reset result can disappear when onboarding replaces Settings. | Open |
 | P1 | Reminder, widget, App Intent, deep-link, export, and private-state schema still use or expose legacy integration assumptions. | Open |
-| P1 | Semester Desk time prechecks and transitions can use different clock reads at a due boundary. | Repair running |
+| P1 | Semester Desk time prechecks and transitions can use different clock reads at a due boundary. | Closed at `f3ac000` |
+| P1 | Dirty Semester Desk forms can close without a native discard confirmation. | Repair running |
+| P1 | Sheet save failures are visible but are not announced or focused for VoiceOver. | Repair running |
+| P1 | Protected-study return date uses `Date.now`, and dirty draft dismissal has no final confirmation. | Open |
 | P2 | Final Dynamic Type, VoiceOver, Reduced Motion, interruption, and system-integration proof is missing. | Open |
 
 ## Current test and build evidence
@@ -242,6 +249,7 @@ Status: **The native Semester Desk v2 loop is reachable and tested; system integ
 | Release artifact verifier | Pass: 14 release routes, two framework routes, and 73 retired modules excluded |
 | Clean production artifact | 336 files; `sha256:695c42f86961fa937a52bd39831e931ee48114a9cc1e6c0d2a14d65c1f2ef6c2` |
 | Canonical Semester Desk Playwright journey | Two cases passed: desktop and mobile |
+| Canonical public-route Playwright journey | Two cases passed: desktop and mobile; four total Playwright cases passed |
 | Rendered web route sweep | Seven routes passed at 1440, 1280, 768, 430, 390, and 320 px where applicable |
 | Browser console and horizontal overflow | Zero observed errors and zero observed overflow |
 | Browser release-gate tooling | 92 focused tests passed; exact-SHA local and production receipt rules retained |
@@ -256,7 +264,7 @@ The pnpm commands reported missing-bin repair warnings for `tsx` and `next`. The
 
 The private-state focused suite passed 77 tests.
 
-The cancellation repair passed one focused test and the complete AppModel suite.
+The deterministic action repair passed 130 focused AppModel tests.
 
 The complete application suite passed 255 tests with zero failures and zero skips on `690cadd`.
 
@@ -264,7 +272,7 @@ The complete ForgeCore package passed 156 tests in 11 suites.
 
 The modern and small simulator builds passed with zero warnings and zero errors.
 
-The old UI test suite targets retired surfaces. Its Semester Desk v2 replacement is running.
+The old UI test suite is replaced in the working tree by seven Semester Desk v2 journeys. Final simulator execution remains open.
 
 Unsigned arm64 Debug and Release device builds passed.
 
@@ -352,9 +360,10 @@ These are not current reasons to stop internal work.
 
 ## Next internally executable action
 
-1. Complete the native deterministic-time and duplicate-action repair.
-2. Complete native UI automation against the Semester Desk v2 shell.
-3. Cut reminder, widget, App Intent, deep-link, export, and private-state systems to Semester Desk v2.
-4. Complete the canonical public-route browser gate and full web production build.
-5. Consolidate web and iOS into one canonical release lineage.
-6. Run final rendered, accessibility, performance, security, archive, and release checks.
+1. Cut reminder, widget, App Intent, deep-link, export, and shared-state systems to Semester Desk v2.
+2. Close native dirty-form, protected-draft, VoiceOver, and deterministic return-date defects.
+3. Cut private storage to one fail-closed Semester Desk v2 schema.
+4. Run native UI automation and full simulator, device, archive, accessibility, and runtime checks.
+5. Run the final clean web production build, performance audit, and security audit.
+6. Consolidate web and iOS into one canonical release lineage.
+7. Run final rendered, cross-platform, release, and deployment-readiness checks.
