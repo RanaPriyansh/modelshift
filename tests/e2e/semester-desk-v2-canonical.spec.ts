@@ -7,6 +7,108 @@ const FIRST_WORK = "Prepare the first problem set";
 const PRACTICE_NOTE = "I used my lecture notes to work through the first proof step.";
 const PROOF_NOTE = "I can now explain the method without the practice prompt.";
 
+type NavigationExpectation = Readonly<{
+  readonly name: string;
+  readonly href: string;
+  readonly publicNavigation?: boolean;
+}>;
+
+type PublicRouteExpectation = Readonly<{
+  readonly id: string;
+  readonly pathname: string;
+  readonly heading: string;
+  readonly navigation: readonly NavigationExpectation[];
+}>;
+
+const PUBLIC_ROUTE_EXPECTATIONS: readonly PublicRouteExpectation[] = [
+  {
+    id: "home",
+    pathname: "/",
+    heading: "Rebuild from today.",
+    navigation: [
+      { name: "FORGE home", href: "/" },
+      { name: "How it works", href: "/how-forge-works", publicNavigation: true },
+      { name: "University", href: "/university", publicNavigation: true },
+      { name: "Privacy", href: "/privacy", publicNavigation: true },
+      { name: "Open your Semester Desk", href: "/app" },
+    ],
+  },
+  {
+    id: "how-forge-works",
+    pathname: "/how-forge-works",
+    heading: "Make the semester visible before you make a plan.",
+    navigation: [
+      { name: "FORGE home", href: "/" },
+      { name: "How it works", href: "/how-forge-works", publicNavigation: true },
+      { name: "University", href: "/university", publicNavigation: true },
+      { name: "Privacy", href: "/privacy", publicNavigation: true },
+      { name: "Open FORGE", href: "/app", publicNavigation: true },
+    ],
+  },
+  {
+    id: "university",
+    pathname: "/university",
+    heading: "A private desk for the work of a real degree.",
+    navigation: [
+      { name: "FORGE home", href: "/" },
+      { name: "How it works", href: "/how-forge-works", publicNavigation: true },
+      { name: "University", href: "/university", publicNavigation: true },
+      { name: "Privacy", href: "/privacy", publicNavigation: true },
+      { name: "Open FORGE", href: "/app", publicNavigation: true },
+    ],
+  },
+  {
+    id: "privacy",
+    pathname: "/privacy",
+    heading: "Your study plan is not a profile.",
+    navigation: [
+      { name: "FORGE home", href: "/" },
+      { name: "Privacy", href: "/privacy", publicNavigation: true },
+      { name: "Terms", href: "/terms", publicNavigation: true },
+      { name: "Support", href: "/support", publicNavigation: true },
+      { name: "Open FORGE", href: "/app", publicNavigation: true },
+    ],
+  },
+  {
+    id: "terms",
+    pathname: "/terms",
+    heading: "Use FORGE to support your work.",
+    navigation: [
+      { name: "FORGE home", href: "/" },
+      { name: "Privacy", href: "/privacy", publicNavigation: true },
+      { name: "Terms", href: "/terms", publicNavigation: true },
+      { name: "Support", href: "/support", publicNavigation: true },
+      { name: "Open FORGE", href: "/app", publicNavigation: true },
+    ],
+  },
+  {
+    id: "support",
+    pathname: "/support",
+    heading: "Return to the next honest action.",
+    navigation: [
+      { name: "FORGE home", href: "/" },
+      { name: "Privacy", href: "/privacy", publicNavigation: true },
+      { name: "Terms", href: "/terms", publicNavigation: true },
+      { name: "Support", href: "/support", publicNavigation: true },
+      { name: "Open FORGE", href: "/app", publicNavigation: true },
+    ],
+  },
+  {
+    id: "app",
+    pathname: "/app",
+    heading: "Start with what is real.",
+    navigation: [
+      { name: "FORGE home", href: "/" },
+    ],
+  },
+];
+
+const RETIRED_ROUTE_PATHS = [
+  "/lesson-studio",
+  "/university/semester-desk",
+  "/api/forge/private-state",
+] as const;
+
 function captureBrowserFailures(page: Page): string[] {
   const failures: string[] = [];
   page.on("console", (message) => {
@@ -54,6 +156,76 @@ async function captureViewport(page: Page, testInfo: TestInfo, width: number) {
     fullPage: true,
   });
 }
+
+async function expectTruthfulNavigation(
+  page: Page,
+  route: PublicRouteExpectation,
+) {
+  const publicNavigation = page.getByRole("navigation", {
+    name: "Public navigation",
+  });
+
+  for (const expectation of route.navigation) {
+    const link = expectation.publicNavigation
+      ? publicNavigation.getByRole("link", { name: expectation.name, exact: true })
+      : page.getByRole("link", { name: expectation.name, exact: true });
+
+    await expect(link, `${route.pathname} has one ${expectation.name} link`).toHaveCount(1);
+    await expect(link).toHaveAttribute("href", expectation.href);
+  }
+}
+
+async function expectPublicRoute(
+  page: Page,
+  route: PublicRouteExpectation,
+  width: number,
+  testInfo: TestInfo,
+  options: Readonly<{ capture320: boolean }>,
+) {
+  const response = await page.goto(route.pathname, { waitUntil: "networkidle" });
+  expect(response, `${route.pathname} returned a document response`).not.toBeNull();
+  expect(response?.status(), `${route.pathname} returned HTTP 200`).toBe(200);
+  expect(new URL(page.url()).pathname, `${route.pathname} kept its public route`).toBe(route.pathname);
+
+  const main = page.getByRole("main");
+  const heading = page.locator("h1");
+  await expect(main, `${route.pathname} has one main landmark`).toHaveCount(1);
+  await expect(main).toBeVisible();
+  await expect(heading, `${route.pathname} has one h1`).toHaveCount(1);
+  await expect(heading).toBeVisible();
+  await expect(heading).toHaveText(route.heading);
+  await expectTruthfulNavigation(page, route);
+  await expectNoHorizontalOverflow(page, width);
+
+  if (options.capture320) {
+    await page.screenshot({
+      path: testInfo.outputPath(`public-${route.id}-320.png`),
+    });
+  }
+}
+
+test("keeps every public route clear, responsive, and honest", async ({ page }, testInfo) => {
+  const browserFailures = captureBrowserFailures(page);
+  const configuredViewport = page.viewportSize();
+  expect(configuredViewport, "Playwright configured a viewport").not.toBeNull();
+  const configuredWidth = configuredViewport!.width;
+
+  for (const route of PUBLIC_ROUTE_EXPECTATIONS) {
+    await expectPublicRoute(page, route, configuredWidth, testInfo, { capture320: false });
+  }
+
+  await page.setViewportSize({ width: 320, height: 844 });
+  for (const route of PUBLIC_ROUTE_EXPECTATIONS) {
+    await expectPublicRoute(page, route, 320, testInfo, { capture320: true });
+  }
+
+  for (const pathname of RETIRED_ROUTE_PATHS) {
+    const response = await page.request.get(new URL(pathname, page.url()).toString());
+    expect(response.status(), `${pathname} stays outside the canonical release artifact`).toBe(404);
+  }
+
+  expect(browserFailures).toEqual([]);
+});
 
 test("helps a student rebuild a semester, study, return, and continue on one local desk", async ({
   page,
