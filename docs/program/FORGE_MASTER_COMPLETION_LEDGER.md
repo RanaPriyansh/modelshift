@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 03:09 IST
+Updated: 2026-08-03 03:26 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -24,7 +24,7 @@ Milestone completion does not complete the product task.
 | Canonical branch | `agent/forge-semester-desk-v2-release-20260802` | Created |
 | Clean starting baseline | `3a11208d68e55179aaa3b54833a2376f0970be71` | Confirmed |
 | Local integration reference | `origin/main` at `c4abe33bc5bc611a02eded4288e2a2949a2808f3` | Stored locally, not fetched |
-| Current working state | Canonical web line is clean except for one preserved external `AGENTS.md` change | Confirmed at `8b5e734b859b2418a045e75d912c584dfe30c043` |
+| Current working state | Canonical web line is clean except for one preserved external `AGENTS.md` change | Confirmed at `378a18c54f36b90d2b8c7de7dbdb9d7ea84eb24e` |
 | First Semester Desk v2 checkpoint | `c4c42b40d571763fbe80fd7ed1895017442fce5e` | Design, public site, policies, and web domain |
 | Device-local web-app checkpoint | `d7f1d82781799923d41951d8e1dd5961581da84e` | Canonical `/app`, profile-bound persistence, tests, and ledger |
 | Public release-surface checkpoint | `85575d2fe3f0e4b1002bb3310b24beb1d59b9a65` | Metadata, crawler files, manifest, error pages, and truthful policy links |
@@ -34,6 +34,7 @@ Milestone completion does not complete the product task.
 | Private route indexing checkpoint | `4c0d54fb4af4fa662fcf48dfe78318a6461c404f` | `/app` is `noindex` and is absent from the sitemap |
 | Canonical route-boundary checkpoint | `32069d5be52d2ff25af81c6c9c0bd78c45eadead` | Only final release routes and Next.js assets are public |
 | Web state-integrity checkpoint | `8b5e734b859b2418a045e75d912c584dfe30c043` | Bounded profile state, semantic link validation, and validated engine transitions |
+| Release artifact checkpoint | `378a18c54f36b90d2b8c7de7dbdb9d7ea84eb24e` | Only 14 release routes and two framework routes compile into the Next.js artifact |
 | Previous root branch | `agent/forge-local-refoundation-snapshot` at `cd84e20f6f78d68a430666c185b00efa99c49a87` | Preserve, do not use as base |
 | iOS source lane | `agent/forge-ios-foundation-20260801` at committed `f687e99d67e1d990264a2f82b39cc95a226fd9b3` | Verified native foundation; Semester Desk v2 shell implementation is running |
 | iOS Semester Desk domain checkpoint | `45b61c656c278886b63619103389a633d48fc98d` | Profile-bound Semester Desk state machine |
@@ -107,12 +108,13 @@ Milestone completion does not complete the product task.
 
 ## Website status
 
-Status: **Canonical public candidate complete, but final rendered release QA remains**
+Status: **Canonical public candidate and release artifact are complete, but final rendered release QA remains**
 
 - The current application is one Next.js 16.2.11 repository.
-- Historical route source remains in the repository.
+- Historical route source remains in the repository as inactive reference code.
 - The release boundary returns `404` for historical, fixture, and unused API routes.
-- Next.js still compiles old `page.tsx` files into production chunks.
+- Compound release extensions exclude 73 retired route modules from the production artifact.
+- The verified artifact contains 14 release routes and two Next.js framework routes.
 - The current public deployment is not the Semester Desk v2 candidate.
 - Final screenshots must come from the implemented product.
 
@@ -227,11 +229,12 @@ Status: **The verified native foundation is durable, but the Semester Desk v2 ap
 | Semester Desk v2 domain, app, and persistence focused tests | 3 files and 34 tests passed |
 | Semester Desk v2 state-integrity focused tests | 2 files and 29 tests passed |
 | Semester Desk v2 state-integrity scoped lint, typecheck, and diff check | Pass |
-| `pnpm build` | Not run in this course-correction pass |
+| `pnpm build` | Next.js compiled 15 static pages; the dirty-source receipt rejected the local artifact as designed |
+| Release artifact verifier | Pass: 14 release routes, two framework routes, and 73 retired modules excluded |
 | Playwright | Not run in this course-correction pass |
 | Canonical route-policy test | 1 file and 5 tests passed |
 | Canonical route scoped lint and typecheck | Pass |
-| Canonical production route check | 14 routes returned `200`; seven retired routes returned `404` |
+| Canonical production route check | 14 routes returned `200`; three sampled retired routes returned `404` after artifact pruning |
 | Canonical 320 px route check | Seven page routes passed without console errors or horizontal overflow |
 
 The pnpm commands reported missing-bin repair warnings for `tsx` and `next`. The commands still completed successfully.
@@ -273,10 +276,9 @@ No confirmed P0 defect exists at this baseline.
 
 ### P1
 
-1. Historical Next.js routes still compile into the production artifact.
-2. The native application still exposes the old starter-course shell.
-3. No current cross-platform release candidate exists.
-4. No final rendered accessibility or performance evidence exists.
+1. The native application still exposes the old starter-course shell.
+2. No current cross-platform release candidate exists.
+3. No final rendered accessibility or performance evidence exists.
 
 ### P2
 
@@ -335,9 +337,8 @@ These are not current reasons to stop internal work.
 
 ## Next internally executable action
 
-1. Make Next.js compile only the canonical release routes.
-2. Complete the current rendered web-product repair loop.
-3. Implement and verify the native Semester Desk v2 application loop.
-4. Complete native system integrations against the v2 product model.
-5. Replace legacy browser and CI release gates with final product gates.
-6. Run full rendered, accessibility, performance, security, and release checks.
+1. Complete the current rendered web-product repair loop.
+2. Implement and verify the native Semester Desk v2 application loop.
+3. Complete native system integrations against the v2 product model.
+4. Replace legacy browser and CI release gates with final product gates.
+5. Run full rendered, accessibility, performance, security, and release checks.
