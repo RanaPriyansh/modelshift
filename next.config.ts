@@ -10,6 +10,7 @@ const buildSourceCommit = readBuildSourceCommit();
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  allowedDevOrigins: ["127.0.0.1"],
   pageExtensions: ["release.tsx", "release.ts"],
   env: {
     FORGE_COMPILED_SOURCE_SHA: buildSourceCommit,
