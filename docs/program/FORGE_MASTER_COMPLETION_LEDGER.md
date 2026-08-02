@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 03:26 IST
+Updated: 2026-08-03 03:29 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -229,8 +229,9 @@ Status: **The verified native foundation is durable, but the Semester Desk v2 ap
 | Semester Desk v2 domain, app, and persistence focused tests | 3 files and 34 tests passed |
 | Semester Desk v2 state-integrity focused tests | 2 files and 29 tests passed |
 | Semester Desk v2 state-integrity scoped lint, typecheck, and diff check | Pass |
-| `pnpm build` | Next.js compiled 15 static pages; the dirty-source receipt rejected the local artifact as designed |
+| `CI=true pnpm build` from clean `cee6b67` | Pass: 15 static pages and exact clean-source receipt |
 | Release artifact verifier | Pass: 14 release routes, two framework routes, and 73 retired modules excluded |
+| Clean production artifact | 336 files; `sha256:695c42f86961fa937a52bd39831e931ee48114a9cc1e6c0d2a14d65c1f2ef6c2` |
 | Playwright | Not run in this course-correction pass |
 | Canonical route-policy test | 1 file and 5 tests passed |
 | Canonical route scoped lint and typecheck | Pass |
