@@ -86,9 +86,15 @@ describe("FORGE policy and support routes", () => {
     expect(privacyMetadata.title).toBe("Privacy — FORGE");
     expect(privacyMetadata.description).toContain("browser-local");
     expect(privacyMetadata.alternates?.canonical).toBe("/privacy");
+    expect(privacyMetadata.openGraph?.images).toMatchObject([
+      { url: "/opengraph-image", width: 1200, height: 630 },
+    ]);
     expect(termsMetadata.description).toContain("Legal review");
     expect(termsMetadata.robots).toEqual({ index: false, follow: false });
     expect(supportMetadata.description).toContain("browser-local data");
     expect(supportMetadata.alternates?.canonical).toBe("/support");
+    expect(supportMetadata.twitter?.images).toMatchObject([
+      { url: "/twitter-image", width: 1200, height: 630 },
+    ]);
   });
 });

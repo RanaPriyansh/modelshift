@@ -86,5 +86,19 @@ describe("SemesterDeskV2PublicHome", () => {
     expect(metadata.title).toBe("FORGE | Semester Desk for university students");
     expect(metadata.description).toContain("university students");
     expect(metadata.description).toContain("broken week");
+    expect(metadata.openGraph?.images).toMatchObject([
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+      },
+    ]);
+    expect(metadata.twitter?.images).toMatchObject([
+      {
+        url: "/twitter-image",
+        width: 1200,
+        height: 630,
+      },
+    ]);
   });
 });

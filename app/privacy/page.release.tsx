@@ -12,11 +12,27 @@ export const metadata: Metadata = {
     url: "/privacy",
     title: "Privacy — FORGE",
     description: "How the current FORGE product uses browser-local study data and what you can remove.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "FORGE Semester Desk. Rebuild a broken university week from today.",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Privacy — FORGE",
     description: "How the current FORGE product uses browser-local study data and what you can remove.",
+    images: [
+      {
+        url: "/twitter-image",
+        width: 1200,
+        height: 630,
+        alt: "FORGE Semester Desk. Rebuild a broken university week from today.",
+      },
+    ],
   },
 };
 

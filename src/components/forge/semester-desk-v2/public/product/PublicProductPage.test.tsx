@@ -98,7 +98,13 @@ describe("PublicProductPage", () => {
   it("uses specific public metadata for both routes", () => {
     expect(howForgeWorksMetadata.title).toBe("How FORGE works | Semester Desk");
     expect(howForgeWorksMetadata.description).toContain("university students");
+    expect(howForgeWorksMetadata.openGraph?.images).toMatchObject([
+      { url: "/opengraph-image", width: 1200, height: 630 },
+    ]);
     expect(universityMetadata.title).toBe("FORGE for university students | Semester Desk");
     expect(universityMetadata.description).toContain("real capacity");
+    expect(universityMetadata.twitter?.images).toMatchObject([
+      { url: "/twitter-image", width: 1200, height: 630 },
+    ]);
   });
 });

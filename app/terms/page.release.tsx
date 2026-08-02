@@ -16,11 +16,27 @@ export const metadata: Metadata = {
     url: "/terms",
     title: "Terms — FORGE",
     description: "Draft product-use terms for FORGE. Legal review is required before publication.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "FORGE Semester Desk. Rebuild a broken university week from today.",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Terms — FORGE",
     description: "Draft product-use terms for FORGE. Legal review is required before publication.",
+    images: [
+      {
+        url: "/twitter-image",
+        width: 1200,
+        height: 630,
+        alt: "FORGE Semester Desk. Rebuild a broken university week from today.",
+      },
+    ],
   },
 };
 

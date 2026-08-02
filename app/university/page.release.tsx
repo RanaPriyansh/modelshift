@@ -14,12 +14,28 @@ export const metadata: Metadata = {
     title: "FORGE for university students | Semester Desk",
     description:
       "FORGE gives university students one calm place to check course facts, declare real capacity, recover a week, and study independently.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "FORGE Semester Desk. Rebuild a broken university week from today.",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "FORGE for university students | Semester Desk",
     description:
       "FORGE gives university students one calm place to check course facts, declare real capacity, recover a week, and study independently.",
+    images: [
+      {
+        url: "/twitter-image",
+        width: 1200,
+        height: 630,
+        alt: "FORGE Semester Desk. Rebuild a broken university week from today.",
+      },
+    ],
   },
 };
 

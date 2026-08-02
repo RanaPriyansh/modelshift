@@ -14,12 +14,28 @@ export const metadata: Metadata = {
     title: "How FORGE works | Semester Desk",
     description:
       "See how FORGE helps university students check course facts, state capacity, recover a broken week, study actively, and return later.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "FORGE Semester Desk. Rebuild a broken university week from today.",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "How FORGE works | Semester Desk",
     description:
       "See how FORGE helps university students check course facts, state capacity, recover a broken week, study actively, and return later.",
+    images: [
+      {
+        url: "/twitter-image",
+        width: 1200,
+        height: 630,
+        alt: "FORGE Semester Desk. Rebuild a broken university week from today.",
+      },
+    ],
   },
 };
 
