@@ -17,5 +17,6 @@ let package = Package(
       name: "ForgeCoreTests",
       dependencies: ["ForgeCore"]
     ),
-  ]
+  ],
+  swiftLanguageModes: [.v6]
 )

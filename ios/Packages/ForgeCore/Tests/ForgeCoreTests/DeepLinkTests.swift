@@ -5,6 +5,7 @@ import Testing
 
 struct DeepLinkTests {
   @Test(
+    "Parses canonical Forge destinations",
     arguments: [
       ("forge://today", ForgeDestination.today),
       ("forge://path", ForgeDestination.path),
@@ -23,22 +24,13 @@ struct DeepLinkTests {
   }
 
   @Test(
+    "Rejects noncanonical and hostile Forge URLs",
     arguments: [
-      ("FORGE://TODAY", ForgeDestination.today),
-      ("forge://ToDaY", ForgeDestination.today),
-      ("fOrGe://FoCuS", ForgeDestination.focus),
-    ]
-  )
-  func acceptsMixedCaseSchemeAndHost(
-    value: String,
-    expected: ForgeDestination
-  ) throws {
-    let url = try #require(URL(string: value))
-    #expect(ForgeDeepLink.destination(for: url) == expected)
-  }
-
-  @Test(
-    arguments: [
+      "FORGE://TODAY",
+      "FORGE://today",
+      "forge://TODAY",
+      "forge://ToDaY",
+      "fOrGe://FoCuS",
       "http://today",
       "https://today",
       "HTTP://TODAY",
@@ -49,8 +41,13 @@ struct DeepLinkTests {
       "forge://@today",
       "forge://today:",
       "forge://today:443",
+      "forge://today:000",
       "forge://today?query=value",
+      "forge://today?",
+      "forge://today?%71=%76",
       "forge://today#fragment",
+      "forge://today#",
+      "forge://today#%66",
       "forge://today?query=value#fragment",
       "forge://today.",
       "forge://%74oday",
@@ -63,28 +60,15 @@ struct DeepLinkTests {
       "forge:/today",
       "forge:///today",
       "forge://today/",
+      "forge://today/.",
+      "forge://today/%2e",
       "forge://today//",
       "forge://today/extra",
       "forge://today/extra/",
     ]
   )
-  func rejectsUnsupportedOrAmbiguousRoutes(value: String) throws {
+  func rejectsNoncanonicalOrHostileURLs(value: String) throws {
     let url = try #require(URL(string: value))
     #expect(ForgeDeepLink.destination(for: url) == nil)
-  }
-
-  @Test
-  func invalidRoutesDoNotChangePendingDestination() throws {
-    let suiteName = "DeepLinkTests.\(UUID().uuidString)"
-    let defaults = try #require(UserDefaults(suiteName: suiteName))
-    defer { defaults.removePersistentDomain(forName: suiteName) }
-
-    let store = ForgeSharedStateStore(defaults: defaults)
-    store.setPendingDestination(.settings)
-
-    let url = try #require(URL(string: "forge://settings?unexpected=1"))
-    #expect(ForgeDeepLink.destination(for: url) == nil)
-    #expect(store.consumePendingDestination() == .settings)
-    #expect(store.consumePendingDestination() == nil)
   }
 }

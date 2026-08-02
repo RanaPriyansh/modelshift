@@ -4,51 +4,104 @@ public enum ReturnReminderPolicy {
   public static let quietHoursStart = 21
   public static let quietHoursEnd = 9
 
-  public static func scheduledDate(
-    for dueReturn: ForgeDueReturn,
-    now: Date,
-    mode: LearnerMode,
-    grownUpManaged: Bool,
-    timeZone: TimeZone,
-    calendar baseCalendar: Calendar = .autoupdatingCurrent
-  ) -> Date? {
-    guard dueReturn.dueAt > now else {
+  public static let title = "Reminder"
+  public static let body = "Open FORGE to continue."
+
+  public static func eligibleReturn(
+    in delayedReturns: [DelayedReturnRecord],
+    now: Date
+  ) -> DelayedReturnRecord? {
+    guard isFinite(now) else {
       return nil
     }
 
-    guard mode != .childWithAdult || grownUpManaged else {
+    return
+      delayedReturns
+      .filter { isReminderEligible($0, now: now) }
+      .min { left, right in
+        if left.opensAt == right.opensAt {
+          return left.id.rawValue < right.id.rawValue
+        }
+        return left.opensAt < right.opensAt
+      }
+  }
+
+  public static func scheduledDate(
+    for record: DelayedReturnRecord,
+    now: Date,
+    timeZone: TimeZone,
+    calendar baseCalendar: Calendar
+  ) -> Date? {
+    guard isReminderEligible(record, now: now) else {
       return nil
     }
 
     var calendar = baseCalendar
     calendar.timeZone = timeZone
 
-    let hour = calendar.component(.hour, from: dueReturn.dueAt)
+    let hour = calendar.component(.hour, from: record.opensAt)
     let scheduledDate: Date
 
     if hour >= quietHoursStart {
-      scheduledDate =
-        calendar.date(
-          bySettingHour: 9,
+      guard
+        let nextDay = calendar.date(byAdding: .day, value: 1, to: record.opensAt),
+        let shiftedDate = calendar.date(
+          bySettingHour: quietHoursEnd,
           minute: 0,
           second: 0,
-          of: calendar.date(byAdding: .day, value: 1, to: dueReturn.dueAt) ?? dueReturn.dueAt
-        ) ?? dueReturn.dueAt
+          of: nextDay
+        )
+      else {
+        return nil
+      }
+      scheduledDate = shiftedDate
     } else if hour < quietHoursEnd {
-      scheduledDate =
-        calendar.date(
-          bySettingHour: 9,
+      guard
+        let shiftedDate = calendar.date(
+          bySettingHour: quietHoursEnd,
           minute: 0,
           second: 0,
-          of: dueReturn.dueAt
-        ) ?? dueReturn.dueAt
+          of: record.opensAt
+        )
+      else {
+        return nil
+      }
+      scheduledDate = shiftedDate
     } else {
-      scheduledDate = dueReturn.dueAt
+      scheduledDate = record.opensAt
     }
 
-    return scheduledDate > now ? scheduledDate : nil
+    guard
+      isFinite(scheduledDate),
+      scheduledDate > now,
+      scheduledDate <= record.dueAt
+    else {
+      return nil
+    }
+
+    return scheduledDate
   }
 
-  public static let title = "A return is ready"
-  public static let body = "Open FORGE when you choose to test what remains."
+  private static func isReminderEligible(
+    _ record: DelayedReturnRecord,
+    now: Date
+  ) -> Bool {
+    guard
+      isFinite(now),
+      isFinite(record.opensAt),
+      isFinite(record.dueAt),
+      record.opensAt < record.dueAt,
+      record.opensAt > now,
+      record.dueAt > now,
+      record.status(at: now) == .scheduled
+    else {
+      return false
+    }
+
+    return true
+  }
+
+  private static func isFinite(_ date: Date) -> Bool {
+    date.timeIntervalSinceReferenceDate.isFinite
+  }
 }
