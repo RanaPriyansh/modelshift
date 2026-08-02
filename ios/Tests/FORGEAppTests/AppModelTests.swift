@@ -267,6 +267,154 @@ struct AppModelTests {
     }
   }
 
+  @Test("Semester Desk actions use one captured injected time")
+  func semesterDeskActionsUseOneCapturedTime() async throws {
+    try await withEnvironmentCleanup { environments in
+      let environment = try environments.makeEnvironment()
+      let model = try await environment.makeModel()
+      let creationDate = Date(timeIntervalSince1970: 2_000_010_000)
+      environment.clock.setNext(to: creationDate)
+      let callsBeforeCreation = environment.clock.returnedDates.count
+
+      #expect(await model.createSemesterDesk(title: "Autumn 2026"))
+      let createdDesk = try #require(model.semesterDesk)
+      let creationTimestamp = AppModel.semesterDeskTimestamp(for: creationDate)
+
+      #expect(environment.clock.returnedDates.count == callsBeforeCreation + 1)
+      #expect(environment.clock.returnedDates.last == creationDate)
+      #expect(createdDesk.createdAt == creationTimestamp)
+      #expect(createdDesk.updatedAt == creationTimestamp)
+
+      let transitionDate = creationDate.addingTimeInterval(60)
+      environment.clock.setNext(to: transitionDate)
+      let callsBeforeTransition = environment.clock.returnedDates.count
+      #expect(
+        await model.applySemesterDeskCommand(
+          .addCourse(
+            profileID: model.localProfileID,
+            code: "MAT220",
+            title: "Linear algebra"
+          )
+        )
+      )
+
+      #expect(environment.clock.returnedDates.count == callsBeforeTransition + 1)
+      #expect(environment.clock.returnedDates.last == transitionDate)
+      #expect(
+        model.semesterDesk?.updatedAt
+          == AppModel.semesterDeskTimestamp(for: transitionDate)
+      )
+    }
+  }
+
+  @Test("Overlapping Semester Desk creation saves only the accepted action")
+  func overlappingSemesterDeskCreationIsRejected() async throws {
+    try await withEnvironmentCleanup { environments in
+      let environment = try environments.makeEnvironment()
+      let model = try await environment.makeModel()
+      await environment.privateStore.blockNextOperation(.save)
+
+      let firstCreation = Task { @MainActor in
+        await model.createSemesterDesk(title: "Autumn 2026")
+      }
+      let ticket = await environment.privateStore.waitForBlockedOperation(.save)
+      let secondResult = await model.createSemesterDesk(title: "Spring 2027")
+      let blocked = await environment.privateStore.snapshot()
+
+      #expect(!secondResult)
+      #expect(blocked.saveCount == 1)
+      #expect(model.semesterDesk == nil)
+
+      await environment.privateStore.releaseBlockedOperation(ticket)
+      #expect(await firstCreation.value)
+      #expect(model.semesterDesk?.title == "Autumn 2026")
+      #expect((await environment.privateStore.snapshot()).saveCount == 1)
+    }
+  }
+
+  @Test("Overlapping Semester Desk commands save only the accepted action")
+  func overlappingSemesterDeskCommandsAreRejected() async throws {
+    try await withEnvironmentCleanup { environments in
+      let environment = try environments.makeEnvironment()
+      let model = try await environment.makeModel()
+      #expect(await model.createSemesterDesk(title: "Autumn 2026"))
+      let command = UniversitySemesterDeskCommand.addCourse(
+        profileID: model.localProfileID,
+        code: "MAT220",
+        title: "Linear algebra"
+      )
+      await environment.privateStore.blockNextOperation(.save)
+
+      let firstCommand = Task { @MainActor in
+        await model.applySemesterDeskCommand(command)
+      }
+      let ticket = await environment.privateStore.waitForBlockedOperation(.save)
+      let secondResult = await model.applySemesterDeskCommand(command)
+      let blocked = await environment.privateStore.snapshot()
+
+      #expect(!secondResult)
+      #expect(blocked.saveCount == 2)
+      #expect(model.semesterDesk?.courses.isEmpty == true)
+
+      await environment.privateStore.releaseBlockedOperation(ticket)
+      #expect(await firstCommand.value)
+      #expect(model.semesterDesk?.courses.map(\.code) == ["MAT220"])
+      #expect((await environment.privateStore.snapshot()).saveCount == 2)
+    }
+  }
+
+  @Test("Cancellation before installation does not apply a Semester Desk")
+  func cancellationBeforeSaveInstallationDoesNotApply() async throws {
+    try await withEnvironmentCleanup { environments in
+      let environment = try environments.makeEnvironment()
+      let model = try await environment.makeModel()
+      await environment.privateStore
+        .checkCancellationBeforeNextSaveInstallation()
+      await environment.privateStore.blockNextOperation(.save)
+
+      let creation = Task { @MainActor in
+        await model.createSemesterDesk(title: "Autumn 2026")
+      }
+      let ticket = await environment.privateStore.waitForBlockedOperation(.save)
+      creation.cancel()
+      await environment.privateStore.releaseBlockedOperation(ticket)
+      let result = await creation.value
+
+      #expect(!result)
+      #expect(model.semesterDesk == nil)
+      #expect(model.recoveryState == nil)
+      #expect(try await environment.privateStore.load() == nil)
+      #expect(!model.isSemesterDeskOperationRunning)
+    }
+  }
+
+  @Test("Cancellation after installation applies the durable Semester Desk")
+  func cancellationAfterSaveInstallationAppliesDurableState() async throws {
+    try await withEnvironmentCleanup { environments in
+      let environment = try environments.makeEnvironment()
+      let model = try await environment.makeModel()
+      await environment.privateStore.blockNextSaveAfterInstallation()
+
+      let creation = Task { @MainActor in
+        await model.createSemesterDesk(title: "Autumn 2026")
+      }
+      let ticket = await environment.privateStore
+        .waitForSaveBlockedAfterInstallation()
+      let durableWhileBlocked = try await environment.privateStore.load()
+      creation.cancel()
+      await environment.privateStore.releaseSaveBlockedAfterInstallation(
+        ticket
+      )
+      let result = await creation.value
+
+      #expect(result)
+      #expect(durableWhileBlocked?.semesterDesk != nil)
+      #expect(model.semesterDesk == durableWhileBlocked?.semesterDesk)
+      #expect(try await environment.privateStore.load() == durableWhileBlocked)
+      #expect(!model.isSemesterDeskOperationRunning)
+    }
+  }
+
   @Test("Semester Desk save failure preserves the prior state")
   func semesterDeskSaveFailureIsAtomic() async throws {
     try await withEnvironmentCleanup { environments in
@@ -546,7 +694,11 @@ struct AppModelTests {
       )
 
       let returnDate = Date(timeIntervalSince1970: 2_000_100_000)
+      let callsBeforeScheduling = environment.clock.returnedDates.count
       #expect(await model.scheduleProtectedDelayedReturn(at: returnDate))
+      #expect(
+        environment.clock.returnedDates.count == callsBeforeScheduling + 1
+      )
       #expect(!model.isProtectedStudyPresented)
       #expect(model.semesterDeskStudyDraft(for: planItemID) == .empty)
       let delayedReturn = try #require(
@@ -563,26 +715,35 @@ struct AppModelTests {
           )
       )
 
+      let callsBeforeEarlyOpen = environment.clock.returnedDates.count
       #expect(
         !(await model.openProtectedDelayedReturn(
           delayedReturnID: delayedReturn.id,
           planItemID: planItemID
         ))
       )
+      #expect(
+        environment.clock.returnedDates.count == callsBeforeEarlyOpen + 1
+      )
       #expect(!model.isProtectedStudyPresented)
 
-      let openedAt = returnDate.addingTimeInterval(1)
+      let openedAt = returnDate
       environment.clock.setNext(to: openedAt)
-      environment.semesterDeskClock.setTimestamp(
-        AppModel.semesterDeskTimestamp(for: openedAt)
-      )
+      let callsBeforeDueOpen = environment.clock.returnedDates.count
       #expect(
         await model.openProtectedDelayedReturn(
           delayedReturnID: delayedReturn.id,
           planItemID: planItemID
         )
       )
+      #expect(
+        environment.clock.returnedDates.count == callsBeforeDueOpen + 1
+      )
       #expect(model.protectedStudyDelayedReturn?.status == .open)
+      #expect(
+        model.protectedStudyDelayedReturn?.openedAt
+          == AppModel.semesterDeskTimestamp(for: openedAt)
+      )
 
       model.updateSemesterDeskStudyDraft(
         for: planItemID,
@@ -622,7 +783,9 @@ struct AppModelTests {
       let desk = try UniversitySemesterDeskEngine.create(
         input: .init(profileID: "profile.other", title: "Autumn 2026"),
         runtime: UniversitySemesterDeskRuntime(
-          clock: environment.semesterDeskClock,
+          clock: TestSemesterDeskClock(
+            timestamp: "2033-05-18T03:33:20.000Z"
+          ),
           identifiers: environment.semesterDeskIdentifiers
         )
       ).get()
@@ -2753,6 +2916,35 @@ struct AppModelTests {
     }
   }
 
+  @Test("Overlapping focus reads retain an earlier consumed request")
+  func overlappingFocusReadsRetainConsumedRequest() async throws {
+    try await withEnvironmentCleanup { environments in
+      let gate = OneShotBlockingGate()
+      var hooks = ForgeSharedStateStoreTestHooks()
+      hooks.beforeLockBinding = { gate.blockIfEnabled() }
+      let environment = try environments.makeEnvironment(
+        sharedStoreTestHooks: hooks
+      )
+      let model = try await environment.makeModel()
+      #expect(await model.createSemesterDesk(title: "Autumn 2026"))
+      model.route(try validURL("forge://path"))
+      await model.waitForFocusOperationForTesting()
+      #expect(model.selectedTab == .semester)
+      try environment.sharedStore.setPendingFocus()
+      gate.enableNextBlock()
+      defer { gate.release() }
+
+      model.consumePendingFocus()
+      await gate.waitUntilBlocked()
+      model.consumePendingFocus()
+      gate.release()
+      await model.waitForFocusOperationForTesting()
+
+      #expect(model.selectedTab == .today)
+      #expect(!(try environment.sharedStore.consumePendingFocus()))
+    }
+  }
+
   @Test("Reset follows older shared work and leaves shared state empty")
   func resetDefeatsOlderSharedWork() async throws {
     try await withEnvironmentCleanup { environments in
@@ -4622,7 +4814,6 @@ private final class TestEnvironment {
   let notificationCenter: TestNotificationCenter
   let notificationCoordinator: NotificationCoordinator
   let timeBoundarySleeper: TestTimeBoundarySleeper
-  let semesterDeskClock: TestSemesterDeskClock
   let semesterDeskIdentifiers: TestSemesterDeskIdentifierFactory
 
   private var nextEvidenceNumber = 1
@@ -4664,9 +4855,6 @@ private final class TestEnvironment {
     let notificationCenter = TestNotificationCenter()
     let timeBoundarySleeper = TestTimeBoundarySleeper()
     let clock = StrictDateClock(start: start)
-    let semesterDeskClock = TestSemesterDeskClock(
-      timestamp: "2033-05-18T03:33:20.000Z"
-    )
     let semesterDeskIdentifiers = TestSemesterDeskIdentifierFactory()
     let timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
     var calendar = Calendar(identifier: .gregorian)
@@ -4692,7 +4880,6 @@ private final class TestEnvironment {
     )
     self.notificationCenter = notificationCenter
     self.timeBoundarySleeper = timeBoundarySleeper
-    self.semesterDeskClock = semesterDeskClock
     self.semesterDeskIdentifiers = semesterDeskIdentifiers
     self.notificationCoordinator = NotificationCoordinator(
       center: notificationCenter,
@@ -4738,12 +4925,7 @@ private final class TestEnvironment {
       localProfileIDGenerator: { [self] in
         nextProfileID()
       },
-      semesterDeskRuntimeProvider: { [self] in
-        UniversitySemesterDeskRuntime(
-          clock: semesterDeskClock,
-          identifiers: semesterDeskIdentifiers
-        )
-      },
+      semesterDeskIdentifiers: semesterDeskIdentifiers,
       widgetReloader: { [self] in
         widgetReloadCount += 1
       },
@@ -4826,22 +5008,14 @@ private final class StrictDateClock {
   }
 }
 
-private final class TestSemesterDeskClock:
+private struct TestSemesterDeskClock:
   UniversitySemesterDeskClock,
   Sendable
 {
-  private let timestamp: Mutex<String>
-
-  init(timestamp: String) {
-    self.timestamp = Mutex(timestamp)
-  }
+  let timestamp: String
 
   func now() -> String {
-    timestamp.withLock { $0 }
-  }
-
-  func setTimestamp(_ value: String) {
-    timestamp.withLock { $0 = value }
+    timestamp
   }
 }
 
@@ -4903,6 +5077,11 @@ private actor TestPrivateStateStore: PrivateStateStoring {
   private var clearCount = 0
   private var saves: [TestPrivateStateSaveSnapshot] = []
   private var clearEpochs: [UInt64] = []
+  private var checksCancellationBeforeNextSaveInstallation = false
+  private var blocksNextSaveAfterInstallation = false
+  private var installedSaveTicket: TestPrivateStateStoreTicket?
+  private var installedSaveContinuation: CheckedContinuation<Void, Never>?
+  private var installedSaveWaiters: [CheckedContinuation<Void, Never>] = []
   private var operationToBlock: PrivateStateStoreOperation?
   private var blockedTicket: TestPrivateStateStoreTicket?
   private var blockedOperationContinuation: CheckedContinuation<Void, Never>?
@@ -4949,6 +5128,40 @@ private actor TestPrivateStateStore: PrivateStateStoring {
     _ namespace: PrivateStateNamespaceSynchronization
   ) {
     saveNamespace = namespace
+  }
+
+  func checkCancellationBeforeNextSaveInstallation() {
+    precondition(!checksCancellationBeforeNextSaveInstallation)
+    checksCancellationBeforeNextSaveInstallation = true
+  }
+
+  func blockNextSaveAfterInstallation() {
+    precondition(!blocksNextSaveAfterInstallation)
+    precondition(installedSaveTicket == nil)
+    blocksNextSaveAfterInstallation = true
+  }
+
+  func waitForSaveBlockedAfterInstallation() async -> TestPrivateStateStoreTicket {
+    if let installedSaveTicket {
+      return installedSaveTicket
+    }
+    await withCheckedContinuation { continuation in
+      installedSaveWaiters.append(continuation)
+    }
+    guard let installedSaveTicket else {
+      preconditionFailure("The installed save did not block.")
+    }
+    return installedSaveTicket
+  }
+
+  func releaseSaveBlockedAfterInstallation(
+    _ ticket: TestPrivateStateStoreTicket
+  ) {
+    precondition(installedSaveTicket == ticket)
+    installedSaveTicket = nil
+    let continuation = installedSaveContinuation
+    installedSaveContinuation = nil
+    continuation?.resume()
   }
 
   func blockNextOperation(_ operation: PrivateStateStoreOperation) {
@@ -5047,6 +5260,10 @@ private actor TestPrivateStateStore: PrivateStateStoring {
     activeTickets.insert(ticket)
     defer { complete(ticket) }
     await waitAtGate(for: ticket)
+    if checksCancellationBeforeNextSaveInstallation {
+      checksCancellationBeforeNextSaveInstallation = false
+      try Task.checkCancellation()
+    }
     if let saveError {
       throw saveError
     }
@@ -5057,6 +5274,7 @@ private actor TestPrivateStateStore: PrivateStateStoring {
     let result = try await store.save(state, token: token)
     switch result {
     case .installed:
+      await waitAfterSaveInstallation(for: ticket)
       return .installed(namespace: saveNamespace)
     case .superseded:
       return .superseded
@@ -5114,6 +5332,24 @@ private actor TestPrivateStateStore: PrivateStateStoring {
     }
     await withCheckedContinuation { continuation in
       blockedOperationContinuation = continuation
+    }
+  }
+
+  private func waitAfterSaveInstallation(
+    for ticket: TestPrivateStateStoreTicket
+  ) async {
+    guard blocksNextSaveAfterInstallation else {
+      return
+    }
+    blocksNextSaveAfterInstallation = false
+    installedSaveTicket = ticket
+    let waiters = installedSaveWaiters
+    installedSaveWaiters.removeAll()
+    for waiter in waiters {
+      waiter.resume()
+    }
+    await withCheckedContinuation { continuation in
+      installedSaveContinuation = continuation
     }
   }
 

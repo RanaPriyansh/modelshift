@@ -20,9 +20,11 @@ struct SystemTimeBoundarySleeper: TimeBoundarySleeping {
   }
 }
 
-private struct SystemSemesterDeskClock: UniversitySemesterDeskClock {
+private struct CapturedSemesterDeskClock: UniversitySemesterDeskClock {
+  let timestamp: String
+
   func now() -> String {
-    Date.ISO8601FormatStyle(includingFractionalSeconds: true).format(Date())
+    timestamp
   }
 }
 
@@ -366,6 +368,16 @@ final class AppModel {
     let deadline: Date
   }
 
+  private struct FocusOperationResult: Sendable {
+    static let empty = FocusOperationResult(
+      didConsume: false,
+      shouldPresent: false
+    )
+
+    let didConsume: Bool
+    let shouldPresent: Bool
+  }
+
   private enum ResetCleanupStage: String, CaseIterable, Hashable {
     case notifications
     case shared
@@ -414,8 +426,8 @@ final class AppModel {
   @ObservationIgnored private let calendar: Calendar
   @ObservationIgnored private let evidenceIDGenerator: @MainActor () -> String
   @ObservationIgnored private let localProfileIDGenerator: @MainActor () -> String
-  @ObservationIgnored private let semesterDeskRuntimeProvider:
-    @MainActor () -> UniversitySemesterDeskRuntime
+  @ObservationIgnored private let semesterDeskIdentifiers:
+    any UniversitySemesterDeskIdentifierFactory
   @ObservationIgnored private let widgetReloader: @MainActor () -> Void
   @ObservationIgnored private let launchPreparation: @MainActor () async throws -> UInt64?
   @ObservationIgnored private var lastPersistedEnvelope: PrivateStateEnvelope?
@@ -442,7 +454,7 @@ final class AppModel {
   @ObservationIgnored private var backgroundPersistenceOperation: Task<Void, Never>?
   @ObservationIgnored private var sharedProjectionOperation: Task<Void, Never>?
   @ObservationIgnored private var sharedProjectionGeneration: UInt64 = 0
-  @ObservationIgnored private var focusOperation: Task<Bool, Never>?
+  @ObservationIgnored private var focusOperation: Task<FocusOperationResult, Never>?
   @ObservationIgnored private var focusOperationGeneration: UInt64 = 0
   @ObservationIgnored private var timeBoundaryTask: Task<Void, Never>?
   @ObservationIgnored private var timeBoundaryGeneration: UInt64 = 0
@@ -508,13 +520,9 @@ final class AppModel {
     localProfileIDGenerator: @escaping @MainActor () -> String = {
       "profile.\(UUID().uuidString.lowercased())"
     },
-    semesterDeskRuntimeProvider:
-      @escaping @MainActor () -> UniversitySemesterDeskRuntime = {
-        UniversitySemesterDeskRuntime(
-          clock: SystemSemesterDeskClock(),
-          identifiers: SystemSemesterDeskIdentifierFactory()
-        )
-      },
+    semesterDeskIdentifiers:
+      any UniversitySemesterDeskIdentifierFactory =
+      SystemSemesterDeskIdentifierFactory(),
     widgetReloader: @escaping @MainActor () -> Void,
     launchPreparation: @escaping @MainActor () async throws -> UInt64? = {
       nil
@@ -555,7 +563,7 @@ final class AppModel {
     self.calendar = calendar
     self.evidenceIDGenerator = evidenceIDGenerator
     self.localProfileIDGenerator = localProfileIDGenerator
-    self.semesterDeskRuntimeProvider = semesterDeskRuntimeProvider
+    self.semesterDeskIdentifiers = semesterDeskIdentifiers
     self.widgetReloader = widgetReloader
     self.launchPreparation = launchPreparation
     self.learnerState = initialLearnerState
@@ -1034,7 +1042,10 @@ final class AppModel {
     }
 
     if delayedReturn.status == .due {
-      let currentTimestamp = Self.semesterDeskTimestamp(for: now())
+      guard let capturedNow = captureSemesterDeskNow() else {
+        return false
+      }
+      let currentTimestamp = Self.semesterDeskTimestamp(for: capturedNow)
       guard delayedReturn.dueAt <= currentTimestamp else {
         semesterDeskStatusMessage = "Come back on this date before you open the return."
         return false
@@ -1044,7 +1055,8 @@ final class AppModel {
           .openDelayedReturn(
             profileID: localProfileID,
             delayedReturnID: delayedReturnID
-          )
+          ),
+          capturedNow: capturedNow
         )
       else {
         return false
@@ -1103,8 +1115,10 @@ final class AppModel {
     guard let planItemID = protectedStudyPlanItemID else {
       return false
     }
-    let currentDate = now()
-    guard dueDate > currentDate else {
+    guard let capturedNow = captureSemesterDeskNow() else {
+      return false
+    }
+    guard dueDate > capturedNow else {
       semesterDeskStatusMessage = "Choose a return date and time in the future."
       return false
     }
@@ -1113,7 +1127,8 @@ final class AppModel {
         profileID: localProfileID,
         planItemID: planItemID,
         dueAt: Self.semesterDeskTimestamp(for: dueDate)
-      )
+      ),
+      capturedNow: capturedNow
     )
     if didSave {
       discardSemesterDeskStudyDraft(for: planItemID)
@@ -1172,6 +1187,9 @@ final class AppModel {
     }
 
     semesterNameDraft = title
+    guard let capturedNow = captureSemesterDeskNow() else {
+      return false
+    }
     let mutationToken = beginStateMutation()
     isSemesterDeskOperationRunning = true
     semesterDeskStatusMessage = nil
@@ -1186,7 +1204,7 @@ final class AppModel {
         profileID: localProfileID,
         title: title
       ),
-      runtime: semesterDeskRuntimeProvider()
+      runtime: semesterDeskRuntime(capturedNow: capturedNow)
     )
     let createdDesk: UniversitySemesterDeskState
     switch result {
@@ -1220,6 +1238,13 @@ final class AppModel {
   func applySemesterDeskCommand(
     _ command: UniversitySemesterDeskCommand
   ) async -> Bool {
+    await applySemesterDeskCommand(command, capturedNow: nil)
+  }
+
+  private func applySemesterDeskCommand(
+    _ command: UniversitySemesterDeskCommand,
+    capturedNow: Date?
+  ) async -> Bool {
     guard command.profileID == localProfileID else {
       semesterDeskStatusMessage = "This action belongs to a different local profile."
       return false
@@ -1244,6 +1269,9 @@ final class AppModel {
       semesterDeskStatusMessage = "FORGE could not use this Semester Desk."
       return false
     }
+    guard let actionNow = capturedNow ?? captureSemesterDeskNow() else {
+      return false
+    }
 
     let mutationToken = beginStateMutation()
     isSemesterDeskOperationRunning = true
@@ -1257,7 +1285,7 @@ final class AppModel {
     let result = UniversitySemesterDeskEngine.transition(
       state: currentDesk,
       command: command,
-      runtime: semesterDeskRuntimeProvider()
+      runtime: semesterDeskRuntime(capturedNow: actionNow)
     )
     let transitionedDesk: UniversitySemesterDeskState
     switch result {
@@ -2169,6 +2197,15 @@ final class AppModel {
       case .superseded:
         return false
       }
+    } catch is CancellationError {
+      guard
+        token.resetEpoch == privateStateResetEpoch,
+        token.sequence == privateStateSaveSequence,
+        expectedRevision == stateRevision
+      else {
+        return false
+      }
+      return false
     } catch {
       guard
         token.resetEpoch == privateStateResetEpoch,
@@ -2416,6 +2453,27 @@ final class AppModel {
     }
 
     return capturedNow
+  }
+
+  private func captureSemesterDeskNow() -> Date? {
+    let capturedNow = now()
+    guard capturedNow.timeIntervalSinceReferenceDate.isFinite else {
+      semesterDeskStatusMessage = "FORGE could not read the current time."
+      return nil
+    }
+
+    return capturedNow
+  }
+
+  private func semesterDeskRuntime(
+    capturedNow: Date
+  ) -> UniversitySemesterDeskRuntime {
+    UniversitySemesterDeskRuntime(
+      clock: CapturedSemesterDeskClock(
+        timestamp: Self.semesterDeskTimestamp(for: capturedNow)
+      ),
+      identifiers: semesterDeskIdentifiers
+    )
   }
 
   private func activitySubmissionFailure() -> ActivitySubmissionOutcome {
@@ -2940,18 +2998,24 @@ final class AppModel {
 
   private func beginFocusOperation(
     presentsActivity: Bool
-  ) -> Task<Bool, Never> {
+  ) -> Task<FocusOperationResult, Never> {
     focusOperationGeneration &+= 1
     let generation = focusOperationGeneration
     let previousOperation = focusOperation
     let service = sharedStateService
     let operation = Task { @concurrent [weak self, service] in
-      var didConsume = false
+      var previousResult = FocusOperationResult.empty
       if let previousOperation {
-        didConsume = await previousOperation.value
+        previousResult = await previousOperation.value
+      }
+      if !presentsActivity {
+        previousResult = FocusOperationResult(
+          didConsume: previousResult.didConsume,
+          shouldPresent: false
+        )
       }
       guard !Task.isCancelled else {
-        return didConsume
+        return previousResult
       }
       let result = await service.consumePendingFocus()
       let currentOperationDidConsume =
@@ -2960,16 +3024,39 @@ final class AppModel {
         } else {
           false
         }
-      didConsume = didConsume || currentOperationDidConsume
+      let operationResult = FocusOperationResult(
+        didConsume:
+          previousResult.didConsume || currentOperationDidConsume,
+        shouldPresent:
+          presentsActivity
+          && (previousResult.shouldPresent || currentOperationDidConsume)
+      )
       guard !Task.isCancelled else {
-        return didConsume
+        return operationResult
       }
+      let accumulatedResult: AppSharedStateResult<Bool> =
+        switch result {
+        case .success:
+          .success(operationResult.shouldPresent)
+        case .unavailable:
+          .unavailable
+        case .failure:
+          .failure
+        }
       await self?.finishFocusOperation(
-        result,
+        accumulatedResult,
         generation: generation,
         presentsActivity: presentsActivity
       )
-      return didConsume
+      switch result {
+      case .success:
+        return operationResult
+      case .unavailable, .failure:
+        return FocusOperationResult(
+          didConsume: operationResult.didConsume,
+          shouldPresent: false
+        )
+      }
     }
     focusOperation = operation
     return operation
@@ -3001,7 +3088,7 @@ final class AppModel {
     }
   }
 
-  private func cancelFocusOperation() -> Task<Bool, Never>? {
+  private func cancelFocusOperation() -> Task<FocusOperationResult, Never>? {
     focusOperationGeneration &+= 1
     let operation = focusOperation
     operation?.cancel()
@@ -3010,9 +3097,9 @@ final class AppModel {
   }
 
   private func restorePendingFocusIfNeeded(
-    after operation: Task<Bool, Never>?
+    after operation: Task<FocusOperationResult, Never>?
   ) async {
-    guard let operation, await operation.value else {
+    guard let operation, await operation.value.didConsume else {
       return
     }
 
