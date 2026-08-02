@@ -1,46 +1,56 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-07-30T16:40:00.000Z",
-  "title": "Design System: FORGE Learning OS",
+  "generatedAt": "2026-08-03T02:10:00.000+05:30",
+  "title": "Design System: FORGE Semester Desk v2",
   "extensions": {
     "colorMeta": {
-      "paper": {
+      "warm-ivory": {
         "role": "neutral",
-        "displayName": "Cool Paper",
-        "canonical": "#f7f4ed",
-        "tonalRamp": ["#fffdf8", "#f7f4ed", "#ece8df"]
+        "displayName": "Warm Ivory",
+        "canonical": "#F4F7F1",
+        "tonalRamp": ["#FBFDF8", "#F4F7F1", "#EEF3ED", "#E4EBE4"]
       },
-      "ink": {
+      "forest": {
         "role": "neutral",
-        "displayName": "Near-Black Ink",
-        "canonical": "#111714",
-        "tonalRamp": ["#111714", "#5e635f", "#6d726b"]
+        "displayName": "Forest",
+        "canonical": "#173C29",
+        "tonalRamp": ["#102019", "#173C29", "#56645D", "#98AA9E"]
       },
-      "evidence-cyan": {
+      "cobalt": {
         "role": "primary",
-        "displayName": "Evidence Cyan",
-        "canonical": "#185e62",
-        "tonalRamp": ["#287f82", "#185e62"]
+        "displayName": "Cobalt",
+        "canonical": "#123EAE",
+        "tonalRamp": ["#2A61D8", "#123EAE", "#0D2F88"]
       },
-      "learner-amber": {
+      "learner-orange": {
         "role": "secondary",
-        "displayName": "Learner Amber",
-        "canonical": "#7b561a",
-        "tonalRamp": ["#e8b94e", "#7b561a"]
+        "displayName": "Learner Orange",
+        "canonical": "#F0643B",
+        "tonalRamp": ["#FF8059", "#F0643B", "#B73F22"]
+      },
+      "midnight": {
+        "role": "neutral",
+        "displayName": "Midnight",
+        "canonical": "#071722",
+        "tonalRamp": ["#0D202B", "#071722", "#06131D"]
       }
     },
     "typographyMeta": {
       "display": {
-        "displayName": "Question Display",
-        "purpose": "Public question-first moments and unusually important learner decisions."
+        "displayName": "Terrain Display",
+        "purpose": "Use Geist only at a public entry or a major transition."
       },
       "body": {
         "displayName": "Working Body",
-        "purpose": "Operating copy, source explanations, and recovery guidance."
+        "purpose": "Use Geist for course facts, recovery choices, learning work, and controls."
       },
-      "label": {
-        "displayName": "Source Metadata",
-        "purpose": "Sparse source, position, version, and authority metadata."
+      "reflection": {
+        "displayName": "Learner Reflection",
+        "purpose": "Use Libre Baskerville only for a short learner question or reflection."
+      },
+      "native": {
+        "displayName": "Native Text",
+        "purpose": "Use Dynamic Type and the system font in the iOS application."
       }
     },
     "shadows": [],
@@ -48,13 +58,22 @@
       {
         "name": "state-change",
         "value": "160ms cubic-bezier(0.16, 1, 0.3, 1)",
-        "purpose": "Feedback when a source candidate changes review state."
+        "purpose": "Show one confirmed state change."
+      },
+      {
+        "name": "threshold-entry",
+        "value": "260ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Support one entry or return transition."
       }
     ],
     "breakpoints": [
       {
+        "name": "stress",
+        "value": "320px"
+      },
+      {
         "name": "mobile",
-        "value": "760px"
+        "value": "430px"
       },
       {
         "name": "wide",
@@ -64,50 +83,84 @@
   },
   "components": [
     {
-      "name": "Primary Button",
+      "name": "Navigation Action",
       "kind": "button",
-      "refersTo": "button-primary",
-      "description": "The single dominant action in a bounded work surface.",
-      "html": "<button class=\"ds-primary\">Review connected source</button>",
-      "css": ".ds-primary { min-height: 52px; border: 1px solid #111714; border-radius: 6px; background: #111714; color: #fffdf8; padding: 14px 18px; font: 700 16px/1.2 ui-sans-serif, system-ui, sans-serif; } .ds-primary:hover { background: #185e62; border-color: #185e62; } .ds-primary:focus-visible { outline: 3px solid #185e62; outline-offset: 3px; } .ds-primary:active { transform: translateY(1px); }"
+      "refersTo": "navigation-action",
+      "description": "A cobalt action that opens another product surface.",
+      "html": "<a class=\"ds-navigation-action\" href=\"/app\">Open Semester Desk</a>",
+      "css": ".ds-navigation-action { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #123EAE; border-radius: 6px; background: #123EAE; color: #FFFFFF; padding: 12px 18px; font: 800 16px/1.2 Geist, ui-sans-serif, system-ui, sans-serif; text-decoration: none; } .ds-navigation-action:focus-visible { outline: 3px solid #2A61D8; outline-offset: 3px; }"
     },
     {
-      "name": "Source Status",
+      "name": "Learner Commitment",
+      "kind": "button",
+      "refersTo": "learner-commitment",
+      "description": "The one orange action that records a deliberate student choice.",
+      "html": "<button class=\"ds-learner-commitment\">Confirm these changes</button>",
+      "css": ".ds-learner-commitment { min-height: 48px; border: 1px solid #B73F22; border-radius: 6px; background: #F0643B; color: #102019; padding: 12px 18px; font: 800 16px/1.2 Geist, ui-sans-serif, system-ui, sans-serif; } .ds-learner-commitment:focus-visible { outline: 3px solid #2A61D8; outline-offset: 3px; }"
+    },
+    {
+      "name": "Course Status",
       "kind": "custom",
-      "refersTo": "status",
-      "description": "Plain semantic state that does not resemble a button.",
-      "html": "<span class=\"ds-status\"><i></i><span>Review required</span></span>",
-      "css": ".ds-status { display: inline-flex; align-items: center; gap: 8px; color: #7b561a; font: 750 11px/1.3 SFMono-Regular, Consolas, monospace; letter-spacing: .08em; } .ds-status i { width: 8px; height: 8px; background: currentColor; transform: rotate(45deg); }"
+      "refersTo": "course-status",
+      "description": "A plain sentence with a reason and an available action.",
+      "html": "<p class=\"ds-status\"><strong>Needs review.</strong> Two copied sources give different dates.</p>",
+      "css": ".ds-status { border-left: 3px solid #F0643B; color: #102019; margin: 0; padding-left: 12px; font: 600 16px/1.5 Geist, ui-sans-serif, system-ui, sans-serif; }"
+    },
+    {
+      "name": "Ledger Section",
+      "kind": "custom",
+      "refersTo": "ledger-section",
+      "description": "A flat work group that uses spacing and one divider.",
+      "html": "<section class=\"ds-ledger\"><h2>Your semester</h2><p>See every course and every visible change.</p></section>",
+      "css": ".ds-ledger { border-top: 1px solid #CDD9D0; background: transparent; padding: 24px 0; } .ds-ledger h2 { margin: 0; color: #102019; font: 800 28px/1.1 Geist, ui-sans-serif, system-ui, sans-serif; }"
     }
   ],
   "narrative": {
-    "northStar": "The Evidence Workbench",
-    "overview": "A calm working surface where questions, connected sources, learner actions, and evidence can be inspected without decoration impersonating certainty.",
+    "northStar": "Editorial Terrain Recovery",
+    "overview": "A private and calm university operating system. It is vivid at thresholds and quiet during work.",
     "keyCharacteristics": [
-      "One dominant question or action per viewport",
-      "Source and authority states in plain language",
-      "Hairlines and spacing before elevation",
-      "Purposeful motion only for state change"
+      "One honest action at a time",
+      "Exact hierarchy with flat work surfaces",
+      "Warm ivory, forest, cobalt, and scarce learner orange",
+      "Scenery only at a real entry, return, or major transition",
+      "Human course-state language with visible reasons"
     ],
     "rules": [
       {
-        "name": "The Authority Color Rule",
-        "body": "Accent color communicates who or what owns a state. It is never a decorative category label.",
+        "name": "Vivid at thresholds",
+        "body": "Use compact terrain art only for onboarding, recovery confirmation, and delayed return.",
+        "section": "composition"
+      },
+      {
+        "name": "Quiet during work",
+        "body": "Use clean Field and Ledger surfaces for courses, capacity, study, proof, and progress.",
+        "section": "composition"
+      },
+      {
+        "name": "One color, one meaning",
+        "body": "Use cobalt for navigation, orange for student commitment, and green for checked evidence.",
         "section": "colors"
       },
       {
-        "name": "The Flat-by-Default Rule",
-        "body": "Routine containers use one structural signal and no ambient card shadow.",
-        "section": "elevation"
+        "name": "No card soup",
+        "body": "Use spacing and dividers before containers. Use a card only for one bounded decision.",
+        "section": "layout"
       }
     ],
     "dos": [
-      "Show coverage, freshness, and authority where the student makes a decision.",
-      "Preserve unknown, stale, conflicting, unavailable, and not-tested states."
+      "Show the whole semester before one selected action.",
+      "Show each changed item before confirmation.",
+      "Keep learner text private and preserve context.",
+      "Use native iOS navigation, alerts, controls, and Dynamic Type.",
+      "Use Checked, Needs review, Your choice, Changed since last check, Not yet confirmed, Ready to work on, and Come back on this date."
     ],
     "donts": [
-      "Do not open on a card-grid dashboard, chatbot, grade forecast, or mastery percentage.",
-      "Do not turn learner confirmation into institutional truth."
+      "Do not use a chatbot-first layout.",
+      "Do not use purple-blue AI gradients or unnecessary glass.",
+      "Do not use cards as the default container.",
+      "Do not use learner orange for navigation.",
+      "Do not show internal evidence or protocol terms to a student.",
+      "Do not infer mastery, urgency, or institutional truth."
     ]
   }
 }
