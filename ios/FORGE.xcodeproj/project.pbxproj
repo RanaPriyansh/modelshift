@@ -16,8 +16,10 @@
 		5D3BB652699B2D94E2531BC0 /* FORGEUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FA2520B50D2F7E8F28A99C8 /* FORGEUITests.swift */; };
 		60B4952419BB7B5F192EFA49 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 987908C74A2981D584337E92 /* AppRootView.swift */; };
 		6513BD2F700DE40F1E401CF7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A191E6072CCB46827E419E3B /* SettingsView.swift */; };
+		7259406B6AEE9E22CDE4759F /* PrivateStateStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B0838279D518AC890139C5C /* PrivateStateStoreTests.swift */; };
 		73EA905FE726B81CF40470CA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8362C29D610749EF0CDF7EFD /* PrivacyInfo.xcprivacy */; };
 		78B3AB6D1E299818BCD75301 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12CD3529EF5014B4D6F12E51 /* AppModel.swift */; };
+		8670F036813D6DE15AE8C69C /* LocalDataRecoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2226F3649CEB709CFB70E905 /* LocalDataRecoveryView.swift */; };
 		8A93CE48939CF9CE3D3B0368 /* ForgeCore in Frameworks */ = {isa = PBXBuildFile; productRef = F7865C19B2D623DA0C6C5B21 /* ForgeCore */; };
 		8FA217F5CF033D6B214EB36E /* ContinueLearningWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944C4E28695B135F001CBF4D /* ContinueLearningWidget.swift */; };
 		90F68592174270D136AC11FF /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F46C80B356B82A4C647231A8 /* TodayView.swift */; };
@@ -25,13 +27,24 @@
 		91F6DFB237505BFFD5BA2D15 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8362C29D610749EF0CDF7EFD /* PrivacyInfo.xcprivacy */; };
 		9A4BA9D2C3E62663D0ABBD51 /* NotificationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E74EBD7D395F3B694159D248 /* NotificationCoordinator.swift */; };
 		A9E16160D3B5333B8291AF2F /* ContinueLearningIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B6A9845D459751588F41C5 /* ContinueLearningIntent.swift */; };
+		ACB104EFACC9A50B052250FA /* PrivateStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B2A287B19C6FC5F8EC7CB7B /* PrivateStateStore.swift */; };
 		BEDFD37A1CC1326E3222AAC7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D154D78C3C37595DDD8B3427 /* Assets.xcassets */; };
+		BF0269255C12A210D2EA9D8C /* AppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85136CD0B4AEECE4EE210C9C /* AppModelTests.swift */; };
 		CC43584DBA7CC1FD2982B0B6 /* FORGEApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5140E6A1C2C8626D4A2C001 /* FORGEApp.swift */; };
+		CCCE954338E35D2D516EF14A /* NotificationCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C55ECBFDFF4FDC69B1ACDB7 /* NotificationCoordinatorTests.swift */; };
 		DAD5C9352CF139FDB09F1651 /* PrivacySupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAE095745A5BB80ED233C42A /* PrivacySupportView.swift */; };
 		E38812A037A4A1E51CA7BC74 /* EvidenceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3515EBAB2A7B9FD587D3CB1 /* EvidenceView.swift */; };
+		F38F3BD22F82B0D882D80DA5 /* ForgeCore in Frameworks */ = {isa = PBXBuildFile; productRef = 06C6CF4FC62F5F48F5904FE2 /* ForgeCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		1112EBFD91B3EAAFC2857719 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 974BB42F2AE227D4DA7EB26D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DF9C63A4E359B7B1A6A7BF71;
+			remoteInfo = FORGE;
+		};
 		BCBA645400D0A1878D098BFF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 974BB42F2AE227D4DA7EB26D /* Project object */;
@@ -63,14 +76,20 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0B0838279D518AC890139C5C /* PrivateStateStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateStateStoreTests.swift; sourceTree = "<group>"; };
+		0B2A287B19C6FC5F8EC7CB7B /* PrivateStateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateStateStore.swift; sourceTree = "<group>"; };
 		12CD3529EF5014B4D6F12E51 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		19B6A9845D459751588F41C5 /* ContinueLearningIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueLearningIntent.swift; sourceTree = "<group>"; };
 		1A1094F6EBFEBC12E3F39813 /* FORGE.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FORGE.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2226F3649CEB709CFB70E905 /* LocalDataRecoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalDataRecoveryView.swift; sourceTree = "<group>"; };
 		39FFF43C245119FDF26FDDFC /* FORGEUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = FORGEUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3C55ECBFDFF4FDC69B1ACDB7 /* NotificationCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCoordinatorTests.swift; sourceTree = "<group>"; };
 		7313C2039DCBB0F48DC4AE4D /* SettingsToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsToolbar.swift; sourceTree = "<group>"; };
 		8362C29D610749EF0CDF7EFD /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		85136CD0B4AEECE4EE210C9C /* AppModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelTests.swift; sourceTree = "<group>"; };
 		8FA2520B50D2F7E8F28A99C8 /* FORGEUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FORGEUITests.swift; sourceTree = "<group>"; };
 		944C4E28695B135F001CBF4D /* ContinueLearningWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinueLearningWidget.swift; sourceTree = "<group>"; };
+		958D9C54C36C1D27021ACE71 /* FORGEAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = FORGEAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		987908C74A2981D584337E92 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
 		9EDBE5F8545E762F93FF1E9B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		A191E6072CCB46827E419E3B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -88,6 +107,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		2C4F32B9A30A339852F9BFC0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F38F3BD22F82B0D882D80DA5 /* ForgeCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		5982EC569DE44A601D9D0597 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -111,6 +138,7 @@
 			isa = PBXGroup;
 			children = (
 				1A1094F6EBFEBC12E3F39813 /* FORGE.app */,
+				958D9C54C36C1D27021ACE71 /* FORGEAppTests.xctest */,
 				39FFF43C245119FDF26FDDFC /* FORGEUITests.xctest */,
 				B2F04DAF31BF5077B9A00420 /* FORGEWidgets.appex */,
 			);
@@ -133,11 +161,22 @@
 			path = FORGEUITests;
 			sourceTree = "<group>";
 		};
+		58B6AF84D09CF52208183FB0 /* FORGEAppTests */ = {
+			isa = PBXGroup;
+			children = (
+				85136CD0B4AEECE4EE210C9C /* AppModelTests.swift */,
+				3C55ECBFDFF4FDC69B1ACDB7 /* NotificationCoordinatorTests.swift */,
+				0B0838279D518AC890139C5C /* PrivateStateStoreTests.swift */,
+			);
+			path = FORGEAppTests;
+			sourceTree = "<group>";
+		};
 		5EC8499BC15C83BE78CB5D26 /* Screens */ = {
 			isa = PBXGroup;
 			children = (
 				D3515EBAB2A7B9FD587D3CB1 /* EvidenceView.swift */,
 				EAD7EE04AAFE61C667AC138E /* FocusPreviewView.swift */,
+				2226F3649CEB709CFB70E905 /* LocalDataRecoveryView.swift */,
 				9EDBE5F8545E762F93FF1E9B /* OnboardingView.swift */,
 				C0AA5ECAA8954E35193C29C2 /* PathView.swift */,
 				EAE095745A5BB80ED233C42A /* PrivacySupportView.swift */,
@@ -184,6 +223,7 @@
 		7F11D7F3C4574FCC30965357 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				58B6AF84D09CF52208183FB0 /* FORGEAppTests */,
 				4867F3F96DCDB17076E33806 /* FORGEUITests */,
 			);
 			path = Tests;
@@ -207,6 +247,7 @@
 			isa = PBXGroup;
 			children = (
 				E74EBD7D395F3B694159D248 /* NotificationCoordinator.swift */,
+				0B2A287B19C6FC5F8EC7CB7B /* PrivateStateStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -280,6 +321,26 @@
 			productReference = 39FFF43C245119FDF26FDDFC /* FORGEUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		A35C5626AC811A443C1E7B65 /* FORGEAppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A0CEA05A80A665C8D1295469 /* Build configuration list for PBXNativeTarget "FORGEAppTests" */;
+			buildPhases = (
+				C9F0DA4E8F432CD756CA9A48 /* Sources */,
+				2C4F32B9A30A339852F9BFC0 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5F68E20242C3B6812DE307E3 /* PBXTargetDependency */,
+			);
+			name = FORGEAppTests;
+			packageProductDependencies = (
+				06C6CF4FC62F5F48F5904FE2 /* ForgeCore */,
+			);
+			productName = FORGEAppTests;
+			productReference = 958D9C54C36C1D27021ACE71 /* FORGEAppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		DF9C63A4E359B7B1A6A7BF71 /* FORGE */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5F854D0B8600D905FAB98702 /* Build configuration list for PBXNativeTarget "FORGE" */;
@@ -334,6 +395,7 @@
 			projectRoot = "";
 			targets = (
 				DF9C63A4E359B7B1A6A7BF71 /* FORGE */,
+				A35C5626AC811A443C1E7B65 /* FORGEAppTests */,
 				576A97376251247C5A996205 /* FORGEUITests */,
 				04D11E5CD4802FDF24B75D2A /* FORGEWidgets */,
 			);
@@ -380,10 +442,12 @@
 				CC43584DBA7CC1FD2982B0B6 /* FORGEApp.swift in Sources */,
 				52BF204406822DBCDFB21E69 /* FocusPreviewView.swift in Sources */,
 				111BAF605BE055750CD6373D /* ForgeDesign.swift in Sources */,
+				8670F036813D6DE15AE8C69C /* LocalDataRecoveryView.swift in Sources */,
 				9A4BA9D2C3E62663D0ABBD51 /* NotificationCoordinator.swift in Sources */,
 				4DE50F3B65F669092259F572 /* OnboardingView.swift in Sources */,
 				4C02678EBF2F0B155AAAD562 /* PathView.swift in Sources */,
 				DAD5C9352CF139FDB09F1651 /* PrivacySupportView.swift in Sources */,
+				ACB104EFACC9A50B052250FA /* PrivateStateStore.swift in Sources */,
 				465DE58B454A30BF93508FDD /* SettingsToolbar.swift in Sources */,
 				6513BD2F700DE40F1E401CF7 /* SettingsView.swift in Sources */,
 				90F68592174270D136AC11FF /* TodayView.swift in Sources */,
@@ -398,6 +462,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C9F0DA4E8F432CD756CA9A48 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BF0269255C12A210D2EA9D8C /* AppModelTests.swift in Sources */,
+				CCCE954338E35D2D516EF14A /* NotificationCoordinatorTests.swift in Sources */,
+				7259406B6AEE9E22CDE4759F /* PrivateStateStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -405,6 +479,11 @@
 			isa = PBXTargetDependency;
 			target = 04D11E5CD4802FDF24B75D2A /* FORGEWidgets */;
 			targetProxy = FCE0A100A0132C43742A70E0 /* PBXContainerItemProxy */;
+		};
+		5F68E20242C3B6812DE307E3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DF9C63A4E359B7B1A6A7BF71 /* FORGE */;
+			targetProxy = 1112EBFD91B3EAAFC2857719 /* PBXContainerItemProxy */;
 		};
 		61534055C97AA777153A2463 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -556,6 +635,24 @@
 			};
 			name = Release;
 		};
+		A11FFD3A763214223DE77A76 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.forgelearning.app.tests;
+				PRODUCT_NAME = FORGEAppTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FORGE.app/FORGE";
+			};
+			name = Debug;
+		};
 		B2A2099AF5BDD04A8ED1B828 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -635,6 +732,24 @@
 			};
 			name = Release;
 		};
+		D50C684D63F1693AA8F4579A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.forgelearning.app.tests;
+				PRODUCT_NAME = FORGEAppTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FORGE.app/FORGE";
+			};
+			name = Release;
+		};
 		E4C7F77ABC8945E8355B090E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -683,6 +798,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		A0CEA05A80A665C8D1295469 /* Build configuration list for PBXNativeTarget "FORGEAppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A11FFD3A763214223DE77A76 /* Debug */,
+				D50C684D63F1693AA8F4579A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		BFAE167A785FC72DDF66EB62 /* Build configuration list for PBXProject "FORGE" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -702,6 +826,10 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		06C6CF4FC62F5F48F5904FE2 /* ForgeCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ForgeCore;
+		};
 		8ECE2469B1ED0FB0C2BBE35B /* ForgeCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ForgeCore;

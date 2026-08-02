@@ -35,8 +35,8 @@ targets:
           - CFBundleURLName: com.forgelearning.app
             CFBundleURLSchemes:
               - forge
-        FORGEPrivacyPolicyURL: ""
-        FORGESupportURL: ""
+        FORGEPrivacyPolicyURL: "$(FORGE_PRIVACY_POLICY_URL)"
+        FORGESupportURL: "$(FORGE_SUPPORT_URL)"
         ITSAppUsesNonExemptEncryption: false
         LSApplicationCategoryType: public.app-category.education
         UILaunchScreen: {}
@@ -102,6 +102,20 @@ targets:
     dependencies:
       - target: FORGE
 
+  FORGEAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/FORGEAppTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.forgelearning.app.tests
+        PRODUCT_NAME: FORGEAppTests
+        GENERATE_INFOPLIST_FILE: true
+    dependencies:
+      - package: ForgeCore
+      - target: FORGE
+
 schemes:
   FORGE:
     build:
@@ -113,6 +127,7 @@ schemes:
     test:
       config: Debug
       targets:
+        - FORGEAppTests
         - FORGEUITests
     archive:
       config: Release

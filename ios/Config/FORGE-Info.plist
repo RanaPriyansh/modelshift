@@ -30,9 +30,9 @@
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>FORGEPrivacyPolicyURL</key>
-	<string></string>
+	<string>$(FORGE_PRIVACY_POLICY_URL)</string>
 	<key>FORGESupportURL</key>
-	<string></string>
+	<string>$(FORGE_SUPPORT_URL)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSApplicationCategoryType</key>

@@ -78,6 +78,31 @@ json_files=(
   "$ios_root/Resources/Assets.xcassets/AppIcon.appiconset/Contents.json"
 )
 
+store_metadata_build_arguments=()
+
+validate_store_metadata_url() {
+  local setting_name="$1"
+  local value="$2"
+  local https_url_pattern='^https://[A-Za-z0-9][A-Za-z0-9.-]*(:[0-9]+)?([/?#][^[:space:]]*)?$'
+
+  if [[ -z "$value" ]]; then
+    printf 'FORGE_REQUIRE_STORE_METADATA=1 requires %s.\n' "$setting_name" >&2
+    return 1
+  fi
+
+  if [[ ! "$value" =~ $https_url_pattern ]]; then
+    printf '%s must be a non-placeholder https URL when FORGE_REQUIRE_STORE_METADATA=1.\n' "$setting_name" >&2
+    return 1
+  fi
+
+  case "$value" in
+    *example.com*|*example.org*|*example.net*|*localhost*|*127.0.0.1*|*0.0.0.0*|*placeholder*|*your-domain*|*your_domain*|*yourdomain*|*changeme*|*change-me*|*replace-me*|*todo*|*tbd*|*\<*|*\>*)
+      printf '%s must be a non-placeholder https URL when FORGE_REQUIRE_STORE_METADATA=1.\n' "$setting_name" >&2
+      return 1
+      ;;
+  esac
+}
+
 step "Check required tools"
 for tool in "${required_tools[@]}"; do
   if ! command -v "$tool" >/dev/null 2>&1; then
@@ -111,6 +136,37 @@ done
 for file in "${json_files[@]}"; do
   plutil -convert xml1 -o /dev/null "$file"
 done
+
+require_store_metadata="${FORGE_REQUIRE_STORE_METADATA:-0}"
+case "$require_store_metadata" in
+  0)
+    ;;
+  1)
+    step "Validate external store metadata configuration"
+    store_metadata_validation_failed=0
+
+    if validate_store_metadata_url "FORGE_PRIVACY_POLICY_URL" "${FORGE_PRIVACY_POLICY_URL:-}"; then
+      store_metadata_build_arguments+=("FORGE_PRIVACY_POLICY_URL=${FORGE_PRIVACY_POLICY_URL}")
+    else
+      store_metadata_validation_failed=1
+    fi
+
+    if validate_store_metadata_url "FORGE_SUPPORT_URL" "${FORGE_SUPPORT_URL:-}"; then
+      store_metadata_build_arguments+=("FORGE_SUPPORT_URL=${FORGE_SUPPORT_URL}")
+    else
+      store_metadata_validation_failed=1
+    fi
+
+    if [[ "$store_metadata_validation_failed" -ne 0 ]]; then
+      printf 'External store metadata validation failed. Provide both required build settings.\n' >&2
+      exit 1
+    fi
+    ;;
+  *)
+    printf 'FORGE_REQUIRE_STORE_METADATA must be 0 or 1.\n' >&2
+    exit 2
+    ;;
+esac
 
 if [[ "$verify_mode" == "static" ]]; then
   step "Static iOS verification completed"
@@ -213,6 +269,10 @@ build_arguments=(
   -quiet
 )
 
+if [[ "${#store_metadata_build_arguments[@]}" -gt 0 ]]; then
+  build_arguments+=("${store_metadata_build_arguments[@]}")
+fi
+
 asset_build_needs_simulator_runtime() {
   grep -Eqi \
     'No available simulator runtimes|Unable to find a simulator runtime|Failed to locate any simulator runtime' \
@@ -262,6 +322,26 @@ for configuration in Debug Release; do
   fi
 done
 
+step "Compile the unsigned arm64 app unit test source"
+xcodebuild \
+  -project "$ios_root/FORGE.xcodeproj" \
+  -packageCachePath "$package_cache" \
+  -target FORGEAppTests \
+  -configuration Debug \
+  -sdk iphoneos \
+  OBJROOT="$scratch_root/Build/Intermediates" \
+  SYMROOT="$scratch_root/Build/Products" \
+  SHARED_PRECOMPS_DIR="$scratch_root/Build/PrecompiledHeaders" \
+  ARCHS=arm64 \
+  ONLY_ACTIVE_ARCH=YES \
+  CODE_SIGNING_ALLOWED=NO \
+  COMPILER_INDEX_STORE_ENABLE=NO \
+  "${store_metadata_build_arguments[@]}" \
+  EXCLUDED_SOURCE_FILE_NAMES=Assets.xcassets \
+  ASSETCATALOG_COMPILER_APPICON_NAME= \
+  -quiet \
+  build
+
 step "Compile the unsigned arm64 UI test source"
 xcodebuild \
   -project "$ios_root/FORGE.xcodeproj" \
@@ -276,6 +356,7 @@ xcodebuild \
   ONLY_ACTIVE_ARCH=YES \
   CODE_SIGNING_ALLOWED=NO \
   COMPILER_INDEX_STORE_ENABLE=NO \
+  "${store_metadata_build_arguments[@]}" \
   EXCLUDED_SOURCE_FILE_NAMES=Assets.xcassets \
   ASSETCATALOG_COMPILER_APPICON_NAME= \
   -quiet \

@@ -58,6 +58,17 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "A35C5626AC811A443C1E7B65"
+               BuildableName = "FORGEAppTests.xctest"
+               BlueprintName = "FORGEAppTests"
+               ReferencedContainer = "container:FORGE.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "576A97376251247C5A996205"
                BuildableName = "FORGEUITests.xctest"
                BlueprintName = "FORGEUITests"
