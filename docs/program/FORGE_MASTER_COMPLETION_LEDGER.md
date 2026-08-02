@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 02:37 IST
+Updated: 2026-08-03 02:42 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -34,7 +34,9 @@ Milestone completion does not complete the product task.
 | Private route indexing checkpoint | `4c0d54fb4af4fa662fcf48dfe78318a6461c404f` | `/app` is `noindex` and is absent from the sitemap |
 | Canonical route-boundary checkpoint | `32069d5be52d2ff25af81c6c9c0bd78c45eadead` | Only final release routes and Next.js assets are public |
 | Previous root branch | `agent/forge-local-refoundation-snapshot` at `cd84e20f6f78d68a430666c185b00efa99c49a87` | Preserve, do not use as base |
-| iOS source lane | `agent/forge-ios-foundation-20260801` at committed `388e889de4acadff3824cc4713b1ffd98c7861ec` plus 60 dirty paths | Preserve and reconcile after review |
+| iOS source lane | `agent/forge-ios-foundation-20260801` at committed `7f6cac4112c3017d9f06384303da8dc579da8f3e` plus reviewed dirty application work | Preserve and reconcile after review |
+| iOS Semester Desk domain checkpoint | `45b61c656c278886b63619103389a633d48fc98d` | Profile-bound Semester Desk state machine |
+| iOS university learning core checkpoint | `7f6cac4112c3017d9f06384303da8dc579da8f3e` | Bounded university learning core, shared projection, widget policy, and 156 passing tests |
 
 ## Accepted and rejected lineage inputs
 
@@ -167,19 +169,21 @@ Status: **Substantial native work exists, but the application is not complete**
 
 - Worktree: `/Users/Priyansh/Documents/codex-buildweek/worktrees/forge-ios-foundation-20260801`
 - Branch: `agent/forge-ios-foundation-20260801`
-- Committed HEAD: `388e889de4acadff3824cc4713b1ffd98c7861ec`
-- Dirty paths: approximately 60 tracked and untracked paths.
+- Committed HEAD: `7f6cac4112c3017d9f06384303da8dc579da8f3e`
+- Dirty application, storage, test, configuration, and document paths remain.
 - The current changes include ForgeCore, app screens, private storage, widgets, intents, tests, and release documents.
 
 ### Verified evidence
 
 | Check | Result | Evidence |
 |---|---|---|
-| Focused ForgeCore model and engine tests | 52 passed | 39 model cases and 13 engine cases |
+| Focused ForgeCore model and engine tests | 52 passed | Two focused university learning suites |
+| Complete ForgeCore package | 156 passed | Eleven suites passed after the source-review repair |
 | Focused private-state tests | 73 passed | XcodeBuildMCP result bundle from 2026-08-02 |
 | AppModel cancellation repair | Passed | The focused cancellation test passed. |
 | Full AppModel simulator suite | 109 passed | Zero failed and zero skipped. |
-| Semester Desk v2 core domain | 10 passed | Deterministic focused Swift package suite |
+| Semester Desk v2 core domain | 11 passed | Deterministic focused Swift package suite |
+| Release source boundary | 12 passed | `/tmp/forge-release-source-boundary-20260803-0236.xcresult` |
 | Activity draft preservation | 239 app tests and three UI flows passed | Raw text remains in process memory only |
 | Full app unit suite | Not passed on the current source | Open |
 | UI tests | Not run on the current source | Open |
@@ -229,6 +233,8 @@ The private-state focused suite passed 73 tests.
 The cancellation repair passed one focused test and the complete AppModel suite.
 
 The complete AppModel suite passed 109 tests with zero failures and zero skips.
+
+The complete ForgeCore package passed 156 tests in 11 suites.
 
 ## Cross-platform parity matrix
 
