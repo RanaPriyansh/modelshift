@@ -1,10 +1,17 @@
 import AppIntents
 import ForgeCore
+import Foundation
+
+extension Notification.Name {
+  static let forgePendingFocusDidChange = Notification.Name(
+    "com.forgelearning.pending-focus-did-change"
+  )
+}
 
 struct ContinueLearningIntent: AppIntent {
-  static let title: LocalizedStringResource = "Continue Learning"
+  static let title: LocalizedStringResource = "Open local course activity"
   static let description = IntentDescription(
-    "Open the FORGE focus preview."
+    "Open a local FORGE course activity."
   )
 
   @available(iOS, introduced: 16.0, obsoleted: 26.0)
@@ -16,8 +23,9 @@ struct ContinueLearningIntent: AppIntent {
   }
 
   func perform() async throws -> some IntentResult & ProvidesDialog {
-    ForgeSharedStateStore().setPendingDestination(.focus)
-    return .result(dialog: "Opening the FORGE focus preview.")
+    try ForgeSharedStateStore().setPendingFocus()
+    NotificationCenter.default.post(name: .forgePendingFocusDidChange, object: nil)
+    return .result(dialog: "Opening FORGE.")
   }
 }
 
@@ -26,10 +34,10 @@ struct ForgeAppShortcutsProvider: AppShortcutsProvider {
     AppShortcut(
       intent: ContinueLearningIntent(),
       phrases: [
-        "Continue learning in \(.applicationName)"
+        "Open local course activity in \(.applicationName)"
       ],
-      shortTitle: "Continue Learning",
-      systemImageName: "book.pages"
+      shortTitle: "Open local course",
+      systemImageName: "graduationcap"
     )
   }
 }

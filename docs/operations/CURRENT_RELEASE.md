@@ -1,11 +1,19 @@
-# FORGE Current Public Release Record
+# FORGE Current Web Release Record
 
-**Canonical current-state locator:** this is the only normative current public-release record. Historical Wave 2–4 records remain evidence for their named source only.
+**Canonical web-only state locator:** this is the only normative current web-release record. Historical Wave 2–4 records remain evidence for their named source only.
+
+This record covers the web deployment only.
+
+It is not an iOS build, signing, export-compliance, TestFlight, or App Store
+record.
+
+The iOS candidate record remains [`NOT_SELECTED` and `NO_SHIP`](../ios/IOS_TEST_AND_RELEASE_PLAN.md).
 
 ## Recorded tuple
 
 | Field | Recorded value | Verification boundary |
 | --- | --- | --- |
+| Release surface | `WEB_ONLY` | Do not use this record as iOS release evidence. |
 | Candidate state | `DEPLOYMENT_BLOCKED` | The app is public and operational, but this CLI-source deployment has no provider-owned Git source/repository tuple. Never `PRODUCTION_VERIFIED` or a readiness claim. |
 | Deployed source | `04eab4263658725d7a228c67682c40fc469757b1` | GitHub `main`, Vercel metadata, and public `/api/health` identified this exact SHA at deployment time. |
 | Public alias | `https://modelshift.vercel.app` | Public target only; alias resolution is not a terminal decision. |
@@ -21,11 +29,11 @@
 | Release verification | `207 PASS / 8 FAIL` | The eight failures are the provider receipt schema/authority/tuple/time/asset checks and the dependent manifest/state bindings. All retained route, health, CSP, header, script, secret-scan, and source checks passed. |
 | Rollback rehearsal | `NOT_EVALUATED` | No alias change or rehearsal was performed by this repair lane. |
 
-This record is evidence about the named deployed source only. The commit that adds or changes this document is local review material; it is not deployed merely by existing in Git.
+This record is evidence about the named deployed web source only. The commit that adds or changes this document is local review material; it is not deployed merely by existing in Git.
 
 ## What this candidate does and does not establish
 
-The source contains four authored bounded Worlds, the fixture-only adult presentation route at `/paths/source-corroboration`, frontend route/accessibility repairs, and the fail-closed `/pilot` review shell. The pilot route is present but unavailable under the default production environment; its reviewed fixture markers were absent from all 42 public static assets. Engineering checks can establish only the exact software behavior they exercised.
+The web source contains four authored bounded Worlds, the fixture-only adult presentation route at `/paths/source-corroboration`, frontend route/accessibility repairs, and the fail-closed `/pilot` review shell. The pilot route is present but unavailable under the default production environment; its reviewed fixture markers were absent from all 42 public static assets. Engineering checks can establish only the exact software behavior they exercised.
 
 It does **not** establish a minor operational release, verified guardian service, adult entitlement service, broad curriculum, homeschool operation/readiness, learning efficacy, retention, certification, durable evidence, live provider operation, manual assistive-technology coverage, or terminal production readiness.
 

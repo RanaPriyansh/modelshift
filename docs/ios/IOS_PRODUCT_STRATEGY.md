@@ -1,261 +1,186 @@
 # FORGE iOS Product Strategy
 
-**Date:** 2026-08-01
-**State:** `FOUNDATION_CANDIDATE`
-**Web source:** `cd84e20f6f78d68a430666c185b00efa99c49a87`
-**Minimum system:** iOS 18
-**Build system:** Xcode 26.6 with the iOS 26.5 SDK
+**Date:** 2026-08-02
+**Product scope:** `ADULT_UNIVERSITY_V1`
+**Strategy state:** `NOT_SELECTED`
+**Release decision:** `NO_SHIP`
 
-## Product decision
+## Product direction
 
-Build a focused native companion. Do not reproduce the complete web application.
+FORGE starts with a university-first wedge.
 
-Preserve this FORGE loop:
+V1 serves adult university learners through one bounded mechanics course.
 
-`Goal → reviewed path → active work → protected proof → bounded evidence → delayed return → next action`
+The larger learning-companion vision can support learning across subjects, settings,
+and age groups.
 
-The first native release uses the current public FORGE contract. It does not use the provisional university research surfaces.
+Each new area needs its own scope, safeguards, source review, and evidence.
 
-The first release has three primary sections:
+Do this before the area becomes a product capability.
 
-- Today
-- Path
-- Evidence
+This strategy makes no learning-result or commercial outcome claim.
 
-Projects remain part of the product direction. Projects enter native navigation after the fixture boundary is removed.
+## Evidence and release boundary
 
-## Release boundary
+This strategy defines direction. It does not report an implementation result.
 
-The current web record reports a strong local V1 candidate. It does not report a complete production release.
+No fixed, clean university candidate is identified here.
 
-Native foundation work can continue with local fixtures. TestFlight cannot start until the source and API contracts are frozen.
+No simulator, device, participant, accessibility, signing, store, or production
+result is recorded here.
 
-The first native build contains no network client. It creates no canonical learning evidence.
+Do not describe this strategy as a shipped, signed, accessible, released, or production
+product.
 
-The first native build contains no account authority. It uses device-local state only.
+## V1 boundary
 
-## Onboarding
+V1 contains only these parts:
 
-Use one short, optional, interactive welcome screen.
+- One adult mechanics starter course.
+- One local course package at a time.
+- Local device state.
+- Local deterministic checks for defined activity transitions.
+- Defined practice, proof, delayed-return, and local-receipt states.
+- A local reminder, a redacted widget, and a parameter-free App Intent.
+- Complete local deletion.
 
-The learner can enter one goal or try a safe sample. Do not use a feature carousel.
+V1 does not include accounts, cloud sync, remote push, analytics, advertising, or
+live source connections.
 
-Ask for the learner mode only when the mode changes policy. Do not ask for an exact birth date.
+V1 does not include production AI.
 
-Show the device data boundary before the learner continues. Do not request notification permission during onboarding.
+V1 does not issue grades, credit, certificates, enrollment decisions, or academic
+standing.
 
-Delay account setup until cross-device continuity gives clear value.
+V1 does not create a canonical academic record.
 
-Apple recommends fast, optional, and interactive onboarding. See [Apple onboarding guidance](https://developer.apple.com/design/human-interface-guidelines/onboarding).
+## Student agency
 
-## Mobile information architecture
+The student chooses when to start, pause, stop, and return to an activity.
+
+The student can review the local course setup and delete local data.
+
+The student can enable or cancel a local reminder.
+
+The course package, not the application or the student, sets delayed-return dates.
+
+Do not use scores, streaks, ranks, badges, leaderboards, or automatic ability labels.
+
+Do not change a protected activity because of a reminder, widget, intent, or invalid
+route.
+
+## Learning loop
+
+Use this V1 loop:
+
+Active recall, practice, defined proof, local receipt, delayed return, and return
+action form this V1 loop.
+
+Active recall requires the student to respond before explanatory support.
+
+Practice lets the student work with the defined mechanics activity.
+
+Proof before claims requires a defined proof action before a local record can advance.
+
+The deterministic check evaluates only the defined local transition.
+
+The deterministic check does not establish mastery, proficiency, retention, efficacy,
+or academic achievement.
+
+The course package defines `opensAt` and `dueAt` for a delayed return.
+
+The application shows whether the return is scheduled, open, due, closed, or recorded.
+
+Notification delivery does not complete a return.
+
+## Local receipt boundary
+
+Store only the minimum local receipt metadata.
+
+The receipt can contain package identity, activity identity, check result, time,
+and package limits.
+
+Do not store raw learner responses, free text, images, audio, code, source text,
+learner names, account identifiers, or device identifiers in the receipt.
+
+Keep raw practice data in memory only.
+
+Clear raw practice data after completion, cancellation, failure, termination,
+and local deletion.
+
+The receipt is unsigned and local only.
+
+The receipt does not establish identity, external proof, academic evidence, credit,
+grade, mastery, efficacy, or retention.
+
+## Sources and privacy
+
+Show the local source-provenance state and any incomplete provenance.
+
+Do not infer source review or external status from a title, URL, file, catalog entry,
+or local receipt.
+
+Keep course-loop data on the device.
+
+Use generic reminder text and generic locked-device widget content.
+
+Do not place learner, course, activity, receipt, or raw practice data in a
+Lock Screen message.
+
+Keep the course loop usable when notification permission is denied.
+
+Delete active course state, local receipts, local reminders, widget data, and intent
+handoff state during complete local deletion.
+
+## V1 information architecture
 
 ### Today
 
-Today shows one next action. It also shows the reason, duration, and delayed-return state.
+Show the course, the current activity, the exact activity state, and the next action.
 
-Today includes two secondary choices:
+Show local limits and source-provenance limits.
 
-- Change direction
-- Review a due return
+### Course and activity
 
-Today does not show scores, streaks, ranks, badges, or a dense dashboard.
+Show one active capability, the defined prompt, active recall, and proof conditions.
 
-### Path
+Keep access support, cancellation, and local-data limits available.
 
-Path shows the accepted reviewed route. Use one vertical sequence on iPhone.
+### Return and receipt
 
-Each milestone shows one explicit state:
+Show the local receipt limits.
 
-- Complete
-- Active
-- Next
-- Review gap
+Show package-derived `opensAt` and `dueAt` values for a delayed return.
 
-Do not convert sequence position into a capability claim.
-
-### Evidence
-
-Evidence shows the result, assistance state, provenance, limitation, and delayed-return state.
-
-Evidence must keep negative and untested states visible.
-
-Do not let a widget, notification, shortcut, or intent change evidence.
-
-### Focus
-
-Open active work from Today or Path. Hide the tab bar during focused work.
-
-Keep Pause, Stop, Source, Access, Safety, and Recovery available.
-
-Remove instructional help during protected proof. Keep access support available.
+Do not let the student change either date.
 
 ### Settings
 
-Open Settings from a toolbar control.
+Show local-data status, reminder permission, complete local deletion, privacy
+information, and support information.
 
-Settings contains:
+## Future work that is not V1
 
-- Device data status
-- Reminder permission
-- Complete local deletion
-- Privacy information
+Connected university sources need source identity, rights, review, release identity,
+access control, failure handling, privacy review, and separate authority.
 
-Add export and account status only after canonical records and account authority exist.
+Planning needs a separate learner-agency, data, and review decision.
 
-## Visual system
+Tutoring needs a separate assistance policy.
 
-Use the existing warm paper, near-black ink, amber, and cyan language.
+It must remain outside protected proof until that policy is proved and released.
 
-Use system text styles and controls. Support Dynamic Type and system appearance settings.
+Mentoring needs role verification, consent, scope, expiry, reporting, safeguarding,
+appeal, audit, and revocation controls.
 
-Let standard navigation and controls adopt Liquid Glass on iOS 26.
+Broader age groups need separate product scope, privacy policy, safeguards, accessibility
+planning, and release authority.
 
-Do not apply Liquid Glass to lesson, path, or evidence content surfaces.
+These future areas are not V1 capabilities, release plans, or evidence claims.
 
-Apple describes Liquid Glass as a functional control layer. See [Apple Liquid Glass guidance](https://developer.apple.com/documentation/TechnologyOverviews/adopting-liquid-glass).
+## Current strategy state
 
-## Notification strategy
+The current strategy state is `NOT_SELECTED` and `NO_SHIP`.
 
-Start with one local delayed-return reminder.
-
-Request permission after the learner chooses the first return time. Keep all functions available after denial.
-
-Use generic Lock Screen text:
-
-> A return is ready.
-
-Do not include the learner name, goal, course, lesson, evidence, grade, or account data.
-
-Use a passive or normal interruption level. Do not use Time Sensitive or Critical delivery.
-
-Move delivery outside the local quiet period. Cancel the reminder after completion, pause, deletion, or schedule change.
-
-A grown-up manages reminders for a child mode.
-
-Do not add remote push until adult account sync, preferences, APNs registration, and deletion operations pass review.
-
-See [Apple notification guidance](https://developer.apple.com/design/human-interface-guidelines/managing-notifications).
-
-## Widget strategy
-
-Release one nonconfigurable `systemSmall` widget.
-
-Show only:
-
-- A generic Continue Learning label
-- The next return time
-
-Open the exact focus route. Show a safe unavailable state when that route is invalid.
-
-Mark learner-specific content as privacy-sensitive. Show generic content while the device is locked.
-
-Add larger widgets only after real use shows a clear need.
-
-See [Apple WidgetKit strategy](https://developer.apple.com/documentation/widgetkit/developing-a-widgetkit-strategy).
-
-## App Intent strategy
-
-Release one parameter-free intent:
-
-`ContinueLearningIntent`
-
-Use this shortcut phrase:
-
-`Continue learning in FORGE`
-
-The intent opens the exact focus route. It does not return learner data through Siri.
-
-Do not add entities until the system must select between real, authorized records.
-
-See [Apple App Intents guidance](https://developer.apple.com/documentation/appintents/adopting-app-intents-to-support-system-experiences).
-
-## Features that remain out of the first release
-
-- General chat
-- User-generated content
-- Studio authoring
-- New AI provider operation
-- Remote push
-- Live Activities
-- Payments
-- Third-party analytics
-- Advertising
-- Camera, Photos, Contacts, or Location access
-- A web-view application shell
-
-A future Live Activity can support a learner-started focus session. The session must have a clear start and end.
-
-## Data and API strategy
-
-Keep guest mode local-first. Store authentication tokens in Keychain when authentication exists.
-
-Use one App Group for application, widget, and intent handoff data.
-
-Store only the minimum redacted widget snapshot in the App Group.
-
-The current web planner uses a same-origin boundary. The native application cannot use that endpoint as a production API.
-
-Build these server contracts before sync:
-
-1. Adult authentication and device registration
-2. Versioned native planner
-3. Goal, path, and path-decision records
-4. Bootstrap and delta sync
-5. Signed World package download
-6. Session checkpoint and completion receipts
-7. Evidence export, delete, and challenge
-8. Return scheduling and completion
-9. Notification preferences and APNs registration
-
-Every route must validate the opaque identifier, entitlement, World version, and current record.
-
-## Under-18 boundary
-
-Treat local learner mode as a preference. It is not verified age or guardian authority.
-
-Keep free-form goals and constraints on the device for minor modes.
-
-Disable cloud sync, open messaging, open-web sources, analytics, and remote notifications.
-
-Require fresh grown-up confirmation for each child session and return.
-
-Use Declared Age Range only after the age-assurance policy is accepted. See [Apple age-range guidance](https://developer.apple.com/documentation/declaredagerange/requesting-people-share-their-age-range-with-your-app).
-
-## Apple release requirements
-
-Build App Store archives with the iOS 26 SDK or later. Apple requires this for submissions after April 28, 2026.
-
-See [Apple SDK submission requirement](https://developer.apple.com/news/?id=ueeok6yw).
-
-Before App Store review, add these items:
-
-- Valid signing and App Group identifiers
-- Store media
-- `PrivacyInfo.xcprivacy`
-- Accurate App Privacy answers
-- In-application privacy policy
-- In-application account deletion when account creation exists
-- Review account and complete review notes
-- Live reviewed backend services
-
-See [Apple App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/).
-
-## Current implementation
-
-The foundation now includes:
-
-- Native onboarding
-- Today, Path, and Evidence sections
-- A read-only focus preview
-- Device-local shared state
-- A complete local-data reset
-- One private local reminder
-- One small privacy-sensitive widget
-- One parameter-free App Intent
-- A 1024-pixel opaque application icon
-- A generated Xcode project
-- A local verification script
-- A path-scoped continuous-integration workflow
-
-This implementation uses fixtures. It does not create canonical evidence or use a production API.
+Use the requirements, execution plan, test plan, and ship checklist for exact future
+gates.

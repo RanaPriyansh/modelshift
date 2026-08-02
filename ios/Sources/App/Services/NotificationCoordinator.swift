@@ -2,81 +2,282 @@ import ForgeCore
 import Foundation
 import UserNotifications
 
+enum LocalNotificationAuthorizationStatus: Equatable, Sendable {
+  case notDetermined
+  case denied
+  case authorized
+  case provisional
+  case ephemeral
+  case unknown
+
+  var permitsScheduling: Bool {
+    switch self {
+    case .authorized, .provisional, .ephemeral:
+      true
+    case .notDetermined, .denied, .unknown:
+      false
+    }
+  }
+}
+
+enum ReminderSchedulingResult: Equatable, Sendable {
+  case scheduled
+  case notScheduled
+  case cleanupFailed
+
+  var storedPreferenceValue: Bool? {
+    switch self {
+    case .scheduled:
+      true
+    case .notScheduled:
+      false
+    case .cleanupFailed:
+      nil
+    }
+  }
+}
+
+enum ReminderReconciliationReason: Equatable, Sendable {
+  case preferenceDisabled
+  case noScheduledReturn
+  case invalidReturnDate
+  case authorizationNotPermitted
+  case cancelled
+}
+
+enum ReminderReconciliationResult: Equatable, Sendable {
+  case scheduled
+  case removed(reason: ReminderReconciliationReason)
+  case cleanupFailed
+  case schedulingFailed
+
+  var storedPreferenceValue: Bool? {
+    switch self {
+    case .scheduled:
+      true
+    case .removed:
+      false
+    case .cleanupFailed, .schedulingFailed:
+      nil
+    }
+  }
+}
+
 @MainActor
 protocol LocalNotificationCenter: AnyObject {
+  func authorizationStatus() async -> LocalNotificationAuthorizationStatus
   func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool
   func add(_ request: UNNotificationRequest) async throws
-  func pendingNotificationRequests() async -> [UNNotificationRequest]
-  func deliveredNotifications() async -> [UNNotification]
+  func pendingNotificationIdentifiers() async -> [String]
+  func deliveredNotificationIdentifiers() async -> [String]
   func removePendingNotificationRequests(withIdentifiers identifiers: [String])
   func removeDeliveredNotifications(withIdentifiers identifiers: [String])
 }
 
-extension UNUserNotificationCenter: LocalNotificationCenter {}
+@MainActor
+protocol ImmediateNotificationRemovalReporting: AnyObject {
+  func removePendingNotificationsImmediately(
+    withIdentifiers identifiers: [String]
+  ) -> Bool
+  func removeDeliveredNotificationsImmediately(
+    withIdentifiers identifiers: [String]
+  ) -> Bool
+}
+
+extension UNUserNotificationCenter:
+  LocalNotificationCenter,
+  ImmediateNotificationRemovalReporting
+{
+  func authorizationStatus() async -> LocalNotificationAuthorizationStatus {
+    let settings = await notificationSettings()
+
+    switch settings.authorizationStatus {
+    case .notDetermined:
+      return .notDetermined
+    case .denied:
+      return .denied
+    case .authorized:
+      return .authorized
+    case .provisional:
+      return .provisional
+    case .ephemeral:
+      return .ephemeral
+    @unknown default:
+      return .unknown
+    }
+  }
+
+  func pendingNotificationIdentifiers() async -> [String] {
+    let requests = await pendingNotificationRequests()
+    return requests.map(\.identifier)
+  }
+
+  func deliveredNotificationIdentifiers() async -> [String] {
+    let notifications = await deliveredNotifications()
+    return notifications.map(\.request.identifier)
+  }
+
+  func removePendingNotificationsImmediately(
+    withIdentifiers identifiers: [String]
+  ) -> Bool {
+    removePendingNotificationRequests(withIdentifiers: identifiers)
+    return true
+  }
+
+  func removeDeliveredNotificationsImmediately(
+    withIdentifiers identifiers: [String]
+  ) -> Bool {
+    removeDeliveredNotifications(withIdentifiers: identifiers)
+    return true
+  }
+}
+
+@MainActor
+private final class NotificationOperationCompletion {
+  private var continuation: CheckedContinuation<Void, Never>?
+  private var isFinished = false
+
+  func wait() async {
+    await withCheckedContinuation { continuation in
+      if isFinished {
+        continuation.resume()
+      } else {
+        self.continuation = continuation
+      }
+    }
+  }
+
+  func finish() {
+    guard !isFinished else {
+      return
+    }
+
+    isFinished = true
+    continuation?.resume()
+    continuation = nil
+  }
+}
 
 @MainActor
 final class NotificationCoordinator {
-  private static let legacyReminderIdentifier = "forge.return-reminder"
-  private static let reminderIdentifierPrefix = "forge.return-reminder."
+  private static let reminderIdentifier = "forge.return-reminder"
+  private static let staleOperationReminderPrefix = "\(reminderIdentifier)."
   private static let authorizationOptions: UNAuthorizationOptions = [.alert]
 
   private let center: any LocalNotificationCenter
-  private var calendar: Calendar
+  private let calendar: Calendar
   private let timeZone: TimeZone
-  private let now: () -> Date
-  private var currentOperation = UInt64.zero
-  private var knownReminderIdentifiers = Set<String>()
+  private let now: @MainActor () -> Date
+  private var operationTail: Task<Void, Never>?
 
   init(
     center: any LocalNotificationCenter = UNUserNotificationCenter.current(),
     calendar: Calendar = .autoupdatingCurrent,
     timeZone: TimeZone = .autoupdatingCurrent,
-    now: @escaping () -> Date = Date.init
+    now: @escaping @MainActor () -> Date = Date.init
   ) {
     self.center = center
-    self.calendar = calendar
     self.timeZone = timeZone
     self.now = now
-    self.calendar.timeZone = timeZone
+    self.operationTail = nil
+
+    var configuredCalendar = calendar
+    configuredCalendar.timeZone = timeZone
+    self.calendar = configuredCalendar
   }
 
   /// Call this method only from an explicit return-reminder user action.
   func requestAndSchedule(
-    snapshot: ForgeSnapshot,
-    mode: LearnerMode,
-    grownUpManaged: Bool
-  ) async -> Bool {
-    let operation = beginOperation()
-    let requestDate = now()
+    delayedReturns: [DelayedReturnRecord]
+  ) async -> ReminderSchedulingResult {
+    await enqueue { [self] in
+      await requestAndScheduleOperation(delayedReturns: delayedReturns)
+    }
+  }
+
+  func reconcile(
+    isEnabled: Bool,
+    delayedReturns: [DelayedReturnRecord]
+  ) async -> ReminderReconciliationResult {
+    await enqueue { [self] in
+      await reconcileOperation(
+        isEnabled: isEnabled,
+        delayedReturns: delayedReturns
+      )
+    }
+  }
+
+  func disableReminders() async -> Bool {
+    await enqueue { [self] in
+      _ = now()
+      return await cancelManagedReminders()
+    }
+  }
+
+  func removeKnownReminderImmediately() -> Bool {
+    let identifiers = [Self.reminderIdentifier]
+    guard
+      let reportingCenter =
+        center as? any ImmediateNotificationRemovalReporting
+    else {
+      center.removePendingNotificationRequests(
+        withIdentifiers: identifiers
+      )
+      center.removeDeliveredNotifications(
+        withIdentifiers: identifiers
+      )
+      return true
+    }
+    let didRequestPendingRemoval =
+      reportingCenter.removePendingNotificationsImmediately(
+        withIdentifiers: identifiers
+      )
+    let didRequestDeliveredRemoval =
+      reportingCenter.removeDeliveredNotificationsImmediately(
+        withIdentifiers: identifiers
+      )
+    return didRequestPendingRemoval && didRequestDeliveredRemoval
+  }
+
+  private func requestAndScheduleOperation(
+    delayedReturns: [DelayedReturnRecord]
+  ) async -> ReminderSchedulingResult {
+    let capturedNow = now()
+
+    guard !Task.isCancelled else {
+      return await resultAfterManagedReminderCleanup()
+    }
 
     guard
-      snapshot.mode == mode,
-      let dueReturn = snapshot.dueReturn,
-      let scheduledDate = ReturnReminderPolicy.scheduledDate(
-        for: dueReturn,
-        now: requestDate,
-        mode: mode,
-        grownUpManaged: grownUpManaged,
-        timeZone: timeZone,
-        calendar: calendar
+      let delayedReturn = ReturnReminderPolicy.eligibleReturn(
+        in: delayedReturns,
+        now: capturedNow
       )
     else {
-      _ = await cancelManagedReminders(for: operation)
-      return false
+      return await resultAfterManagedReminderCleanup()
     }
 
-    guard isCurrent(operation), !Task.isCancelled else {
-      _ = await cancelManagedReminders(for: operation)
-      return false
+    guard
+      let scheduledDate = ReturnReminderPolicy.scheduledDate(
+        for: delayedReturn,
+        now: capturedNow,
+        timeZone: timeZone,
+        calendar: calendar
+      ),
+      let trigger = makeReminderTrigger(
+        for: scheduledDate,
+        after: capturedNow
+      )
+    else {
+      return await resultAfterManagedReminderCleanup()
     }
 
-    guard await cancelManagedReminders(for: operation) else {
-      return false
+    guard await cancelManagedReminders() else {
+      return .cleanupFailed
     }
 
-    guard isCurrent(operation), !Task.isCancelled else {
-      _ = await cancelManagedReminders(for: operation)
-      return false
+    guard !Task.isCancelled else {
+      return await resultAfterManagedReminderCleanup()
     }
 
     let isAuthorized: Bool
@@ -85,154 +286,236 @@ final class NotificationCoordinator {
         options: Self.authorizationOptions
       )
     } catch {
-      _ = await cancelManagedReminders(for: operation)
-      return false
+      return await resultAfterManagedReminderCleanup()
     }
 
-    guard isAuthorized, isCurrent(operation), !Task.isCancelled else {
-      _ = await cancelManagedReminders(for: operation)
-      return false
+    guard isAuthorized, !Task.isCancelled else {
+      return await resultAfterManagedReminderCleanup()
     }
 
+    do {
+      try await center.add(makeReminderRequest(trigger: trigger))
+    } catch {
+      return await resultAfterManagedReminderCleanup()
+    }
+
+    guard !Task.isCancelled else {
+      return await resultAfterManagedReminderCleanup()
+    }
+
+    return .scheduled
+  }
+
+  private func reconcileOperation(
+    isEnabled: Bool,
+    delayedReturns: [DelayedReturnRecord]
+  ) async -> ReminderReconciliationResult {
+    let capturedNow = now()
+
+    guard !Task.isCancelled else {
+      return await removeAndReport(reason: .cancelled)
+    }
+
+    guard isEnabled else {
+      return await removeAndReport(reason: .preferenceDisabled)
+    }
+
+    guard
+      let delayedReturn = ReturnReminderPolicy.eligibleReturn(
+        in: delayedReturns,
+        now: capturedNow
+      )
+    else {
+      return await removeAndReport(reason: .noScheduledReturn)
+    }
+
+    guard
+      let scheduledDate = ReturnReminderPolicy.scheduledDate(
+        for: delayedReturn,
+        now: capturedNow,
+        timeZone: timeZone,
+        calendar: calendar
+      ),
+      let trigger = makeReminderTrigger(
+        for: scheduledDate,
+        after: capturedNow
+      )
+    else {
+      return await removeAndReport(reason: .invalidReturnDate)
+    }
+
+    let authorizationStatus = await center.authorizationStatus()
+
+    guard !Task.isCancelled else {
+      return await removeAndReport(reason: .cancelled)
+    }
+
+    guard authorizationStatus.permitsScheduling else {
+      return await removeAndReport(reason: .authorizationNotPermitted)
+    }
+
+    guard await cancelManagedReminders() else {
+      return .cleanupFailed
+    }
+
+    guard !Task.isCancelled else {
+      return await removeAndReport(reason: .cancelled)
+    }
+
+    do {
+      try await center.add(makeReminderRequest(trigger: trigger))
+    } catch {
+      guard await cancelManagedReminders() else {
+        return .cleanupFailed
+      }
+      return .schedulingFailed
+    }
+
+    guard !Task.isCancelled else {
+      return await removeAndReport(reason: .cancelled)
+    }
+
+    return .scheduled
+  }
+
+  private func removeAndReport(
+    reason: ReminderReconciliationReason
+  ) async -> ReminderReconciliationResult {
+    guard await cancelManagedReminders() else {
+      return .cleanupFailed
+    }
+
+    return .removed(reason: reason)
+  }
+
+  private func resultAfterManagedReminderCleanup() async -> ReminderSchedulingResult {
+    guard await cancelManagedReminders() else {
+      return .cleanupFailed
+    }
+
+    return .notScheduled
+  }
+
+  private func cancelManagedReminders() async -> Bool {
+    let pendingIdentifiers = managedIdentifiers(
+      await center.pendingNotificationIdentifiers()
+    )
+
+    if !pendingIdentifiers.isEmpty {
+      center.removePendingNotificationRequests(
+        withIdentifiers: pendingIdentifiers
+      )
+    }
+
+    let deliveredIdentifiers = managedIdentifiers(
+      await center.deliveredNotificationIdentifiers()
+    )
+
+    if !deliveredIdentifiers.isEmpty {
+      center.removeDeliveredNotifications(
+        withIdentifiers: deliveredIdentifiers
+      )
+    }
+
+    let remainingPendingIdentifiers = managedIdentifiers(
+      await center.pendingNotificationIdentifiers()
+    )
+    let remainingDeliveredIdentifiers = managedIdentifiers(
+      await center.deliveredNotificationIdentifiers()
+    )
+
+    return remainingPendingIdentifiers.isEmpty
+      && remainingDeliveredIdentifiers.isEmpty
+  }
+
+  private func managedIdentifiers(_ identifiers: [String]) -> [String] {
+    Array(Set(identifiers.filter(Self.isManagedReminderIdentifier))).sorted()
+  }
+
+  private static func isManagedReminderIdentifier(_ identifier: String) -> Bool {
+    identifier == Self.reminderIdentifier
+      || identifier.hasPrefix(Self.staleOperationReminderPrefix)
+  }
+
+  private func makeReminderRequest(
+    trigger: UNCalendarNotificationTrigger
+  ) -> UNNotificationRequest {
     let content = UNMutableNotificationContent()
     content.title = ReturnReminderPolicy.title
     content.body = ReturnReminderPolicy.body
     content.interruptionLevel = .passive
     content.sound = nil
 
-    let dateComponents = calendar.dateComponents(
-      [.year, .month, .day, .hour, .minute],
-      from: scheduledDate
-    )
-    let trigger = UNCalendarNotificationTrigger(
-      dateMatching: dateComponents,
-      repeats: false
-    )
-    let identifier = Self.reminderIdentifier(for: operation)
-    let request = UNNotificationRequest(
-      identifier: identifier,
+    return UNNotificationRequest(
+      identifier: Self.reminderIdentifier,
       content: content,
       trigger: trigger
     )
-
-    knownReminderIdentifiers.insert(identifier)
-
-    do {
-      try await center.add(request)
-    } catch {
-      removeReminder(withIdentifier: identifier)
-      _ = await cancelManagedReminders(for: operation)
-      return false
-    }
-
-    guard isCurrent(operation), !Task.isCancelled else {
-      removeReminder(withIdentifier: identifier)
-      _ = await cancelManagedReminders(for: operation)
-      return false
-    }
-
-    return true
   }
 
-  func disableReminders() async {
-    let operation = beginOperation()
-    _ = await cancelManagedReminders(for: operation)
-  }
-
-  private func beginOperation() -> UInt64 {
-    currentOperation &+= 1
-    return currentOperation
-  }
-
-  private func isCurrent(_ operation: UInt64) -> Bool {
-    currentOperation == operation
-  }
-
-  private func cancelManagedReminders(for operation: UInt64) async -> Bool {
-    let pendingRequests = await center.pendingNotificationRequests()
-
-    guard isCurrent(operation) else {
-      return false
-    }
-
-    var pendingIdentifiers = knownReminderIdentifiers
-    pendingIdentifiers.insert(Self.legacyReminderIdentifier)
-    pendingIdentifiers.formUnion(
-      pendingRequests.lazy
-        .map(\.identifier)
-        .filter(Self.isManagedReminderIdentifier)
-    )
-
-    if !pendingIdentifiers.isEmpty {
-      center.removePendingNotificationRequests(
-        withIdentifiers: pendingIdentifiers.sorted()
+  private func makeReminderTrigger(
+    for scheduledDate: Date,
+    after capturedNow: Date
+  ) -> UNCalendarNotificationTrigger? {
+    func dateComponents(for date: Date) -> DateComponents {
+      var components = calendar.dateComponents(
+        [.year, .month, .day, .hour, .minute, .second],
+        from: date
       )
-    }
-    knownReminderIdentifiers.subtract(pendingIdentifiers)
-
-    let deliveredNotifications = await center.deliveredNotifications()
-
-    guard isCurrent(operation) else {
-      return false
+      components.calendar = calendar
+      components.timeZone = timeZone
+      return components
     }
 
-    let deliveredIdentifiers = Set(
-      deliveredNotifications.lazy
-        .map(\.request.identifier)
-        .filter(Self.isManagedReminderIdentifier)
+    var components = dateComponents(for: scheduledDate)
+
+    guard var triggerDate = calendar.date(from: components) else {
+      return nil
+    }
+
+    if triggerDate < scheduledDate {
+      guard
+        let laterDate = calendar.date(
+          byAdding: .second,
+          value: 1,
+          to: scheduledDate
+        )
+      else {
+        return nil
+      }
+
+      components = dateComponents(for: laterDate)
+      guard let laterTriggerDate = calendar.date(from: components) else {
+        return nil
+      }
+
+      triggerDate = laterTriggerDate
+    }
+
+    guard triggerDate >= scheduledDate, triggerDate > capturedNow else {
+      return nil
+    }
+
+    return UNCalendarNotificationTrigger(
+      dateMatching: components,
+      repeats: false
     )
-
-    if !deliveredIdentifiers.isEmpty {
-      center.removeDeliveredNotifications(
-        withIdentifiers: deliveredIdentifiers.sorted()
-      )
-    }
-
-    let remainingPendingRequests = await center.pendingNotificationRequests()
-
-    guard isCurrent(operation) else {
-      return false
-    }
-
-    let remainingDeliveredNotifications = await center.deliveredNotifications()
-
-    guard isCurrent(operation) else {
-      return false
-    }
-
-    let remainingIdentifiers = Set(
-      remainingPendingRequests.lazy
-        .map(\.identifier)
-        .filter(Self.isManagedReminderIdentifier)
-    ).union(
-      remainingDeliveredNotifications.lazy
-        .map(\.request.identifier)
-        .filter(Self.isManagedReminderIdentifier)
-    )
-
-    guard remainingIdentifiers.isEmpty else {
-      knownReminderIdentifiers.formUnion(remainingIdentifiers)
-      return false
-    }
-
-    knownReminderIdentifiers.subtract(
-      knownReminderIdentifiers.filter(Self.isManagedReminderIdentifier)
-    )
-    return true
   }
 
-  private func removeReminder(withIdentifier identifier: String) {
-    center.removePendingNotificationRequests(withIdentifiers: [identifier])
-    center.removeDeliveredNotifications(withIdentifiers: [identifier])
-    knownReminderIdentifiers.remove(identifier)
-  }
+  private func enqueue<T>(
+    _ operation: @escaping @MainActor () async -> T
+  ) async -> T {
+    let previousOperation = operationTail
+    let completion = NotificationOperationCompletion()
+    operationTail = Task { @MainActor in
+      await completion.wait()
+    }
 
-  private static func reminderIdentifier(for operation: UInt64) -> String {
-    "\(reminderIdentifierPrefix)\(operation)"
-  }
+    defer {
+      completion.finish()
+    }
 
-  private static func isManagedReminderIdentifier(_ identifier: String) -> Bool {
-    identifier == legacyReminderIdentifier
-      || identifier.hasPrefix(reminderIdentifierPrefix)
+    await previousOperation?.value
+    return await operation()
   }
 }

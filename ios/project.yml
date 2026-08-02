@@ -39,7 +39,10 @@ targets:
         FORGESupportURL: "$(FORGE_SUPPORT_URL)"
         ITSAppUsesNonExemptEncryption: false
         LSApplicationCategoryType: public.app-category.education
-        UILaunchScreen: {}
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchMark
+          UIImageRespectsSafeAreaInsets: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationPortraitUpsideDown

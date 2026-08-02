@@ -28,20 +28,56 @@ concurrency:
 
 jobs:
   verify:
-    name: Verify iOS source, build, and simulator tests
+    name: Verify the iOS candidate
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 60
+    env:
+      XCODEGEN_VERSION: "2.45.4"
+      XCODEGEN_ARCHIVE_SHA256: "090ec29491aad50aec10631bf6e62253fed733c50f3aab0f5ffc86bc170bdbef"
+      FORGE_IOS_EVIDENCE_DIR: ${{ runner.temp }}/forge-ios-candidate-evidence
 
     steps:
-      - name: Check out the repository
+      - name: Check out the candidate source
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         timeout-minutes: 5
         with:
           persist-credentials: false
 
+      - name: Record the exact candidate identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$FORGE_IOS_EVIDENCE_DIR"
+          candidate_sha="$(git rev-parse HEAD)"
+          candidate_tree="$(git rev-parse HEAD^{tree})"
+
+          if [[ "$candidate_sha" != "$GITHUB_SHA" ]]; then
+            printf 'Checked-out SHA does not match GITHUB_SHA.\n' >&2
+            printf 'Expected: %s\n' "$GITHUB_SHA" >&2
+            printf 'Found: %s\n' "$candidate_sha" >&2
+            exit 1
+          fi
+
+          {
+            printf 'commit_sha=%s\n' "$candidate_sha"
+            printf 'tree_sha=%s\n' "$candidate_tree"
+            printf 'github_ref=%s\n' "$GITHUB_REF"
+            printf 'runner_os=%s\n' "$RUNNER_OS"
+            printf 'runner_arch=%s\n' "$RUNNER_ARCH"
+          } > "$FORGE_IOS_EVIDENCE_DIR/candidate-before.txt"
+
+          git status --porcelain=v1 --untracked-files=all > "$FORGE_IOS_EVIDENCE_DIR/candidate-status-before.txt"
+          if [[ -s "$FORGE_IOS_EVIDENCE_DIR/candidate-status-before.txt" ]]; then
+            printf 'The checked-out candidate is not clean.\n' >&2
+            cat "$FORGE_IOS_EVIDENCE_DIR/candidate-status-before.txt" >&2
+            exit 1
+          fi
+
       - name: Select Xcode 26.6
         timeout-minutes: 5
+        shell: bash
         run: |
+          set -euo pipefail
           xcode_path="/Applications/Xcode_26.6.app/Contents/Developer"
           if [[ ! -d "$xcode_path" ]]; then
             printf 'Xcode 26.6 is not installed at: %s\n' "$xcode_path" >&2
@@ -55,38 +91,426 @@ jobs:
             exit 1
           fi
 
-          xcodebuild -version
-          swift --version
+          {
+            printf 'xcode=%s\n' "$selected_xcode_version"
+            xcodebuild -version
+            swift --version
+          } >> "$FORGE_IOS_EVIDENCE_DIR/candidate-before.txt"
+
+      - name: Install pinned XcodeGen
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_archive="$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION.zip"
+          tool_root="$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION"
+          tool_url="https://github.com/yonaskolb/XcodeGen/releases/download/$XCODEGEN_VERSION/xcodegen.zip"
+
+          curl --fail --location --retry 3 --retry-all-errors --silent --show-error "$tool_url" --output "$tool_archive"
+
+          actual_sha="$(shasum -a 256 "$tool_archive" | awk '{print $1}')"
+          if [[ "$actual_sha" != "$XCODEGEN_ARCHIVE_SHA256" ]]; then
+            printf 'XcodeGen archive SHA-256 does not match.\n' >&2
+            printf 'Expected: %s\n' "$XCODEGEN_ARCHIVE_SHA256" >&2
+            printf 'Found: %s\n' "$actual_sha" >&2
+            exit 1
+          fi
+
+          unzip -q "$tool_archive" -d "$tool_root"
+          xcodegen_binary="$tool_root/xcodegen/bin/xcodegen"
+          xcodegen_version="$("$xcodegen_binary" --version | awk 'NR == 1 { print $NF }')"
+          if [[ "$xcodegen_version" != "$XCODEGEN_VERSION" ]]; then
+            printf 'XcodeGen version does not match.\n' >&2
+            printf 'Expected: %s\n' "$XCODEGEN_VERSION" >&2
+            printf 'Found: %s\n' "$xcodegen_version" >&2
+            exit 1
+          fi
+
+          printf '%s\n' "$tool_root/xcodegen/bin" >> "$GITHUB_PATH"
+          {
+            printf 'xcodegen_version=%s\n' "$xcodegen_version"
+            printf 'xcodegen_archive_sha256=%s\n' "$actual_sha"
+          } >> "$FORGE_IOS_EVIDENCE_DIR/candidate-before.txt"
+
+      - name: Generate and verify the Xcode project
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd ios
+            xcodegen generate
+          )
+
+          git diff --exit-code -- ios/FORGE.xcodeproj
+          git status --porcelain=v1 --untracked-files=all -- ios/FORGE.xcodeproj > "$FORGE_IOS_EVIDENCE_DIR/generated-project-status.txt"
+          if [[ -s "$FORGE_IOS_EVIDENCE_DIR/generated-project-status.txt" ]]; then
+            printf 'XcodeGen changed the checked-in project.\n' >&2
+            cat "$FORGE_IOS_EVIDENCE_DIR/generated-project-status.txt" >&2
+            exit 1
+          fi
+
+          shasum -a 256 ios/project.yml ios/FORGE.xcodeproj/project.pbxproj ios/FORGE.xcodeproj/xcshareddata/xcschemes/FORGE.xcscheme > "$FORGE_IOS_EVIDENCE_DIR/generated-project.sha256"
 
       - name: Run static iOS verification
         timeout-minutes: 5
-        run: ios/Scripts/verify.sh --static
+        shell: bash
+        run: |
+          set -o pipefail
+          ios/Scripts/verify.sh --static 2>&1 | tee "$FORGE_IOS_EVIDENCE_DIR/static-verification.log"
 
-      - name: Run iOS build and deterministic simulator tests
-        timeout-minutes: 35
-        run: ios/Scripts/verify.sh
+      - name: Detect iPhone 17 Pro simulator support
+        id: simulator
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          simulator_list="$FORGE_IOS_EVIDENCE_DIR/simctl-devices.txt"
+          simulator_available=0
+
+          if xcrun simctl list devices available > "$simulator_list" 2>&1; then
+            if awk '
+                /^-- iOS 26\.5 / { in_runtime = 1; next }
+                /^-- / { in_runtime = 0 }
+                in_runtime && /iPhone 17 Pro/ { found = 1 }
+                END { exit found ? 0 : 1 }
+              ' "$simulator_list"; then
+              simulator_available=1
+            fi
+          fi
+
+          if [[ "$simulator_available" -ne 1 ]]; then
+            printf 'available=0\n' >> "$GITHUB_OUTPUT"
+            printf 'simulator_tests=required-but-unavailable\n' >> "$FORGE_IOS_EVIDENCE_DIR/candidate-before.txt"
+            printf '%s\n' 'The required iPhone 17 Pro simulator with iOS 26.5 is unavailable.' >&2
+            printf '%s\n' 'This candidate cannot pass with source-only verification.' >&2
+            cat "$simulator_list" >&2
+            exit 1
+          fi
+
+          printf 'available=1\n' >> "$GITHUB_OUTPUT"
+          printf 'simulator_tests=enabled\n' >> "$FORGE_IOS_EVIDENCE_DIR/candidate-before.txt"
+
+      - name: Run ForgeCore tests and compile iOS test targets
+        timeout-minutes: 40
+        shell: bash
         env:
-          FORGE_REQUIRE_ASSET_BUILD: "1"
-          FORGE_REQUIRE_SIMULATOR_TESTS: "1"
+          FORGE_REQUIRE_ASSET_BUILD: ${{ steps.simulator.outputs.available }}
+          FORGE_REQUIRE_SIMULATOR_TESTS: ${{ steps.simulator.outputs.available }}
+          FORGE_RESULT_BUNDLE_PATH: ${{ runner.temp }}/FORGE-simulator-tests.xcresult
+        run: |
+          set -o pipefail
+          ios/Scripts/verify.sh 2>&1 | tee "$FORGE_IOS_EVIDENCE_DIR/verification.log"
+
+      - name: Record post-verification candidate identity
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate_sha="$(git rev-parse HEAD)"
+          candidate_tree="$(git rev-parse HEAD^{tree})"
+          before_sha="$(awk -F= '$1 == "commit_sha" { print $2 }' "$FORGE_IOS_EVIDENCE_DIR/candidate-before.txt")"
+          before_tree="$(awk -F= '$1 == "tree_sha" { print $2 }' "$FORGE_IOS_EVIDENCE_DIR/candidate-before.txt")"
+
+          {
+            printf 'commit_sha=%s\n' "$candidate_sha"
+            printf 'tree_sha=%s\n' "$candidate_tree"
+          } > "$FORGE_IOS_EVIDENCE_DIR/candidate-after.txt"
+
+          git status --porcelain=v1 --untracked-files=all > "$FORGE_IOS_EVIDENCE_DIR/candidate-status-after.txt"
+
+          if [[ "$candidate_sha" != "$before_sha" || "$candidate_tree" != "$before_tree" ]]; then
+            printf 'Candidate identity changed during verification.\n' >&2
+            exit 1
+          fi
+
+          if [[ -s "$FORGE_IOS_EVIDENCE_DIR/candidate-status-after.txt" ]]; then
+            printf 'Verification changed the candidate worktree.\n' >&2
+            cat "$FORGE_IOS_EVIDENCE_DIR/candidate-status-after.txt" >&2
+            exit 1
+          fi
+
+      - name: Upload iOS candidate evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        timeout-minutes: 5
+        with:
+          name: forge-ios-candidate-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/forge-ios-candidate-evidence/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload iOS simulator test result
+        if: ${{ always() && steps.simulator.outputs.available == '1' }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        timeout-minutes: 5
+        with:
+          name: forge-ios-simulator-tests-${{ github.sha }}
+          path: ${{ runner.temp }}/FORGE-simulator-tests.xcresult
+          if-no-files-found: error
+          retention-days: 14
 
   release-candidate-store-metadata:
     name: Validate iOS release-candidate store metadata
     needs: verify
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.require_store_metadata == true }}
     runs-on: macos-26
-    timeout-minutes: 10
+    timeout-minutes: 15
+    env:
+      XCODEGEN_VERSION: "2.45.4"
+      XCODEGEN_ARCHIVE_SHA256: "090ec29491aad50aec10631bf6e62253fed733c50f3aab0f5ffc86bc170bdbef"
+      FORGE_IOS_METADATA_EVIDENCE_DIR: ${{ runner.temp }}/forge-ios-release-candidate-metadata
 
     steps:
-      - name: Check out the repository
+      - name: Check out the candidate source
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         timeout-minutes: 5
         with:
           persist-credentials: false
 
+      - name: Record the exact release-candidate identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$FORGE_IOS_METADATA_EVIDENCE_DIR"
+          candidate_sha="$(git rev-parse HEAD)"
+          candidate_tree="$(git rev-parse HEAD^{tree})"
+
+          if [[ "$candidate_sha" != "$GITHUB_SHA" ]]; then
+            printf 'Checked-out SHA does not match GITHUB_SHA.\n' >&2
+            printf 'Expected: %s\n' "$GITHUB_SHA" >&2
+            printf 'Found: %s\n' "$candidate_sha" >&2
+            exit 1
+          fi
+
+          {
+            printf 'commit_sha=%s\n' "$candidate_sha"
+            printf 'tree_sha=%s\n' "$candidate_tree"
+            printf 'github_ref=%s\n' "$GITHUB_REF"
+            printf 'github_event_name=%s\n' "$GITHUB_EVENT_NAME"
+            printf 'github_run_id=%s\n' "$GITHUB_RUN_ID"
+            printf 'github_run_attempt=%s\n' "$GITHUB_RUN_ATTEMPT"
+          } > "$FORGE_IOS_METADATA_EVIDENCE_DIR/candidate-before.txt"
+
+          git status --porcelain=v1 --untracked-files=all > "$FORGE_IOS_METADATA_EVIDENCE_DIR/candidate-status-before.txt"
+          if [[ -s "$FORGE_IOS_METADATA_EVIDENCE_DIR/candidate-status-before.txt" ]]; then
+            printf 'The checked-out release candidate is not clean.\n' >&2
+            cat "$FORGE_IOS_METADATA_EVIDENCE_DIR/candidate-status-before.txt" >&2
+            exit 1
+          fi
+
+      - name: Select Xcode 26.6
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcode_path="/Applications/Xcode_26.6.app/Contents/Developer"
+          if [[ ! -d "$xcode_path" ]]; then
+            printf 'Xcode 26.6 is not installed at: %s\n' "$xcode_path" >&2
+            exit 1
+          fi
+
+          sudo xcode-select --switch "$xcode_path"
+          selected_xcode_version="$(xcodebuild -version | sed -n '1p')"
+          if [[ "$selected_xcode_version" != "Xcode 26.6" ]]; then
+            printf 'Expected Xcode 26.6. Found: %s\n' "$selected_xcode_version" >&2
+            exit 1
+          fi
+
+          printf 'xcode=%s\n' "$selected_xcode_version" >> "$FORGE_IOS_METADATA_EVIDENCE_DIR/candidate-before.txt"
+
+      - name: Install pinned XcodeGen
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_archive="$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION.zip"
+          tool_root="$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION"
+          tool_url="https://github.com/yonaskolb/XcodeGen/releases/download/$XCODEGEN_VERSION/xcodegen.zip"
+
+          curl --fail --location --retry 3 --retry-all-errors --silent --show-error "$tool_url" --output "$tool_archive"
+
+          actual_sha="$(shasum -a 256 "$tool_archive" | awk '{print $1}')"
+          if [[ "$actual_sha" != "$XCODEGEN_ARCHIVE_SHA256" ]]; then
+            printf 'XcodeGen archive SHA-256 does not match.\n' >&2
+            exit 1
+          fi
+
+          unzip -q "$tool_archive" -d "$tool_root"
+          xcodegen_binary="$tool_root/xcodegen/bin/xcodegen"
+          xcodegen_version="$("$xcodegen_binary" --version | awk 'NR == 1 { print $NF }')"
+          if [[ "$xcodegen_version" != "$XCODEGEN_VERSION" ]]; then
+            printf 'XcodeGen version does not match.\n' >&2
+            exit 1
+          fi
+
+          printf '%s\n' "$tool_root/xcodegen/bin" >> "$GITHUB_PATH"
+
+      - name: Generate and verify the Xcode project
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$FORGE_IOS_METADATA_EVIDENCE_DIR"
+          if (
+            cd ios
+            xcodegen generate
+          ); then
+            generation_status=0
+          else
+            generation_status=$?
+          fi
+
+          if git diff --exit-code -- ios/FORGE.xcodeproj; then
+            project_diff_status=0
+          else
+            project_diff_status=$?
+          fi
+
+          worktree_status_after_generation="$FORGE_IOS_METADATA_EVIDENCE_DIR/worktree-status-after-generation.txt"
+          git status --porcelain=v1 --untracked-files=all > "$worktree_status_after_generation"
+          if [[ -s "$worktree_status_after_generation" ]]; then
+            printf 'Generation changed the release-candidate worktree.\n' >&2
+            cat "$worktree_status_after_generation" >&2
+            exit 1
+          fi
+
+          if [[ "$generation_status" -ne 0 ]]; then
+            exit "$generation_status"
+          fi
+          exit "$project_diff_status"
+
       - name: Validate release-candidate store metadata
         timeout-minutes: 5
-        run: ios/Scripts/verify.sh --static
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$FORGE_IOS_METADATA_EVIDENCE_DIR"
+          if ios/Scripts/verify.sh --static 2>&1 | tee "$FORGE_IOS_METADATA_EVIDENCE_DIR/store-metadata-validation.log"; then
+            static_status=0
+          else
+            static_status=$?
+          fi
+
+          worktree_status_after_static="$FORGE_IOS_METADATA_EVIDENCE_DIR/worktree-status-after-static-verification.txt"
+          git status --porcelain=v1 --untracked-files=all > "$worktree_status_after_static"
+          if [[ -s "$worktree_status_after_static" ]]; then
+            printf 'Static verification changed the release-candidate worktree.\n' >&2
+            cat "$worktree_status_after_static" >&2
+            exit 1
+          fi
+
+          exit "$static_status"
         env:
           FORGE_REQUIRE_STORE_METADATA: "1"
           FORGE_PRIVACY_POLICY_URL: ${{ vars.FORGE_PRIVACY_POLICY_URL }}
           FORGE_SUPPORT_URL: ${{ vars.FORGE_SUPPORT_URL }}
+
+      - name: Resolve Release Info.plist evidence
+        timeout-minutes: 5
+        shell: bash
+        env:
+          FORGE_PRIVACY_POLICY_URL: ${{ vars.FORGE_PRIVACY_POLICY_URL }}
+          FORGE_SUPPORT_URL: ${{ vars.FORGE_SUPPORT_URL }}
+        run: |
+          set -euo pipefail
+          release_build_settings="$RUNNER_TEMP/forge-release-build-settings.txt"
+          source_info_plist="ios/Config/FORGE-Info.plist"
+          resolved_info_plist="$FORGE_IOS_METADATA_EVIDENCE_DIR/Release-FORGE-Info.plist"
+
+          xcodebuild \
+            -project ios/FORGE.xcodeproj \
+            -target FORGE \
+            -configuration Release \
+            -sdk iphoneos \
+            FORGE_PRIVACY_POLICY_URL="$FORGE_PRIVACY_POLICY_URL" \
+            FORGE_SUPPORT_URL="$FORGE_SUPPORT_URL" \
+            -showBuildSettings > "$release_build_settings"
+
+          read_build_setting() {
+            local setting_name="$1"
+            local setting_prefix="    $setting_name = "
+            local setting_value
+
+            setting_value="$(awk -v prefix="$setting_prefix" 'index($0, prefix) == 1 { print substr($0, length(prefix) + 1); exit }' "$release_build_settings")"
+            if [[ -z "$setting_value" ]]; then
+              printf 'The Release build setting is missing: %s\n' "$setting_name" >&2
+              exit 1
+            fi
+            printf '%s' "$setting_value"
+          }
+
+          info_plist_file="$(read_build_setting INFOPLIST_FILE)"
+          if [[ "$info_plist_file" != "Config/FORGE-Info.plist" ]]; then
+            printf 'The Release Info.plist path is unexpected: %s\n' "$info_plist_file" >&2
+            exit 1
+          fi
+
+          cp "$source_info_plist" "$resolved_info_plist"
+          plutil -replace CFBundleDevelopmentRegion -string "$(read_build_setting DEVELOPMENT_LANGUAGE)" "$resolved_info_plist"
+          plutil -replace CFBundleExecutable -string "$(read_build_setting EXECUTABLE_NAME)" "$resolved_info_plist"
+          plutil -replace CFBundleIdentifier -string "$(read_build_setting PRODUCT_BUNDLE_IDENTIFIER)" "$resolved_info_plist"
+          plutil -replace CFBundleName -string "$(read_build_setting PRODUCT_NAME)" "$resolved_info_plist"
+          plutil -replace CFBundleShortVersionString -string "$(read_build_setting MARKETING_VERSION)" "$resolved_info_plist"
+          plutil -replace CFBundleVersion -string "$(read_build_setting CURRENT_PROJECT_VERSION)" "$resolved_info_plist"
+          plutil -replace FORGEPrivacyPolicyURL -string "$(read_build_setting FORGE_PRIVACY_POLICY_URL)" "$resolved_info_plist"
+          plutil -replace FORGESupportURL -string "$(read_build_setting FORGE_SUPPORT_URL)" "$resolved_info_plist"
+
+          if grep -Fq '$(' "$resolved_info_plist"; then
+            printf 'The Release Info.plist still contains an unresolved build setting.\n' >&2
+            exit 1
+          fi
+
+          plutil -lint "$resolved_info_plist"
+          {
+            printf 'configuration=Release\n'
+            printf 'target=FORGE\n'
+            printf 'source_info_plist=%s\n' "$source_info_plist"
+            printf 'resolved_info_plist=%s\n' "$(basename "$resolved_info_plist")"
+            printf 'build_settings_source=xcodebuild -showBuildSettings\n'
+          } > "$FORGE_IOS_METADATA_EVIDENCE_DIR/release-info-plist-resolution.txt"
+          shasum -a 256 "$source_info_plist" "$resolved_info_plist" > "$FORGE_IOS_METADATA_EVIDENCE_DIR/release-info-plist.sha256"
+
+      - name: Record post-validation candidate identity
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$FORGE_IOS_METADATA_EVIDENCE_DIR"
+          candidate_before="$FORGE_IOS_METADATA_EVIDENCE_DIR/candidate-before.txt"
+          candidate_sha="$(git rev-parse HEAD)"
+          candidate_tree="$(git rev-parse HEAD^{tree})"
+
+          {
+            printf 'commit_sha=%s\n' "$candidate_sha"
+            printf 'tree_sha=%s\n' "$candidate_tree"
+          } > "$FORGE_IOS_METADATA_EVIDENCE_DIR/candidate-after.txt"
+          git status --porcelain=v1 --untracked-files=all > "$FORGE_IOS_METADATA_EVIDENCE_DIR/candidate-status-after.txt"
+
+          if [[ ! -f "$candidate_before" ]]; then
+            printf 'The release-candidate identity record is missing.\n' >&2
+            exit 1
+          fi
+
+          before_sha="$(awk -F= '$1 == "commit_sha" { print $2 }' "$candidate_before")"
+          before_tree="$(awk -F= '$1 == "tree_sha" { print $2 }' "$candidate_before")"
+          if [[ "$candidate_sha" != "$before_sha" || "$candidate_tree" != "$before_tree" ]]; then
+            printf 'Release-candidate identity changed during metadata validation.\n' >&2
+            exit 1
+          fi
+
+          if [[ -s "$FORGE_IOS_METADATA_EVIDENCE_DIR/candidate-status-after.txt" ]]; then
+            printf 'Metadata validation changed the release-candidate worktree.\n' >&2
+            cat "$FORGE_IOS_METADATA_EVIDENCE_DIR/candidate-status-after.txt" >&2
+            exit 1
+          fi
+
+      - name: Upload release-candidate store metadata evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        timeout-minutes: 5
+        with:
+          name: forge-ios-release-candidate-metadata-${{ github.sha }}
+          path: ${{ runner.temp }}/forge-ios-release-candidate-metadata/
+          if-no-files-found: error
+          retention-days: 14

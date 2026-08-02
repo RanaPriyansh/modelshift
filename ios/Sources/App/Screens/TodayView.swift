@@ -3,21 +3,24 @@ import SwiftUI
 
 struct TodayView: View {
   @Environment(AppModel.self) private var model
-  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @ScaledMetric(relativeTo: .body) private var bottomContentClearance: CGFloat = 88
 
   var body: some View {
     ScrollView {
-      LazyVStack(alignment: .leading, spacing: ForgeDesign.Spacing.large) {
-        goalHeader
-        nextAction
+      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.large) {
+        activityContent
+        courseContext
 
-        if let dueReturn = model.snapshot.dueReturn {
-          dueReturnCard(dueReturn)
+        if let message = model.localIntegrationStatusMessage {
+          localIntegrationStatus(message)
         }
 
-        boundaryCard
-        updatedAt
+        if let message = model.localPersistenceStatusMessage {
+          localIntegrationStatus(message)
+        }
+
+        sourceAndLocalLimits
       }
       .frame(maxWidth: ForgeDesign.Layout.contentMaxWidth, alignment: .leading)
       .padding(.horizontal, ForgeDesign.Spacing.regular)
@@ -27,226 +30,412 @@ struct TodayView: View {
     .contentMargins(.bottom, bottomContentClearance, for: .scrollContent)
     .background(ForgeDesign.canvas)
     .navigationTitle("Today")
-    .toolbar {
-      if dynamicTypeSize.isAccessibilitySize {
-        ToolbarItem(placement: .topBarLeading) {
-          Button {
-            model.reviewOnboarding()
-          } label: {
-            Image(systemName: "arrow.triangle.branch")
-          }
-          .accessibilityLabel("Change direction")
-          .accessibilityHint("Opens the local learning setup for review.")
-          .accessibilityIdentifier("today.change-direction")
-        }
+    .transaction { transaction in
+      if reduceMotion {
+        transaction.animation = nil
+        transaction.disablesAnimations = true
       }
-
-      SettingsToolbar()
+    }
+    .onChange(of: model.localIntegrationStatusMessage, initial: false) { oldMessage, newMessage in
+      announceLocalIntegrationStatusChange(from: oldMessage, to: newMessage)
+    }
+    .onChange(of: model.localPersistenceStatusMessage, initial: false) {
+      oldMessage,
+      newMessage in
+      announceLocalIntegrationStatusChange(from: oldMessage, to: newMessage)
+    }
+    .onChange(of: model.isCourseReviewRunning, initial: false) { _, isRunning in
+      announceCourseReviewProgress(isRunning)
     }
   }
 
-  private var goalHeader: some View {
+  private var courseContext: some View {
     VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
-      ViewThatFits(in: .horizontal) {
-        HStack {
-          activeGoalLabel
-          Spacer()
-          deviceOnlyLabel
-        }
-
-        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
-          activeGoalLabel
-          deviceOnlyLabel
-        }
-      }
-
-      Text(model.snapshot.goal)
-        .font(.title2.weight(.bold))
-        .accessibilityAddTraits(.isHeader)
-    }
-  }
-
-  private var activeGoalLabel: some View {
-    Label("Active goal", systemImage: "scope")
-      .font(.caption.weight(.semibold))
-      .foregroundStyle(ForgeDesign.secondaryText)
-      .textCase(.uppercase)
-      .tracking(0.8)
-  }
-
-  private var deviceOnlyLabel: some View {
-    Label("Device-only", systemImage: "lock.fill")
-      .font(.caption)
-      .foregroundStyle(ForgeDesign.secondaryText)
-      .accessibilityElement(children: .combine)
-  }
-
-  private var nextAction: some View {
-    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
-      HStack(alignment: .firstTextBaseline) {
-        Label("Next action", systemImage: "arrow.forward.circle.fill")
-          .font(.subheadline.weight(.semibold))
-          .foregroundStyle(.tint)
-
-        Spacer(minLength: ForgeDesign.Spacing.small)
-
-        Text("\(model.snapshot.nextAction.durationMinutes) min")
-          .font(.subheadline.weight(.medium))
-          .foregroundStyle(ForgeDesign.secondaryText)
-          .monospacedDigit()
-      }
-
-      Text(model.snapshot.nextAction.title)
-        .font(.title2.weight(.semibold))
-        .accessibilityAddTraits(.isHeader)
-
-      Text(model.snapshot.nextAction.rationale)
-        .font(.body)
-        .foregroundStyle(ForgeDesign.secondaryText)
-
       Divider()
 
-      Button {
-        model.presentFocus()
-      } label: {
-        HStack {
-          Text("Open focus preview")
-          Spacer()
-          Image(systemName: "arrow.right")
-        }
-        .frame(maxWidth: .infinity)
-      }
-      .buttonStyle(.borderedProminent)
-      .tint(Color.accentColor)
-      .controlSize(.large)
-      .foregroundStyle(ForgeDesign.primaryActionForeground)
-      .accessibilityHint("Opens a full-screen preview. It records no evidence.")
-      .accessibilityIdentifier("today.open-focus")
+      UniversitySectionLabel(title: "Course context")
 
-      if !dynamicTypeSize.isAccessibilitySize {
-        Button {
-          model.reviewOnboarding()
-        } label: {
-          Label("Change direction", systemImage: "arrow.triangle.branch")
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .buttonStyle(ForgeSecondaryButtonStyle())
-        .accessibilityHint("Opens the local learning setup for review.")
-        .accessibilityIdentifier("today.change-direction")
-      }
-    }
-    .padding(ForgeDesign.Spacing.large)
-    .background(ForgeDesign.raisedSurface)
-    .clipShape(
-      RoundedRectangle(cornerRadius: ForgeDesign.Radius.card, style: .continuous)
-    )
-    .overlay {
-      RoundedRectangle(cornerRadius: ForgeDesign.Radius.card, style: .continuous)
-        .stroke(ForgeDesign.hairline, lineWidth: 1)
-    }
-  }
+      Text(model.courseTitle)
+        .font(.headline.weight(.semibold))
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityIdentifier("today.course-title")
 
-  private func dueReturnCard(_ dueReturn: ForgeDueReturn) -> some View {
-    Button {
-      model.presentFocus()
-    } label: {
-      HStack(alignment: .top, spacing: ForgeDesign.Spacing.regular) {
-        Image(systemName: "calendar.badge.clock")
-          .font(.title3)
-          .foregroundStyle(.tint)
-          .frame(width: 44, height: 44)
-          .background(ForgeDesign.accentWash, in: Circle())
-          .accessibilityHidden(true)
-
-        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
-          Text("Review due return")
-            .font(.headline)
-
-          Text(dueReturn.dueAt, format: .dateTime.day().month().hour().minute())
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(Color.primary)
-            .padding(.horizontal, ForgeDesign.Spacing.small)
-            .padding(.vertical, ForgeDesign.Spacing.tight)
-            .accessibilityIdentifier("today.return-date-visual")
-            .accessibilityHidden(true)
-
-          Text(dueReturn.status)
-            .font(.footnote)
-            .foregroundStyle(ForgeDesign.secondaryText)
-            .accessibilityIdentifier("today.return-status-visual")
-            .accessibilityHidden(true)
-        }
-
-        Spacer(minLength: ForgeDesign.Spacing.small)
-
-        Image(systemName: "chevron.right")
-          .font(.footnote.weight(.semibold))
-          .foregroundStyle(.tertiary)
-          .accessibilityHidden(true)
-      }
-      .padding(ForgeDesign.Spacing.regular)
-      .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    .buttonStyle(.plain)
-    .background(ForgeDesign.raisedSurface)
-    .clipShape(
-      RoundedRectangle(cornerRadius: ForgeDesign.Radius.inset, style: .continuous)
-    )
-    .accessibilityLabel("Review due return")
-    .accessibilityValue(
-      "Due \(dueReturn.dueAt.formatted(date: .long, time: .shortened)). \(dueReturn.status)"
-    )
-    .accessibilityHint("Opens the read-only focus preview.")
-    .accessibilityIdentifier("today.open-return")
-  }
-
-  private var boundaryCard: some View {
-    HStack(alignment: .top, spacing: ForgeDesign.Spacing.small) {
-      Image(systemName: "checkmark.seal.fill")
-        .foregroundStyle(.tint)
-        .accessibilityHidden(true)
-
-      Text("FORGE proposes the next action. Only your accepted path gives it authority.")
+      Text(model.courseSummary)
         .font(.subheadline)
         .foregroundStyle(ForgeDesign.secondaryText)
+        .fixedSize(horizontal: false, vertical: true)
+
+      UniversityMetadataRow(
+        label: "Last local update",
+        value: exactDateTime(model.learnerState.updatedAt)
+      )
+      .accessibilityIdentifier("today.updated-at-visual")
+
+      reviewCourseSetupButton
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .accessibilityElement(children: .contain)
+  }
+
+  @ViewBuilder
+  private var activityContent: some View {
+    if let experience = model.experience {
+      activeActivityCard(experience)
+    } else if let message = model.experienceErrorMessage {
+      activityUnavailableCard(message)
+    } else {
+      activityUnavailableCard("Current activity data is not available.")
+    }
+  }
+
+  private func activeActivityCard(
+    _ experience: UniversityExperienceProjection.Projection
+  ) -> some View {
+    UniversitySurface {
+      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+        UniversitySectionLabel(title: "Next action")
+
+        nextActionContent(for: experience)
+
+        Divider()
+
+        UniversitySectionLabel(title: "Activity details")
+
+        UniversityMetadataRow(
+          label: "Activity kind",
+          value: activityKindText(for: experience.activeActivity.kind)
+        )
+
+        UniversityMetadataRow(
+          label: "Activity state",
+          value: activityStateText(for: experience.nextActionState)
+        )
+        .accessibilityIdentifier("today.activity-state-active")
+
+        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
+          Text("Prompt")
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(ForgeDesign.secondaryText)
+
+          Text(experience.activeActivity.prompt)
+            .font(.body)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+      }
+    }
+  }
+
+  private func activityUnavailableCard(_ message: String) -> some View {
+    UniversitySurface {
+      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
+        UniversitySectionLabel(title: "Next action")
+
+        Text(message)
+          .font(.body)
+          .foregroundStyle(ForgeDesign.secondaryText)
+          .fixedSize(horizontal: false, vertical: true)
+          .accessibilityIdentifier("today.activity-state-unavailable")
+
+        activityAccessButton(
+          title: "Open current activity",
+          hint: "Activity data is not available.",
+          isEnabled: false
+        )
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func nextActionContent(
+    for experience: UniversityExperienceProjection.Projection
+  ) -> some View {
+    switch experience.nextActionState {
+    case .activeActivity:
+      currentActivityAction
+
+    case .delayedReturn:
+      if let delayedReturn = model.currentDelayedReturn {
+        delayedReturnAction(delayedReturn)
+      } else {
+        delayedReturnAccess(
+          message: "Delayed return data is not available.",
+          isEnabled: false
+        )
+      }
+    }
+  }
+
+  private var currentActivityAction: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
+      activityAccessButton(
+        title: "Open current activity",
+        hint: model.canPresentCurrentActivity
+          ? "Opens the current activity."
+          : "Activity access is not available.",
+        isEnabled: model.canPresentCurrentActivity
+      )
+
+      Text(
+        model.canPresentCurrentActivity
+          ? "This activity is ready to open."
+          : "Activity access is not available."
+      )
+      .font(.subheadline)
+      .foregroundStyle(ForgeDesign.secondaryText)
+    }
+  }
+
+  private func delayedReturnAction(
+    _ delayedReturn: UniversityExperienceProjection.DelayedReturnRow
+  ) -> some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
+      delayedReturnActionDetails(for: delayedReturn.status)
+
+      UniversityMetadataRow(
+        label: "Return state",
+        value: delayedReturnStateText(for: delayedReturn.status)
+      )
+      .accessibilityIdentifier("today.return-status-visual")
+
+      UniversityMetadataRow(
+        label: "Opens",
+        value: exactDateTime(delayedReturn.opensAt)
+      )
+      .accessibilityIdentifier("today.return-opens-at")
+
+      UniversityMetadataRow(
+        label: "Due",
+        value: exactDateTime(delayedReturn.dueAt)
+      )
+      .accessibilityIdentifier("today.return-date-visual")
+    }
+  }
+
+  @ViewBuilder
+  private func delayedReturnActionDetails(
+    for status: DelayedReturnStatus
+  ) -> some View {
+    switch status {
+    case .scheduled:
+      delayedReturnAccess(
+        message: "The return is scheduled.",
+        isEnabled: false
+      )
+
+    case .open:
+      delayedReturnAccess(
+        message: "The return is open.",
+        isEnabled: model.canPresentCurrentActivity
+      )
+
+    case .due:
+      delayedReturnAccess(
+        message: "The return is due.",
+        isEnabled: model.canPresentCurrentActivity
+      )
+
+    case .expired:
+      delayedReturnAccess(
+        message: "The return window is closed.",
+        isEnabled: false
+      )
+
+    case .completed:
+      delayedReturnAccess(
+        message: "The return is recorded.",
+        isEnabled: false
+      )
+    }
+  }
+
+  private func delayedReturnAccess(
+    message: String,
+    isEnabled: Bool
+  ) -> some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
+      activityAccessButton(
+        title: "Open delayed return",
+        hint: isEnabled
+          ? "Opens the delayed return activity."
+          : "This delayed return cannot open now.",
+        isEnabled: isEnabled
+      )
+
+      Text(message)
+        .font(.subheadline)
+        .foregroundStyle(ForgeDesign.secondaryText)
+    }
+  }
+
+  private func activityAccessButton(
+    title: String,
+    hint: String,
+    isEnabled: Bool
+  ) -> some View {
+    Button {
+      model.presentActivity()
+    } label: {
+      Label(title, systemImage: "arrow.right.circle.fill")
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 48)
+        .fixedSize(horizontal: false, vertical: true)
+        .multilineTextAlignment(.center)
+    }
+    .buttonStyle(ForgeCommitmentButtonStyle())
+    .disabled(!isEnabled)
+    .accessibilityHint(hint)
+    .accessibilityIdentifier("today.open-activity")
+  }
+
+  private var reviewCourseSetupButton: some View {
+    Button {
+      Task { @MainActor in
+        await model.reviewCourseSetup()
+      }
+    } label: {
+      HStack(spacing: ForgeDesign.Spacing.small) {
+        if model.isCourseReviewRunning {
+          ProgressView()
+            .controlSize(.small)
+            .accessibilityHidden(true)
+        } else {
+          Image(systemName: "slider.horizontal.3")
+            .accessibilityHidden(true)
+        }
+
+        Text(
+          model.isCourseReviewRunning
+            ? "Opening course setup\u{2026}"
+            : "Review course setup"
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .multilineTextAlignment(.leading)
+      }
+    }
+    .buttonStyle(ForgeSecondaryButtonStyle())
+    .disabled(model.isCourseReviewRunning)
+    .accessibilityLabel(
+      model.isCourseReviewRunning ? "Opening course setup" : "Review course setup"
+    )
+    .accessibilityValue(model.isCourseReviewRunning ? "In progress" : "")
+    .accessibilityHint(
+      model.isCourseReviewRunning
+        ? "FORGE is opening the local course setup."
+        : "Opens the local course setup."
+    )
+    .accessibilityIdentifier("today.change-direction")
+  }
+
+  private func localIntegrationStatus(_ message: String) -> some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
+      Divider()
+
+      UniversitySectionLabel(title: "Local data status")
+
+      Text(message)
+        .font(.subheadline)
+        .foregroundStyle(ForgeDesign.secondaryText)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .accessibilityElement(children: .contain)
+  }
+
+  private func announceLocalIntegrationStatusChange(
+    from oldMessage: String?,
+    to newMessage: String?
+  ) {
+    guard oldMessage != newMessage, let newMessage, !newMessage.isEmpty else {
+      return
+    }
+
+    AccessibilityNotification.Announcement(newMessage).post()
+  }
+
+  private func announceCourseReviewProgress(_ isRunning: Bool) {
+    guard isRunning else {
+      return
+    }
+
+    AccessibilityNotification.Announcement(
+      "Opening local course setup."
+    ).post()
+  }
+
+  private var sourceAndLocalLimits: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
+      Divider()
+
+      UniversitySectionLabel(title: "Source and local limits")
+
+      Text(sourceProvenanceMessage)
+        .font(.subheadline)
+        .foregroundStyle(ForgeDesign.secondaryText)
+        .fixedSize(horizontal: false, vertical: true)
+
+      Text("Activity records stay on this device. They do not establish a learning result.")
+        .font(.subheadline)
+        .foregroundStyle(ForgeDesign.secondaryText)
+        .fixedSize(horizontal: false, vertical: true)
         .accessibilityIdentifier("today.boundary-copy-visual")
     }
-    .padding(ForgeDesign.Spacing.regular)
-    .background(ForgeDesign.raisedSurface)
-    .clipShape(
-      RoundedRectangle(cornerRadius: ForgeDesign.Radius.inset, style: .continuous)
-    )
-    .accessibilityElement(children: .combine)
-    .accessibilityLabel(
-      "Path authority. FORGE proposes the next action. Your accepted path gives it authority."
-    )
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .accessibilityElement(children: .contain)
   }
 
-  private var updatedAt: some View {
-    Text(
-      "Updated \(model.snapshot.updatedAt, format: .relative(presentation: .named))"
-    )
-    .font(.footnote)
-    .foregroundStyle(ForgeDesign.secondaryText)
-    .frame(maxWidth: .infinity, alignment: .trailing)
-    .accessibilityIdentifier("today.updated-at-visual")
-    .accessibilityLabel(
-      "Updated \(model.snapshot.updatedAt.formatted(date: .long, time: .shortened))"
-    )
+  private var sourceProvenanceMessage: String {
+    model.catalog.sourceBindings.contains { $0.provenance == .provenanceIncomplete }
+      ? "Source provenance is incomplete."
+      : "Source provenance is recorded in the local course data."
   }
-}
 
-#Preview {
-  NavigationStack {
-    TodayView()
-  }
-  .environment(AppModel.preview())
-}
+  private func activityStateText(
+    for nextActionState: UniversityExperienceProjection.NextActionState
+  ) -> String {
+    switch nextActionState {
+    case .activeActivity:
+      "Active"
 
-#Preview("Today — Large Type") {
-  NavigationStack {
-    TodayView()
+    case .delayedReturn(let status):
+      delayedReturnStateText(for: status)
+    }
   }
-  .environment(AppModel.preview())
-  .environment(\.dynamicTypeSize, .accessibility2)
+
+  private func activityKindText(for kind: ActivityKind) -> String {
+    switch kind {
+    case .practice:
+      "Practice"
+
+    case .proof:
+      "Independent check"
+
+    case .delayedReturn:
+      "Delayed return"
+    }
+  }
+
+  private func delayedReturnStateText(for status: DelayedReturnStatus) -> String {
+    switch status {
+    case .scheduled:
+      "Scheduled"
+
+    case .open:
+      "Open"
+
+    case .due:
+      "Due"
+
+    case .expired:
+      "Window closed"
+
+    case .completed:
+      "Return recorded"
+    }
+  }
+
+  private func exactDateTime(_ date: Date) -> String {
+    date.formatted(date: .long, time: .shortened)
+  }
 }

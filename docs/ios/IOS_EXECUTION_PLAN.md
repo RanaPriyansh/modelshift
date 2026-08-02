@@ -1,282 +1,450 @@
-# FORGE iOS Execution Plan
+# FORGE iOS Adult University V1 Execution Plan
 
-**Date:** 2026-08-02
-**Worktree:** `forge-ios-foundation-20260801`
-**Branch:** `agent/forge-ios-foundation-20260801`
-**Starting commit:** `a542bfca7b7c86b26a41c8c3f600b784db92e797`
-**Code commit:** `9e0496c`
-**Current candidate state:** `VERIFIED_LOCAL_BASELINE`
-**Release decision:** `NO_SHIP`
+- **Date:** 2026-08-02
+- **Product scope:** `ADULT_UNIVERSITY_V1`
+- **Candidate state:** `NOT_SELECTED`
+- **Release decision:** `NO_SHIP`
 
-## Fixed foundation scope
+## Evidence boundary
 
-The first candidate is a native SwiftUI application for adult internal testers.
+This document records the current source inventory only.
 
-The candidate supports iOS 18 or later. Distribution builds use Xcode 26 and the
-iOS 26 SDK.
+The working tree is modified.
 
-The candidate stays on the device. It has no account, cloud sync, analytics,
-advertising, network client, or remote notification.
+No exact candidate SHA or clean-tree record exists.
 
-The candidate uses read-only fixture data. It does not create completion,
-protected proof, canonical evidence, or consequential decisions.
+Source presence does not prove compilation or execution.
 
-The main navigation has three sections:
+Source presence does not prove simulator, device, signing, or release behavior.
 
-- Today
-- Path
-- Evidence
+Do not reuse prior iOS evidence for this candidate.
 
-The candidate also contains:
+Do not treat a local receipt as an academic record, credit, grade, mastery,
+proficiency, efficacy, or retention result.
 
-- Optional onboarding
-- One full-screen focus preview
-- One local delayed-return reminder
-- One redacted small widget
-- One parameter-free App Intent
-- Settings, privacy information, support information, and local deletion
+Keep `NO_SHIP` until a fixed candidate has current evidence.
 
-## Product acceptance contract
+## Implemented source work
 
-1. A clean installation shows optional onboarding.
-2. Onboarding collects one goal or one safe sample.
-3. Onboarding states the device-data boundary.
-4. Today shows one primary action, its reason, and its duration.
-5. Today offers Change direction and Review a due return.
-6. Path shows one vertical milestone sequence with explicit states.
-7. Today and the active Path milestone open the focus preview.
-8. Focus hides the tab bar and keeps pause, stop, source, safety, and access controls.
-9. Evidence keeps limitations and untested results visible.
-10. Settings shows device data, reminders, onboarding, privacy, support, and deletion.
-11. Widgets, notifications, intents, routes, and settings do not change evidence.
-12. Invalid external routes cause no state change.
-13. Local deletion removes application state, App Group state, routes, and reminders.
-14. All learner surfaces operate without a network connection.
+The sections below identify source that exists in the current working tree.
 
-## Current confirmed local evidence
+Each section has the state `SOURCE_PRESENT_NOT_VERIFIED`.
 
-The table records only confirmed local evidence for this update.
+### Course domain
 
-| Evidence | Exact result | Boundary |
-| --- | --- | --- |
-| Static verification | `ios/Scripts/verify.sh --static` passed. | This is static local evidence. |
-| Formatting | Strict recursive `swift-format` passed. | Formatting does not prove runtime behavior. |
-| `ForgeCore` | `ForgeCore` passed 17 tests in 3 suites. | This is local test evidence only. |
-| Unsigned device builds | Full `CI=true ios/Scripts/verify.sh` passed unsigned arm64 Debug and Release device builds with full assets and compiled the UI test source. | These are unsigned builds. |
-| Named simulator | XcodeBuildMCP `build_run_sim` passed on `FORGE-iPhone-17-Pro` with ID `51A58074-74AB-4942-84DD-E0ED2E087CD7` without warnings or errors. | This proves only the named local simulator. |
-| UI tests | All 7 UI tests passed in `~/Library/Developer/XcodeBuildMCP/workspaces/codex-buildweek-dcb7dbdcf9c5/result-bundles/test_sim_2026-08-01T22-24-44-871Z_pid2419_aadc876c.xcresult`. | This result covers the named local simulator only. |
-| Primary accessibility audit | The primary accessibility audit passed in that run after exact Xcode 26 false-report handling. | This does not prove accessibility conformance. |
+The ForgeCore course domain is in this directory:
 
-The current local state is `VERIFIED_LOCAL_BASELINE` at code commit `9e0496c`.
-The evidence proves only the named local simulator and unsigned builds.
-It does not prove physical-device behavior, a signed archive, distribution, production operation, accessibility conformance, or release readiness.
+`ios/Packages/ForgeCore/Sources/ForgeCore/`
 
-## Release boundary
+- `UniversityStarterCourse.swift`
+- `UniversityLearningModels.swift`
+- `UniversityLearningEngine.swift`
 
-Keep `NO_SHIP`.
+These files define one local adult mechanics course package.
 
-`VERIFIED_LOCAL_BASELINE` is not release authorization.
+They define local learner state, receipts, and delayed returns.
 
-- Do not sign.
-- Do not archive.
-- Do not upload.
-- Do not distribute.
-- Do not deploy.
+The engine validates catalog IDs, state, dates, and submissions before a change.
 
-## Current implementation slices
-
-### Slice A: Environment and initial build
-
-Status: `COMPLETE`
-
-- Prepare the local build environment.
-- Run `ios/Scripts/verify.sh --static`.
-- Run strict recursive `swift-format`.
-- Run `CI=true ios/Scripts/verify.sh`.
-- Build and launch the named local simulator.
+FORGE keeps written reasoning and values derived from written reasoning in
+memory while an activity is open and during submission. FORGE does not save
+them.
 
-Completion evidence:
-
-- Static verification passed.
-- Strict recursive `swift-format` passed.
-- Unsigned arm64 Debug and Release device builds passed with full assets.
-- The UI test source compiled.
-- The named simulator build and launch passed without warnings or errors.
-
-This completion applies only to the recorded local baseline.
-
-### Slice B: Foundation safety
-
-Status: `COMPLETE`
-
-- Give the App Intent one application target owner.
-- Accept only exact `forge://` routes.
-- Add missing Today and Path actions.
-- Add deterministic UI-test waits.
-- Add an in-application privacy and support center.
-
-Completion evidence:
-
-- `ForgeCore` passed 17 tests in 3 suites.
-- All 7 UI tests passed in the recorded result bundle.
-- The primary accessibility audit passed after exact Xcode 26 false-report handling.
-- XcodeBuildMCP reported no warnings or errors for the named simulator run.
-
-This completion does not establish accessibility conformance.
-
-### Slice C: Simulator and accessibility verification
-
-Status: `OPEN_EVIDENCE`
-
-- Build Debug with all assets.
-- Launch the application on the named `FORGE-iPhone-17-Pro` simulator.
-- Launch the application on a small iPhone.
-- Launch the application on an iPad.
-- Run all seven UI tests.
-- Run accessibility audits for primary learner surfaces.
-- Launch the exact `forge://focus` route.
-- Capture small iPhone, large iPhone, and iPad frames.
-- Test Dark Mode and Increased Contrast.
-
-Recorded local evidence:
-
-- The named `FORGE-iPhone-17-Pro` simulator run passed.
-- All 7 UI tests passed in the recorded result bundle.
-- The primary accessibility audit passed after exact Xcode 26 false-report handling.
-
-The remaining simulator, appearance, route, deletion, and manual access-method gates remain open.
-
-## Next local gates
-
-Run these gates in order on the verified local baseline.
+FORGE uses selected-choice text to check an activity. FORGE does not save
+selected-choice text.
 
-1. Run the simulator matrix on a small iPhone.
-2. Run the simulator matrix on an iPad.
-3. Test Dark Mode.
-4. Test Increased Contrast.
-5. Launch the exact `forge://focus` route.
-6. Test deletion after a cold relaunch.
-7. Run application-level storage and recovery tests.
-8. Verify reminder launch reconciliation.
-9. Measure memory and performance.
-10. Record result bundles, screenshots, and residual risks.
-
-Stop local progression when a gate fails.
+FORGE saves selected-choice check results, activity progress, help use, receipt
+metadata, and delayed-return schedules locally. FORGE needs this data for
+durable learning progress.
 
-## Remaining evidence and external inputs
+### Experience state
 
-Keep each item open until the required evidence or input exists.
+`UniversityExperienceProjection.swift` derives the learner-facing state.
 
-| Item | State | Required evidence or input |
-| --- | --- | --- |
-| Small iPhone | `OPEN_EVIDENCE` | Recorded simulator result at 320 CSS px and supported sizes |
-| iPad | `OPEN_EVIDENCE` | Recorded simulator result |
-| Dark Mode | `OPEN_EVIDENCE` | Recorded appearance result |
-| Increased Contrast | `OPEN_EVIDENCE` | Recorded contrast result |
-| Exact `forge://focus` launch | `OPEN_EVIDENCE` | Recorded launch from the exact route |
-| Cold-relaunch deletion | `OPEN_EVIDENCE` | Deletion result after process termination and relaunch |
-| Application storage and recovery | `OPEN_EVIDENCE` | Application-level storage, corruption, and recovery results |
-| Reminder launch reconciliation | `OPEN_EVIDENCE` | Launch reconciliation result for reminder state |
-| Memory and performance | `OPEN_EVIDENCE` | Recorded memory, energy, launch, hang, and performance results |
-| Accessibility conformance | `OPEN_EVIDENCE` | Manual access-method results and the broader accessibility matrix |
-| Physical device | `BLOCKED_OWNER_INPUT` | Authorized signed-device notification, widget, intent, lifecycle, privacy, and performance results |
-| Signed archive | `BLOCKED_OWNER_INPUT` | Signed Release archive, validation result, and archive digest |
-| Signing | `BLOCKED_OWNER_INPUT` | Team, identifiers, signing method, and authorized operator |
-| Identifiers | `BLOCKED_OWNER_INPUT` | Approved application, widget, and App Group identifiers |
-| TestFlight | `BLOCKED_OWNER_INPUT` | Signed candidate, tester group, and explicit distribution authority |
-| App Store | `BLOCKED_OWNER_INPUT` | App Store metadata, review records, and explicit submission authority |
-| Policy URLs | `BLOCKED_OWNER_INPUT` | Approved privacy-policy URL and maintained support URL |
-| Owner approvals | `BLOCKED_OWNER_INPUT` | Product, technical, privacy/support, and Apple distribution approvals |
-| Upload | `BLOCKED_OWNER_INPUT` | Explicit upload authority for the fixed signed candidate |
-| Distribution | `BLOCKED_OWNER_INPUT` | Explicit distribution authority for the approved tester group |
-
-### Slice D: Candidate hardening
-
-Status: `PENDING`
-
-- Separate private application state from the redacted App Group state.
-- Replace silent storage failure with an explicit recovery state.
-- Prevent custom goals from inheriting unrelated fixture records.
-- Reconcile reminders during launch.
-- Verify deletion after cold relaunch.
-- Add application-level tests for storage, routing, and notification adapters.
-
-Completion evidence:
-
-- Typed storage contract
-- Corruption and relaunch tests
-- App Group payload privacy test
-- Notification reconciliation tests
-
-### Slice E: Distribution
-
-Status: `BLOCKED_OWNER_INPUT`
-
-- Register application, widget, and App Group identifiers.
-- Configure the approved Apple Developer Team and signing method.
-- Create and validate one signed archive.
-- Prepare one adult-only internal TestFlight group.
-- Upload only after explicit candidate-bound authority.
-
-Completion evidence:
-
-- Team and identifier records
-- Certificate and profile records
-- Signed archive digest
-- Apple validation result
-- TestFlight processed-build record
-- Explicit upload and distribution authority
-
-## Required owner decisions
-
-These decisions remain external to local evidence.
-
-### Product
-
-- Approve the adult-only foundation scope.
-- Approve the bundled fixture, sources, rights, reviewer, version, and limitations.
-- Decide whether release 0.1 stays read-only.
-- Approve evidence terms before any local observation feature enters scope.
-- Define return delay, expiry, overdue, interruption, and recovery rules.
-
-### Technical
-
-- Approve the private storage file-protection class.
-- Approve backup, restore, corruption, and schema-mismatch behavior.
-- Approve an HTTPS universal-link host or keep only the custom scheme.
-- Set launch, memory, energy, crash, and hang limits.
-
-### Privacy and support
-
-- Provide the published privacy-policy URL.
-- Provide the maintained support URL.
-- Approve retention, deletion, backup, diagnostics, logging, and feedback behavior.
-- Approve final App Privacy answers for the fixed binary.
-
-### Apple distribution
-
-- Provide the legal Apple Developer organization and Team identifier.
-- Confirm registered bundle and App Group identifiers.
-- Select automatic or manual signing.
-- Name the authorized signing operator.
-- Provide App Store Connect fields, age rating, screenshots, review notes, and contacts.
-- Name the approved internal tester group and roster owner.
-
-## No-ship gates
-
-Keep `NO_SHIP` until these gates pass:
-
-- One clean, pushed candidate SHA identifies the release binary.
-- The full simulator matrix passes on the required devices and appearances.
-- The exact `forge://focus` launch passes.
-- Cold-relaunch deletion and application storage recovery pass.
-- Reminder launch reconciliation passes.
-- Memory and performance results meet the approved limits.
-- The required accessibility matrix and manual access-method results pass.
-- Physical-device notification, widget, intent, lifecycle, privacy, and performance tests pass.
-- The final privacy policy and App Privacy answers match the binary.
-- Apple identifiers, signing, entitlements, and archive validation pass.
-- A signed archive passes Apple validation.
-- App Store records match the fixed binary.
-- The release owner gives explicit upload and distribution authority.
-- Required owner approvals are recorded.
+It derives the active activity, capability progress, return rows, and evidence
+rows.
+
+It validates catalog and learner state before it creates a projection.
+
+### Reminder policy
+
+`ReminderPolicy.swift` contains the pure reminder selection and time rule.
+
+It has no notification API dependency.
+
+It selects one eligible scheduled return and derives one local reminder time.
+
+### Private state
+
+`ios/Sources/App/Services/PrivateStateStore.swift` stores the v4 envelope.
+
+The envelope contains learner state, course-start state, and reminder
+preference.
+
+The source uses protected Application Support storage.
+
+### App coordination
+
+`ios/Sources/App/AppModel.swift` coordinates local state and system handoff.
+
+`ios/Sources/App/AppRootView.swift` sends URLs and scene phases to `AppModel`.
+
+`AppComposition` creates the catalog, engine, stores, notification adapter, and
+widget reloader.
+
+### Notification adapter
+
+`ios/Sources/App/Services/NotificationCoordinator.swift` manages one generic
+local notification.
+
+It separates explicit authorization requests from routine reconciliation.
+
+### Shared state
+
+`SharedStateStore.swift` is in this directory:
+
+`ios/Packages/ForgeCore/Sources/ForgeCore/`
+
+It stores a typed, redacted return projection and one permitted pending-focus
+handoff token.
+
+### Widget
+
+`WidgetProjectionPolicy.swift` is in the ForgeCore source directory.
+
+`ios/Sources/Widgets/ContinueLearningWidget.swift` renders the widget.
+
+The widget reads only the shared projection.
+
+### Intent and route
+
+`ios/Sources/SystemIntegration/ContinueLearningIntent.swift` defines the
+parameter-free App Intent.
+
+`DeepLinks.swift` in ForgeCore defines the exact custom URL parser.
+
+The App Intent can write only the pending-focus handoff token.
+
+The App Intent cannot modify learner state, course state, evidence state, a
+receipt, or a delayed return.
+
+### Project definition
+
+`ios/project.yml` defines `FORGE`, `FORGEWidgets`, `FORGEAppTests`, and
+`FORGEUITests`.
+
+It also defines the shared `FORGE` scheme and App Group entitlements.
+
+## State transition order
+
+The engine validates the catalog, state, date, and submission before it changes
+local learner state.
+
+The source uses this order when the learner starts the local course.
+
+1. `AppModel` makes a private v4 envelope with `isCourseStarted` set to true.
+2. `PrivateStateStore` saves the envelope.
+3. `AppModel` applies the saved envelope to memory.
+4. `AppModel` refreshes the experience projection.
+5. `AppModel` writes or clears the redacted shared projection.
+
+The source uses this order when the learner submits an activity.
+
+1. `AppModel` captures one current time and validates activity eligibility.
+2. `UniversityLearningEngine.transition` validates the local submission.
+3. The engine creates a receipt only for the defined local result.
+4. Demonstrated proof creates the delayed return from the package rule.
+5. The fixed package sets `opensAt` seven days after demonstrated proof.
+6. The fixed package sets `dueAt` thirty days after `opensAt`.
+7. `AppModel` saves the private candidate envelope.
+8. `AppModel` applies the saved envelope to memory.
+9. `AppModel` refreshes the experience projection.
+10. `AppModel` writes or clears the shared projection.
+11. `AppModel` starts reminder reconciliation.
+
+The engine does not let a route, widget, intent, reminder, or notification
+create a receipt.
+
+`AppRootView` sends an initial and later scene-phase value to `AppModel`.
+
+For an active scene, `AppModel` refreshes the experience and shared projection.
+
+It then consumes a pending-focus handoff token and reconciles reminders.
+
+For a background scene, `AppModel` writes the current private envelope.
+
+## Private and shared storage
+
+`PrivateStateStore` writes `private-state-v4.json` in the app Application
+Support directory.
+
+Private stage files use the `.private-state-v4.json.stage-` prefix.
+
+When FORGE finds `private-state-v3.json` or `private-state-v2.json`, it shows
+visible recovery and preserves the file until an explicit clear-local-data
+action.
+
+The private write path has a 1 MiB byte limit.
+
+The source uses a stage file, file synchronization, atomic rename, and
+read-back validation for one private-file replacement.
+
+The source also checks protected-data availability and rejects unsafe paths.
+
+`ForgeSharedStateStore` writes two separate v3 files in the App Group directory.
+
+The return projection contains only these values:
+
+- `lifecycle`
+- `opensAt`
+- `dueAt`
+- `generatedAt`
+- `validUntil`
+
+The pending-focus handoff token file contains only the `focus` destination
+token.
+
+The shared store uses an exclusive lock, bounded reads, stage files, file
+synchronization, atomic rename, and read-back validation for each file.
+
+The private and shared stores do not form one distributed transaction.
+
+For course start and activity submission, the source saves private state before
+it writes the shared projection.
+
+If private persistence fails, `AppModel` does not apply the candidate state.
+
+If shared persistence fails, `AppModel` reports a local integration error after
+private state can already exist.
+
+The local-data reset source disables the managed reminder and clears shared
+state before it clears private state.
+
+That cleanup sequence is not an end-to-end deletion verification result.
+
+## Reminder reconciliation
+
+`ReturnReminderPolicy` selects the earliest eligible scheduled return.
+
+It breaks equal opening times by return ID.
+
+The policy uses the opening time only.
+
+An opening from 21:00 through 08:59 local time moves to 09:00 local time.
+
+The policy rejects invalid, past, nonfinite, and post-due reminder times.
+
+The notification text is generic.
+
+It contains no learner, course, activity, receipt, or return identifier.
+
+It contains no selected-choice text, selected-choice check result, written
+reasoning, or value derived from written reasoning.
+
+`NotificationCoordinator.requestAndSchedule` is for an explicit learner enable
+action.
+
+It removes managed notifications, requests alert authorization, and adds one
+passive notification without sound.
+
+`NotificationCoordinator.reconcile` does not request authorization.
+
+It removes the managed notification in these conditions:
+
+- The preference is off.
+- No eligible scheduled return exists.
+- The reminder time is invalid.
+- Authorization does not permit scheduling.
+
+The coordinator serializes operations.
+
+It checks that its managed pending and delivered identifiers are gone after
+removal.
+
+`AppModel` starts reconciliation after a saved activity transition, a successful
+retry load, and an active scene.
+
+`AppModel` also starts the explicit enable flow when the learner turns the
+setting on.
+
+The source schedules a notification before it saves the resulting reminder
+preference.
+
+iOS controls notification delivery. This document records no delivery result.
+
+## Widget projection
+
+`AppModel` builds the shared return projection after successful local load,
+course start, activity submission, and active-scene refresh.
+
+It clears the projection when no current return exists or when the return is
+expired or completed.
+
+It asks `WidgetCenter` to reload timelines after a shared projection update or
+clear.
+
+The widget reads only `ForgeSharedStateStore`.
+
+`WidgetProjectionPolicy` maps unavailable, absent, corrupt, scheduled, open,
+due, expired, and stale inputs to generic content.
+
+The widget uses `.privacySensitive()`.
+
+Only open and due presentation states use `forge://focus`.
+
+All other presentation states use `forge://today`.
+
+The policy refreshes at the next relevant time boundary or within six hours.
+
+The widget source does not change learner state.
+
+The shared projection contains no selected-choice text, selected-choice check
+result, written reasoning, receipt metadata, or help-use data.
+
+## Intent and deep-link handling
+
+`ForgeDeepLink` accepts only these exact URLs.
+
+- `forge://today`
+- `forge://path`
+- `forge://evidence`
+- `forge://returns`
+- `forge://focus`
+- `forge://settings`
+
+The parser rejects URL paths, query values, and all other URL forms.
+
+`AppRootView` sends accepted URLs to `AppModel.route`.
+
+`AppModel` rejects a route during local recovery or local-data reset.
+
+The `today`, `path`, `evidence`, and `settings` destinations change navigation
+only.
+
+The `returns` destination selects Today. It does not open an activity directly.
+
+The `focus` destination calls `presentActivity`.
+
+`AppModel` still requires a started course and an eligible current activity.
+
+For a delayed return, only the open and due states are eligible for activity
+presentation.
+
+`ContinueLearningIntent` has no parameters.
+
+The App Intent writes the permitted pending-focus handoff token to the shared
+store.
+
+When the app becomes active, `AppModel` consumes and removes that token before
+it requests activity presentation.
+
+The handoff token is not learner state, course state, or evidence state.
+
+The App Intent cannot modify learner state, course state, evidence state, a
+receipt, or a delayed return.
+
+The App Intent does not bypass eligibility.
+
+## DEBUG-only UI test controls
+
+`PrivateStateStore.seedCorruptStateForUITesting()` exists inside `#if DEBUG`.
+
+`FORGEApp.swift` handles these launch controls inside `#if DEBUG`:
+
+- `-FORGEUITestingReset`
+- `-FORGEUITestingCorruptPrivateState`
+- `-FORGEUITestingClockStart <unix-time>`
+
+The reset control clears private state, shared state, and local notifications.
+
+The corrupt-state control writes invalid private state through the DEBUG helper.
+
+The clock control injects a monotonic test clock into `AppComposition`.
+
+The app-test source expects these controls and their DEBUG boundary.
+
+Do not add test launch controls to a Release path.
+
+Do not record a DEBUG test-control result until a fixed candidate runs the
+relevant tests.
+
+## XcodeGen workflow
+
+`ios/project.yml` is the project definition.
+
+Run XcodeGen only after an intended source-membership or `project.yml` change.
+
+```sh
+cd ios
+xcodegen generate
+```
+
+Review the generated `FORGE.xcodeproj` and shared-scheme diff before you keep
+it.
+
+Do not treat project generation as a build, test, signing, or release result.
+
+Use `ios/Scripts/verify.sh --static` for file, property-list, JSON, shell, and
+whitespace checks.
+
+Static verification does not compile source.
+
+Use this command for a candidate build without the source-only asset fallback.
+
+```sh
+FORGE_REQUIRE_ASSET_BUILD=1 ios/Scripts/verify.sh
+```
+
+Use an unused absolute result-bundle path for the configured simulator action.
+
+```sh
+FORGE_REQUIRE_SIMULATOR_TESTS=1 \
+FORGE_RESULT_BUNDLE_PATH="$PWD/FORGE-simulator-tests.xcresult" \
+ios/Scripts/verify.sh
+```
+
+The configured simulator command is not evidence until its result bundle is
+retained for a fixed candidate.
+
+## Verification and release separation
+
+### Source inventory
+
+State: `RECORDED_SOURCE_ONLY`.
+
+Required next evidence: a fixed candidate SHA and a clean-tree record.
+
+### Local execution
+
+The following gates are `UNVERIFIED`.
+
+- ForgeCore tests
+- App and extension build
+- App-test and UI-test compilation
+- Simulator tests
+- Reminder, widget, intent, route, and deletion behavior
+- Physical-device behavior
+- Accessibility conformance
+
+Bind each result to the fixed candidate.
+
+Keep the exact command, simulator runtime, result bundle, and candidate
+identity.
+
+### External release
+
+The following gates are `BLOCKED_EXTERNAL` and unresolved.
+
+- Privacy and support URLs
+- Apple team, identifiers, and signing
+- Export compliance
+- Archive creation and validation
+- TestFlight authority
+- App Store authority
+
+Require explicit authority and Apple records for the fixed archive.
+
+No source inventory or local result closes these external gates.
+
+Keep `NO_SHIP` until all required local and external gates have current
+evidence.

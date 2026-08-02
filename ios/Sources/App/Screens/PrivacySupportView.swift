@@ -22,248 +22,582 @@ struct PrivacySupportView: View {
   }
 
   var body: some View {
-    Form {
-      dataBoundarySection
-      storedDataSection
-      dataUseSection
-      systemPrivacySection
-      LocalDataDeletionSection(identifierPrefix: "privacy-support")
-      evidenceBoundarySection
-      publicLinksSection
+    ScrollView {
+      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.large) {
+        PrivacyOverviewSurface(courseTitle: model.courseTitle)
+
+        PrivacyEditorialSection(title: "Your privacy") {
+          StorageBoundarySurface()
+          Divider()
+          ReminderBoundarySurface()
+          Divider()
+          DataUseSurface()
+          Divider()
+          EvidenceBoundarySurface()
+        }
+
+        PrivacyEditorialSection(title: "Technical details and course limits") {
+          StorageProtectionSurface()
+          Divider()
+          WidgetAndShortcutSurface()
+          Divider()
+          CatalogLimitationsSurface(
+            courseTitle: model.courseTitle,
+            limitations: model.catalog.limitations
+          )
+        }
+
+        LocalDataDeletionSection(identifierPrefix: "privacy-support")
+        PublicLinksSurface(links: links)
+      }
+      .frame(maxWidth: ForgeDesign.Layout.contentMaxWidth)
+      .padding(.horizontal, ForgeDesign.Spacing.regular)
+      .padding(.vertical, ForgeDesign.Spacing.large)
+      .frame(maxWidth: .infinity)
     }
+    .background(ForgeDesign.canvas)
     .navigationTitle("Privacy and Support")
+    .toolbar(.hidden, for: .tabBar)
     .accessibilityIdentifier("privacy-support.screen")
   }
+}
 
-  private var dataBoundarySection: some View {
-    Section {
-      LabeledContent("Current boundary") {
-        Text("Device-local")
-      }
-      .accessibilityIdentifier("privacy-support.data-boundary")
+private struct PrivacyOverviewSurface: View {
+  let courseTitle: String
 
-      LabeledContent("Learner mode") {
-        Text(model.snapshot.mode.title)
-      }
-      .accessibilityIdentifier("privacy-support.learner-mode")
+  var body: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
+      UniversitySectionLabel(title: "Adult university course")
 
-      Text(model.snapshot.mode.dataBoundary)
-        .foregroundStyle(ForgeDesign.secondaryText)
+      Text(courseTitle)
+        .font(.title2.weight(.semibold))
+        .foregroundStyle(Color.primary)
         .fixedSize(horizontal: false, vertical: true)
 
       Text(
-        "FORGE stores its data in a device-local app group. It does not sync this data to FORGE servers."
+        "FORGE keeps course progress on this device. It does not issue a credential or establish institutional authority."
       )
-      .foregroundStyle(ForgeDesign.secondaryText)
+      .foregroundStyle(Color.secondary)
       .fixedSize(horizontal: false, vertical: true)
-    } header: {
-      Text("Data boundary")
-        .foregroundStyle(ForgeDesign.secondaryText)
     }
+    .accessibilityElement(children: .combine)
+    .accessibilityIdentifier("privacy-support.course")
+  }
+}
+
+private struct PrivacyEditorialSection<Content: View>: View {
+  let title: String
+
+  private let content: Content
+
+  init(
+    title: String,
+    @ViewBuilder content: () -> Content
+  ) {
+    self.title = title
+    self.content = content()
   }
 
-  private var storedDataSection: some View {
-    Section {
-      PrivacyDataCategoryRow(
-        title: "Learning setup",
-        detail: "Goal, learner mode, available time, study depth, and grown-up presence selection.",
-        identifier: "privacy-support.stored-data.setup"
-      )
-      PrivacyDataCategoryRow(
-        title: "Learning path",
-        detail: "Next action, path milestones, and delayed-return time.",
-        identifier: "privacy-support.stored-data.path"
-      )
-      PrivacyDataCategoryRow(
-        title: "Local evidence",
-        detail: "Evidence record titles, status, limitations, and recorded time.",
-        identifier: "privacy-support.stored-data.evidence"
-      )
-      PrivacyDataCategoryRow(
-        title: "App state",
-        detail: "Onboarding completion, reminder preference, and pending internal route.",
-        identifier: "privacy-support.stored-data.app-state"
-      )
-    } header: {
-      Text("Stored on this device")
-        .foregroundStyle(ForgeDesign.secondaryText)
+  var body: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
+      UniversitySectionLabel(title: title)
+
+      UniversitySurface {
+        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+          content
+        }
+      }
     }
   }
+}
 
-  private var dataUseSection: some View {
-    Section {
-      PrivacyStatusRow(
-        title: "Network activity",
-        value: "Off",
-        identifier: "privacy-support.network-state"
-      )
-      PrivacyStatusRow(
-        title: "Analytics",
-        value: "Off",
-        identifier: "privacy-support.analytics-state"
-      )
-      PrivacyStatusRow(
-        title: "Remote push",
-        value: "Off",
-        identifier: "privacy-support.remote-push-state"
-      )
+private struct StorageBoundarySurface: View {
+  var body: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+      UniversitySectionLabel(title: "What FORGE stores")
 
-      Text(
-        "This build has no network client, analytics service, or remote push registration."
-      )
-      .foregroundStyle(ForgeDesign.secondaryText)
-      .fixedSize(horizontal: false, vertical: true)
-    } header: {
-      Text("Network and data use")
-        .foregroundStyle(ForgeDesign.secondaryText)
-    }
-  }
-
-  private var systemPrivacySection: some View {
-    Section {
-      PrivacyDataCategoryRow(
-        title: "Widget",
+      PrivacyFactRow(
+        title: "Course progress and activity",
         detail:
-          "The widget shows whether a local delayed return is available. "
-          + "It does not show learner goals or evidence. "
-          + "iOS marks its content as privacy-sensitive.",
-        identifier: "privacy-support.widget-privacy"
+          "FORGE saves the current course and activity, selected-choice check results, "
+          + "activity progress, help use, receipt metadata, and delayed-return schedules locally. "
+          + "FORGE needs this data for durable learning progress."
       )
-      PrivacyDataCategoryRow(
-        title: "Notification",
+
+      PrivacyFactRow(
+        title: "Local receipt metadata",
         detail:
-          "If enabled, FORGE schedules one local return reminder. "
-          + "The notification contains no learner, goal, path, or evidence text.",
-        identifier: "privacy-support.notification-privacy"
+          "Each local receipt includes course, activity, package, limitation, help-use, and date "
+          + "metadata. It also includes the selected-choice check result."
       )
-    } header: {
-      Text("Widgets and notifications")
-        .foregroundStyle(ForgeDesign.secondaryText)
-    }
-  }
 
-  private var evidenceBoundarySection: some View {
-    Section {
-      Text(
-        "This center does not create, edit, upgrade, share, or make decisions from evidence. Local evidence remains read-only."
+      PrivacyFactRow(
+        title: "Written reasoning and selected choice",
+        detail:
+          "FORGE keeps written reasoning and values derived from written reasoning in memory while "
+          + "the activity is open and during submission. FORGE does not save them. "
+          + "FORGE uses selected-choice text to check the activity. FORGE does not save selected-choice text."
       )
-      .foregroundStyle(ForgeDesign.secondaryText)
-      .fixedSize(horizontal: false, vertical: true)
-      .accessibilityIdentifier("privacy-support.evidence-boundary")
-    } header: {
-      Text("Evidence boundary")
-        .foregroundStyle(ForgeDesign.secondaryText)
-    }
-  }
 
-  private var publicLinksSection: some View {
-    Section {
-      DistributionLinkRow(
-        title: "Privacy policy",
-        url: links.privacyPolicyURL,
-        identifier: "privacy-support.privacy-policy"
+      PrivacyFactRow(
+        title: "Planned returns and reminders",
+        detail:
+          "FORGE saves the delayed-return schedule locally. It stores when a return becomes available, "
+          + "when it is due, and whether it is completed. It also stores your reminder choice."
       )
-      DistributionLinkRow(
-        title: "Support",
-        url: links.supportURL,
-        identifier: "privacy-support.support"
-      )
-    } header: {
-      Text("Privacy policy and support")
-        .foregroundStyle(ForgeDesign.secondaryText)
-    } footer: {
-      Text(
-        "FORGE shows a public link only when the distribution configuration contains a valid HTTPS URL."
-      )
-      .foregroundStyle(ForgeDesign.secondaryText)
-      .fixedSize(horizontal: false, vertical: true)
     }
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("privacy-support.storage-boundary")
+  }
+}
+
+private struct StorageProtectionSurface: View {
+  var body: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+      UniversitySectionLabel(title: "Private app-data settings")
+
+      PrivacyFactRow(
+        title: "File and backup settings",
+        detail:
+          "FORGE asks iOS to apply file protection to private app data and exclude it from device backups."
+      )
+
+      PrivacyFactRow(
+        title: "After each save",
+        detail:
+          "FORGE checks that iOS reports the requested settings. If the check fails, FORGE reports a local-data problem."
+      )
+
+      PrivacyFactRow(
+        title: "Backup boundary",
+        detail:
+          "These checks do not show how a device backup handles the data."
+      )
+    }
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("privacy-support.storage-protection")
+  }
+}
+
+private struct ReminderBoundarySurface: View {
+  var body: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+      UniversitySectionLabel(title: "Local reminders")
+
+      PrivacyFactRow(
+        title: "Reminder text",
+        detail:
+          "The reminder text is general. It does not include course, activity, local receipt, or personal "
+          + "information. It does not include written reasoning, selected-choice text, a selected-choice "
+          + "check result, or a value derived from written reasoning."
+      )
+
+      PrivacyFactRow(
+        title: "Reminder limit",
+        detail:
+          "A reminder does not complete a planned return, create a learning record, or change course progress."
+      )
+    }
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("privacy-support.reminders")
+  }
+}
+
+private struct WidgetAndShortcutSurface: View {
+  var body: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+      UniversitySectionLabel(title: "Widget and shortcuts")
+
+      PrivacyFactRow(
+        title: "Widget values",
+        detail:
+          "The widget uses a general delayed-return state and time window. It includes whether a return "
+          + "is scheduled, open, or due. It also includes when the return becomes available, when it is due, "
+          + "when FORGE prepares the window, and when it expires."
+      )
+
+      PrivacyFactRow(
+        title: "Backup behavior",
+        detail:
+          "The shared time window can be included in a device backup. iOS controls this behavior."
+      )
+
+      PrivacyFactRow(
+        title: "Widget limit",
+        detail:
+          "The widget has only the return lifecycle and time boundaries. It does not include course or "
+          + "activity details, local receipts, or personal information. It does not include written reasoning, "
+          + "selected-choice text, a selected-choice check result, or a value derived from written reasoning. "
+          + "Opening it does not change course progress."
+      )
+
+      PrivacyFactRow(
+        title: "Shortcut limit",
+        detail:
+          "A shortcut can ask FORGE to open the local focus screen. It does not receive course or activity "
+          + "details, local receipts, or personal information. It does not receive written reasoning, "
+          + "selected-choice text, a selected-choice check result, or a value derived from written reasoning."
+      )
+    }
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("privacy-support.app-group")
+  }
+}
+
+private struct DataUseSurface: View {
+  var body: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+      UniversitySectionLabel(title: "Network and AI boundary")
+
+      PrivacyFactRow(
+        title: "Learning-data network and cloud sync",
+        detail:
+          "This course does not send learning data over a network. It does not sync learning data to cloud services."
+      )
+
+      PrivacyFactRow(
+        title: "AI service",
+        detail: "This course does not use an AI service."
+      )
+
+      PrivacyFactRow(
+        title: "Public links",
+        detail:
+          "Privacy and support links open in your device browser. FORGE does not attach learning data to those links."
+      )
+    }
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("privacy-support.data-use")
+  }
+}
+
+private struct EvidenceBoundarySurface: View {
+  var body: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+      UniversitySectionLabel(title: "Local learning record boundary")
+
+      PrivacyFactRow(
+        title: "Scope",
+        detail: "Local learning records remain on this device. They are not official records."
+      )
+
+      PrivacyFactRow(
+        title: "Limit",
+        detail:
+          "A local learning record does not issue a credential, establish institutional authority, or make a course decision."
+      )
+    }
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("privacy-support.evidence-boundary")
+  }
+}
+
+private struct CatalogLimitationsSurface: View {
+  let courseTitle: String
+  let limitations: [CatalogLimitation]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+      UniversitySectionLabel(title: "Course limitations")
+
+      Text("This course lists these limits for \(courseTitle).")
+        .foregroundStyle(Color.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+
+      if limitations.isEmpty {
+        Text("This course has no listed limitations.")
+          .foregroundStyle(Color.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+      } else {
+        ForEach(limitations, id: \.id) { limitation in
+          Label {
+            Text(limitation.statement)
+              .fixedSize(horizontal: false, vertical: true)
+          } icon: {
+            Image(systemName: "exclamationmark.triangle")
+              .accessibilityHidden(true)
+          }
+          .foregroundStyle(Color.primary)
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel("Course limitation")
+          .accessibilityValue(limitation.statement)
+        }
+      }
+    }
+    .accessibilityElement(children: .contain)
+    .accessibilityIdentifier("privacy-support.catalog-limitations")
   }
 }
 
 struct LocalDataDeletionSection: View {
   @Environment(AppModel.self) private var model
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var isClearDataConfirmationPresented = false
+  @AccessibilityFocusState private var clearDataFocus: ClearDataFocus?
 
   let identifierPrefix: String
 
+  private enum ClearDataFocus: Hashable {
+    case clearLocalData
+    case confirmationHeading
+  }
+
   var body: some View {
-    Section {
-      Button("Clear local learning data", role: .destructive) {
-        isClearDataConfirmationPresented = true
+    UniversitySurface {
+      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+        UniversitySectionLabel(title: "Delete local data")
+
+        if isClearDataConfirmationPresented {
+          clearDataConfirmation
+        } else {
+          clearDataAction
+        }
+
+        if model.isLocalDataResetRunning {
+          ProgressView("Clearing local data")
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityIdentifier("\(identifierPrefix).clear-local-data-progress")
+        }
+
+        if let statusMessage = model.localDataResetStatusMessage {
+          Text(statusMessage)
+            .foregroundStyle(Color.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("\(identifierPrefix).clear-local-data-status")
+        }
       }
-      .disabled(
-        model.isLocalDataResetRunning
-          || model.isReminderOperationRunning
+    }
+    .accessibilityIdentifier("\(identifierPrefix).local-data")
+    .onChange(
+      of: model.localDataResetStatusMessage,
+      initial: false,
+      announceStatusChange
+    )
+    .onChange(of: isClearDataConfirmationPresented) { _, isPresented in
+      if isPresented {
+        clearDataFocus = .confirmationHeading
+        AccessibilityNotification.Announcement(
+          "Clear local data confirmation. Review the effect, then choose Cancel or Clear local data."
+        ).post()
+      } else if !model.isLocalDataResetRunning {
+        clearDataFocus = .clearLocalData
+      } else {
+        clearDataFocus = nil
+      }
+    }
+  }
+
+  private var clearDataAction: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+      Text(
+        "FORGE tries to clear saved learning data, the shared return window and pending focus request, "
+          + "and local reminders. If a step fails, FORGE shows a recovery report."
       )
+      .foregroundStyle(Color.secondary)
+      .fixedSize(horizontal: false, vertical: true)
+
+      Button(role: .destructive, action: presentClearDataConfirmation) {
+        Label("Clear local learning data", systemImage: "trash")
+          .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .buttonStyle(.bordered)
+      .controlSize(.large)
+      .tint(ForgeDesign.warningText)
+      .disabled(model.isLocalDataResetRunning)
+      .accessibilityLabel("Clear local learning data")
       .accessibilityHint(
-        "Shows a confirmation before local learning data is deleted."
+        "Shows the second confirmation step. FORGE does not clear local data yet."
       )
       .accessibilityIdentifier("\(identifierPrefix).clear-local-data")
+      .accessibilityFocused($clearDataFocus, equals: .clearLocalData)
+    }
+  }
 
-      if model.isLocalDataResetRunning {
-        ProgressView("Clearing local data")
-      }
-    } header: {
-      Text("Local data")
+  private var clearDataConfirmation: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+      clearDataConfirmationHeader
+
+      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
+        Text("What will happen")
+          .font(.headline)
+          .accessibilityAddTraits(.isHeader)
+
+        Text(
+          "FORGE will try to clear saved learning data, the shared return window and pending focus request, "
+            + "and local reminders on this device. FORGE cannot restore cleared local learning data."
+        )
         .foregroundStyle(ForgeDesign.secondaryText)
-        .accessibilityIdentifier("\(identifierPrefix).local-data-header-visual")
-    } footer: {
+        .fixedSize(horizontal: false, vertical: true)
+
+        Text("If a step fails, FORGE shows a recovery report.")
+          .foregroundStyle(ForgeDesign.secondaryText)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(ForgeDesign.Spacing.regular)
+      .background(ForgeDesign.raisedSurface)
+      .clipShape(
+        RoundedRectangle(
+          cornerRadius: ForgeDesign.Radius.inset,
+          style: .continuous
+        )
+      )
+      .overlay {
+        RoundedRectangle(
+          cornerRadius: ForgeDesign.Radius.inset,
+          style: .continuous
+        )
+        .stroke(ForgeDesign.hairline, lineWidth: 1)
+      }
+
+      VStack(spacing: ForgeDesign.Spacing.small) {
+        Button("Cancel", action: dismissClearDataConfirmation)
+          .frame(maxWidth: .infinity, minHeight: 48)
+          .buttonStyle(.bordered)
+          .controlSize(.large)
+          .tint(ForgeDesign.tabSelection)
+          .disabled(model.isLocalDataResetRunning)
+          .accessibilityLabel("Cancel local data clear")
+          .accessibilityHint("Returns to local data options. FORGE does not clear local data.")
+          .accessibilityIdentifier("\(identifierPrefix).cancel-clear-local-data")
+
+        Button("Clear local data", role: .destructive, action: clearLocalData)
+          .frame(maxWidth: .infinity, minHeight: 48)
+          .buttonStyle(.bordered)
+          .controlSize(.large)
+          .tint(ForgeDesign.warningText)
+          .disabled(model.isLocalDataResetRunning)
+          .accessibilityLabel("Clear local data")
+          .accessibilityHint(
+            "Clears local learning data. FORGE cannot restore cleared local learning data."
+          )
+          .accessibilityIdentifier("\(identifierPrefix).confirm-clear-local-data")
+      }
+    }
+    .accessibilityIdentifier("\(identifierPrefix).clear-local-data-confirmation")
+  }
+
+  private var clearDataConfirmationHeader: some View {
+    Group {
+      if dynamicTypeSize.isAccessibilitySize {
+        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+          clearDataConfirmationSymbol
+          clearDataConfirmationHeaderCopy
+        }
+      } else {
+        HStack(alignment: .top, spacing: ForgeDesign.Spacing.regular) {
+          clearDataConfirmationSymbol
+          clearDataConfirmationHeaderCopy
+        }
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .fixedSize(horizontal: false, vertical: true)
+  }
+
+  private var clearDataConfirmationSymbol: some View {
+    Image(systemName: "trash")
+      .font(.title2.weight(.semibold))
+      .foregroundStyle(ForgeDesign.warningText)
+      .frame(width: 48, height: 48)
+      .background(ForgeDesign.accentWash, in: Circle())
+      .accessibilityHidden(true)
+  }
+
+  private var clearDataConfirmationHeaderCopy: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
+      Text("Clear local data?")
+        .font(.title2.weight(.semibold))
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityFocused($clearDataFocus, equals: .confirmationHeading)
+
       Text(
-        "This deletes the goal, setup, path, local evidence, pending route, and reminder preference from this device."
+        "This is the second step. Choose Clear local data only if you intend to remove the data."
       )
       .foregroundStyle(ForgeDesign.secondaryText)
       .fixedSize(horizontal: false, vertical: true)
-      .accessibilityIdentifier("\(identifierPrefix).local-data-footer-visual")
     }
-    .alert(
-      "Clear local learning data?",
-      isPresented: $isClearDataConfirmationPresented
-    ) {
-      Button("Cancel", role: .cancel) {}
-      Button("Clear data", role: .destructive) {
-        model.clearLocalData()
-      }
-      .accessibilityIdentifier("\(identifierPrefix).confirm-clear-local-data")
-    } message: {
-      Text(
-        "This action deletes local learning data and scheduled reminders. You cannot undo this action."
-      )
-      .fixedSize(horizontal: false, vertical: true)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .layoutPriority(1)
+  }
+
+  private func presentClearDataConfirmation() {
+    isClearDataConfirmationPresented = true
+  }
+
+  private func dismissClearDataConfirmation() {
+    isClearDataConfirmationPresented = false
+  }
+
+  private func clearLocalData() {
+    isClearDataConfirmationPresented = false
+    model.clearLocalData()
+  }
+
+  private func announceStatusChange(from oldStatus: String?, to newStatus: String?) {
+    guard oldStatus != newStatus, let newStatus, !newStatus.isEmpty else {
+      return
     }
+
+    AccessibilityNotification.Announcement(newStatus).post()
   }
 }
 
-private struct PrivacyDataCategoryRow: View {
+private struct PublicLinksSurface: View {
+  let links: PrivacySupportLinks
+
+  var body: some View {
+    UniversitySurface {
+      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+        UniversitySectionLabel(title: "Privacy policy and support")
+
+        DistributionLinkRow(
+          title: "Privacy policy",
+          url: links.privacyPolicyURL,
+          identifier: "privacy-support.privacy-policy"
+        )
+
+        DistributionLinkRow(
+          title: "Support",
+          url: links.supportURL,
+          identifier: "privacy-support.support"
+        )
+
+        Text(
+          "FORGE shows a link only when a usable public web address is available. "
+            + "If it is not available, FORGE shows Not available yet. A shown link can still be unavailable."
+        )
+        .font(.footnote)
+        .foregroundStyle(Color.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+      }
+    }
+    .accessibilityIdentifier("privacy-support.public-links")
+  }
+}
+
+private struct PrivacyFactRow: View {
   let title: String
   let detail: String
-  let identifier: String
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 4) {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
       Text(title)
-        .font(.body.weight(.medium))
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(Color.primary)
         .fixedSize(horizontal: false, vertical: true)
-        .accessibilityIdentifier("privacy-support.category-title-visual")
+
       Text(detail)
-        .font(.footnote)
-        .foregroundStyle(ForgeDesign.secondaryText)
+        .font(.body)
+        .foregroundStyle(Color.secondary)
         .fixedSize(horizontal: false, vertical: true)
-        .accessibilityIdentifier("privacy-support.category-detail-visual")
     }
-    .accessibilityElement(children: .combine)
-    .accessibilityIdentifier(identifier)
-  }
-}
-
-private struct PrivacyStatusRow: View {
-  let title: String
-  let value: String
-  let identifier: String
-
-  var body: some View {
-    LabeledContent(title, value: value)
-      .accessibilityIdentifier(identifier)
+    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(title)
+    .accessibilityValue(detail)
   }
 }
 
@@ -276,13 +610,19 @@ private struct DistributionLinkRow: View {
     if let url {
       Link(destination: url) {
         Label(title, systemImage: "arrow.up.right.square")
+          .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+          .contentShape(Rectangle())
+          .fixedSize(horizontal: false, vertical: true)
       }
       .accessibilityIdentifier("\(identifier).link")
       .accessibilityHint("Opens the public \(title.lowercased()) in a browser.")
     } else {
-      LabeledContent(title, value: "Not configured for distribution")
-        .accessibilityIdentifier("\(identifier).not-configured")
-        .accessibilityHint("No public \(title.lowercased()) link is configured.")
+      PrivacyFactRow(
+        title: title,
+        detail: "Not available yet"
+      )
+      .accessibilityIdentifier("\(identifier).not-configured")
+      .accessibilityHint("No public \(title.lowercased()) link is available.")
     }
   }
 }
@@ -323,12 +663,13 @@ private struct PrivacySupportLinks {
   .environment(AppModel.preview())
 }
 
-#Preview("Privacy and Support — Not configured") {
+#Preview("Privacy and Support — Accessibility XL") {
   NavigationStack {
     PrivacySupportView(
-      privacyPolicyValue: nil,
-      supportValue: nil
+      privacyPolicyValue: "https://forgelearning.org/privacy",
+      supportValue: "https://forgelearning.org/support"
     )
   }
   .environment(AppModel.preview())
+  .environment(\.dynamicTypeSize, .accessibility3)
 }

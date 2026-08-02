@@ -3,248 +3,333 @@ import SwiftUI
 
 struct EvidenceView: View {
   @Environment(AppModel.self) private var model
-  @ScaledMetric(relativeTo: .body) private var recordMinimumHeight: CGFloat = 44
+  @State private var expandedReceiptIDs = Set<EvidenceID>()
+  @ScaledMetric(relativeTo: .body) private var receiptMinimumHeight: CGFloat = 56
 
   var body: some View {
-    List {
-      Section {
-        EvidenceBoundaryRow(
-          title: "Local fixture records",
-          detail:
-            "This screen shows local fixture records only. It does not show verified evidence or provider evidence.",
-          systemImage: "doc.text"
-        )
+    let receipts = sortedReceipts
 
-        EvidenceBoundaryRow(
-          title: "No authority or efficacy proof",
-          detail:
-            "A local fixture cannot prove a participant action, a signed receipt, release approval, production status, or learning efficacy.",
-          systemImage: "hand.raised"
-        )
+    ScrollView {
+      LazyVStack(alignment: .leading, spacing: ForgeDesign.Spacing.large) {
+        receiptBoundary
+        EvidencePackageLimitations(limitations: model.catalog.limitations)
 
-        EvidenceBoundaryRow(
-          title: "Device-local and read-only",
-          detail:
-            "This build stores these records on this device. This screen does not share, publish, or upgrade them.",
-          systemImage: "lock"
-        )
-      } header: {
-        Text("Evidence boundary")
-          .foregroundStyle(ForgeDesign.secondaryText)
+        if receipts.isEmpty {
+          EvidenceEmptyState(courseTitle: model.courseTitle)
+        } else {
+          receiptList(receipts)
+        }
+      }
+      .frame(maxWidth: ForgeDesign.Layout.contentMaxWidth, alignment: .leading)
+      .padding(.horizontal, ForgeDesign.Spacing.regular)
+      .padding(.vertical, ForgeDesign.Spacing.large)
+      .frame(maxWidth: .infinity)
+    }
+    .background(ForgeDesign.canvas)
+    .navigationTitle("Evidence")
+  }
+
+  private var sortedReceipts: [LocalEvidenceReceipt] {
+    model.learnerState.evidence.sorted { left, right in
+      if left.recordedAt == right.recordedAt {
+        return left.id.rawValue < right.id.rawValue
       }
 
-      if model.snapshot.evidence.isEmpty {
-        ContentUnavailableView(
-          "No local fixture records",
-          systemImage: "doc.text.magnifyingglass",
-          description: Text("Completed work does not create verified evidence automatically.")
-        )
-      } else {
-        Section {
-          ForEach(model.snapshot.evidence) { record in
-            NavigationLink {
-              EvidenceRecordView(record: record)
-            } label: {
-              EvidenceRecordRow(record: record)
-            }
-            .frame(minHeight: recordMinimumHeight)
-            .contentShape(Rectangle())
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(record.title)
-            .accessibilityValue(
-              "Local fixture. \(record.status). Recorded \(record.recordedAt.formatted(date: .long, time: .omitted))"
+      return left.recordedAt > right.recordedAt
+    }
+  }
+
+  private var receiptBoundary: some View {
+    UniversitySurface {
+      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+        UniversitySectionLabel(title: "Adult university course receipts")
+
+        ViewThatFits(in: .horizontal) {
+          HStack(alignment: .firstTextBaseline, spacing: ForgeDesign.Spacing.small) {
+            UniversityStatusBadge(
+              label: "Local scope",
+              symbolName: "lock.fill",
+              colorRole: .information
             )
-            .accessibilityHint(
-              "Opens local record details. This record is not verified or provider evidence."
-            )
-            .privacySensitive()
+            Text("Local-only and unsigned")
+              .font(.subheadline.weight(.semibold))
+              .foregroundStyle(ForgeDesign.secondaryText)
           }
-        } header: {
-          Text("Local fixture records")
-            .foregroundStyle(ForgeDesign.secondaryText)
-        } footer: {
-          Text(
-            "Each record states what remains untested. A local fixture does not prove a verified result."
+
+          VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
+            UniversityStatusBadge(
+              label: "Local scope",
+              symbolName: "lock.fill",
+              colorRole: .information
+            )
+            Text("Local-only and unsigned")
+              .font(.subheadline.weight(.semibold))
+              .foregroundStyle(ForgeDesign.secondaryText)
+          }
+        }
+
+        Text(model.courseTitle)
+          .font(.title3.weight(.semibold))
+          .fixedSize(horizontal: false, vertical: true)
+          .accessibilityAddTraits(.isHeader)
+
+        Text(
+          "These local receipt fields are for an adult university course on this device. They do not publish, share, change, or issue a credential."
+        )
+        .font(.subheadline)
+        .foregroundStyle(ForgeDesign.secondaryText)
+        .fixedSize(horizontal: false, vertical: true)
+      }
+      .accessibilityElement(children: .contain)
+    }
+    .accessibilityIdentifier("evidence.local-boundary")
+  }
+
+  private func receiptList(_ receipts: [LocalEvidenceReceipt]) -> some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+      UniversitySectionLabel(title: "Receipt list")
+
+      LazyVStack(spacing: ForgeDesign.Spacing.regular) {
+        ForEach(receipts, id: \.id) { receipt in
+          EvidenceReceiptRow(
+            receipt: receipt,
+            catalog: model.catalog,
+            courseTitle: model.courseTitle,
+            isExpanded: expansionBinding(for: receipt.id)
           )
-          .foregroundStyle(ForgeDesign.secondaryText)
-          .accessibilityIdentifier("evidence.records-footer-visual")
+          .frame(minHeight: receiptMinimumHeight)
         }
       }
     }
-    .navigationTitle("Evidence")
-    .toolbar {
-      SettingsToolbar()
+    .accessibilityIdentifier("evidence.record-list")
+  }
+
+  private func expansionBinding(for receiptID: EvidenceID) -> Binding<Bool> {
+    Binding {
+      expandedReceiptIDs.contains(receiptID)
+    } set: { isExpanded in
+      if isExpanded {
+        expandedReceiptIDs.insert(receiptID)
+      } else {
+        expandedReceiptIDs.remove(receiptID)
+      }
     }
   }
 }
 
-private struct EvidenceRecordRow: View {
-  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-  let record: ForgeEvidenceRecord
+private struct EvidenceReceiptRow: View {
+  let receipt: LocalEvidenceReceipt
+  let catalog: ReleasedCatalogSnapshot
+  let courseTitle: String
+  @Binding var isExpanded: Bool
 
   var body: some View {
+    UniversitySurface {
+      DisclosureGroup(isExpanded: $isExpanded) {
+        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+          Divider()
+          receiptFields
+        }
+        .padding(.top, ForgeDesign.Spacing.tight)
+      } label: {
+        receiptSummary
+      }
+      .tint(ForgeDesign.navigationCommitment)
+      .accessibilityIdentifier(
+        "evidence.receipt-disclosure.\(receipt.id.rawValue)"
+      )
+      .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+      .accessibilityHint(
+        isExpanded
+          ? "Hides local receipt fields."
+          : "Shows local receipt fields."
+      )
+    }
+    .privacySensitive()
+    .accessibilityIdentifier("evidence.receipt.\(receipt.id.rawValue)")
+  }
+
+  private var receiptSummary: some View {
     VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
-      Text(record.title)
+      ViewThatFits(in: .horizontal) {
+        HStack(alignment: .firstTextBaseline, spacing: ForgeDesign.Spacing.small) {
+          scopeLabel
+          Spacer(minLength: ForgeDesign.Spacing.small)
+          recordedTime
+        }
+
+        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
+          scopeLabel
+          recordedTime
+        }
+      }
+
+      Text(activityTitle)
         .font(.headline)
         .fixedSize(horizontal: false, vertical: true)
 
-      localFixtureLabel
-
-      Text(record.status)
+      Text(validatorResultTitle(receipt.validatorResult))
         .font(.subheadline.weight(.semibold))
-        .foregroundStyle(ForgeDesign.secondaryText)
+        .foregroundStyle(resultForeground)
         .fixedSize(horizontal: false, vertical: true)
 
-      Text(record.recordedAt, format: .dateTime.day().month().year())
-        .font(.caption)
+      Text(activityKindTitle(receipt.activityKind))
+        .font(.subheadline.weight(.semibold))
         .foregroundStyle(ForgeDesign.secondaryText)
         .fixedSize(horizontal: false, vertical: true)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .privacySensitive()
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("Local-only unsigned receipt for \(activityTitle)")
+    .accessibilityValue(
+      "Check result: \(validatorResultTitle(receipt.validatorResult)). Activity kind: \(activityKindTitle(receipt.activityKind)). Recorded time: \(recordedTimeValue)."
+    )
   }
 
-  @ViewBuilder
-  private var localFixtureLabel: some View {
-    Group {
-      if dynamicTypeSize.isAccessibilitySize {
-        Text("Local fixture")
-      } else {
-        Label("Local fixture", systemImage: "doc.text")
-      }
-    }
-    .font(.caption.weight(.semibold))
-    .foregroundStyle(ForgeDesign.secondaryText)
-    .fixedSize(horizontal: false, vertical: true)
-  }
-}
-
-private struct EvidenceRecordView: View {
-  let record: ForgeEvidenceRecord
-
-  var body: some View {
-    List {
-      Section {
-        Text(record.title)
-          .font(.headline)
-          .fixedSize(horizontal: false, vertical: true)
-          .privacySensitive()
-          .accessibilityAddTraits(.isHeader)
-
-        EvidenceField(label: "Record type", value: "Local fixture")
-          .privacySensitive()
-
-        EvidenceField(label: "Local status", value: record.status)
-          .privacySensitive()
-
-        EvidenceField(
-          label: "Recorded on this device",
-          value: record.recordedAt.formatted(date: .long, time: .omitted)
-        )
-        .privacySensitive()
-      } header: {
-        Text("Record")
-          .foregroundStyle(ForgeDesign.secondaryText)
-      }
-
-      Section {
-        Text(record.limitation)
-          .fixedSize(horizontal: false, vertical: true)
-          .privacySensitive()
-      } header: {
-        Text("Limits")
-          .foregroundStyle(ForgeDesign.secondaryText)
-      }
-
-      Section {
-        EvidenceBoundaryRow(
-          title: "Not verified or provider evidence",
-          detail:
-            "This local fixture does not show a provider event, participant activity, a signed receipt, release approval, production status, or learning efficacy.",
-          systemImage: "hand.raised"
-        )
-
-        EvidenceBoundaryRow(
-          title: "Read-only local record",
-          detail:
-            "This view does not upgrade, publish, or make a decision from this local fixture.",
-          systemImage: "lock"
-        )
-      } header: {
-        Text("Evidence boundary")
-          .foregroundStyle(ForgeDesign.secondaryText)
-      }
-    }
-    .navigationTitle("Evidence record")
-    .navigationBarTitleDisplayMode(.inline)
-  }
-}
-
-private struct EvidenceBoundaryRow: View {
-  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-  let title: String
-  let detail: String
-  let systemImage: String
-
-  var body: some View {
-    Group {
-      if dynamicTypeSize.isAccessibilitySize {
-        VStack(alignment: .leading, spacing: ForgeDesign.Spacing.small) {
-          boundaryIcon
-          boundaryCopy
-        }
-      } else {
-        HStack(alignment: .top, spacing: ForgeDesign.Spacing.small) {
-          boundaryIcon
-          boundaryCopy
-        }
-      }
-    }
-    .accessibilityElement(children: .combine)
-  }
-
-  private var boundaryIcon: some View {
-    Image(systemName: systemImage)
-      .font(.title3)
-      .foregroundStyle(.tint)
-      .frame(width: 28, height: 44)
+  private var scopeLabel: some View {
+    Label("Local-only unsigned", systemImage: "lock.fill")
+      .font(.caption.weight(.semibold))
+      .foregroundStyle(ForgeDesign.neutralInformation)
+      .fixedSize(horizontal: false, vertical: true)
       .accessibilityHidden(true)
   }
 
-  private var boundaryCopy: some View {
-    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
-      Text(title)
-        .font(.subheadline.weight(.semibold))
-        .fixedSize(horizontal: false, vertical: true)
+  private var recordedTime: some View {
+    Text(recordedTimeValue)
+      .font(.caption.monospacedDigit())
+      .foregroundStyle(ForgeDesign.secondaryText)
+      .fixedSize(horizontal: false, vertical: true)
+      .accessibilityHidden(true)
+  }
 
-      Text(detail)
-        .font(.footnote)
-        .foregroundStyle(ForgeDesign.secondaryText)
-        .fixedSize(horizontal: false, vertical: true)
+  private var receiptFields: some View {
+    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+      UniversitySectionLabel(title: "Receipt fields")
+
+      UniversityMetadataRow(label: "Scope", value: "Local-only unsigned")
+      UniversityMetadataRow(label: "Course", value: courseTitle)
+      UniversityMetadataRow(label: "Activity", value: activityTitle)
+      UniversityMetadataRow(label: "Capability", value: capabilityTitle)
+      UniversityMetadataRow(
+        label: "Activity kind",
+        value: activityKindTitle(receipt.activityKind)
+      )
+      UniversityMetadataRow(
+        label: "Check result",
+        value: validatorResultTitle(receipt.validatorResult)
+      )
+      UniversityMetadataRow(
+        label: "Assistance references",
+        value: "\(receipt.assistanceIDs.count)"
+      )
+      UniversityMetadataRow(label: "Recorded time", value: recordedTimeValue)
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
+  private var recordedTimeValue: String {
+    receipt.recordedAt.formatted(date: .long, time: .shortened)
+  }
+
+  private var resultForeground: Color {
+    switch receipt.validatorResult {
+    case .demonstrated:
+      ForgeDesign.recordedLocalCheck
+    case .notDemonstrated:
+      ForgeDesign.failedCheck
+    }
+  }
+
+  private var activityTitle: String {
+    catalog.activities.first(where: { $0.id == receipt.activityID })?.prompt
+      ?? "Course activity"
+  }
+
+  private var capabilityTitle: String {
+    catalog.capabilities.first(where: { $0.id == receipt.capabilityID })?.title
+      ?? "Course capability"
   }
 }
 
-private struct EvidenceField: View {
-  let label: String
-  let value: String
+private struct EvidencePackageLimitations: View {
+  let limitations: [CatalogLimitation]
 
   var body: some View {
-    VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
-      Text(label)
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(ForgeDesign.secondaryText)
+    UniversitySurface {
+      VStack(alignment: .leading, spacing: ForgeDesign.Spacing.regular) {
+        UniversitySectionLabel(title: "Package limitations")
 
-      Text(value)
-        .font(.body)
-        .fixedSize(horizontal: false, vertical: true)
+        if limitations.isEmpty {
+          UniversityMetadataRow(label: "Package limitations", value: "None listed")
+        } else {
+          ForEach(limitations, id: \.id) { limitation in
+            VStack(alignment: .leading, spacing: ForgeDesign.Spacing.tight) {
+              Text(limitationKindTitle(limitation.kind))
+                .font(.subheadline.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+
+              Text(limitation.statement)
+                .font(.subheadline)
+                .foregroundStyle(ForgeDesign.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(limitationKindTitle(limitation.kind))
+                .accessibilityValue(limitation.statement)
+            }
+          }
+        }
+      }
     }
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel(label)
-    .accessibilityValue(value)
+    .accessibilityIdentifier("evidence.package-limitations")
+  }
+}
+
+private struct EvidenceEmptyState: View {
+  let courseTitle: String
+
+  var body: some View {
+    UniversitySurface {
+      ContentUnavailableView(
+        "No local receipts",
+        systemImage: "doc.text.magnifyingglass",
+        description: Text("This device has no local receipts for \(courseTitle).")
+      )
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .fixedSize(horizontal: false, vertical: true)
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel("No local receipts")
+      .accessibilityValue("This device has no local receipts for \(courseTitle).")
+      .accessibilityAddTraits(.isHeader)
+      .accessibilityIdentifier("evidence.empty-state")
+    }
+  }
+}
+
+private func activityKindTitle(_ kind: ActivityKind) -> String {
+  switch kind {
+  case .practice:
+    "Practice"
+  case .proof:
+    "Independent check"
+  case .delayedReturn:
+    "Delayed return"
+  }
+}
+
+private func validatorResultTitle(_ result: ValidatorResult) -> String {
+  switch result {
+  case .demonstrated:
+    "Recorded local check"
+  case .notDemonstrated:
+    "Check not passed"
+  }
+}
+
+private func limitationKindTitle(_ kind: LimitationKind) -> String {
+  switch kind {
+  case .provenance:
+    "Provenance limit"
+  case .claimBoundary:
+    "Claim boundary"
   }
 }
 
@@ -255,10 +340,10 @@ private struct EvidenceField: View {
   .environment(AppModel.preview())
 }
 
-#Preview("Evidence — Large Type") {
+#Preview("Evidence — Accessibility XL") {
   NavigationStack {
     EvidenceView()
   }
   .environment(AppModel.preview())
-  .environment(\.dynamicTypeSize, .accessibility2)
+  .environment(\.dynamicTypeSize, .accessibility5)
 }

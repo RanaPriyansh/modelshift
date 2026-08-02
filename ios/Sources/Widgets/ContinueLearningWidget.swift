@@ -3,95 +3,133 @@ import Foundation
 import SwiftUI
 import WidgetKit
 
-private enum ContinueLearningRoute {
-  static let focus = URL(string: "forge://focus")
-}
+private struct ContinueLearningWidgetPresentation {
+  let copy: WidgetProjectionPolicy.Copy
+  let symbol: String
+  let route: URL?
+  let accessibilityHint: String
+  let nextRefreshDate: Date
 
-private enum ContinueLearningState {
-  case placeholder
-  case snapshot
-  case delayedReturn
-  case noData
-  case corruptedData
+  init(_ presentation: WidgetProjectionPolicy.Presentation) {
+    copy = presentation.copy
+    symbol = presentation.symbol
+    route = Self.routeURL(for: presentation.route)
+    accessibilityHint = presentation.copy.accessibilityHint
+    nextRefreshDate = presentation.nextRefreshDate
+  }
 
-  var accessibilityLabel: String {
-    switch self {
-    case .placeholder:
-      "FORGE. Widget content is loading."
-    case .snapshot:
-      "FORGE. Widget preview."
-    case .delayedReturn:
-      "FORGE. A delayed return is available. Open FORGE."
-    case .noData:
-      "FORGE. No delayed return is available. Open FORGE."
-    case .corruptedData:
-      "FORGE. Delayed return is unavailable. Open FORGE."
+  init(
+    copy: WidgetProjectionPolicy.Copy,
+    symbol: String,
+    nextRefreshDate: Date
+  ) {
+    self.copy = copy
+    self.symbol = symbol
+    route = Self.routeURL(for: .today)
+    accessibilityHint = copy.accessibilityHint
+    self.nextRefreshDate = nextRefreshDate
+  }
+
+  private static func routeURL(
+    for route: WidgetProjectionPolicy.Route
+  ) -> URL? {
+    let closedRoute: WidgetProjectionPolicy.Route
+
+    switch route {
+    case .today:
+      closedRoute = .today
+    case .focus:
+      closedRoute = .focus
+    @unknown default:
+      closedRoute = .today
     }
-  }
-}
 
-private struct SharedSnapshotProbe: Decodable {
-  struct DueReturn: Decodable {
-    let dueAt: Date
+    return URL(string: closedRoute.rawValue)
+      ?? URL(string: WidgetProjectionPolicy.Route.today.rawValue)
   }
 
-  let dueReturn: DueReturn?
+  static func placeholder(at date: Date) -> Self {
+    Self(
+      copy: WidgetProjectionPolicy.Copy(
+        status: "Loading",
+        title: "FORGE learning space",
+        detail: "Loading local return status",
+        accessibilityLabel: "FORGE. Widget content is loading.",
+        accessibilityHint: "Opens the local FORGE Today view."
+      ),
+      symbol: "circle.dotted",
+      nextRefreshDate: date.addingTimeInterval(
+        WidgetProjectionPolicy.maximumRefreshInterval
+      )
+    )
+  }
+
+  static func snapshot(at date: Date) -> Self {
+    Self(
+      copy: WidgetProjectionPolicy.Copy(
+        status: "Preview",
+        title: "FORGE learning space",
+        detail: "Local status is hidden",
+        accessibilityLabel: "FORGE. Widget preview.",
+        accessibilityHint: "Opens the local FORGE Today view."
+      ),
+      symbol: "eye",
+      nextRefreshDate: date.addingTimeInterval(
+        WidgetProjectionPolicy.maximumRefreshInterval
+      )
+    )
+  }
 }
 
 private enum ContinueLearningSharedState {
-  private static let snapshotKey = "forge.snapshot.v1"
-  private static let maximumSnapshotByteCount = 64 * 1024
+  static func input() -> WidgetProjectionPolicy.Input {
+    do {
+      let reader = try ForgeSharedProjectionReader()
+      guard let projection = try reader.readProjection() else {
+        return .noData
+      }
 
-  static func load() -> ContinueLearningState {
-    guard let defaults = UserDefaults(suiteName: ForgeSharedStateStore.appGroupIdentifier)
-    else {
-      return .noData
+      return .projection(projection)
+    } catch ForgeSharedStateStoreError.lockAcquisitionTimedOut {
+      return .transientlyUnavailableStore
+    } catch ForgeSharedStateStoreError.corruptProjection,
+      ForgeSharedStateStoreError.oversizedProjection
+    {
+      return .corruptData
+    } catch {
+      return .unavailableStore
     }
-
-    guard let snapshotData = defaults.data(forKey: snapshotKey) else {
-      return .noData
-    }
-
-    guard snapshotData.count <= maximumSnapshotByteCount else {
-      return .corruptedData
-    }
-
-    guard
-      let snapshot = try? JSONDecoder().decode(
-        SharedSnapshotProbe.self,
-        from: snapshotData
-      )
-    else {
-      return .corruptedData
-    }
-
-    guard let dueAt = snapshot.dueReturn?.dueAt else {
-      return .noData
-    }
-
-    guard dueAt.timeIntervalSinceReferenceDate.isFinite else {
-      return .corruptedData
-    }
-
-    return dueAt > .now ? .delayedReturn : .noData
   }
 }
 
 private struct ContinueLearningEntry: TimelineEntry {
   let date: Date
-  let state: ContinueLearningState
+  let presentation: ContinueLearningWidgetPresentation
+  let isRedacted: Bool
 }
 
 private struct ContinueLearningProvider: TimelineProvider {
   func placeholder(in context: Context) -> ContinueLearningEntry {
-    ContinueLearningEntry(date: .now, state: .placeholder)
+    let date = Date.now
+    return ContinueLearningEntry(
+      date: date,
+      presentation: .placeholder(at: date),
+      isRedacted: true
+    )
   }
 
   func getSnapshot(
     in context: Context,
     completion: @escaping (ContinueLearningEntry) -> Void
   ) {
-    completion(ContinueLearningEntry(date: .now, state: .snapshot))
+    let date = Date.now
+    completion(
+      ContinueLearningEntry(
+        date: date,
+        presentation: .snapshot(at: date),
+        isRedacted: true
+      )
+    )
   }
 
   func getTimeline(
@@ -99,20 +137,27 @@ private struct ContinueLearningProvider: TimelineProvider {
     completion: @escaping (Timeline<ContinueLearningEntry>) -> Void
   ) {
     let entry = entry()
-    let refreshDate = entry.date.addingTimeInterval(21_600)
 
     completion(
       Timeline(
         entries: [entry],
-        policy: .after(refreshDate)
+        policy: .after(entry.presentation.nextRefreshDate)
       )
     )
   }
 
   private func entry() -> ContinueLearningEntry {
-    ContinueLearningEntry(
-      date: .now,
-      state: ContinueLearningSharedState.load()
+    let date = Date.now
+    let presentation = WidgetProjectionPolicy.presentation(
+      for: ContinueLearningSharedState.input(),
+      now: date,
+      calendar: .autoupdatingCurrent
+    )
+
+    return ContinueLearningEntry(
+      date: date,
+      presentation: ContinueLearningWidgetPresentation(presentation),
+      isRedacted: false
     )
   }
 }
@@ -123,13 +168,19 @@ private enum ForgeWidgetTerrain {
   static let signal = Color(red: 0.94, green: 0.69, blue: 0.24)
   static let mist = Color(red: 0.94, green: 0.97, blue: 0.92)
   static let quietMist = Color(red: 0.76, green: 0.84, blue: 0.78)
+  static let markerFill = Color.white.opacity(0.10)
+  static let markerBorder = Color.white.opacity(0.18)
 }
 
 private struct ContinueLearningWidgetView: View {
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
   let entry: ContinueLearningEntry
 
   var body: some View {
-    stateContent
+    let presentation = entry.presentation
+
+    stateContent(presentation)
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
       .containerBackground(for: .widget) {
         LinearGradient(
@@ -139,54 +190,114 @@ private struct ContinueLearningWidgetView: View {
         )
       }
       .privacySensitive()
-      .widgetURL(ContinueLearningRoute.focus)
+      .dynamicTypeSize(.xSmall ... .accessibility5)
+      .widgetURL(presentation.route)
       .accessibilityElement(children: .ignore)
-      .accessibilityLabel(entry.state.accessibilityLabel)
-      .accessibilityHint("Opens the local FORGE focus view.")
+      .accessibilityLabel(presentation.copy.accessibilityLabel)
+      .accessibilityHint(presentation.accessibilityHint)
+      .accessibilityAddTraits(.isButton)
   }
 
   @ViewBuilder
-  private var stateContent: some View {
-    switch entry.state {
-    case .placeholder, .snapshot:
-      widgetContent(detail: "Return review available")
+  private func stateContent(
+    _ presentation: ContinueLearningWidgetPresentation
+  ) -> some View {
+    if entry.isRedacted {
+      widgetContent(presentation)
         .redacted(reason: .placeholder)
-    case .delayedReturn:
-      widgetContent(detail: "Return review available")
-    case .noData:
-      widgetContent(detail: "No delayed return")
-    case .corruptedData:
-      widgetContent(detail: "Unavailable")
+    } else {
+      widgetContent(presentation)
     }
   }
 
-  private func widgetContent(detail: String) -> some View {
-    VStack(alignment: .leading, spacing: 10) {
+  private func widgetContent(
+    _ presentation: ContinueLearningWidgetPresentation
+  ) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
       HStack(spacing: 8) {
         Image(systemName: "mountain.2.fill")
-          .font(.title3.weight(.semibold))
+          .font(.subheadline.weight(.semibold))
           .foregroundStyle(ForgeWidgetTerrain.signal)
           .accessibilityHidden(true)
 
         Text("FORGE")
-          .font(.caption.weight(.bold))
+          .font(.caption2.weight(.bold))
           .tracking(1.2)
           .foregroundStyle(ForgeWidgetTerrain.mist)
           .lineLimit(1)
+
+        Spacer(minLength: 0)
+
+        Text("LOCAL")
+          .font(.caption2.weight(.semibold))
+          .tracking(0.8)
+          .foregroundStyle(ForgeWidgetTerrain.quietMist)
+          .lineLimit(1)
       }
 
-      Spacer(minLength: 0)
+      Spacer(minLength: 2)
 
-      Text("Learning space")
-        .font(.headline)
+      statusContent(presentation)
+    }
+  }
+
+  @ViewBuilder
+  private func statusContent(
+    _ presentation: ContinueLearningWidgetPresentation
+  ) -> some View {
+    if dynamicTypeSize.isAccessibilitySize {
+      VStack(alignment: .leading, spacing: 6) {
+        statusMarker(for: presentation)
+
+        copyContent(presentation)
+      }
+    } else {
+      HStack(alignment: .top, spacing: 10) {
+        statusMarker(for: presentation)
+
+        copyContent(presentation)
+      }
+    }
+  }
+
+  private func copyContent(
+    _ presentation: ContinueLearningWidgetPresentation
+  ) -> some View {
+    VStack(alignment: .leading, spacing: 3) {
+      Text(presentation.copy.status)
+        .font(.caption2.weight(.bold))
+        .tracking(0.7)
+        .foregroundStyle(ForgeWidgetTerrain.quietMist)
+        .lineLimit(1)
+
+      Text(presentation.copy.title)
+        .font(.headline.weight(.semibold))
         .foregroundStyle(ForgeWidgetTerrain.mist)
         .lineLimit(2)
 
-      Text(detail)
+      Text(presentation.copy.detail)
         .font(.caption)
         .foregroundStyle(ForgeWidgetTerrain.quietMist)
         .lineLimit(2)
     }
+  }
+
+  private func statusMarker(
+    for presentation: ContinueLearningWidgetPresentation
+  ) -> some View {
+    Image(systemName: presentation.symbol)
+      .font(.body.weight(.semibold))
+      .foregroundStyle(ForgeWidgetTerrain.signal)
+      .frame(width: 32, height: 32)
+      .background(
+        ForgeWidgetTerrain.markerFill,
+        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+      )
+      .overlay {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+          .stroke(ForgeWidgetTerrain.markerBorder, lineWidth: 1)
+      }
+      .accessibilityHidden(true)
   }
 }
 

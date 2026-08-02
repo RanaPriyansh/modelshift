@@ -1,165 +1,505 @@
-# FORGE iOS 0.1 Requirements
+# FORGE iOS 0.1 Requirements: Adult University V1
 
-**Date:** 2026-08-01
-**Product state:** `FOUNDATION_CANDIDATE`
+**Date:** 2026-08-02
+
+**Product scope:** `ADULT_UNIVERSITY_V1`
+
+**Candidate state:** `NOT_SELECTED`
+
 **Release decision:** `NO_SHIP`
-**Native implementation base:** `850df36a1f99e0f9401cba3f9688124b62f4c27f`
-**Web source:** `cd84e20f6f78d68a430666c185b00efa99c49a87`
 
-## Release purpose
+## Status and trace terms
 
-Release a focused native FORGE companion to adult internal TestFlight testers.
+This document defines required behavior.
 
-Keep the first release device-local. Do not create accounts, canonical evidence, cloud sync, or remote notifications.
+This document records no passed test, simulator, device, CI, signing, or
+distribution check.
 
-Do not include minor testers. A later minor release requires separate product, legal, privacy, and participant authority.
+- `REQUIRED` means that the fixed candidate must meet the requirement.
+- `NOT_SELECTED` means that no fixed candidate SHA and clean-tree record exist.
+- `NOT_RUN` means that no result exists for the fixed candidate.
+- `BLOCKED_EXTERNAL` means that an external input or external evidence is
+  missing.
 
-## Status terms
+## Fixed product scope
 
-- `BUILT_LOCAL`: The current source contains the requirement.
-- `TESTED_LOCAL`: Current local evidence verifies the requirement.
-- `BLOCKED`: A required input or system does not exist.
-- `NOT_RUN`: The required verification has not run.
-- `OUT_OF_SCOPE`: The first release excludes the requirement.
+The product serves adult university learners only.
 
-## Product requirements
+The product does not prove age, enrollment, affiliation, credit eligibility,
+or academic standing.
 
-| ID | Requirement | Acceptance condition | Status |
-| --- | --- | --- | --- |
-| P-01 | Optional onboarding | A learner can close onboarding without losing application access. | `BUILT_LOCAL` |
-| P-02 | Goal entry | A learner can enter one goal or select the safe sample. | `TESTED_LOCAL` |
-| P-03 | Policy input | The application asks for learner mode only because the mode changes policy. | `BUILT_LOCAL` |
-| P-04 | Data boundary | Onboarding states that the goal remains on the device. | `BUILT_LOCAL` |
-| P-05 | Today | Today shows one next action, its reason, and its duration. | `BUILT_LOCAL` |
-| P-06 | Path | Path shows a reviewed vertical milestone sequence and explicit states. | `BUILT_LOCAL` |
-| P-07 | Evidence | Evidence shows limitations and does not upgrade a record. | `BUILT_LOCAL` |
-| P-08 | Focus | Focus keeps pause, stop, source, safety, and access information available. | `BUILT_LOCAL` |
-| P-09 | Settings | Settings exposes reminder state, privacy state, onboarding, and local deletion. | `BUILT_LOCAL` |
-| P-10 | Local deletion | One confirmed action removes local learning data, reminder state, and pending routes. | `TESTED_LOCAL` |
-| P-11 | Offline operation | All first-release learning surfaces work without a network connection. | `BUILT_LOCAL` |
-| P-12 | Read-only fixture boundary | The first release does not create completion, proof, or evidence. | `BUILT_LOCAL` |
+### S-01 One starter mechanics course
 
-## System integration requirements
+Requirement: Expose only `course.adult-mechanics.force-motion.v1`.
 
-| ID | Requirement | Acceptance condition | Status |
-| --- | --- | --- | --- |
-| S-01 | Local reminder | The application can schedule one passive delayed-return reminder. | `BUILT_LOCAL` |
-| S-02 | Reminder privacy | The Lock Screen message contains no learner, goal, path, or evidence data. | `TESTED_LOCAL` |
-| S-03 | Reminder denial | All application functions remain available after permission denial. | `TESTED_LOCAL` |
-| S-04 | Child reminder policy | A grown-up must manage reminders in child mode. | `TESTED_LOCAL` |
-| S-05 | Small widget | One nonconfigurable small widget opens the focus route. | `BUILT_LOCAL` |
-| S-06 | Widget privacy | The widget marks its content as privacy-sensitive. | `BUILT_LOCAL` |
-| S-07 | App Intent | One parameter-free intent opens the focus route without returning learner data. | `BUILT_LOCAL` |
-| S-08 | App Group | The application and widget use one shared App Group. | `BUILT_LOCAL` |
-| S-09 | App Group ownership | Apple registers and assigns the approved App Group to both identifiers. | `BLOCKED` |
-| S-10 | Deep links | Valid FORGE routes open the correct section or focus screen. | `TESTED_LOCAL` |
+Acceptance:
 
-## Quality requirements
+- The catalog has one course, one capability, and three activities.
+- The capability title is `Mechanics: Force and motion`.
 
-| ID | Requirement | Acceptance condition | Status |
-| --- | --- | --- | --- |
-| Q-01 | Minimum system | The application supports iOS 18 or later. | `BUILT_LOCAL` |
-| Q-02 | Current SDK | The distribution archive uses the iOS 26 SDK or later. | `BLOCKED` |
-| Q-03 | Swift safety | Swift 6 strict concurrency reports no application error. | `TESTED_LOCAL` |
-| Q-04 | Core tests | All `ForgeCore` tests pass for the fixed candidate. | `TESTED_LOCAL` |
-| Q-05 | Full asset build | Debug and Release builds include the application icon and all assets. | `BLOCKED` |
-| Q-06 | UI journeys | UI tests pass onboarding, tabs, focus, deletion, and accessibility audit. | `NOT_RUN` |
-| Q-06A | UI test compilation | Four UI journeys compile for an unsigned arm64 iOS XCTest runner. | `TESTED_LOCAL` |
-| Q-07 | Small layout | Each primary screen works at 320 points without horizontal clipping. | `NOT_RUN` |
-| Q-08 | Dynamic Type | Each primary journey works at 200 percent Dynamic Type. | `NOT_RUN` |
-| Q-09 | Access methods | VoiceOver, Voice Control, Switch Control, and Full Keyboard Access complete each journey. | `NOT_RUN` |
-| Q-10 | Appearance | Dark appearance, increased contrast, Bold Text, and Reduced Motion keep content usable. | `NOT_RUN` |
-| Q-11 | Physical device | A signed build passes notification, widget, intent, termination, rotation, and low-memory checks. | `BLOCKED` |
-| Q-12 | Performance | A device trace shows no release-blocking launch, hang, energy, or memory issue. | `NOT_RUN` |
+Trace: `UniversityStarterCourse.catalog()`.
 
-## Privacy and safety requirements
+### S-02 Immutable catalog
 
-| ID | Requirement | Acceptance condition | Status |
-| --- | --- | --- | --- |
-| D-01 | Data minimization | The application requests only notification permission. | `BUILT_LOCAL` |
-| D-02 | No tracking | The application contains no analytics, advertising, or tracking SDK. | `BUILT_LOCAL` |
-| D-03 | Privacy manifest | The application and widget contain valid privacy manifests. | `TESTED_LOCAL` |
-| D-04 | Privacy policy | App Store metadata and the application link to one approved privacy policy. | `BLOCKED` |
-| D-05 | App Privacy answers | App Store Connect answers match the fixed binary and service behavior. | `BLOCKED` |
-| D-06 | Minor data | The adult internal release does not collect or transmit minor data. | `BUILT_LOCAL` |
-| D-07 | Account deletion | If account creation enters scope, deletion is available inside the application. | `OUT_OF_SCOPE` |
-| D-08 | Third-party AI | Any later third-party AI data transfer has clear disclosure and explicit permission. | `OUT_OF_SCOPE` |
-| D-09 | No evidence mutation | Notifications, widgets, intents, and settings cannot change evidence. | `BUILT_LOCAL` |
+Requirement: Keep the catalog immutable.
 
-Apple requires an accessible privacy-policy link in App Store metadata and inside the application.
-Apple also requires in-application account deletion when account creation exists.
+Acceptance:
 
-See the current [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/).
+- Bind one catalog release, package ID, version, and SHA-256 digest.
+- Do not accept a user, file, or network catalog update.
 
-## Signing and distribution requirements
+Trace: `ReleasedCatalogSnapshot.validate()`.
 
-| ID | Requirement | Acceptance condition | Status |
-| --- | --- | --- | --- |
-| R-01 | Developer organization | The release owner identifies the legal Apple Developer organization. | `BLOCKED` |
-| R-02 | Team identifier | The repository records the approved Apple Developer Team identifier. | `BLOCKED` |
-| R-03 | Bundle identifiers | Apple registers the application and widget identifiers. | `BLOCKED` |
-| R-04 | Provisioning | Distribution profiles include the application, widget, and App Group entitlements. | `BLOCKED` |
-| R-05 | Candidate identity | One clean pushed commit identifies every distribution input. | `BLOCKED` |
-| R-06 | Version identity | App Store Connect accepts version `0.1.0` and one unique build number. | `BLOCKED` |
-| R-07 | Signed archive | Xcode creates, validates, and exports one signed Release archive. | `BLOCKED` |
-| R-08 | Internal TestFlight | One fixed adult-only build reaches the approved internal group. | `BLOCKED` |
-| R-09 | TestFlight receipt | The release record identifies the commit, build, tester group, environment, and known limits. | `BLOCKED` |
-| R-10 | Rollback | The release owner can expire the TestFlight build and disable its service environment. | `NOT_RUN` |
+### S-03 Exact catalog identity
 
-Apple requires registered application identifiers in TestFlight provisioning profiles.
-Apple permits up to 100 internal App Store Connect testers.
+Requirement: Reject unknown and cross-course references.
 
-See the current [TestFlight overview](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/).
+Acceptance:
 
-Apple requires an Account Holder or Admin to register an App Group.
+- Reject an unknown activity, capability, source, claim, or prerequisite ID.
+- Reject a package identity that does not match the fixed catalog.
 
-See [Register an App Group](https://developer.apple.com/help/account/identifiers/register-an-app-group/).
+Trace: `UniversityLearningError`.
 
-## Store requirements
+### S-04 Adult-only UI
 
-| ID | Requirement | Acceptance condition | Status |
-| --- | --- | --- | --- |
-| M-01 | Product name | The release owner approves the store name and subtitle. | `BLOCKED` |
-| M-02 | Category and rating | The release owner approves Education category, age rating, and audience. | `BLOCKED` |
-| M-03 | Description | Store text states the device-local and read-only first-release boundary. | `BLOCKED` |
-| M-04 | Support URL | One maintained support URL exists. | `BLOCKED` |
-| M-05 | Privacy URL | One approved public privacy-policy URL exists. | `BLOCKED` |
-| M-06 | Screenshots | Approved screenshots show real screens and fictional sample data. | `BLOCKED` |
-| M-07 | Review access | Review notes describe the fixture boundary and require no account. | `BLOCKED` |
-| M-08 | Contact | App Review has current release-owner contact information. | `BLOCKED` |
-| M-09 | Export compliance | The release owner confirms the encryption answer for the fixed binary. | `BLOCKED` |
-| M-10 | Rights | The release owner confirms rights for the FORGE name, icon, text, and screenshots. | `BLOCKED` |
+Requirement: Show only the adult mechanics course UI.
 
-Apple accepts one to ten screenshots for each required display class.
+Acceptance:
 
-See [App Store screenshot guidance](https://developer.apple.com/help/app-store-connect/manage-app-information/upload-app-previews-and-screenshots/).
+- Do not show learner-segment selection.
+- Do not show free-form course creation or alternate course selection.
 
-## Required owner inputs
+Trace: UI source review.
 
-Provide these inputs before signing work:
+### S-05 Local-only product boundary
 
-1. Apple Developer organization name and Team identifier.
-2. App Store Connect role for the release operator.
-3. Approved application, widget, and App Group identifiers.
-4. Approved product name, subtitle, category, audience, and age rating.
-5. Public privacy-policy URL and support URL.
-6. Internal adult tester group and TestFlight authority.
-7. Intellectual-property owner for the icon and store content.
-8. Approved distribution and rollback owners.
+Requirement: Keep all learner state on the device.
 
-## First internal TestFlight definition
+Acceptance:
 
-The first internal build is ready only when these conditions pass:
+- Do not provide an account, cloud sync, remote notification, or academic
+  export.
 
-1. One clean pushed commit identifies the binary.
-2. The full asset build passes without fallback.
-3. All core and UI tests pass on an installed simulator runtime.
-4. Manual accessibility tests pass on a physical device.
-5. The signed archive passes App Store validation.
-6. Privacy and store records match the fixed binary.
-7. The approved adult-only internal group receives the build.
-8. The release record contains the exact build and rollback evidence.
+Trace: production source review.
 
-The current machine has no installed simulator runtime. The machine has approximately 15 GB of available storage.
+## Required learning loop
 
-Do not install a large runtime until the release owner confirms the storage action.
+The fixed catalog order is practice, proof, and delayed return.
+
+The product must process the loop with `UniversityLearningEngine.transition`.
+
+### L-01 Practice
+
+Requirement: Start with the practice activity.
+
+Acceptance:
+
+- A practice result creates one local receipt.
+- A practice result updates local progress.
+
+Trace: practice transition.
+
+### L-02 Proof gate
+
+Requirement: Gate proof with demonstrated practice.
+
+Acceptance:
+
+- Reject proof when the practice receipt is missing.
+- Reject proof when the practice result is not demonstrated.
+
+Trace: proof prerequisite validation.
+
+### L-03 Protected proof and return
+
+Requirement: Protect proof and delayed return activities.
+
+Acceptance:
+
+- Allow only construct-preserving access assistance.
+- Require AI action and retrieval mode `none`.
+
+Trace: activity boundary validation.
+
+### L-04 Delayed return creation
+
+Requirement: Create a delayed return after demonstrated proof.
+
+Acceptance:
+
+- Set `opensAt` to the proof receipt time plus seven days.
+- Set `dueAt` to `opensAt` plus 30 days.
+
+Trace: `ReturnPolicy` validation.
+
+### L-05 Return window
+
+Requirement: Enforce the return window.
+
+Acceptance:
+
+- Reject a return before `opensAt`.
+- Reject a return after `dueAt`.
+
+Trace: delayed-return transition.
+
+### L-06 Return completion
+
+Requirement: Record demonstrated return completion locally.
+
+Acceptance:
+
+- Create one local receipt for a demonstrated return.
+- Record completion time inside the return window.
+
+Trace: `DelayedReturnRecord` validation.
+
+Recording a local loop event does not state learner achievement or academic
+standing.
+
+## Catalog and receipt boundaries
+
+The catalog must retain its limitation records with the package identity.
+
+The starter mechanics source has incomplete provenance.
+
+The product must state that the source is not source-reviewed or
+university-authoritative.
+
+Local evidence receipts are unsigned and have local scope only.
+
+### B-01 Receipt identity
+
+Requirement: Bind every receipt to the active catalog.
+
+Acceptance:
+
+- Include course, capability, activity, task-family, and catalog release IDs.
+- Include package and limitation identities.
+
+Trace: `LocalEvidenceReceipt`.
+
+### B-02 Written reasoning and selected-choice boundary
+
+Requirement: Keep written reasoning, values derived from written reasoning, and
+selected-choice text transient.
+
+FORGE saves selected-choice check results, activity progress, help use, receipt
+metadata, and delayed-return schedules locally. FORGE needs this data for
+durable learning progress.
+
+Acceptance:
+
+- Do not save written reasoning, values derived from written reasoning, or
+  selected-choice text in a receipt.
+- Save the selected-choice check result and receipt metadata in a local receipt.
+- Save activity progress, help use, and delayed-return schedules locally.
+
+Trace: receipt schema review.
+
+### B-03 Assistance boundary
+
+Requirement: Preserve only allowed assistance facts.
+
+Acceptance:
+
+- Link only assistance IDs allowed by the activity boundary.
+
+Trace: assistance validation.
+
+### B-04 Source boundary
+
+Requirement: State local scope and incomplete source provenance.
+
+Acceptance:
+
+- Show the catalog limitation with its local receipt context.
+
+Trace: catalog limitation rendering.
+
+### B-05 Outcome boundary
+
+Requirement: Do not state outcome authority.
+
+Acceptance:
+
+- Do not state efficacy, mastery, retention, credential, grade, or credit.
+- Do not state university authority from a catalog or local receipt.
+
+Trace: copy review.
+
+## Local state and system handoff
+
+The private state file must use schema version 4.
+
+The private v4 envelope contains `LocalLearnerState`, course-start state, and
+reminder preference.
+
+The private v4 envelope must remain outside the App Group.
+
+### D-01 Private v4 envelope
+
+Requirement: Store learner state in the private v4 envelope.
+
+Acceptance:
+
+- Accept only schema version `4`.
+- Put a detected `private-state-v3.json` or `private-state-v2.json` file in
+  visible recovery.
+- Preserve each detected v3 or v2 file until an explicit clear-local-data
+  action.
+- Fail closed for unsupported, corrupt, or oversized data.
+
+Trace: `PrivateStateStore` and envelope schema decoder.
+
+### D-02 Transient written reasoning and derived values
+
+Requirement: Keep written reasoning and each value derived from written
+reasoning transient.
+
+Acceptance:
+
+- Do not write written reasoning or a value derived from written reasoning to
+  private state or shared state.
+- Do not write either item to a notification, widget, intent, log, or export.
+- Do not write selected-choice text to private state or shared state.
+- Do not include selected-choice text in a notification, widget, or intent.
+
+Trace: storage boundary review.
+
+### D-03 Typed App Group projection
+
+Requirement: Use one typed App Group projection.
+
+Acceptance:
+
+- Include only lifecycle, `opensAt`, `dueAt`, `generatedAt`, and `validUntil`.
+
+Trace: `ForgeReturnProjection`.
+
+### D-04 Redacted App Group projection
+
+Requirement: Redact the App Group projection.
+
+Acceptance:
+
+- Do not include learner data, course data, receipt data, identifiers, written
+  reasoning, selected-choice text, a selected-choice check result, or a value
+  derived from written reasoning.
+
+Trace: projection schema review.
+
+### D-05 Projection failure boundary
+
+Requirement: Fail closed on projection corruption.
+
+Acceptance:
+
+- Clear unknown, missing, invalid, or oversized projection values.
+- Report the projection failure to the application.
+
+Trace: `ForgeSharedStateStore`.
+
+### D-06 Local deletion
+
+Requirement: Delete managed local state after confirmation.
+
+Acceptance:
+
+- Clear the private envelope, App Group projection, pending-focus handoff token,
+  and reminder.
+
+Trace: local deletion flow.
+
+## Reminder, widget, and intent requirements
+
+The product can schedule one local return reminder only after explicit adult
+action.
+
+The reminder opening time is `opensAt`.
+
+The reminder must not schedule before `opensAt`.
+
+### I-01 Reminder time
+
+Requirement: Schedule only an eligible delayed return.
+
+Acceptance:
+
+- Set the reminder date to `opensAt`.
+- Do not change `opensAt` or `dueAt`.
+
+Trace: `ReturnReminderPolicy`.
+
+### I-02 Reminder failure boundary
+
+Requirement: Keep the loop usable after reminder denial or failure.
+
+Acceptance:
+
+- Permission denial, scheduling failure, and cancellation failure do not change
+  learner state.
+
+Trace: reminder coordinator.
+
+### I-03 Redacted reminder text
+
+Requirement: Use redacted reminder text.
+
+Acceptance:
+
+- Do not show learner, course, activity, receipt, selected-choice text,
+  selected-choice check result, written reasoning, or values derived from
+  written reasoning on the Lock Screen.
+
+Trace: notification content review.
+
+### I-04 Reminder cleanup
+
+Requirement: Clear obsolete reminders.
+
+Acceptance:
+
+- Completion, deletion, disabled preference, and no eligible return remove the
+  managed reminder.
+
+Trace: reminder cleanup.
+
+### I-05 Widget and App Intent limit
+
+Requirement: Limit widget and App Intent behavior.
+
+Acceptance:
+
+- The widget reads the typed projection only.
+- The App Intent can write only one pending-focus handoff token.
+- The App Intent cannot modify learner state, course state, evidence state, a
+  receipt, or a delayed return.
+- The application opens a validated local destination only after it checks
+  eligibility.
+
+Trace: system integration review.
+
+### I-06 External mutation boundary
+
+Requirement: Prevent external mutation.
+
+Acceptance:
+
+- Except for the permitted pending-focus handoff token, a widget, App Intent,
+  notification, or invalid URL cannot create or modify learner state, course
+  state, evidence state, a receipt, or a delayed return.
+
+Trace: route boundary review.
+
+## Network and AI boundary
+
+The product has no production AI service.
+
+The product has no learning-data network client.
+
+### N-01 Production AI
+
+Requirement: Do not call a production model.
+
+Acceptance:
+
+- Do not make a production model request or remote inference request.
+- Do not use AI for a consequential action.
+
+Trace: production source review.
+
+### N-02 Learning-data network
+
+Requirement: Do not use a learning-data network client.
+
+Acceptance:
+
+- Do not send learner state, receipt data, source data, selected-choice text,
+  written reasoning, or values derived from written reasoning off the device.
+
+Trace: production source review.
+
+### N-03 Academic decision boundary
+
+Requirement: Do not make a consequential academic decision.
+
+Acceptance:
+
+- Do not enroll, grade, award credit, waive a prerequisite, or notify a third
+  party.
+
+Trace: product boundary review.
+
+## External gates
+
+The following gates remain unresolved.
+
+They require external authority or external evidence.
+
+They are not implementation results.
+
+### G-01 Privacy and support URLs
+
+State: `BLOCKED_EXTERNAL`.
+
+Required external input: Approved and maintained HTTPS privacy-policy and
+support URLs.
+
+### G-02 Signing
+
+State: `BLOCKED_EXTERNAL`.
+
+Required external input: Apple team, identifiers, App Group assignment,
+profiles, and authorized signing operator.
+
+### G-03 Export compliance
+
+State: `BLOCKED_EXTERNAL`.
+
+Required external input: Authorized fixed-archive export-compliance decision,
+rights record, and Apple answer.
+
+### G-04 TestFlight authority
+
+State: `BLOCKED_EXTERNAL`.
+
+Required external input: Approved tester group, signed archive, upload,
+distribution, support, withdrawal, and deletion authority.
+
+### G-05 App Store authority
+
+State: `BLOCKED_EXTERNAL`.
+
+Required external input: Approved metadata, category, rating, images, review
+notes, contact, rights record, and submission authority.
+
+### G-06 Participant evidence
+
+State: `BLOCKED_EXTERNAL`.
+
+Required external input: Approved protocol, adult participant authority, and
+collected participant evidence.
+
+## Verification state
+
+Every requirement above remains `REQUIRED` until a fixed clean candidate
+provides its own evidence.
+
+- Unit checks: `NOT_RUN`.
+- Simulator checks: `NOT_RUN`.
+- Device checks: `NOT_RUN`.
+- UI checks: `NOT_RUN`.
+- CI checks: `NOT_RUN`.
+- Accessibility conformance: `NOT_RUN`.
+- Privacy and support URLs: `BLOCKED_EXTERNAL`.
+- Signing: `BLOCKED_EXTERNAL`.
+- Export compliance: `BLOCKED_EXTERNAL`.
+- TestFlight authority: `BLOCKED_EXTERNAL`.
+- App Store authority: `BLOCKED_EXTERNAL`.
+
+Keep the release decision at `NO_SHIP`.
+
+Do not describe this document as evidence of an implemented, tested, signed,
+distributed, accessible, or production product.
