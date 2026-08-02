@@ -1,12 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
-import { WorldRouteFocus } from "@/src/components/forge/WorldRouteFocus";
 import "./globals.css";
-import "./forge.css";
-import "./forge-system.css";
-import "./forge-product.css";
-import "./forge-sprint.css";
 
 const DEFAULT_METADATA_BASE = new URL("http://localhost:3000");
 
@@ -77,10 +72,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   await headers();
   return (
     <html lang="en" data-scroll-behavior="smooth">
-      <body>
-        <WorldRouteFocus />
-        {children}
-      </body>
+      <body className="forge-document">{children}</body>
     </html>
   );
 }

@@ -2,7 +2,7 @@
   "name": "forge-learning-os",
   "version": "0.1.0",
   "private": true,
-  "description": "FORGE — a learner-owned system of reviewed learning Worlds, bounded AI support, and proof after help.",
+  "description": "FORGE is a private Semester Desk for university students to rebuild a difficult week from today.",
   "license": "MIT",
   "packageManager": "pnpm@11.9.0",
   "engines": {
