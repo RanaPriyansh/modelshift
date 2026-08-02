@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 02:42 IST
+Updated: 2026-08-03 02:49 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -110,6 +110,7 @@ Status: **Canonical public candidate complete, but final rendered release QA rem
 - The current application is one Next.js 16.2.11 repository.
 - Historical route source remains in the repository.
 - The release boundary returns `404` for historical, fixture, and unused API routes.
+- Next.js still compiles old `page.tsx` files into production chunks.
 - The current public deployment is not the Semester Desk v2 candidate.
 - Final screenshots must come from the implemented product.
 
@@ -261,15 +262,16 @@ No confirmed P0 defect exists at this baseline.
 
 1. Decoded web state has no semantic relationship validation.
 2. Browser state has no raw-byte or collection bounds before `JSON.parse`.
-3. The iOS Today title repair is not yet in a durable iOS checkpoint.
-4. The iOS active-study choice control is not reachable at AccessibilityXXXL.
-5. The iOS dirty work has no clean checkpoint identity.
-6. No current cross-platform release candidate exists.
-7. No final rendered accessibility or performance evidence exists.
+3. Historical Next.js routes still compile into the production artifact.
+4. The iOS Today title repair is not yet in a durable iOS checkpoint.
+5. The iOS active-study choice control is not reachable at AccessibilityXXXL.
+6. The iOS dirty work has no clean checkpoint identity.
+7. No current cross-platform release candidate exists.
+8. No final rendered accessibility or performance evidence exists.
 
 ### P2
 
-1. Historical route source remains in the repository, but the source is not public.
+1. Historical route source remains in the repository.
 2. The reset result can be hidden after an iOS navigation change.
 3. Current disk pressure can block large builds or simulator artifacts.
 4. The current public release record describes an older product.
@@ -325,9 +327,10 @@ These are not current reasons to stop internal work.
 ## Next internally executable action
 
 1. Add semantic and bounded validation to the web Semester Desk state.
-2. Complete native Semester Desk v2 persistence integration.
-3. Complete the active-study AccessibilityXXXL repair.
-4. Establish an iOS checkpoint.
-5. Implement the native Semester Desk v2 application loop.
-6. Replace legacy browser and CI release gates with final product gates.
-7. Run full rendered, accessibility, performance, security, and release checks.
+2. Make Next.js compile only the canonical release routes.
+3. Complete native Semester Desk v2 persistence integration.
+4. Complete the active-study AccessibilityXXXL repair.
+5. Establish an iOS checkpoint.
+6. Implement the native Semester Desk v2 application loop.
+7. Replace legacy browser and CI release gates with final product gates.
+8. Run full rendered, accessibility, performance, security, and release checks.
