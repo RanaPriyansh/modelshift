@@ -30,7 +30,7 @@ jobs:
   verify:
     name: Verify the iOS candidate
     runs-on: macos-26
-    timeout-minutes: 60
+    timeout-minutes: 125
     env:
       XCODEGEN_VERSION: "2.45.4"
       XCODEGEN_ARCHIVE_SHA256: "090ec29491aad50aec10631bf6e62253fed733c50f3aab0f5ffc86bc170bdbef"
@@ -159,45 +159,23 @@ jobs:
           set -o pipefail
           ios/Scripts/verify.sh --static 2>&1 | tee "$FORGE_IOS_EVIDENCE_DIR/static-verification.log"
 
-      - name: Detect iPhone 17 Pro simulator support
-        id: simulator
-        timeout-minutes: 5
-        shell: bash
-        run: |
-          set -euo pipefail
-          simulator_list="$FORGE_IOS_EVIDENCE_DIR/simctl-devices.txt"
-          simulator_available=0
-
-          if xcrun simctl list devices available > "$simulator_list" 2>&1; then
-            if awk '
-                /^-- iOS 26\.5 / { in_runtime = 1; next }
-                /^-- / { in_runtime = 0 }
-                in_runtime && /iPhone 17 Pro/ { found = 1 }
-                END { exit found ? 0 : 1 }
-              ' "$simulator_list"; then
-              simulator_available=1
-            fi
-          fi
-
-          if [[ "$simulator_available" -ne 1 ]]; then
-            printf 'available=0\n' >> "$GITHUB_OUTPUT"
-            printf 'simulator_tests=required-but-unavailable\n' >> "$FORGE_IOS_EVIDENCE_DIR/candidate-before.txt"
-            printf '%s\n' 'The required iPhone 17 Pro simulator with iOS 26.5 is unavailable.' >&2
-            printf '%s\n' 'This candidate cannot pass with source-only verification.' >&2
-            cat "$simulator_list" >&2
-            exit 1
-          fi
-
-          printf 'available=1\n' >> "$GITHUB_OUTPUT"
-          printf 'simulator_tests=enabled\n' >> "$FORGE_IOS_EVIDENCE_DIR/candidate-before.txt"
-
-      - name: Run ForgeCore tests and compile iOS test targets
-        timeout-minutes: 40
+      - name: Run the complete unsigned iOS release gate
+        timeout-minutes: 65
         shell: bash
         env:
-          FORGE_REQUIRE_ASSET_BUILD: ${{ steps.simulator.outputs.available }}
-          FORGE_REQUIRE_SIMULATOR_TESTS: ${{ steps.simulator.outputs.available }}
-          FORGE_RESULT_BUNDLE_PATH: ${{ runner.temp }}/FORGE-simulator-tests.xcresult
+          FORGE_REQUIRE_ASSET_BUILD: "1"
+          FORGE_REQUIRE_SIMULATOR_TESTS: "1"
+          FORGE_REQUIRE_SMALL_DEVICE_UI_TESTS: "1"
+          FORGE_REQUIRE_IPAD_UI_TESTS: "1"
+          FORGE_REQUIRE_UNSIGNED_ARCHIVE: "1"
+          FORGE_SIMULATOR_RUNTIME_IDENTIFIER: com.apple.CoreSimulator.SimRuntime.iOS-26-5
+          FORGE_REQUIRE_STORE_METADATA: ${{ github.event_name == 'workflow_dispatch' && inputs.require_store_metadata && '1' || '0' }}
+          FORGE_PRIVACY_POLICY_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.require_store_metadata && vars.FORGE_PRIVACY_POLICY_URL || '' }}
+          FORGE_SUPPORT_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.require_store_metadata && vars.FORGE_SUPPORT_URL || '' }}
+          FORGE_RESULT_BUNDLE_PATH: ${{ runner.temp }}/FORGE-primary-simulator-tests.xcresult
+          FORGE_SMALL_DEVICE_RESULT_BUNDLE_PATH: ${{ runner.temp }}/FORGE-small-device-ui-tests.xcresult
+          FORGE_IPAD_RESULT_BUNDLE_PATH: ${{ runner.temp }}/FORGE-ipad-semester-desk-ui-tests.xcresult
+          FORGE_UNSIGNED_ARCHIVE_PATH: ${{ runner.temp }}/FORGE-unsigned-release.xcarchive
         run: |
           set -o pipefail
           ios/Scripts/verify.sh 2>&1 | tee "$FORGE_IOS_EVIDENCE_DIR/verification.log"
@@ -240,13 +218,43 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload iOS simulator test result
-        if: ${{ always() && steps.simulator.outputs.available == '1' }}
+      - name: Upload iPhone 17 Pro test result
+        if: ${{ always() }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         timeout-minutes: 5
         with:
-          name: forge-ios-simulator-tests-${{ github.sha }}
-          path: ${{ runner.temp }}/FORGE-simulator-tests.xcresult
+          name: forge-ios-primary-simulator-tests-${{ github.sha }}
+          path: ${{ runner.temp }}/FORGE-primary-simulator-tests.xcresult
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload narrow iPhone UI test result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        timeout-minutes: 5
+        with:
+          name: forge-ios-small-device-ui-tests-${{ github.sha }}
+          path: ${{ runner.temp }}/FORGE-small-device-ui-tests.xcresult
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload iPad Semester Desk test result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        timeout-minutes: 5
+        with:
+          name: forge-ios-ipad-semester-desk-ui-tests-${{ github.sha }}
+          path: ${{ runner.temp }}/FORGE-ipad-semester-desk-ui-tests.xcresult
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload unsigned iOS Release archive
+        if: ${{ always() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        timeout-minutes: 10
+        with:
+          name: forge-ios-unsigned-release-archive-${{ github.sha }}
+          path: ${{ runner.temp }}/FORGE-unsigned-release.xcarchive
           if-no-files-found: error
           retention-days: 14
 
