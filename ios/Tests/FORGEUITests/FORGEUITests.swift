@@ -1,819 +1,388 @@
+import Foundation
 import XCTest
 
 @MainActor
 final class FORGEUITests: XCTestCase {
-  private enum ActivityChoice {
-    static let practiceCorrect = "stays_constant_after_force"
-    static let practiceWrong = "changes_direction"
-    static let delayedReturnCorrect = "constant_positive_velocity"
-  }
-
-  private static let initialClockStart = 1_800_000_000
-  private static let delayedReturnClockStart = 1_800_691_200
+  private static let defaultClockStart = 1_700_000_000
+  private static let delayedReturnClockStart = 2_000_000_000
   private static let secondsPerDay = 86_400
-  private static let proofSubmissionClockOffset = 0
-  private static let delayedReturnDueAt =
-    initialClockStart + (37 * secondsPerDay) + proofSubmissionClockOffset
-  private static let delayedReturnDueClockStart = delayedReturnDueAt - 2
-  private static let delayedReturnWindowClosedClockStart = delayedReturnDueAt
-  private static let defaultLaunchArguments = [
-    "-FORGEUITestingReset",
-    "-FORGEUITestingClockStart",
-    "1800000000",
-  ]
 
-  func testFreshOnboardingShowsStarterCourse() {
+  func testOnboardingRequiresNameAndCreatesOneSemesterDeskAfterRapidTaps() {
     let app = launchApp()
 
     waitForElement(element("onboarding.screen", in: app))
-    waitForElement(element("onboarding.course-title", in: app))
-    waitForElement(element("onboarding.limitations", in: app))
-    waitForHittable(button("onboarding.start-course", in: app))
-  }
-
-  func testOnboardingOpensPrivacyAndSupportBeforeCourseStart() {
-    let app = launchApp()
-
-    waitForElement(element("onboarding.screen", in: app))
-    revealAndTap(element("onboarding.privacy-support", in: app), in: app)
-    waitForElement(element("privacy-support.screen", in: app))
-    assertDoesNotAppear(element("today.course-title", in: app))
-  }
-
-  func testStarterCourseStarts() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-
-    waitForElement(element("today.course-title", in: app))
-    revealAndWaitForHittable(button("today.open-activity", in: app), in: app)
-  }
-
-  func testPracticeRecordsWrongThenCorrectLocalChecks() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    openCurrentActivity(in: app)
-
-    submitLocalCheck(
-      choice: ActivityChoice.practiceWrong,
-      reasoning: "The force changes the velocity.",
-      expectedResult: "Check not passed",
-      in: app
-    )
-    submitLocalCheck(
-      choice: ActivityChoice.practiceCorrect,
-      reasoning: "The velocity remains constant after the force is removed.",
-      expectedResult: "Recorded local check",
-      in: app
-    )
-
-    expectActivityType("Independent check", in: app)
-  }
-
-  func testCorrectProofSchedulesDelayedReturn() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    createScheduledDelayedReturn(in: app)
-
-    expectReturnStatus("Scheduled", in: app)
-    let returnOpensAt = element("today.return-opens-at", in: app)
-    revealAndWaitForVisible(returnOpensAt, in: app)
-    let returnDate = element("today.return-date-visual", in: app)
-    revealAndWaitForVisible(returnDate, in: app)
-  }
-
-  func testRestartPersistsCurrentActivity() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    completeCorrectPractice(in: app)
-    closeActivity(
-      in: app,
-      expectedScreen: element("today.course-title", in: app)
-    )
-
-    relaunchWithoutReset(
-      app,
-      clockStart: Self.initialClockStart + 86_400
-    )
-
-    waitForElement(element("today.course-title", in: app))
-    openCurrentActivity(in: app)
-    expectActivityType("Independent check", in: app)
-  }
-
-  func testDelayedReturnOpensCompletesAndPersistsAcrossRestart() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    createScheduledDelayedReturn(in: app)
-    expectReturnStatus("Scheduled", in: app)
-
-    relaunchWithoutReset(app, clockStart: Self.delayedReturnClockStart)
-
-    waitForElement(element("today.course-title", in: app))
-    expectReturnStatus("Open", in: app)
-    openCurrentActivity(in: app)
-    expectActivityType("Delayed return", in: app)
-    submitLocalCheck(
-      choice: ActivityChoice.delayedReturnCorrect,
-      reasoning: "The velocity remains constant and positive after the force stops.",
-      expectedResult: "Recorded local check",
-      in: app
-    )
-    closeActivity(
-      in: app,
-      expectedScreen: element("today.course-title", in: app)
-    )
-    expectReturnStatus("Return recorded", in: app)
-
-    relaunchWithoutReset(
-      app,
-      clockStart: Self.delayedReturnClockStart + 86_400
-    )
-
-    waitForElement(element("today.course-title", in: app))
-    expectReturnStatus("Return recorded", in: app)
-  }
-
-  func testInjectedClockShowsDueAndWindowClosedDelayedReturns() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    createScheduledDelayedReturn(in: app)
-
-    relaunchWithoutReset(
-      app,
-      clockStart: Self.delayedReturnDueClockStart
-    )
-
-    waitForElement(element("today.course-title", in: app))
-    expectReturnStatus("Due", in: app)
-    let dueOpenActivity = button("today.open-activity", in: app)
-    revealAndWaitForVisible(dueOpenActivity, in: app)
-    waitForEnabled(dueOpenActivity)
-
-    relaunchWithoutReset(
-      app,
-      clockStart: Self.delayedReturnWindowClosedClockStart
-    )
-
-    waitForElement(element("today.course-title", in: app))
-    expectReturnStatus("Window closed", in: app)
-    let closedOpenActivity = button("today.open-activity", in: app)
-    revealAndWaitForVisible(closedOpenActivity, in: app)
-    waitForDisabled(closedOpenActivity)
-  }
-
-  func testSettingsShowsReminderBoundaryCopy() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    createScheduledDelayedReturn(in: app)
-
-    tap(button("settings.toolbar-button", in: app))
-
-    let guidance = element("settings.reminder-guidance", in: app)
-    waitForElement(guidance)
-    waitForLabel(guidance, containing: "iOS controls notification delivery.")
-    waitForElement(app.switches["settings.return-reminders"])
-  }
-
-  func testSettingsTechnicalDetailsStartCollapsedAndShowLocalPackageFacts() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    tap(button("settings.toolbar-button", in: app))
-
-    let technicalDetails = button("settings.package-technical-details", in: app)
-    waitForValue(technicalDetails, equalTo: "Collapsed")
-    revealAndTap(technicalDetails, in: app)
-    waitForValue(technicalDetails, equalTo: "Expanded")
-    waitForValue(
-      element("settings.package-id", in: app),
-      equalTo: "package.forge.adult-mechanics.local-starter"
-    )
-    waitForValue(
-      element("settings.package-digest", in: app),
-      equalTo: "cfd71c2bd907def9b472c0d45f5b206d9725cdb2ba148a9d9d2f85287d656cf6"
-    )
-    waitForLabel(
-      element("settings.package-no-credential-boundary", in: app),
-      containing: "do not create credentials."
-    )
-  }
-
-  func testPrivacyAndSupportShowsLocalBoundaries() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    tap(button("settings.toolbar-button", in: app))
-    waitForElement(element("settings.reminder-guidance", in: app))
-    revealAndTap(element("settings.privacy-support", in: app), in: app)
-
-    waitForElement(element("privacy-support.screen", in: app))
-    let storageBoundary = element("privacy-support.storage-boundary", in: app)
-    revealAndWaitForVisible(storageBoundary, in: app)
-    let storageProtection = element("privacy-support.storage-protection", in: app)
-    revealAndWaitForVisible(storageProtection, in: app)
-    let appGroup = element("privacy-support.app-group", in: app)
-    revealAndWaitForVisible(appGroup, in: app)
-    let dataUse = element("privacy-support.data-use", in: app)
-    revealAndWaitForVisible(dataUse, in: app)
-  }
-
-  func testPrivacyAndSupportClearsPopulatedCourseAcrossRelaunch() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    completeCorrectPractice(in: app)
-    closeActivity(
-      in: app,
-      expectedScreen: element("today.course-title", in: app)
-    )
-
-    tap(button("settings.toolbar-button", in: app))
-    revealAndTap(element("settings.privacy-support", in: app), in: app)
-    waitForElement(element("privacy-support.screen", in: app))
-    revealAndTap(button("privacy-support.clear-local-data", in: app), in: app)
-    waitForElement(element("privacy-support.clear-local-data-confirmation", in: app))
-    revealAndTap(button("privacy-support.confirm-clear-local-data", in: app), in: app)
-    waitForElement(element("onboarding.screen", in: app))
-
-    relaunchWithoutReset(
-      app,
-      clockStart: Self.initialClockStart + Self.secondsPerDay
-    )
-
-    waitForElement(element("onboarding.screen", in: app))
-    waitForHittable(button("onboarding.start-course", in: app))
-  }
-
-  func testPrivacyClearCancelPreservesPopulatedCourseAcrossRelaunch() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    completeCorrectPractice(in: app)
-    closeActivity(
-      in: app,
-      expectedScreen: element("today.course-title", in: app)
-    )
-
-    tap(button("settings.toolbar-button", in: app))
-    revealAndTap(element("settings.privacy-support", in: app), in: app)
-    waitForElement(element("privacy-support.screen", in: app))
-    revealAndTap(button("privacy-support.clear-local-data", in: app), in: app)
-    waitForElement(element("privacy-support.clear-local-data-confirmation", in: app))
-    revealAndTap(button("privacy-support.cancel-clear-local-data", in: app), in: app)
-    waitForHittable(button("privacy-support.clear-local-data", in: app))
-
-    relaunchWithoutReset(
-      app,
-      clockStart: Self.initialClockStart + Self.secondsPerDay
-    )
-
-    waitForElement(element("today.course-title", in: app))
-    openCurrentActivity(in: app)
-    expectActivityType("Independent check", in: app)
-  }
-
-  func testEvidenceDisclosesLocalReceiptScope() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    completeCorrectPractice(in: app)
-    closeActivity(
-      in: app,
-      expectedScreen: element("today.course-title", in: app)
-    )
-
-    revealAndTap(app.tabBars.buttons["tab.evidence"], in: app)
-    waitForElement(element("evidence.record-list", in: app))
-    waitForElement(element("evidence.local-boundary", in: app))
-  }
-
-  func testEvidenceShowsWrongThenCorrectReceiptResultsAndLocalScope() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    openCurrentActivity(in: app)
-    submitLocalCheck(
-      choice: ActivityChoice.practiceWrong,
-      reasoning: "The force changes the velocity.",
-      expectedResult: "Check not passed",
-      in: app
-    )
-    submitLocalCheck(
-      choice: ActivityChoice.practiceCorrect,
-      reasoning: "The velocity remains constant after the force is removed.",
-      expectedResult: "Recorded local check",
-      in: app
-    )
-    closeActivity(
-      in: app,
-      expectedScreen: element("today.course-title", in: app)
-    )
-
-    tap(app.tabBars.buttons["tab.evidence"])
-    waitForElement(element("evidence.record-list", in: app))
-
-    let localReceipts = receipts(in: app)
-    waitForElement(localReceipts.firstMatch)
-    XCTAssertEqual(localReceipts.count, 2, "Expected two local receipts.")
-
-    let firstReceipt = localReceipts.element(boundBy: 0)
-    let secondReceipt = localReceipts.element(boundBy: 1)
-    let firstResult = expandedReceiptCheckResult(in: firstReceipt, app: app)
-    let secondResult = expandedReceiptCheckResult(in: secondReceipt, app: app)
-
-    XCTAssertEqual(
-      Set([firstResult, secondResult]),
-      Set(["Check not passed", "Recorded local check"]),
-      "Expected one failed check receipt and one recorded local check receipt."
-    )
-  }
-
-  func testEvidenceReceiptShowsLocalScopeWithoutRawResponse() {
-    let app = launchApp()
-    let uniqueResponse = "FORGE UI raw response marker 20260802"
-
-    startStarterCourse(in: app)
-    openCurrentActivity(in: app)
-    submitLocalCheck(
-      choice: ActivityChoice.practiceCorrect,
-      reasoning: uniqueResponse,
-      expectedResult: "Recorded local check",
-      in: app
-    )
-    closeActivity(
-      in: app,
-      expectedScreen: element("today.course-title", in: app)
-    )
-
-    tap(app.tabBars.buttons["tab.evidence"])
-    let localBoundary = element("evidence.local-boundary", in: app)
-    waitForElement(localBoundary)
-    waitForLabel(localBoundary, containing: "do not publish, share, change, or issue a credential.")
-
-    let receipt = onlyReceipt(in: app)
-    let disclosure = receiptDisclosure(in: receipt, in: app)
-    waitForValue(disclosure, equalTo: "Collapsed")
-    revealAndTap(disclosure, in: app)
-    waitForValue(disclosure, equalTo: "Expanded")
-    waitForValue(metadataRow("Scope", in: receipt), equalTo: "Local-only unsigned")
-    assertNoAccessibleContent(containing: uniqueResponse, in: app)
-  }
-
-  func testRootDeepLinksOpenCourseSurfaces() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-
-    openRootURL("forge://path", in: app)
-    let pathCourseTitle = element("path.course-title", in: app)
-    revealAndWaitForVisible(pathCourseTitle, in: app)
-
-    openRootURL("forge://evidence", in: app)
-    waitForElement(element("evidence.local-boundary", in: app))
-
-    openRootURL("forge://today", in: app)
-    waitForElement(element("today.course-title", in: app))
-
-    openRootURL("forge://returns", in: app)
-    waitForElement(element("today.course-title", in: app))
-
-    openRootURL("forge://settings", in: app)
-    waitForElement(element("settings.reminder-guidance", in: app))
-  }
-
-  func testColdLaunchRootDeepLinkOpensPath() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    relaunchWithoutReset(
-      app,
-      clockStart: Self.initialClockStart + Self.secondsPerDay
-    )
-    waitForElement(element("today.course-title", in: app))
-
-    app.terminate()
-    openRootURL("forge://path", in: app)
-
-    revealAndWaitForVisible(element("path.course-title", in: app), in: app)
-  }
-
-  func testColdLaunchRootDeepLinksOpenSettingsAndEvidence() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    relaunchWithoutReset(
-      app,
-      clockStart: Self.initialClockStart + Self.secondsPerDay
-    )
-    waitForElement(element("today.course-title", in: app))
-
-    app.terminate()
-    openRootURL("forge://settings", in: app)
-    waitForElement(element("settings.reminder-guidance", in: app))
-
-    app.terminate()
-    openRootURL("forge://evidence", in: app)
-    waitForElement(element("evidence.local-boundary", in: app))
-  }
-
-  func testFocusDeepLinkOnlyOpensEligibleCurrentActivity() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    openRootURL("forge://focus", in: app)
-    waitForElement(element("activity.screen", in: app))
-    closeActivity(
-      in: app,
-      expectedScreen: element("today.course-title", in: app)
-    )
-
-    openRootURL("forge://focus?unexpected=1", in: app)
-    assertDoesNotAppear(element("activity.screen", in: app))
-
-    createScheduledDelayedReturn(in: app)
-    expectReturnStatus("Scheduled", in: app)
-    openRootURL("forge://focus", in: app)
-    assertDoesNotAppear(element("activity.screen", in: app))
-    let openActivity = button("today.open-activity", in: app)
-    revealAndWaitForVisible(openActivity, in: app)
-    waitForDisabled(openActivity)
-  }
-
-  func testPathOpensCurrentActivityAndTodayReviewsCourse() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    tap(app.tabBars.buttons["tab.path"])
-    let pathCourseTitle = element("path.course-title", in: app)
-    revealAndWaitForVisible(pathCourseTitle, in: app)
-    revealAndTap(button("path.open-current", in: app), in: app)
-    waitForElement(element("activity.screen", in: app))
-    closeActivity(in: app, expectedScreen: pathCourseTitle)
-
-    tap(app.tabBars.buttons["tab.today"])
-    waitForElement(element("today.course-title", in: app))
-    revealAndTap(button("today.change-direction", in: app), in: app)
-    waitForElement(element("onboarding.screen", in: app))
-    waitForHittable(button("onboarding.start-course", in: app))
-  }
-
-  func testActivityDraftCancelPreservesAndDiscardDismisses() {
-    let app = launchApp()
-    let draftResponse = "Draft local reasoning."
-
-    startStarterCourse(in: app)
-    openCurrentActivity(in: app)
-
-    let selectedChoice = button(
-      "activity.choice.\(ActivityChoice.practiceCorrect)",
-      in: app
-    )
-    revealAndTap(selectedChoice, in: app)
-
-    let response = app.textFields["activity.response"]
-    revealAndTap(response, in: app)
-    response.typeText(draftResponse)
-    tap(button("activity.keyboard.done", in: app))
-
-    tap(button("activity.close", in: app))
-    let discardAlert = discardConfirmation(in: app)
-    let discardResponse = discardAlert.buttons.element(boundBy: 0)
-    let cancelDiscard = discardAlert.buttons.element(boundBy: 1)
-    waitForHittable(discardResponse)
-    waitForHittable(cancelDiscard)
-
-    tap(cancelDiscard)
-    waitForHittable(button("activity.close", in: app))
-    waitForElement(element("activity.screen", in: app))
-    waitForValue(selectedChoice, equalTo: "Selected")
-    waitForValue(response, equalTo: draftResponse)
-
-    tap(button("activity.close", in: app))
-    waitForElement(discardAlert)
-    waitForHittable(discardResponse)
-    tap(discardResponse)
-    waitForElement(element("today.course-title", in: app))
-    assertDoesNotAppear(element("activity.screen", in: app))
-  }
-
-  func testActivityChoiceOnlyDraftRequiresDiscardConfirmation() {
-    let app = launchApp()
-
-    startStarterCourse(in: app)
-    openCurrentActivity(in: app)
-
-    let selectedChoice = button(
-      "activity.choice.\(ActivityChoice.practiceCorrect)",
-      in: app
-    )
-    revealAndTap(selectedChoice, in: app)
-
-    tap(button("activity.close", in: app))
-    let discardAlert = discardConfirmation(in: app)
-    let discardResponse = discardAlert.buttons.element(boundBy: 0)
-    let cancelDiscard = discardAlert.buttons.element(boundBy: 1)
-    waitForHittable(discardResponse)
-    waitForHittable(cancelDiscard)
-
-    tap(cancelDiscard)
-    waitForHittable(button("activity.close", in: app))
-    waitForValue(selectedChoice, equalTo: "Selected")
-
-    tap(button("activity.close", in: app))
-    waitForElement(discardAlert)
-    waitForHittable(discardResponse)
-    tap(discardResponse)
-    waitForElement(element("today.course-title", in: app))
-  }
-
-  func testRootRouteDismissalReopensActivityWithDraft() {
-    let app = launchApp(
-      arguments: Self.defaultLaunchArguments + [
-        "-FORGEUITestingActivityDraftDismissal"
-      ]
-    )
-    let draftResponse = "Keep this local reasoning."
-
-    startStarterCourse(in: app)
-    openCurrentActivity(in: app)
-
-    let selectedChoice = button(
-      "activity.choice.\(ActivityChoice.practiceCorrect)",
-      in: app
-    )
-    revealAndTap(selectedChoice, in: app)
-
-    let response = app.textFields["activity.response"]
-    revealAndTap(response, in: app)
-    response.typeText(draftResponse)
-    tap(button("activity.keyboard.done", in: app))
-
-    tap(button("activity.test-route-dismissal", in: app))
-    waitForElement(element("today.course-title", in: app))
-    assertDoesNotAppear(element("activity.screen", in: app))
-
-    openCurrentActivity(in: app)
-    waitForValue(selectedChoice, equalTo: "Selected")
-    waitForValue(response, equalTo: draftResponse)
-  }
-
-  func testDynamicTypeKeepsUniversityJourneysAvailable() throws {
-    guard #available(iOS 17.0, *) else {
-      return
-    }
-
-    let app = launchApp(
-      arguments: Self.defaultLaunchArguments + [
-        "-UIPreferredContentSizeCategoryName",
-        "UICTContentSizeCategoryAccessibilityXXXL",
-      ]
-    )
-
-    tap(button("onboarding.start-course", in: app))
-    waitForElement(element("today.course-title", in: app))
-    revealAndWaitForHittable(button("today.open-activity", in: app), in: app)
-
-    tap(app.tabBars.buttons["tab.path"])
-    let pathCourseTitle = element("path.course-title", in: app)
-    revealAndWaitForVisible(pathCourseTitle, in: app)
-    revealAndTap(button("path.open-current", in: app), in: app)
-    waitForElement(element("activity.screen", in: app))
-    tap(button("activity.go-to-response-choices", in: app))
-    tap(button("activity.choice.\(ActivityChoice.practiceCorrect)", in: app))
-    let response = app.textFields["activity.response"]
-    revealAndTap(response, in: app)
-    response.typeText("Short local reasoning.")
-    let submit = button("activity.submit", in: app)
-    waitForEnabled(submit)
-    waitForHittable(submit)
-    tap(button("activity.keyboard.done", in: app))
-    tap(button("activity.close", in: app))
-    let discardResponse = discardConfirmation(in: app).buttons.element(boundBy: 0)
-    waitForHittable(discardResponse)
-    tap(discardResponse)
-    waitForElement(app.navigationBars["Path"])
-
-    tap(app.tabBars.buttons["tab.evidence"])
-    waitForElement(element("evidence.local-boundary", in: app))
-    revealAndWaitForVisible(element("evidence.empty-state", in: app), in: app)
-    tap(button("settings.toolbar-button", in: app))
-    let technicalDetails = button("settings.package-technical-details", in: app)
-    revealAndTap(technicalDetails, in: app)
-    waitForValue(technicalDetails, equalTo: "Expanded")
-    revealAndWaitForHittable(element("settings.privacy-support", in: app), in: app)
-    try performAccessibilitySmokeAudit(in: app, includesDynamicType: false)
-  }
-
-  func testTodayCourseContextIsReachableAtAccessibilityXXXL() {
-    guard #available(iOS 17.0, *) else {
-      return
-    }
-
-    let app = launchApp(
-      arguments: Self.defaultLaunchArguments + [
-        "-UIPreferredContentSizeCategoryName",
-        "UICTContentSizeCategoryAccessibilityXXXL",
-      ]
-    )
-
-    waitForElement(element("onboarding.screen", in: app))
-    tap(button("onboarding.start-course", in: app))
-
-    let courseTitle = element("today.course-title", in: app)
-    waitForElement(courseTitle)
-    revealAndWaitForVisible(courseTitle, in: app)
-  }
-
-  func testReducedMotionKeepsCourseJourneyAvailable() {
-    let app = launchApp(
-      arguments: Self.defaultLaunchArguments + [
-        "-UIAccessibilityReduceMotionEnabled",
-        "YES",
-      ]
-    )
-
-    visitMainCourseSurfaces(in: app)
-  }
-
-  func testReducedTransparencyKeepsAccessibilityJourneyAvailable() throws {
-    guard #available(iOS 17.0, *) else {
-      return
-    }
-
-    try performAccessibilityPreferenceJourney(
-      launchArguments: Self.defaultLaunchArguments + [
-        "-UIAccessibilityReduceTransparencyEnabled",
-        "YES",
-      ]
-    )
-  }
-
-  func testDifferentiateWithoutColorKeepsAccessibilityJourneyAvailable() throws {
-    guard #available(iOS 17.0, *) else {
-      return
-    }
-
-    try performAccessibilityPreferenceJourney(
-      launchArguments: Self.defaultLaunchArguments + [
-        "-UIAccessibilityDifferentiateWithoutColorEnabled",
-        "YES",
-      ]
-    )
-  }
-
-  func testDarkModeKeepsStarterCourseAvailable() throws {
-    guard #available(iOS 17.0, *) else {
-      return
-    }
-
-    let app = launchApp(
-      arguments: Self.defaultLaunchArguments + [
-        "-AppleInterfaceStyle",
-        "Dark",
-      ]
-    )
-
-    visitMainCourseSurfaces(in: app)
-    try performAccessibilitySmokeAudit(in: app)
-  }
-
-  func testAccessibilitySmokePath() throws {
-    guard #available(iOS 17.0, *) else {
-      return
-    }
-
-    let app = launchApp()
-
-    try performAccessibilitySmokeAudit(in: app)
-
-    tap(button("onboarding.start-course", in: app))
-    waitForElement(element("today.course-title", in: app))
-    try performAccessibilitySmokeAudit(in: app)
-
-    openCurrentActivity(in: app)
-    try performAccessibilitySmokeAudit(in: app)
-
-    submitLocalCheck(
-      choice: ActivityChoice.practiceCorrect,
-      reasoning: "Accessible local reasoning.",
-      expectedResult: "Recorded local check",
-      in: app
-    )
-    closeActivity(
-      in: app,
-      expectedScreen: element("today.course-title", in: app)
-    )
-
-    tap(app.tabBars.buttons["tab.path"])
-    revealAndWaitForVisible(element("path.course-title", in: app), in: app)
-    try performAccessibilitySmokeAudit(in: app)
-
-    tap(app.tabBars.buttons["tab.evidence"])
-    revealAndWaitForVisible(element("evidence.local-boundary", in: app), in: app)
-    try performAccessibilitySmokeAudit(in: app)
-
-    let receipt = onlyReceipt(in: app)
-    let disclosure = receiptDisclosure(in: receipt, in: app)
-    waitForValue(disclosure, equalTo: "Collapsed")
-    revealAndTap(disclosure, in: app)
-    waitForValue(disclosure, equalTo: "Expanded")
-    try performAccessibilitySmokeAudit(in: app)
-
-    tap(button("settings.toolbar-button", in: app))
-    revealAndWaitForVisible(element("settings.reminder-guidance", in: app), in: app)
-    try performAccessibilitySmokeAudit(in: app)
-
-    let technicalDetails = button("settings.package-technical-details", in: app)
-    waitForValue(technicalDetails, equalTo: "Collapsed")
-    revealAndTap(technicalDetails, in: app)
-    waitForValue(technicalDetails, equalTo: "Expanded")
-    try performAccessibilitySmokeAudit(in: app)
-
-    revealAndTap(element("settings.privacy-support", in: app), in: app)
-    revealAndWaitForVisible(element("privacy-support.screen", in: app), in: app)
-    try performAccessibilitySmokeAudit(in: app)
-
-    app.terminate()
-    let recoveryApp = launchApp(
-      arguments: Self.defaultLaunchArguments + [
-        "-FORGEUITestingCorruptPrivateState"
-      ]
-    )
-    revealAndWaitForVisible(element("recovery.screen", in: recoveryApp), in: recoveryApp)
-    try performAccessibilitySmokeAudit(in: recoveryApp)
-
-    revealAndTap(button("recovery.clear-local-data", in: recoveryApp), in: recoveryApp)
-    waitForHittable(button("recovery.confirm-clear-local-data", in: recoveryApp))
-    try performAccessibilitySmokeAudit(in: recoveryApp)
-
-    tap(button("recovery.confirm-clear-local-data", in: recoveryApp))
-    waitForElement(element("onboarding.screen", in: recoveryApp))
-    try performAccessibilitySmokeAudit(in: recoveryApp)
-  }
-
-  func testCorruptPrivateStateShowsRecoveryAndClearRestoresOnboarding() {
-    let app = launchApp(
-      arguments: Self.defaultLaunchArguments + [
-        "-FORGEUITestingCorruptPrivateState"
-      ]
-    )
-
-    waitForElement(element("recovery.screen", in: app))
-    let retry = button("recovery.retry", in: app)
-    tap(retry)
-    waitForElement(element("recovery.screen", in: app))
-    waitForHittable(retry)
-    revealAndTap(button("recovery.clear-local-data", in: app), in: app)
-    let confirmClear = app.buttons["Clear local data"]
-    waitForHittable(confirmClear)
-    tap(confirmClear)
-
-    waitForElement(element("onboarding.screen", in: app))
-
-    relaunchWithoutReset(
-      app,
-      clockStart: Self.initialClockStart + Self.secondsPerDay
-    )
-
-    waitForElement(element("onboarding.screen", in: app))
-    assertDoesNotAppear(element("recovery.screen", in: app))
-  }
-
-  func testRecoveryClearCancelPreservesRecoveryAcrossRelaunch() {
-    let app = launchApp(
-      arguments: Self.defaultLaunchArguments + [
-        "-FORGEUITestingCorruptPrivateState"
-      ]
-    )
-
-    waitForElement(element("recovery.screen", in: app))
-    revealAndTap(button("recovery.clear-local-data", in: app), in: app)
-    waitForHittable(button("recovery.cancel-clear-local-data", in: app))
-    tap(button("recovery.cancel-clear-local-data", in: app))
-    waitForHittable(button("recovery.clear-local-data", in: app))
-
-    relaunchWithoutReset(
-      app,
-      clockStart: Self.initialClockStart + Self.secondsPerDay
-    )
-
-    waitForElement(element("recovery.screen", in: app))
-    waitForHittable(button("recovery.clear-local-data", in: app))
+    let create = button("onboarding.create-semester-desk", in: app)
+    waitForDisabled(create)
+
+    enter("Autumn 2026", into: textField("onboarding.semester-name", in: app), in: app)
+    waitForEnabled(create)
+    rapidlyTap(create)
+
+    let semesterName = element("today.semester-name", in: app)
+    waitForElement(semesterName)
+    waitForLabel(semesterName, equalTo: "Autumn 2026")
     assertDoesNotAppear(element("onboarding.screen", in: app))
   }
 
-  private func launchApp(arguments: [String]? = nil) -> XCUIApplication {
+  func testSemesterTruthCapacityRecoveryAndNextActionFlow() {
+    let app = launchApp()
+
+    createSemesterDesk(named: "Autumn 2026", in: app)
+    openSemester(in: app)
+    addCourse(code: "CS101", title: "Algorithms", in: app)
+    addCheckedFact(
+      label: "Exam date",
+      value: "12 May",
+      source: "Course outline",
+      in: app
+    )
+    addCheckedFact(
+      label: "Exam date",
+      value: "19 May",
+      source: "Latest course message",
+      in: app
+    )
+    recordOpenConflict(
+      summary: "The two listed exam dates do not match.",
+      in: app
+    )
+    confirmCapacity(in: app)
+    addPlannedWork(named: "Work through graph proofs", in: app)
+
+    XCTAssertEqual(
+      buttons(withIdentifierPrefix: "semester.choose.", in: app).count,
+      0,
+      "An open fact conflict must block next-action selection."
+    )
+
+    revealAndTap(
+      firstButton(withIdentifierPrefix: "semester.resolve-conflict.", in: app),
+      in: app
+    )
+    waitForElement(firstButton(withIdentifierPrefix: "semester.choose.", in: app))
+
+    prepareAndConfirmRecovery(in: app)
+
+    let choose = firstButton(withIdentifierPrefix: "semester.choose.", in: app)
+    revealAndTap(choose, in: app)
+    openToday(in: app)
+    waitForLabel(
+      element("today.primary-heading", in: app),
+      containing: "Ready to work on"
+    )
+    waitForHittable(button("today.primary-button", in: app))
+  }
+
+  func testProtectedStudyCompletesDelayedReturnAndRecordsAnswerFreeProgress() {
+    let app = launchApp(clockStart: Self.defaultClockStart)
+
+    createSelectedPlan(named: "Explain shortest paths", in: app)
+    openProtectedStudy(in: app)
+
+    enter(
+      "I used the invariant before each relaxation step.",
+      into: textView("study.practice-text", in: app),
+      in: app
+    )
+    revealAndTap(button("study.practice-complete", in: app), in: app)
+    waitForElement(textView("study.independent-text", in: app))
+
+    enter(
+      "Each relaxation can improve a path estimate until no shorter edge remains.",
+      into: textView("study.independent-text", in: app),
+      in: app
+    )
+    revealAndTap(button("study.independent-demonstrated", in: app), in: app)
+    waitForElement(element("study.return-date", in: app))
+    waitForLabel(
+      element("study.selected-return-date", in: app),
+      equalTo: defaultReturnDateLabel(clockStart: Self.defaultClockStart)
+    )
+
+    let saveReturnDate = button("study.save-return-date", in: app)
+    revealAndWaitForHittable(saveReturnDate, in: app)
+    waitForEnabled(saveReturnDate)
+    tap(saveReturnDate)
+
+    waitForElement(element("today.primary-heading", in: app))
+    waitForLabel(
+      element("today.primary-heading", in: app),
+      containing: "Come back on this date"
+    )
+    waitForDisabled(button("today.primary-button", in: app))
+
+    relaunchWithoutReset(app, clockStart: Self.delayedReturnClockStart)
+    waitForElement(element("today.semester-name", in: app))
+    waitForEnabled(button("today.primary-button", in: app))
+    openProtectedStudy(in: app)
+    let delayedReturnText = textView("study.delayed-return-text", in: app)
+    waitForElement(delayedReturnText)
+    enter(
+      "A fresh explanation still follows the reachability invariant.",
+      into: delayedReturnText,
+      in: app
+    )
+    revealAndTap(button("study.return-retained", in: app), in: app)
+    waitForElement(element("today.semester-name", in: app))
+
+    openProgress(in: app)
+    waitForElement(element("progress.screen", in: app))
+    waitForElement(accessibleElement(containing: "Practice completed", in: app))
+    waitForElement(accessibleElement(containing: "Independent check completed", in: app))
+    waitForElement(accessibleElement(containing: "Delayed return completed", in: app))
+    assertNoAccessibleContent(
+      containing: "fresh explanation still follows",
+      in: app
+    )
+  }
+
+  func testProtectedStudyCloseKeepsDraftInProcessAndColdRelaunchDropsIt() {
+    let app = launchApp(clockStart: Self.defaultClockStart)
+    let rawDraft = "Private graph proof draft marker."
+
+    createSelectedPlan(named: "Prove graph reachability", in: app)
+    openProtectedStudy(in: app)
+    let practiceText = textView("study.practice-text", in: app)
+    enter(rawDraft, into: practiceText, in: app)
+
+    tap(button("study.close", in: app))
+    let closeAlert = app.alerts["Close protected study?"]
+    waitForElement(closeAlert)
+    tap(closeAlert.buttons["Close and keep for process"])
+    waitForElement(element("today.semester-name", in: app))
+
+    openProtectedStudy(in: app)
+    waitForValue(practiceText, equalTo: rawDraft)
+
+    relaunchWithoutReset(
+      app,
+      clockStart: Self.defaultClockStart + Self.secondsPerDay
+    )
+    waitForElement(element("today.semester-name", in: app))
+    openProtectedStudy(in: app)
+    assertNoAccessibleContent(containing: rawDraft, in: app)
+  }
+
+  func testProtectedStudyCloseConfirmationKeepsEditingThenDiscardsPrivateDraft() {
+    let app = launchApp(clockStart: Self.defaultClockStart)
+    let rawDraft = "Private draft that must stay only in this process."
+
+    createSelectedPlan(named: "Trace graph reachability", in: app)
+    openProtectedStudy(in: app)
+    let practiceText = textView("study.practice-text", in: app)
+    enter(rawDraft, into: practiceText, in: app)
+
+    tap(button("study.close", in: app))
+    let closeAlert = app.alerts["Close protected study?"]
+    waitForElement(closeAlert)
+    waitForElement(accessibleElement(containing: "iOS can remove it when the app closes.", in: app))
+    tap(closeAlert.buttons["Keep editing"])
+    waitForElement(element("study.screen", in: app))
+    waitForValue(practiceText, equalTo: rawDraft)
+
+    tap(button("study.close", in: app))
+    waitForElement(closeAlert)
+    tap(closeAlert.buttons["Discard and close"])
+    waitForElement(element("today.semester-name", in: app))
+
+    openProtectedStudy(in: app)
+    let restoredPracticeText = textView("study.practice-text", in: app)
+    waitForValue(restoredPracticeText, equalTo: "")
+    assertNoAccessibleContent(containing: rawDraft, in: app)
+  }
+
+  func testProtectedStudyCloseWithoutPrivateDraftDismissesImmediately() {
+    let app = launchApp(clockStart: Self.defaultClockStart)
+
+    createSelectedPlan(named: "Check graph reachability", in: app)
+    openProtectedStudy(in: app)
+    tap(button("study.close", in: app))
+
+    waitForElement(element("today.semester-name", in: app))
+    assertDoesNotAppear(app.alerts["Close protected study?"])
+  }
+
+  func testRootDeepLinksRouteSemesterDeskSurfaces() {
+    let app = launchApp()
+
+    createSemesterDesk(named: "Autumn 2026", in: app)
+
+    openRootURL("forge://semester", in: app)
+    waitForElement(element("semester.screen", in: app))
+
+    openRootURL("forge://progress", in: app)
+    waitForElement(element("progress.screen", in: app))
+
+    openRootURL("forge://settings", in: app)
+    waitForElement(element("semester-settings.screen", in: app))
+
+    openRootURL("forge://today", in: app)
+    waitForElement(element("today.semester-name", in: app))
+  }
+
+  func testDirtySemesterDeskFormRequiresNativeDiscardConfirmation() {
+    let app = launchApp()
+    let unsavedCourseCode = "UNSAVED101"
+
+    createSemesterDesk(named: "Autumn 2026", in: app)
+    openSemester(in: app)
+    revealAndTap(button("semester.add-course", in: app), in: app)
+
+    let courseCode = textField("course-form.code", in: app)
+    enter(unsavedCourseCode, into: courseCode, in: app)
+
+    let close = app.navigationBars.buttons["Close"]
+    revealAndTap(close, in: app)
+
+    let discardAlert = app.alerts["Discard unsaved changes?"]
+    waitForElement(discardAlert)
+    tap(discardAlert.buttons["Keep editing"])
+    waitForValue(courseCode, equalTo: unsavedCourseCode)
+
+    revealAndTap(close, in: app)
+    waitForElement(discardAlert)
+    tap(discardAlert.buttons["Discard changes"])
+    waitForElement(element("semester.screen", in: app))
+    assertDoesNotAppear(courseCode)
+  }
+
+  func testSettingsUsesGenericReminderAndPrivateExportCopy() {
+    let app = launchApp()
+    let courseTitle = "Private Systems Architecture"
+    let planTitle = "Private study plan marker"
+
+    createSemesterDesk(named: "Autumn 2026", in: app)
+    openSemester(in: app)
+    addCourse(code: "PRIV101", title: courseTitle, in: app)
+    confirmCapacity(in: app)
+    addPlannedWork(named: planTitle, in: app)
+
+    openRootURL("forge://settings", in: app)
+    let settings = element("semester-settings.screen", in: app)
+    waitForElement(settings)
+
+    let reminderStatus = settings.descendants(matching: .any).matching(
+      NSPredicate(format: "label CONTAINS %@", "Reminder status")
+    ).firstMatch
+    waitForElement(reminderStatus)
+    XCTAssertFalse(reminderStatus.label.contains(courseTitle))
+    XCTAssertFalse(reminderStatus.label.contains(planTitle))
+
+    let export = button("semester-settings.export", in: app)
+    revealAndWaitForHittable(export, in: app)
+    XCTAssertEqual(export.label, "Export local Semester Desk JSON")
+
+    let privateContent = settings.descendants(matching: .any).matching(
+      NSPredicate(
+        format: "label CONTAINS %@ OR value CONTAINS %@ OR label CONTAINS %@ OR value CONTAINS %@",
+        courseTitle,
+        courseTitle,
+        planTitle,
+        planTitle
+      )
+    )
+    XCTAssertEqual(privateContent.count, 0)
+  }
+
+  func testLocalResetClearsSemesterDeskAcrossColdRelaunch() {
+    let app = launchApp()
+
+    createSemesterDesk(named: "Autumn 2026", in: app)
+    tap(button("settings.toolbar-button", in: app))
+    waitForElement(element("semester-settings.screen", in: app))
+
+    revealAndTap(button("semester-settings.clear-local-data", in: app), in: app)
+    let alert = app.alerts["Clear local data?"]
+    waitForElement(alert)
+    tap(alert.buttons["Clear local data"])
+    waitForElement(element("onboarding.screen", in: app))
+
+    relaunchWithoutReset(
+      app,
+      clockStart: Self.defaultClockStart + Self.secondsPerDay
+    )
+    waitForElement(element("onboarding.screen", in: app))
+    assertDoesNotAppear(element("today.semester-name", in: app))
+  }
+
+  func testAccessibilityXXXLKeepsSemesterDeskActionsReachable() throws {
+    guard #available(iOS 17.0, *) else {
+      return
+    }
+
+    let app = launchApp(
+      extraArguments: [
+        "-UIPreferredContentSizeCategoryName",
+        "UICTContentSizeCategoryAccessibilityXXXL",
+      ]
+    )
+
+    createSemesterDesk(named: "Autumn 2026", in: app)
+    openSemester(in: app)
+    revealAndTap(button("semester.add-course", in: app), in: app)
+    enter("CS101", into: textField("course-form.code", in: app), in: app)
+    enter("Algorithms", into: textField("course-form.title", in: app), in: app)
+    revealAndTap(button("course-form.save", in: app), in: app)
+
+    waitForElement(element("semester.screen", in: app))
+    let capacity = button("semester.capacity", in: app)
+    revealAndWaitForHittable(capacity, in: app)
+    assertFullyVisible(capacity, in: app)
+
+    openToday(in: app)
+    let nextAction = button("today.primary-button", in: app)
+    revealAndWaitForHittable(nextAction, in: app)
+    assertFullyVisible(nextAction, in: app)
+
+    try app.performAccessibilityAudit(
+      for: [
+        .contrast,
+        .elementDetection,
+        .hitRegion,
+        .sufficientElementDescription,
+        .textClipped,
+        .trait,
+      ]
+    )
+  }
+
+  func testSmallDeviceLayoutKeepsCoreSemesterDeskActionsVisible() throws {
+    let app = launchApp()
+    waitForElement(element("onboarding.screen", in: app))
+
+    guard app.frame.width <= 390 else {
+      throw XCTSkip(
+        "Run this test with a 390-point or narrower iPhone Simulator destination."
+      )
+    }
+
+    let create = button("onboarding.create-semester-desk", in: app)
+    revealAndWaitForHittable(create, in: app)
+    assertFullyVisible(create, in: app)
+
+    createSemesterDesk(named: "Autumn 2026", in: app)
+    let nextAction = button("today.primary-button", in: app)
+    revealAndWaitForHittable(nextAction, in: app)
+    assertFullyVisible(nextAction, in: app)
+
+    openSemester(in: app)
+    let addCourse = button("semester.add-course", in: app)
+    revealAndWaitForHittable(addCourse, in: app)
+    assertFullyVisible(addCourse, in: app)
+  }
+
+  private func launchApp(
+    clockStart: Int = defaultClockStart,
+    extraArguments: [String] = []
+  ) -> XCUIApplication {
     continueAfterFailure = false
 
     let app = XCUIApplication()
-    app.launchArguments = arguments ?? Self.defaultLaunchArguments
+    app.launchArguments = launchArguments(
+      clockStart: clockStart,
+      resetsState: true,
+      extraArguments: extraArguments
+    )
     app.launch()
     return app
   }
@@ -822,165 +391,180 @@ final class FORGEUITests: XCTestCase {
     _ app: XCUIApplication,
     clockStart: Int
   ) {
-    XCTAssertGreaterThan(clockStart, Self.initialClockStart)
     app.terminate()
-
-    var launchArguments = Self.defaultLaunchArguments
-    launchArguments.removeAll { $0 == "-FORGEUITestingReset" }
-
-    guard
-      let clockArgumentIndex = launchArguments.firstIndex(
-        of: "-FORGEUITestingClockStart"
-      )
-    else {
-      XCTFail("The UI test clock argument is not available.")
-      return
-    }
-
-    let clockValueIndex = launchArguments.index(after: clockArgumentIndex)
-    guard clockValueIndex < launchArguments.endIndex else {
-      XCTFail("The UI test clock start value is not available.")
-      return
-    }
-
-    launchArguments[clockValueIndex] = String(clockStart)
-    app.launchArguments = launchArguments
+    app.launchArguments = launchArguments(
+      clockStart: clockStart,
+      resetsState: false
+    )
     app.launch()
   }
 
-  private func startStarterCourse(in app: XCUIApplication) {
+  private func launchArguments(
+    clockStart: Int,
+    resetsState: Bool,
+    extraArguments: [String] = []
+  ) -> [String] {
+    var arguments = ["-FORGEUITestingClockStart", String(clockStart)]
+    if resetsState {
+      arguments.insert("-FORGEUITestingReset", at: 0)
+    }
+    arguments.append(contentsOf: extraArguments)
+    return arguments
+  }
+
+  private func defaultReturnDateLabel(clockStart: Int) -> String {
+    let currentDate = Date(timeIntervalSince1970: TimeInterval(clockStart))
+    let calendar = Calendar.autoupdatingCurrent
+    let defaultReturnDate =
+      calendar.date(
+        byAdding: .day,
+        value: 1,
+        to: currentDate
+      ) ?? currentDate.addingTimeInterval(TimeInterval(Self.secondsPerDay))
+    return defaultReturnDate.formatted(date: .long, time: .shortened)
+  }
+
+  private func createSemesterDesk(named name: String, in app: XCUIApplication) {
     waitForElement(element("onboarding.screen", in: app))
-    tap(button("onboarding.start-course", in: app))
-    waitForElement(element("today.course-title", in: app))
+    enter(name, into: textField("onboarding.semester-name", in: app), in: app)
+    revealAndTap(button("onboarding.create-semester-desk", in: app), in: app)
+    let semesterName = element("today.semester-name", in: app)
+    waitForElement(semesterName)
+    waitForLabel(semesterName, equalTo: name)
   }
 
-  private func openCurrentActivity(in app: XCUIApplication) {
-    revealAndTap(button("today.open-activity", in: app), in: app)
-    waitForElement(element("activity.screen", in: app))
-  }
+  private func createSelectedPlan(named title: String, in app: XCUIApplication) {
+    createSemesterDesk(named: "Autumn 2026", in: app)
+    openSemester(in: app)
+    addCourse(code: "CS101", title: "Algorithms", in: app)
+    confirmCapacity(in: app)
+    addPlannedWork(named: title, in: app)
 
-  private func closeActivity(
-    in app: XCUIApplication,
-    expectedScreen: XCUIElement
-  ) {
-    tap(button("activity.close", in: app))
-    waitForElement(expectedScreen)
-  }
-
-  private func visitMainCourseSurfaces(in app: XCUIApplication) {
-    startStarterCourse(in: app)
-
-    revealAndWaitForVisible(
-      element("today.boundary-copy-visual", in: app),
-      in: app
-    )
-    openCurrentActivity(in: app)
-    closeActivity(
-      in: app,
-      expectedScreen: element("today.course-title", in: app)
-    )
-
-    tap(app.tabBars.buttons["tab.path"])
-    revealAndWaitForVisible(element("path.course-title", in: app), in: app)
-
-    tap(app.tabBars.buttons["tab.evidence"])
-    revealAndWaitForVisible(element("evidence.local-boundary", in: app), in: app)
-
-    tap(button("settings.toolbar-button", in: app))
-    revealAndWaitForVisible(
-      element("settings.reminder-guidance", in: app),
-      in: app
-    )
-    revealAndTap(element("settings.privacy-support", in: app), in: app)
-    revealAndWaitForVisible(element("privacy-support.screen", in: app), in: app)
-  }
-
-  private func performAccessibilityPreferenceJourney(
-    launchArguments: [String]
-  ) throws {
-    let app = launchApp(arguments: launchArguments)
-
-    startStarterCourse(in: app)
-    try performAccessibilitySmokeAudit(in: app)
-
-    openCurrentActivity(in: app)
-    try performAccessibilitySmokeAudit(in: app)
-    closeActivity(
-      in: app,
-      expectedScreen: element("today.course-title", in: app)
-    )
-
-    tap(button("settings.toolbar-button", in: app))
-    revealAndTap(element("settings.privacy-support", in: app), in: app)
-    revealAndWaitForVisible(element("privacy-support.screen", in: app), in: app)
-
-    revealAndTap(button("privacy-support.clear-local-data", in: app), in: app)
-    waitForElement(element("privacy-support.clear-local-data-confirmation", in: app))
-    try performAccessibilitySmokeAudit(in: app)
-    revealAndTap(button("privacy-support.confirm-clear-local-data", in: app), in: app)
-    waitForElement(element("onboarding.screen", in: app))
-    try performAccessibilitySmokeAudit(in: app)
-
-    app.terminate()
-    let recoveryApp = launchApp(
-      arguments: launchArguments + ["-FORGEUITestingCorruptPrivateState"]
-    )
-    revealAndWaitForVisible(element("recovery.screen", in: recoveryApp), in: recoveryApp)
-    try performAccessibilitySmokeAudit(in: recoveryApp)
-
-    revealAndTap(button("recovery.clear-local-data", in: recoveryApp), in: recoveryApp)
-    waitForHittable(button("recovery.confirm-clear-local-data", in: recoveryApp))
-    try performAccessibilitySmokeAudit(in: recoveryApp)
-    tap(button("recovery.confirm-clear-local-data", in: recoveryApp))
-    waitForElement(element("onboarding.screen", in: recoveryApp))
-    try performAccessibilitySmokeAudit(in: recoveryApp)
-  }
-
-  private func completeCorrectPractice(in app: XCUIApplication) {
-    openCurrentActivity(in: app)
-    submitLocalCheck(
-      choice: ActivityChoice.practiceCorrect,
-      reasoning: "The velocity remains constant after the force is removed.",
-      expectedResult: "Recorded local check",
-      in: app
-    )
-    expectActivityType("Independent check", in: app)
-  }
-
-  private func createScheduledDelayedReturn(in app: XCUIApplication) {
-    completeCorrectPractice(in: app)
-    submitLocalCheck(
-      choice: ActivityChoice.practiceCorrect,
-      reasoning: "The velocity remains constant after the force is removed.",
-      expectedResult: "Recorded local check",
-      in: app
-    )
-    expectActivityType("Delayed return", in: app)
-    closeActivity(
-      in: app,
-      expectedScreen: element("today.course-title", in: app)
+    let choose = firstButton(withIdentifierPrefix: "semester.choose.", in: app)
+    revealAndTap(choose, in: app)
+    openToday(in: app)
+    waitForLabel(
+      element("today.primary-heading", in: app),
+      containing: "Ready to work on"
     )
   }
 
-  private func submitLocalCheck(
-    choice: String,
-    reasoning: String,
-    expectedResult: String,
+  private func addCourse(
+    code: String,
+    title: String,
     in app: XCUIApplication
   ) {
-    revealAndTap(button("activity.choice.\(choice)", in: app), in: app)
+    revealAndTap(button("semester.add-course", in: app), in: app)
+    enter(code, into: textField("course-form.code", in: app), in: app)
+    enter(title, into: textField("course-form.title", in: app), in: app)
+    revealAndTap(button("course-form.save", in: app), in: app)
+    waitForElement(element("semester.screen", in: app))
+  }
 
-    let response = app.textFields["activity.response"]
-    revealAndTap(response, in: app)
-    response.typeText(reasoning)
+  private func addCheckedFact(
+    label: String,
+    value: String,
+    source: String,
+    in app: XCUIApplication
+  ) {
+    revealAndTap(
+      firstButton(withIdentifierPrefix: "semester.add-fact.", in: app),
+      in: app
+    )
+    enter(label, into: textField("fact-form.label", in: app), in: app)
+    enter(value, into: textField("fact-form.value", in: app), in: app)
+    enter(source, into: textField("fact-form.source", in: app), in: app)
+    chooseFactStatus("Checked", in: app)
+    revealAndTap(button("fact-form.save", in: app), in: app)
+    waitForElement(element("semester.screen", in: app))
+  }
 
-    let submit = button("activity.submit", in: app)
-    waitForEnabled(submit)
-    tap(submit)
+  private func chooseFactStatus(_ status: String, in app: XCUIApplication) {
+    revealAndTap(element("fact-form.status", in: app), in: app)
 
-    let result = element("activity.result", in: app)
-    waitForElement(result)
-    waitForLabel(result, equalTo: expectedResult)
+    let pickerOption = app.cells.containing(.staticText, identifier: status).firstMatch
+    if pickerOption.waitForExistence(timeout: 1) {
+      revealAndTap(pickerOption, in: app)
+    } else {
+      revealAndTap(app.staticTexts[status], in: app)
+    }
+  }
+
+  private func recordOpenConflict(summary: String, in app: XCUIApplication) {
+    revealAndTap(
+      firstButton(withIdentifierPrefix: "semester.record-conflict.", in: app),
+      in: app
+    )
+
+    let facts = app.switches.matching(
+      NSPredicate(format: "identifier BEGINSWITH %@", "conflict-form.fact.")
+    )
+    waitForElement(facts.firstMatch)
+    XCTAssertEqual(facts.count, 2, "Expected exactly two selectable course facts.")
+    for index in 0..<2 {
+      revealAndTap(facts.element(boundBy: index), in: app)
+    }
+
+    enter(summary, into: textField("conflict-form.summary", in: app), in: app)
+    revealAndTap(button("conflict-form.save", in: app), in: app)
+    waitForElement(element("semester.screen", in: app))
+  }
+
+  private func confirmCapacity(in app: XCUIApplication) {
+    revealAndTap(button("semester.capacity", in: app), in: app)
+    revealAndTap(button("capacity-form.save-draft", in: app), in: app)
+    revealAndTap(button("capacity-form.confirm", in: app), in: app)
+    waitForElement(element("semester.screen", in: app))
+  }
+
+  private func addPlannedWork(named title: String, in app: XCUIApplication) {
+    revealAndTap(
+      firstButton(withIdentifierPrefix: "semester.add-plan.", in: app),
+      in: app
+    )
+    enter(title, into: textField("plan-form.title", in: app), in: app)
+    revealAndTap(button("plan-form.save", in: app), in: app)
+    waitForElement(element("semester.screen", in: app))
+  }
+
+  private func prepareAndConfirmRecovery(in app: XCUIApplication) {
+    revealAndTap(button("semester.prepare-recovery", in: app), in: app)
+    enter(
+      "A late course change reduced the available week.",
+      into: textField("recovery-form.summary", in: app),
+      in: app
+    )
+    enter(
+      "Keep this work because the revised plan remains possible.",
+      into: firstTextField(withIdentifierPrefix: "recovery-form.reason.", in: app),
+      in: app
+    )
+    revealAndTap(button("recovery-form.save", in: app), in: app)
+    waitForElement(element("semester.screen", in: app))
+
+    revealAndTap(button("semester.review-recovery", in: app), in: app)
+    revealAndTap(button("recovery-review.confirm", in: app), in: app)
+    waitForElement(element("semester.screen", in: app))
+  }
+
+  private func openToday(in app: XCUIApplication) {
+    tap(tab("tab.today", in: app))
+    waitForElement(element("today.semester-name", in: app))
+  }
+
+  private func openSemester(in app: XCUIApplication) {
+    tap(tab("tab.semester", in: app))
+    waitForElement(element("semester.screen", in: app))
+  }
+
+  private func openProgress(in app: XCUIApplication) {
+    tap(tab("tab.progress", in: app))
+    waitForElement(element("progress.screen", in: app))
+  }
+
+  private func openProtectedStudy(in app: XCUIApplication) {
+    revealAndTap(button("today.primary-button", in: app), in: app)
+    waitForElement(element("study.screen", in: app))
   }
 
   private func openRootURL(_ string: String, in app: XCUIApplication) {
@@ -992,83 +576,34 @@ final class FORGEUITests: XCTestCase {
     app.open(url)
   }
 
-  private func expectActivityType(
-    _ expectedValue: String,
+  private func enter(
+    _ text: String,
+    into field: XCUIElement,
     in app: XCUIApplication
   ) {
-    waitForValue(element("activity.type", in: app), equalTo: expectedValue)
+    revealAndTap(field, in: app)
+    field.typeText(text)
   }
 
-  private func expectReturnStatus(
-    _ expectedValue: String,
-    in app: XCUIApplication
-  ) {
-    let returnStatus = element("today.return-status-visual", in: app)
-    revealAndWaitForVisible(returnStatus, in: app)
-    waitForValue(returnStatus, equalTo: expectedValue)
-  }
-
-  private func receipts(in app: XCUIApplication) -> XCUIElementQuery {
-    app.descendants(matching: .any).matching(
-      NSPredicate(format: "identifier BEGINSWITH %@", "evidence.receipt.")
+  private func rapidlyTap(_ element: XCUIElement) {
+    waitForHittable(element)
+    let coordinate = element.coordinate(
+      withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)
     )
+    coordinate.tap()
+    coordinate.tap()
   }
 
-  private func onlyReceipt(in app: XCUIApplication) -> XCUIElement {
-    let localReceipts = receipts(in: app)
-    let receipt = localReceipts.firstMatch
-    waitForElement(receipt)
-    XCTAssertEqual(localReceipts.count, 1, "Expected exactly one local receipt.")
-    return receipt
+  private func tab(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
+    app.tabBars.buttons[identifier]
   }
 
-  private func expandedReceiptCheckResult(
-    in receipt: XCUIElement,
-    app: XCUIApplication
-  ) -> String {
-    let disclosure = receiptDisclosure(in: receipt, in: app)
-    waitForValue(disclosure, equalTo: "Collapsed")
-    revealAndTap(disclosure, in: app)
-    waitForValue(disclosure, equalTo: "Expanded")
-
-    let scope = metadataRow("Scope", in: receipt)
-    waitForValue(scope, equalTo: "Local-only unsigned")
-    let checkResult = metadataRow("Check result", in: receipt)
-    waitForElement(checkResult)
-
-    guard let value = checkResult.value as? String else {
-      XCTFail("Expected a Check result value for the local receipt.")
-      return ""
-    }
-    return value
+  private func textField(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
+    app.textFields[identifier]
   }
 
-  private func receiptDisclosure(
-    in receipt: XCUIElement,
-    in app: XCUIApplication
-  ) -> XCUIElement {
-    let receiptIdentifierPrefix = "evidence.receipt."
-    let disclosureIdentifierPrefix = "evidence.receipt-disclosure."
-    let receiptIdentifier = receipt.identifier
-
-    guard receiptIdentifier.hasPrefix(receiptIdentifierPrefix) else {
-      XCTFail("Expected a receipt identifier. Found: \(receiptIdentifier)")
-      return receipt
-    }
-
-    let receiptID = String(
-      receiptIdentifier.dropFirst(receiptIdentifierPrefix.count)
-    )
-    return element("\(disclosureIdentifierPrefix)\(receiptID)", in: app)
-  }
-
-  private func metadataRow(
-    _ label: String,
-    in container: XCUIElement
-  ) -> XCUIElement {
-    container.descendants(matching: .any).matching(
-      NSPredicate(format: "label == %@", label)
-    ).firstMatch
+  private func textView(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
+    app.textViews[identifier]
   }
 
   private func element(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
@@ -1079,24 +614,50 @@ final class FORGEUITests: XCTestCase {
     app.buttons[identifier]
   }
 
-  private func discardConfirmation(in app: XCUIApplication) -> XCUIElement {
-    let alert = app.alerts.element(boundBy: 0)
-    waitForElement(alert)
-    waitForLabel(alert, containing: "Discard response?")
-    return alert
+  private func buttons(
+    withIdentifierPrefix prefix: String,
+    in app: XCUIApplication
+  ) -> XCUIElementQuery {
+    app.buttons.matching(
+      NSPredicate(format: "identifier BEGINSWITH %@", prefix)
+    )
+  }
+
+  private func firstButton(
+    withIdentifierPrefix prefix: String,
+    in app: XCUIApplication
+  ) -> XCUIElement {
+    buttons(withIdentifierPrefix: prefix, in: app).firstMatch
+  }
+
+  private func firstTextField(
+    withIdentifierPrefix prefix: String,
+    in app: XCUIApplication
+  ) -> XCUIElement {
+    app.textFields.matching(
+      NSPredicate(format: "identifier BEGINSWITH %@", prefix)
+    ).firstMatch
+  }
+
+  private func accessibleElement(
+    containing label: String,
+    in app: XCUIApplication
+  ) -> XCUIElement {
+    app.descendants(matching: .any).matching(
+      NSPredicate(format: "label CONTAINS %@", label)
+    ).firstMatch
   }
 
   private func revealAndWaitForVisible(
     _ element: XCUIElement,
     in app: XCUIApplication
   ) {
-    let maximumScrollAttempts = 8
+    let maximumScrollAttempts = 10
 
     for attempt in 0...maximumScrollAttempts {
       if hasVisibleFrame(element, in: app) {
         return
       }
-
       if attempt < maximumScrollAttempts {
         app.swipeUp()
       }
@@ -1106,43 +667,24 @@ final class FORGEUITests: XCTestCase {
       if hasVisibleFrame(element, in: app) {
         return
       }
-
       if attempt < maximumScrollAttempts {
         app.swipeDown()
       }
     }
 
-    XCTFail(
-      "Expected \(element) to have a visible frame after bounded upward and downward scrolls."
-    )
-  }
-
-  private func hasVisibleFrame(
-    _ element: XCUIElement,
-    in app: XCUIApplication
-  ) -> Bool {
-    guard element.exists else {
-      return false
-    }
-
-    let elementFrame = element.frame
-    let appFrame = app.frame
-    return !elementFrame.isEmpty
-      && !appFrame.isEmpty
-      && elementFrame.intersects(appFrame)
+    XCTFail("Expected \(element) to have a visible frame after bounded scrolling.")
   }
 
   private func revealAndWaitForHittable(
     _ element: XCUIElement,
     in app: XCUIApplication
   ) {
-    let maximumScrollAttempts = 8
+    let maximumScrollAttempts = 10
 
     for attempt in 0...maximumScrollAttempts {
       if element.exists, element.isHittable {
         return
       }
-
       if attempt < maximumScrollAttempts {
         app.swipeUp()
       }
@@ -1152,21 +694,15 @@ final class FORGEUITests: XCTestCase {
       if element.exists, element.isHittable {
         return
       }
-
       if attempt < maximumScrollAttempts {
         app.swipeDown()
       }
     }
 
-    XCTFail(
-      "Expected \(element) to become hittable after bounded upward and downward scrolls."
-    )
+    XCTFail("Expected \(element) to become hittable after bounded scrolling.")
   }
 
-  private func revealAndTap(
-    _ element: XCUIElement,
-    in app: XCUIApplication
-  ) {
+  private func revealAndTap(_ element: XCUIElement, in app: XCUIApplication) {
     revealAndWaitForHittable(element, in: app)
     element.tap()
   }
@@ -1179,6 +715,20 @@ final class FORGEUITests: XCTestCase {
   ) {
     waitForHittable(element, timeout: timeout, file: file, line: line)
     element.tap()
+  }
+
+  private func waitForElement(
+    _ element: XCUIElement,
+    timeout: TimeInterval = 5,
+    file: StaticString = #filePath,
+    line: UInt = #line
+  ) {
+    XCTAssertTrue(
+      element.waitForExistence(timeout: timeout),
+      "Expected \(element) to exist.",
+      file: file,
+      line: line
+    )
   }
 
   private func waitForHittable(
@@ -1239,20 +789,6 @@ final class FORGEUITests: XCTestCase {
       XCTWaiter().wait(for: [expectation], timeout: timeout),
       .completed,
       "Expected \(element) to become disabled.",
-      file: file,
-      line: line
-    )
-  }
-
-  private func waitForElement(
-    _ element: XCUIElement,
-    timeout: TimeInterval = 5,
-    file: StaticString = #filePath,
-    line: UInt = #line
-  ) {
-    XCTAssertTrue(
-      element.waitForExistence(timeout: timeout),
-      "Expected \(element) to exist.",
       file: file,
       line: line
     )
@@ -1345,38 +881,69 @@ final class FORGEUITests: XCTestCase {
     line: UInt = #line
   ) {
     let matchingContent = app.descendants(matching: .any).matching(
-      NSPredicate(
-        format: "label CONTAINS %@ OR value CONTAINS %@",
-        text,
-        text
-      )
+      NSPredicate(format: "label CONTAINS %@ OR value CONTAINS %@", text, text)
     )
     XCTAssertEqual(
       matchingContent.count,
       0,
-      "Expected accessible UI to omit the raw response text.",
+      "Expected accessible UI to omit raw study text.",
       file: file,
       line: line
     )
   }
 
-  private func performAccessibilitySmokeAudit(
+  private func assertFullyVisible(
+    _ element: XCUIElement,
     in app: XCUIApplication,
-    includesDynamicType: Bool = true
-  ) throws {
-    var auditTypes: XCUIAccessibilityAuditType = [
-      .contrast,
-      .elementDetection,
-      .hitRegion,
-      .sufficientElementDescription,
-      .textClipped,
-      .trait,
-    ]
+    file: StaticString = #filePath,
+    line: UInt = #line
+  ) {
+    revealAndWaitForVisible(element, in: app)
+    let elementFrame = element.frame
+    let appFrame = app.frame
 
-    if includesDynamicType {
-      auditTypes.insert(.dynamicType)
+    XCTAssertGreaterThanOrEqual(
+      elementFrame.minX,
+      appFrame.minX,
+      "Expected \(element) to stay inside the leading app edge.",
+      file: file,
+      line: line
+    )
+    XCTAssertLessThanOrEqual(
+      elementFrame.maxX,
+      appFrame.maxX,
+      "Expected \(element) to stay inside the trailing app edge.",
+      file: file,
+      line: line
+    )
+    XCTAssertGreaterThanOrEqual(
+      elementFrame.minY,
+      appFrame.minY,
+      "Expected \(element) to stay inside the top app edge.",
+      file: file,
+      line: line
+    )
+    XCTAssertLessThanOrEqual(
+      elementFrame.maxY,
+      appFrame.maxY,
+      "Expected \(element) to stay inside the bottom app edge.",
+      file: file,
+      line: line
+    )
+  }
+
+  private func hasVisibleFrame(
+    _ element: XCUIElement,
+    in app: XCUIApplication
+  ) -> Bool {
+    guard element.exists else {
+      return false
     }
 
-    try app.performAccessibilityAudit(for: auditTypes)
+    let elementFrame = element.frame
+    let appFrame = app.frame
+    return !elementFrame.isEmpty
+      && !appFrame.isEmpty
+      && elementFrame.intersects(appFrame)
   }
 }

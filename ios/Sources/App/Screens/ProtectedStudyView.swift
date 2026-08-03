@@ -6,7 +6,9 @@ struct ProtectedStudyView: View {
   @Environment(AppModel.self) private var model
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-  @State private var returnDate = Date.now.addingTimeInterval(86_400)
+  @State private var minimumReturnDate: Date?
+  @State private var selectedReturnDate: Date?
+  @State private var isCloseConfirmationPresented = false
   @AccessibilityFocusState private var statusIsFocused: Bool
 
   var body: some View {
@@ -39,21 +41,48 @@ struct ProtectedStudyView: View {
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
-          Button("Close") {
-            model.dismissProtectedStudy()
-          }
-          .disabled(model.isSemesterDeskOperationRunning)
-          .accessibilityHint("Closes protected study. Private text stays only in process memory.")
-          .accessibilityIdentifier("study.close")
+          Button("Close", action: requestClose)
+            .frame(minWidth: 44, minHeight: 44)
+            .disabled(model.isSemesterDeskOperationRunning)
+            .accessibilityHint(closeAccessibilityHint)
+            .accessibilityIdentifier("study.close")
         }
       }
     }
-    .interactiveDismissDisabled(model.isSemesterDeskOperationRunning)
+    .interactiveDismissDisabled(
+      model.isSemesterDeskOperationRunning || hasStudyDraft
+    )
+    .alert(
+      "Close protected study?",
+      isPresented: $isCloseConfirmationPresented
+    ) {
+      Button("Keep editing", role: .cancel) {}
+        .accessibilityIdentifier("study.close-keep-editing")
+
+      Button("Close and keep for process") {
+        model.dismissProtectedStudy()
+      }
+      .accessibilityIdentifier("study.close-keep-draft")
+
+      Button("Discard and close", role: .destructive) {
+        discardStudyDraftAndClose()
+      }
+      .accessibilityIdentifier("study.close-discard-draft")
+    } message: {
+      Text(
+        "FORGE keeps this text only in this app process. It is not saved. iOS can remove it when the app closes."
+      )
+      .accessibilityIdentifier("study.close-confirmation")
+    }
     .transaction { transaction in
       if reduceMotion {
         transaction.animation = nil
         transaction.disablesAnimations = true
       }
+    }
+    .onAppear(perform: captureReturnDates)
+    .onChange(of: returnDateCaptureTrigger) { _, _ in
+      captureReturnDates()
     }
     .onChange(of: model.semesterDeskStatusMessage, initial: false) { _, message in
       guard let message, !message.isEmpty else {
@@ -248,37 +277,44 @@ struct ProtectedStudyView: View {
         detail: "Choose a future time for a fresh delayed return."
       )
 
-      DatePicker(
-        "Come back on this date",
-        selection: $returnDate,
-        in: model.semesterDeskCurrentDate...,
-        displayedComponents: [.date, .hourAndMinute]
-      )
-      .datePickerStyle(.graphical)
-      .accessibilityIdentifier("study.return-date")
+      if let minimumReturnDate, let selectedReturnDate {
+        DatePicker(
+          "Come back on this date",
+          selection: returnDateBinding(minimumReturnDate: minimumReturnDate),
+          in: minimumReturnDate...,
+          displayedComponents: [.date, .hourAndMinute]
+        )
+        .datePickerStyle(.graphical)
+        .accessibilityIdentifier("study.return-date")
 
-      Label(
-        returnDate.formatted(date: .long, time: .shortened),
-        systemImage: "calendar.badge.clock"
-      )
-      .font(.headline)
-      .fixedSize(horizontal: false, vertical: true)
-      .accessibilityElement(children: .combine)
-
-      Text("FORGE saves this date before it closes protected study.")
-        .font(.subheadline)
-        .foregroundStyle(ForgeDesign.secondaryText)
+        Label(
+          selectedReturnDate.formatted(date: .long, time: .shortened),
+          systemImage: "calendar.badge.clock"
+        )
+        .font(.headline)
         .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("study.selected-return-date")
 
-      SemesterDeskPrimaryButton(
-        title: "Save return date",
-        systemImage: "checkmark.circle.fill",
-        hint: "Saves the future return date before this surface closes.",
-        identifier: "study.save-return-date",
-        isDisabled: returnDate <= model.semesterDeskCurrentDate
-          || model.isSemesterDeskOperationRunning
-      ) {
-        scheduleReturn()
+        Text("FORGE saves this date before it closes protected study.")
+          .font(.subheadline)
+          .foregroundStyle(ForgeDesign.secondaryText)
+          .fixedSize(horizontal: false, vertical: true)
+
+        SemesterDeskPrimaryButton(
+          title: "Save return date",
+          systemImage: "checkmark.circle.fill",
+          hint: "Saves the future return date before this surface closes.",
+          identifier: "study.save-return-date",
+          isDisabled: selectedReturnDate < minimumReturnDate
+            || model.isSemesterDeskOperationRunning
+        ) {
+          scheduleReturn()
+        }
+      } else {
+        ProgressView("Preparing return date")
+          .frame(maxWidth: .infinity, minHeight: 44)
+          .accessibilityIdentifier("study.return-date-preparing")
       }
     }
   }
@@ -365,6 +401,54 @@ struct ProtectedStudyView: View {
     }
   }
 
+  private var protectedStudyPlanItemID: String? {
+    model.protectedStudyPlanItem?.id
+  }
+
+  private var hasStudyDraft: Bool {
+    guard let protectedStudyPlanItemID else {
+      return false
+    }
+    return model.semesterDeskStudyDraft(for: protectedStudyPlanItemID).hasContent
+  }
+
+  private var closeAccessibilityHint: String {
+    if model.isSemesterDeskOperationRunning {
+      return "This study activity stays open until the current operation is complete."
+    }
+    if hasStudyDraft {
+      return "Shows choices to keep editing, close and keep the draft, or discard the draft."
+    }
+    return "Closes protected study immediately."
+  }
+
+  private var returnDateCaptureTrigger: ReturnDateCaptureTrigger {
+    ReturnDateCaptureTrigger(
+      planItemID: protectedStudyPlanItemID,
+      stage: currentStage
+    )
+  }
+
+  private func returnDateBinding(minimumReturnDate: Date) -> Binding<Date> {
+    Binding(
+      get: { selectedReturnDate ?? minimumReturnDate },
+      set: { selectedReturnDate = max($0, minimumReturnDate) }
+    )
+  }
+
+  private func captureReturnDates() {
+    let capturedCurrentDate = model.semesterDeskCurrentDate
+    let capturedCalendar = model.semesterDeskCalendar
+    let capturedMinimumReturnDate =
+      capturedCalendar.date(
+        byAdding: .day,
+        value: 1,
+        to: capturedCurrentDate
+      ) ?? capturedCurrentDate.addingTimeInterval(86_400)
+    minimumReturnDate = capturedMinimumReturnDate
+    selectedReturnDate = capturedMinimumReturnDate
+  }
+
   private func independentText(for planItemID: String) -> String {
     model.semesterDeskStudyDraft(for: planItemID)
       .independentCheckText
@@ -420,8 +504,15 @@ struct ProtectedStudyView: View {
   }
 
   private func scheduleReturn() {
+    guard
+      let minimumReturnDate,
+      let selectedReturnDate,
+      selectedReturnDate >= minimumReturnDate
+    else {
+      return
+    }
     Task { @MainActor in
-      _ = await model.scheduleProtectedDelayedReturn(at: returnDate)
+      _ = await model.scheduleProtectedDelayedReturn(at: selectedReturnDate)
     }
   }
 
@@ -429,6 +520,33 @@ struct ProtectedStudyView: View {
     Task { @MainActor in
       _ = await model.completeProtectedDelayedReturn(outcome: outcome)
     }
+  }
+
+  private func requestClose() {
+    guard !model.isSemesterDeskOperationRunning else {
+      return
+    }
+
+    if hasStudyDraft {
+      isCloseConfirmationPresented = true
+    } else {
+      model.dismissProtectedStudy()
+    }
+  }
+
+  private func discardStudyDraftAndClose() {
+    guard let protectedStudyPlanItemID else {
+      model.dismissProtectedStudy()
+      return
+    }
+
+    model.updateSemesterDeskStudyDraft(
+      for: protectedStudyPlanItemID,
+      practiceText: "",
+      independentCheckText: "",
+      delayedReturnText: ""
+    )
+    model.dismissProtectedStudy()
   }
 }
 
@@ -456,4 +574,9 @@ private enum StudyDraftField: Equatable {
   case practice
   case independentCheck
   case delayedReturn
+}
+
+private struct ReturnDateCaptureTrigger: Equatable {
+  let planItemID: String?
+  let stage: StudyStage
 }
