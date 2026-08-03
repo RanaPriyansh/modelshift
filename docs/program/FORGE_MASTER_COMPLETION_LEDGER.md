@@ -347,12 +347,15 @@ No confirmed P0 defect exists at this baseline.
 |---|---|
 | Provider | Vercel |
 | Project | `forge-learning-os` |
+| Project ID | `prj_SnTYtzLicYKYlHvXCNwq9J7ehQZB` |
+| Team ID | `team_lr0E9GlEDc3XYJP7xrx8po2W` |
 | Public alias | `https://modelshift.vercel.app` |
 | Recorded deployment | `dpl_ET6nUWvjeVMEdacWJgCbxVsCT1qn` |
 | Recorded deployed SHA | `04eab4263658725d7a228c67682c40fc469757b1` |
-| Release status | The verified web candidate is not deployed because native integration is incomplete |
-| Exact block | SHA `6f12ad4` exists only in the local repository. It is not pushed or deployed. |
-| External action after final candidate | Push the clean canonical branch, then deploy the saved final source through Vercel project `forge-learning-os`. |
+| Release status | The public alias is `READY`, but it serves the old CLI-source product and not Semester Desk v2 |
+| Exact block | Vercel does not return a provider-owned GitHub source tuple for the current project deployments |
+| Required provider tuple | GitHub repository ID `1308085427`, path `RanaPriyansh/modelshift`, branch `main`, and the final clean SHA |
+| External action after final candidate | Authorize the Vercel GitHub App, connect project `forge-learning-os`, set `main` as production, push the final SHA without force, and inspect the new provider record |
 
 Do not deploy the final product until the final candidate is clean, tested, reviewed, and explicitly ready.
 
@@ -372,11 +375,12 @@ Do not deploy the final product until the final candidate is clean, tested, revi
 
 These are not current reasons to stop internal work.
 
-1. Authority to push the final branch and replace the current production Vercel deployment.
-2. Production cloud identity and persistence credentials, if the final product uses a cloud adapter.
-3. iOS distribution certificates, provisioning profiles, App Store Connect access, and physical-device access.
-4. Payment or billing authority, if a later release enables paid services.
-5. Real student data or university integration authority.
+1. Vercel project-owner authority to connect `RanaPriyansh/modelshift`, expose Vercel System Environment Variables, and create the Git-source production deployment.
+2. GitHub environment secret `VERCEL_RECEIPT_TOKEN` for the read-only deployment receipt workflow.
+3. Production cloud identity and persistence credentials, if the final product uses a cloud adapter.
+4. iOS distribution certificates, provisioning profiles, App Store Connect access, and physical-device access.
+5. Payment or billing authority, if a later release enables paid services.
+6. Real student data or university integration authority.
 
 ## Goal state
 
