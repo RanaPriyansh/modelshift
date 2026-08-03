@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 08:25 IST
+Updated: 2026-08-03 08:53 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -24,7 +24,7 @@ Milestone completion does not complete the product task.
 | Canonical branch | `agent/forge-semester-desk-v2-release-20260802` | Created |
 | Clean starting baseline | `3a11208d68e55179aaa3b54833a2376f0970be71` | Confirmed |
 | Local integration reference | `origin/main` at `c4abe33bc5bc611a02eded4288e2a2949a2808f3` | Stored locally, not fetched |
-| Current working state | Canonical web line is at product SHA `9ad28a362dc14a7d02d0435b6ac02c864bd4c51d`; only the preserved external `AGENTS.md` change is outside the product checkpoint | Confirmed |
+| Current working state | Canonical web line is at product SHA `f40beec24f43573120d570ef117cac9654f31c24`; only the preserved external `AGENTS.md` change is outside the product checkpoint | Confirmed |
 | First Semester Desk v2 checkpoint | `c4c42b40d571763fbe80fd7ed1895017442fce5e` | Design, public site, policies, and web domain |
 | Device-local web-app checkpoint | `d7f1d82781799923d41951d8e1dd5961581da84e` | Canonical `/app`, profile-bound persistence, tests, and ledger |
 | Public release-surface checkpoint | `85575d2fe3f0e4b1002bb3310b24beb1d59b9a65` | Metadata, crawler files, manifest, error pages, and truthful policy links |
@@ -45,8 +45,9 @@ Milestone completion does not complete the product task.
 | Web exact-SHA release checkpoint | `6f12ad4e73ac7665ee5d24e8d1c58c9dcbe2d5b5` | Skip navigation preserves active work; all clean production gates pass |
 | Web active-learning repair checkpoint | `55d89bfb83cfe228245d20b108c40da18c29f9d7` | Proof and return require process-only responses; storage, recovery, progress, and reset states are truthful |
 | Web history and response-ownership checkpoint | `9ad28a362dc14a7d02d0435b6ac02c864bd4c51d` | Direct hash changes fail closed; proof and return drafts cannot cross plan items; reset has one live announcement |
+| Web reset-verification checkpoint | `f40beec24f43573120d570ef117cac9654f31c24` | Local deletion is verified, successful reset restores main focus, and the commitment token meets text contrast |
 | Previous root branch | `agent/forge-local-refoundation-snapshot` at `cd84e20f6f78d68a430666c185b00efa99c49a87` | Preserve, do not use as base |
-| iOS source lane | `agent/forge-ios-foundation-20260801` at committed `ee25c94d5ccb4c6e055f8f28a07144f830739a79` and tree `f4827c2711f359bde56a8f909db9416f4af93e94` | Semester Desk v2 private state, system integration, production boundaries, export, release documentation, and stale-state external cleanup are complete |
+| iOS source lane | `agent/forge-ios-foundation-20260801` at committed `0ef0c8c49bf5850a390fb070899124f0536f19f2`; native UI and storage receipt repairs remain in the working tree | Semester Desk v2 private state, system integration, production boundaries, export, release documentation, stale-state cleanup, and release automation are checkpointed |
 | iOS Semester Desk domain checkpoint | `45b61c656c278886b63619103389a633d48fc98d` | Profile-bound Semester Desk state machine |
 | iOS university learning core checkpoint | `7f6cac4112c3017d9f06384303da8dc579da8f3e` | Bounded university learning core, shared projection, widget policy, and 156 passing tests |
 | iOS verified native-foundation checkpoint | `f687e99d67e1d990264a2f82b39cc95a226fd9b3` | Private state, app model, interruption safety, AXXXL access, device builds, tests, and Editorial Terrain assets |
@@ -55,6 +56,7 @@ Milestone completion does not complete the product task.
 | iOS Semester Desk v2 integration checkpoint | `27d807ef6a23eb54b6e758b26de0fd7a66116855` | Private schema 1, stale-state blocking, system surfaces, process-only drafts, UTF-8 limits, export, and 115 passing app tests |
 | iOS Semester Desk v2 release-document checkpoint | `56295eb045ab088ee75d23fb895c5e8b904f42de` | Active native documentation now describes Semester Desk v2; exact V1 documents remain in the archive |
 | iOS stale-state external-cleanup checkpoint | `ee25c94d5ccb4c6e055f8f28a07144f830739a79` | Stale private bytes remain unchanged while managed shared projection and reminder state are removed; 36 focused AppModel tests pass |
+| iOS release-automation checkpoint | `0ef0c8c49bf5850a390fb070899124f0536f19f2` | CI now requires primary, narrow iPhone, iPad, and unsigned archive gates with exact result validation |
 
 ## Accepted and rejected lineage inputs
 
@@ -265,14 +267,15 @@ Status: **The native Semester Desk v2 product and private-state cutover pass the
 | Browser report digest | `0cfc97245f5df6171c6e9a71bcb5eaed0b7e9999ba4f1ef740a39e475412ec2a` |
 | Preserved evidence | `/tmp/forge-web-exact-evidence-6f12ad4.uILD1z` |
 
-### Web focused repairs through `9ad28a3`
+### Web focused repairs through `f40beec`
 
 | Check | Result |
 |---|---|
-| Semester Desk application and domain tests | 53 passed |
+| Semester Desk application, persistence, accessibility-token, and domain tests | 66 passed |
 | TypeScript typecheck | Pass |
 | Scoped ESLint | Pass |
 | Git whitespace check | Pass |
+| Current `/app` browser console | Zero warnings and zero errors |
 | Final exact-SHA production and browser gate | Open until integration |
 
 ### Web baseline at `3a11208d`
