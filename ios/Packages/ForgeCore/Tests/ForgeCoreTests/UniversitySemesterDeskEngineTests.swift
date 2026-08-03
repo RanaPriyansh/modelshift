@@ -588,6 +588,239 @@ struct UniversitySemesterDeskEngineTests {
     )
     #expect(try failure(from: invalidDate).code == .invalidInput)
   }
+
+  @Test
+  func directInputsUseExactUTF8ScalarBoundaries() throws {
+    let controlled = SemesterDeskTestRuntime()
+    let identifierAtLimit = String(
+      repeating: "🙂",
+      count: UniversitySemesterDeskLimits.maximumIdentifierUTF8ByteCount / 4
+    )
+    let shortTextAtLimit = String(
+      repeating: "🙂",
+      count: UniversitySemesterDeskLimits.maximumShortTextUTF8ByteCount / 4
+    )
+    let longTextAtLimit = String(
+      repeating: "🙂",
+      count: UniversitySemesterDeskLimits.maximumLongTextUTF8ByteCount / 4
+    )
+
+    #expect(
+      UniversitySemesterDeskLimits.utf8ByteCount(of: identifierAtLimit)
+        == UniversitySemesterDeskLimits.maximumIdentifierUTF8ByteCount
+    )
+    #expect(
+      UniversitySemesterDeskLimits.utf8ByteCount(of: shortTextAtLimit)
+        == UniversitySemesterDeskLimits.maximumShortTextUTF8ByteCount
+    )
+    #expect(
+      UniversitySemesterDeskLimits.utf8ByteCount(of: longTextAtLimit)
+        == UniversitySemesterDeskLimits.maximumLongTextUTF8ByteCount
+    )
+
+    var state = try UniversitySemesterDeskEngine.create(
+      input: .init(profileID: identifierAtLimit, title: shortTextAtLimit),
+      runtime: controlled.runtime
+    ).get()
+    state = try UniversitySemesterDeskEngine.transition(
+      state: state,
+      command: .addCourse(
+        profileID: identifierAtLimit,
+        code: shortTextAtLimit,
+        title: shortTextAtLimit
+      ),
+      runtime: controlled.runtime
+    ).get()
+    let courseID = try #require(state.courses.first?.id)
+    state = try UniversitySemesterDeskEngine.transition(
+      state: state,
+      command: .addCourseFact(
+        profileID: identifierAtLimit,
+        courseID: courseID,
+        label: shortTextAtLimit,
+        value: longTextAtLimit,
+        status: .checked,
+        sourceLabel: shortTextAtLimit,
+        checkedAt: controlled.clock.now()
+      ),
+      runtime: controlled.runtime
+    ).get()
+    try UniversitySemesterDeskEngine.validate(state: state).get()
+
+    let identifierOverLimit = String(
+      repeating: "🙂",
+      count: UniversitySemesterDeskLimits.maximumIdentifierUTF8ByteCount / 4 + 1
+    )
+    let shortTextOverLimit = String(
+      repeating: "🙂",
+      count: UniversitySemesterDeskLimits.maximumShortTextUTF8ByteCount / 4 + 1
+    )
+    let longTextOverLimit = String(
+      repeating: "🙂",
+      count: UniversitySemesterDeskLimits.maximumLongTextUTF8ByteCount / 4 + 1
+    )
+
+    let invalidCreate = UniversitySemesterDeskEngine.create(
+      input: .init(profileID: identifierOverLimit, title: "Autumn 2026"),
+      runtime: controlled.runtime
+    )
+    #expect(try failure(from: invalidCreate).code == .invalidInput)
+
+    let invalidCourse = UniversitySemesterDeskEngine.transition(
+      state: state,
+      command: .addCourse(
+        profileID: identifierAtLimit,
+        code: "MAT220",
+        title: shortTextOverLimit
+      ),
+      runtime: controlled.runtime
+    )
+    #expect(try failure(from: invalidCourse).code == .invalidInput)
+
+    let invalidFact = UniversitySemesterDeskEngine.transition(
+      state: state,
+      command: .addCourseFact(
+        profileID: identifierAtLimit,
+        courseID: courseID,
+        label: "Deadline",
+        value: longTextOverLimit,
+        status: .checked,
+        sourceLabel: "Course outline",
+        checkedAt: controlled.clock.now()
+      ),
+      runtime: controlled.runtime
+    )
+    #expect(try failure(from: invalidFact).code == .invalidInput)
+
+    let prepared = try deskWithCheckedCourseAndPlans(
+      controlled,
+      plans: [("Recovery plan", "2026-08-05", 60)]
+    )
+    let recoveryPlanID = try #require(prepared.state.planItems.first?.id)
+    let invalidRecovery = UniversitySemesterDeskEngine.transition(
+      state: prepared.state,
+      command: .prepareRecovery(
+        profileID: SemesterDeskTestRuntime.profileID,
+        summary: "Rebuild this week.",
+        decisions: [
+          .init(
+            planItemID: recoveryPlanID,
+            outcome: .kept,
+            reason: longTextOverLimit
+          )
+        ]
+      ),
+      runtime: controlled.runtime
+    )
+    #expect(try failure(from: invalidRecovery).code == .recoveryDecisionInvalid)
+
+    let oversizedRuntime = UniversitySemesterDeskRuntime(
+      clock: controlled.clock,
+      identifiers: FixedSemesterDeskIdentifierFactory(value: identifierOverLimit)
+    )
+    let invalidGeneratedIdentifier = UniversitySemesterDeskEngine.create(
+      input: .init(profileID: SemesterDeskTestRuntime.profileID, title: "Autumn 2026"),
+      runtime: oversizedRuntime
+    )
+    #expect(try failure(from: invalidGeneratedIdentifier).code == .invalidInput)
+  }
+
+  @Test
+  func decodedStateRejectsMultibyteOversizedScalars() throws {
+    let controlled = SemesterDeskTestRuntime()
+    let identifierAtLimit = String(
+      repeating: "🙂",
+      count: UniversitySemesterDeskLimits.maximumIdentifierUTF8ByteCount / 4
+    )
+    let shortTextAtLimit = String(
+      repeating: "🙂",
+      count: UniversitySemesterDeskLimits.maximumShortTextUTF8ByteCount / 4
+    )
+    let longTextAtLimit = String(
+      repeating: "🙂",
+      count: UniversitySemesterDeskLimits.maximumLongTextUTF8ByteCount / 4
+    )
+    let identifierOverLimit = identifierAtLimit + "🙂"
+    let shortTextOverLimit = shortTextAtLimit + "🙂"
+    let longTextOverLimit = longTextAtLimit + "🙂"
+
+    var state = try emptyDesk(controlled)
+    state = try UniversitySemesterDeskEngine.transition(
+      state: state,
+      command: .addCourse(
+        profileID: SemesterDeskTestRuntime.profileID,
+        code: "MAT220",
+        title: shortTextAtLimit
+      ),
+      runtime: controlled.runtime
+    ).get()
+    let courseID = try #require(state.courses.first?.id)
+    state = try UniversitySemesterDeskEngine.transition(
+      state: state,
+      command: .addCourseFact(
+        profileID: SemesterDeskTestRuntime.profileID,
+        courseID: courseID,
+        label: "Exam scope",
+        value: longTextAtLimit,
+        status: .checked,
+        sourceLabel: "Course outline",
+        checkedAt: controlled.clock.now()
+      ),
+      runtime: controlled.runtime
+    ).get()
+
+    let exactBoundaryState = replacingSemesterDeskState(
+      state,
+      id: identifierAtLimit,
+      profileID: identifierAtLimit,
+      title: shortTextAtLimit
+    )
+    try UniversitySemesterDeskEngine.validate(state: exactBoundaryState).get()
+
+    let invalidIdentifierState = replacingSemesterDeskState(
+      exactBoundaryState,
+      id: identifierOverLimit
+    )
+    #expect(
+      try failure(from: UniversitySemesterDeskEngine.validate(state: invalidIdentifierState)).code
+        == .invalidInput
+    )
+
+    let invalidShortTextState = replacingSemesterDeskState(
+      exactBoundaryState,
+      title: shortTextOverLimit
+    )
+    #expect(
+      try failure(from: UniversitySemesterDeskEngine.validate(state: invalidShortTextState)).code
+        == .invalidInput
+    )
+
+    let course = try #require(state.courses.first)
+    let fact = try #require(course.facts.first)
+    let oversizedFact = UniversitySemesterDeskCourseFact(
+      id: fact.id,
+      label: fact.label,
+      value: longTextOverLimit,
+      status: fact.status,
+      sourceLabel: fact.sourceLabel,
+      checkedAt: fact.checkedAt
+    )
+    let oversizedCourse = UniversitySemesterDeskCourse(
+      id: course.id,
+      code: course.code,
+      title: course.title,
+      facts: [oversizedFact],
+      factConflicts: course.factConflicts
+    )
+    let invalidLongTextState = replacingSemesterDeskState(
+      state,
+      courses: [oversizedCourse]
+    )
+    #expect(
+      try failure(from: UniversitySemesterDeskEngine.validate(state: invalidLongTextState)).code
+        == .invalidInput
+    )
+  }
 }
 
 private func emptyDesk(_ controlled: SemesterDeskTestRuntime) throws -> UniversitySemesterDeskState
@@ -717,6 +950,34 @@ private func failure<T>(
   }
 }
 
+private func replacingSemesterDeskState(
+  _ state: UniversitySemesterDeskState,
+  id: String? = nil,
+  profileID: String? = nil,
+  title: String? = nil,
+  courses: [UniversitySemesterDeskCourse]? = nil
+) -> UniversitySemesterDeskState {
+  UniversitySemesterDeskState(
+    schemaVersion: state.schemaVersion,
+    id: id ?? state.id,
+    profileID: profileID ?? state.profileID,
+    title: title ?? state.title,
+    createdAt: state.createdAt,
+    updatedAt: state.updatedAt,
+    courses: courses ?? state.courses,
+    capacity: state.capacity,
+    capacityDraft: state.capacityDraft,
+    planItems: state.planItems,
+    recoveryDraft: state.recoveryDraft,
+    recoveryChanges: state.recoveryChanges,
+    selectedNextActionID: state.selectedNextActionID,
+    protectedStudySessions: state.protectedStudySessions,
+    independentProofs: state.independentProofs,
+    delayedReturns: state.delayedReturns,
+    progressEvidence: state.progressEvidence
+  )
+}
+
 private enum SemesterDeskTestFailure: Error {
   case expectedFailure
 }
@@ -754,6 +1015,14 @@ private final class SemesterDeskIdentifierFactory: UniversitySemesterDeskIdentif
     let next = (counts[kind] ?? 0) + 1
     counts[kind] = next
     return "\(kind.rawValue).\(next)"
+  }
+}
+
+private struct FixedSemesterDeskIdentifierFactory: UniversitySemesterDeskIdentifierFactory {
+  let value: String
+
+  func next(kind _: UniversitySemesterDeskIdentifierKind) -> String {
+    value
   }
 }
 

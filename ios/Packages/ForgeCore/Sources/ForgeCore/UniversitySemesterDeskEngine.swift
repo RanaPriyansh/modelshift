@@ -17,7 +17,7 @@ public enum UniversitySemesterDeskEngine {
     input: UniversitySemesterDeskCreateInput,
     runtime: UniversitySemesterDeskRuntime
   ) -> Result<UniversitySemesterDeskState, UniversitySemesterDeskError> {
-    guard nonBlank(input.profileID), nonBlank(input.title) else {
+    guard isBoundedIdentifier(input.profileID), isBoundedShortText(input.title) else {
       return failure(.invalidInput, "A Semester Desk needs a profile and a title.")
     }
     switch timestamp(from: runtime) {
@@ -58,7 +58,7 @@ public enum UniversitySemesterDeskEngine {
     command: UniversitySemesterDeskCommand,
     runtime: UniversitySemesterDeskRuntime
   ) -> Result<UniversitySemesterDeskState, UniversitySemesterDeskError> {
-    guard state.profileID == command.profileID else {
+    guard isBoundedIdentifier(command.profileID), state.profileID == command.profileID else {
       return failure(.profileMismatch, "This action belongs to a different profile.")
     }
     if let error = stateValidationError(for: state) {
@@ -206,7 +206,7 @@ public enum UniversitySemesterDeskEngine {
     now: String,
     runtime: UniversitySemesterDeskRuntime
   ) -> Result<UniversitySemesterDeskState, UniversitySemesterDeskError> {
-    guard nonBlank(code), nonBlank(title) else {
+    guard isBoundedShortText(code), isBoundedShortText(title) else {
       return failure(.invalidInput, "A course needs a code and a title.")
     }
     let cleanCode = code.trimmed
@@ -243,7 +243,8 @@ public enum UniversitySemesterDeskEngine {
     now: String,
     runtime: UniversitySemesterDeskRuntime
   ) -> Result<UniversitySemesterDeskState, UniversitySemesterDeskError> {
-    guard nonBlank(label), nonBlank(value), nonBlank(sourceLabel) else {
+    guard isBoundedShortText(label), isBoundedLongText(value), isBoundedShortText(sourceLabel)
+    else {
       return failure(.invalidInput, "A course fact needs text and a source label.")
     }
     if status == .checked && (checkedAt == nil || !isValidTimestamp(checkedAt ?? "")) {
@@ -303,7 +304,7 @@ public enum UniversitySemesterDeskEngine {
     case .success(let value):
       course = value
     }
-    guard course.facts.contains(where: { $0.id == factID }) else {
+    guard isBoundedIdentifier(factID), course.facts.contains(where: { $0.id == factID }) else {
       return failure(.notFound, "The course fact does not exist in this course.")
     }
     let facts = course.facts.map { fact in
@@ -335,7 +336,7 @@ public enum UniversitySemesterDeskEngine {
     now: String,
     runtime: UniversitySemesterDeskRuntime
   ) -> Result<UniversitySemesterDeskState, UniversitySemesterDeskError> {
-    guard nonBlank(summary), factIDs.count >= 2 else {
+    guard isBoundedLongText(summary), factIDs.count >= 2 else {
       return failure(.invalidInput, "A fact conflict needs two facts and a summary.")
     }
     let course: UniversitySemesterDeskCourse
@@ -346,7 +347,7 @@ public enum UniversitySemesterDeskEngine {
       course = value
     }
     let factIDSet = Set(factIDs)
-    guard factIDSet.count == factIDs.count,
+    guard factIDs.allSatisfy(isBoundedIdentifier), factIDSet.count == factIDs.count,
       factIDs.allSatisfy({ factID in course.facts.contains(where: { $0.id == factID }) })
     else {
       return failure(
@@ -388,7 +389,9 @@ public enum UniversitySemesterDeskEngine {
     case .success(let value):
       course = value
     }
-    guard let conflict = course.factConflicts.first(where: { $0.id == conflictID }) else {
+    guard isBoundedIdentifier(conflictID),
+      let conflict = course.factConflicts.first(where: { $0.id == conflictID })
+    else {
       return failure(.notFound, "The fact conflict does not exist in this course.")
     }
     guard conflict.status == .open else {
@@ -469,7 +472,8 @@ public enum UniversitySemesterDeskEngine {
     now: String,
     runtime: UniversitySemesterDeskRuntime
   ) -> Result<UniversitySemesterDeskState, UniversitySemesterDeskError> {
-    guard nonBlank(title), isValidDateOnly(date), minutes > 0 else {
+    guard isBoundedShortText(title), isValidDateOnly(date), minutes > 0
+    else {
       return failure(.invalidInput, "A plan item needs a title, date, and positive whole minutes.")
     }
     let course: UniversitySemesterDeskCourse
@@ -508,7 +512,7 @@ public enum UniversitySemesterDeskEngine {
     now: String,
     runtime: UniversitySemesterDeskRuntime
   ) -> Result<UniversitySemesterDeskState, UniversitySemesterDeskError> {
-    guard nonBlank(summary) else {
+    guard isBoundedLongText(summary) else {
       return failure(.invalidInput, "A recovery draft needs a summary.")
     }
     guard state.recoveryDraft == nil else {
@@ -531,6 +535,9 @@ public enum UniversitySemesterDeskEngine {
     var checkedDecisions = [UniversitySemesterDeskRecoveryDecision]()
     checkedDecisions.reserveCapacity(decisions.count)
     for input in decisions {
+      guard isBoundedIdentifier(input.planItemID), isBoundedLongText(input.reason) else {
+        return failure(.recoveryDecisionInvalid, "Each recovery decision needs a reason.")
+      }
       guard let item = recoverableItems.first(where: { $0.id == input.planItemID }) else {
         return failure(
           .recoveryDecisionInvalid, "Recovery cannot include work that is not currently planned.")
@@ -631,6 +638,9 @@ public enum UniversitySemesterDeskEngine {
     planItemID: String,
     now: String
   ) -> Result<UniversitySemesterDeskState, UniversitySemesterDeskError> {
+    guard isBoundedIdentifier(planItemID) else {
+      return failure(.notFound, "The plan item does not exist in this Semester Desk.")
+    }
     let item: UniversitySemesterDeskPlanItem
     switch planItem(for: planItemID, in: state) {
     case .failure(let error):
@@ -655,6 +665,9 @@ public enum UniversitySemesterDeskEngine {
     planItemID: String,
     now: String
   ) -> Result<UniversitySemesterDeskState, UniversitySemesterDeskError> {
+    guard isBoundedIdentifier(planItemID) else {
+      return failure(.notFound, "The plan item does not exist in this Semester Desk.")
+    }
     let item: UniversitySemesterDeskPlanItem
     switch planItem(for: planItemID, in: state) {
     case .failure(let error):
@@ -676,6 +689,10 @@ public enum UniversitySemesterDeskEngine {
     now: String,
     runtime: UniversitySemesterDeskRuntime
   ) -> Result<UniversitySemesterDeskState, UniversitySemesterDeskError> {
+    guard isBoundedIdentifier(planItemID) else {
+      return failure(
+        .nextActionRequired, "Choose this item as the next action before protected study.")
+    }
     guard state.selectedNextActionID == planItemID else {
       return failure(
         .nextActionRequired, "Choose this item as the next action before protected study.")
@@ -727,6 +744,9 @@ public enum UniversitySemesterDeskEngine {
     now: String,
     runtime: UniversitySemesterDeskRuntime
   ) -> Result<UniversitySemesterDeskState, UniversitySemesterDeskError> {
+    guard isBoundedIdentifier(studySessionID) else {
+      return failure(.notFound, "The protected study session does not exist.")
+    }
     guard let session = state.protectedStudySessions.first(where: { $0.id == studySessionID })
     else {
       return failure(.notFound, "The protected study session does not exist.")
@@ -786,6 +806,9 @@ public enum UniversitySemesterDeskEngine {
     now: String,
     runtime: UniversitySemesterDeskRuntime
   ) -> Result<UniversitySemesterDeskState, UniversitySemesterDeskError> {
+    guard isBoundedIdentifier(planItemID) else {
+      return failure(.notFound, "The plan item does not exist in this Semester Desk.")
+    }
     let item: UniversitySemesterDeskPlanItem
     switch planItem(for: planItemID, in: state) {
     case .failure(let error):
@@ -886,6 +909,9 @@ public enum UniversitySemesterDeskEngine {
     delayedReturnID: String,
     now: String
   ) -> Result<UniversitySemesterDeskState, UniversitySemesterDeskError> {
+    guard isBoundedIdentifier(delayedReturnID) else {
+      return failure(.notFound, "The delayed return does not exist.")
+    }
     guard let delayedReturn = state.delayedReturns.first(where: { $0.id == delayedReturnID }) else {
       return failure(.notFound, "The delayed return does not exist.")
     }
@@ -918,6 +944,9 @@ public enum UniversitySemesterDeskEngine {
     now: String,
     runtime: UniversitySemesterDeskRuntime
   ) -> Result<UniversitySemesterDeskState, UniversitySemesterDeskError> {
+    guard isBoundedIdentifier(delayedReturnID) else {
+      return failure(.notFound, "The delayed return does not exist.")
+    }
     guard let delayedReturn = state.delayedReturns.first(where: { $0.id == delayedReturnID }) else {
       return failure(.notFound, "The delayed return does not exist.")
     }
@@ -975,7 +1004,7 @@ public enum UniversitySemesterDeskEngine {
     for item: UniversitySemesterDeskPlanItem,
     input: UniversitySemesterDeskRecoveryDecisionInput
   ) -> Result<UniversitySemesterDeskRecoveryDecision, UniversitySemesterDeskError> {
-    guard nonBlank(input.reason) else {
+    guard isBoundedIdentifier(input.planItemID), isBoundedLongText(input.reason) else {
       return failure(.recoveryDecisionInvalid, "Each recovery decision needs a reason.")
     }
     switch input.outcome {
@@ -1107,7 +1136,9 @@ public enum UniversitySemesterDeskEngine {
     _ courseID: String,
     in state: UniversitySemesterDeskState
   ) -> Result<UniversitySemesterDeskCourse, UniversitySemesterDeskError> {
-    guard let course = state.courses.first(where: { $0.id == courseID }) else {
+    guard isBoundedIdentifier(courseID),
+      let course = state.courses.first(where: { $0.id == courseID })
+    else {
       return failure(.notFound, "The course does not exist in this Semester Desk.")
     }
     return .success(course)
@@ -1117,7 +1148,9 @@ public enum UniversitySemesterDeskEngine {
     for planItemID: String,
     in state: UniversitySemesterDeskState
   ) -> Result<UniversitySemesterDeskPlanItem, UniversitySemesterDeskError> {
-    guard let item = state.planItems.first(where: { $0.id == planItemID }) else {
+    guard isBoundedIdentifier(planItemID),
+      let item = state.planItems.first(where: { $0.id == planItemID })
+    else {
       return failure(.notFound, "The plan item does not exist in this Semester Desk.")
     }
     return .success(item)
@@ -1178,7 +1211,7 @@ public enum UniversitySemesterDeskEngine {
     from runtime: UniversitySemesterDeskRuntime
   ) -> Result<String, UniversitySemesterDeskError> {
     let value = runtime.identifiers.next(kind: kind)
-    guard nonBlank(value) else {
+    guard isBoundedIdentifier(value) else {
       return failure(.invalidInput, "The identifier factory returned an empty identifier.")
     }
     return .success(value)
@@ -1206,19 +1239,20 @@ public enum UniversitySemesterDeskEngine {
     guard state.schemaVersion == UniversitySemesterDeskSchema.version else {
       return invalidState("The Semester Desk version is not supported.")
     }
-    guard nonBlank(state.id), nonBlank(state.profileID), nonBlank(state.title),
+    guard isBoundedIdentifier(state.id), isBoundedIdentifier(state.profileID),
+      isBoundedShortText(state.title),
       isValidTimestamp(state.createdAt), isValidTimestamp(state.updatedAt)
     else {
       return invalidState("The Semester Desk identity or time is invalid.")
     }
-    guard unique(state.courses.map(\.id)),
+    guard uniqueIdentifiers(state.courses.map(\.id)),
       unique(state.courses.map(\.code)),
-      unique(state.planItems.map(\.id)),
-      unique(state.recoveryChanges.map(\.id)),
-      unique(state.protectedStudySessions.map(\.id)),
-      unique(state.independentProofs.map(\.id)),
-      unique(state.delayedReturns.map(\.id)),
-      unique(state.progressEvidence.map(\.id))
+      uniqueIdentifiers(state.planItems.map(\.id)),
+      uniqueIdentifiers(state.recoveryChanges.map(\.id)),
+      uniqueIdentifiers(state.protectedStudySessions.map(\.id)),
+      uniqueIdentifiers(state.independentProofs.map(\.id)),
+      uniqueIdentifiers(state.delayedReturns.map(\.id)),
+      uniqueIdentifiers(state.progressEvidence.map(\.id))
     else {
       return invalidState("The Semester Desk contains duplicate identifiers.")
     }
@@ -1230,7 +1264,8 @@ public enum UniversitySemesterDeskEngine {
       }
     }
     for item in state.planItems {
-      guard courseIDs.contains(item.courseID), nonBlank(item.title),
+      guard isBoundedIdentifier(item.id), isBoundedIdentifier(item.courseID),
+        courseIDs.contains(item.courseID), isBoundedShortText(item.title),
         isValidDateOnly(item.originalDate), isValidDateOnly(item.currentDate),
         item.originalMinutes > 0, item.currentMinutes > 0
       else {
@@ -1243,13 +1278,13 @@ public enum UniversitySemesterDeskEngine {
       return invalidState("Confirmed capacity is invalid.")
     }
     if let capacityDraft = state.capacityDraft,
-      capacityDraft.availableMinutes < 0 || !nonBlank(capacityDraft.id)
+      capacityDraft.availableMinutes < 0 || !isBoundedIdentifier(capacityDraft.id)
         || !isValidTimestamp(capacityDraft.draftedAt)
     {
       return invalidState("Draft capacity is invalid.")
     }
     if let selectedNextActionID = state.selectedNextActionID,
-      !planItemIDs.contains(selectedNextActionID)
+      !isBoundedIdentifier(selectedNextActionID) || !planItemIDs.contains(selectedNextActionID)
     {
       return invalidState("The selected action does not exist.")
     }
@@ -1259,9 +1294,9 @@ public enum UniversitySemesterDeskEngine {
       return error
     }
     for change in state.recoveryChanges {
-      guard nonBlank(change.id), nonBlank(change.recoveryDraftID),
-        planItemIDs.contains(change.planItemID),
-        nonBlank(change.reason), isValidDateOnly(change.previousDate),
+      guard isBoundedIdentifier(change.id), isBoundedIdentifier(change.recoveryDraftID),
+        isBoundedIdentifier(change.planItemID), planItemIDs.contains(change.planItemID),
+        isBoundedLongText(change.reason), isValidDateOnly(change.previousDate),
         isValidDateOnly(change.currentDate), change.previousMinutes > 0,
         change.currentMinutes > 0, isValidTimestamp(change.recordedAt)
       else {
@@ -1273,7 +1308,8 @@ public enum UniversitySemesterDeskEngine {
       return invalidState("More than one protected study session is active.")
     }
     for session in state.protectedStudySessions {
-      guard nonBlank(session.id), planItemIDs.contains(session.planItemID),
+      guard isBoundedIdentifier(session.id), isBoundedIdentifier(session.planItemID),
+        planItemIDs.contains(session.planItemID),
         isValidTimestamp(session.startedAt)
       else {
         return invalidState("A protected study session is invalid.")
@@ -1293,14 +1329,16 @@ public enum UniversitySemesterDeskEngine {
       }
     }
     for proof in state.independentProofs {
-      guard nonBlank(proof.id), planItemIDs.contains(proof.planItemID),
+      guard isBoundedIdentifier(proof.id), isBoundedIdentifier(proof.planItemID),
+        planItemIDs.contains(proof.planItemID),
         isValidTimestamp(proof.completedAt)
       else {
         return invalidState("An independent proof record is invalid.")
       }
     }
     for delayedReturn in state.delayedReturns {
-      guard nonBlank(delayedReturn.id), planItemIDs.contains(delayedReturn.planItemID),
+      guard isBoundedIdentifier(delayedReturn.id), isBoundedIdentifier(delayedReturn.planItemID),
+        planItemIDs.contains(delayedReturn.planItemID),
         isValidTimestamp(delayedReturn.dueAt)
       else {
         return invalidState("A delayed return is invalid.")
@@ -1330,7 +1368,8 @@ public enum UniversitySemesterDeskEngine {
       }
     }
     for evidence in state.progressEvidence {
-      guard nonBlank(evidence.id), planItemIDs.contains(evidence.planItemID),
+      guard isBoundedIdentifier(evidence.id), isBoundedIdentifier(evidence.planItemID),
+        planItemIDs.contains(evidence.planItemID),
         isValidTimestamp(evidence.occurredAt)
       else {
         return invalidState("A progress record is invalid.")
@@ -1342,15 +1381,16 @@ public enum UniversitySemesterDeskEngine {
   private static func courseValidationError(
     for course: UniversitySemesterDeskCourse
   ) -> UniversitySemesterDeskError? {
-    guard nonBlank(course.id), nonBlank(course.code), nonBlank(course.title),
-      unique(course.facts.map(\.id)), unique(course.factConflicts.map(\.id))
+    guard isBoundedIdentifier(course.id), isBoundedShortText(course.code),
+      isBoundedShortText(course.title), uniqueIdentifiers(course.facts.map(\.id)),
+      uniqueIdentifiers(course.factConflicts.map(\.id))
     else {
       return invalidState("A course is invalid.")
     }
     let factIDs = Set(course.facts.map(\.id))
     for fact in course.facts {
-      guard nonBlank(fact.id), nonBlank(fact.label), nonBlank(fact.value),
-        nonBlank(fact.sourceLabel),
+      guard isBoundedIdentifier(fact.id), isBoundedShortText(fact.label),
+        isBoundedLongText(fact.value), isBoundedShortText(fact.sourceLabel),
         fact.checkedAt.map(isValidTimestamp) ?? true
       else {
         return invalidState("A course fact is invalid.")
@@ -1360,9 +1400,10 @@ public enum UniversitySemesterDeskEngine {
       }
     }
     for conflict in course.factConflicts {
-      guard nonBlank(conflict.id), conflict.factIDs.count >= 2,
+      guard isBoundedIdentifier(conflict.id), conflict.factIDs.count >= 2,
+        conflict.factIDs.allSatisfy(isBoundedIdentifier),
         Set(conflict.factIDs).count == conflict.factIDs.count,
-        conflict.factIDs.allSatisfy(factIDs.contains), nonBlank(conflict.summary),
+        conflict.factIDs.allSatisfy(factIDs.contains), isBoundedLongText(conflict.summary),
         isValidTimestamp(conflict.detectedAt)
       else {
         return invalidState("A fact conflict is invalid.")
@@ -1385,12 +1426,15 @@ public enum UniversitySemesterDeskEngine {
     _ draft: UniversitySemesterDeskRecoveryDraft,
     in state: UniversitySemesterDeskState
   ) -> UniversitySemesterDeskError? {
-    guard nonBlank(draft.id), nonBlank(draft.summary), isValidTimestamp(draft.createdAt) else {
+    guard isBoundedIdentifier(draft.id), isBoundedLongText(draft.summary),
+      isValidTimestamp(draft.createdAt)
+    else {
       return invalidState("A recovery draft is invalid.")
     }
     let recoverableItems = state.planItems.filter { $0.status == .planned }
     let decisionIDs = draft.decisions.map(\.planItemID)
-    guard !recoverableItems.isEmpty, Set(decisionIDs).count == decisionIDs.count,
+    guard !recoverableItems.isEmpty, decisionIDs.allSatisfy(isBoundedIdentifier),
+      Set(decisionIDs).count == decisionIDs.count,
       decisionIDs.count == recoverableItems.count,
       recoverableItems.allSatisfy({ decisionIDs.contains($0.id) })
     else {
@@ -1422,8 +1466,30 @@ public enum UniversitySemesterDeskEngine {
     values.allSatisfy(nonBlank) && Set(values).count == values.count
   }
 
+  private static func uniqueIdentifiers(_ values: [String]) -> Bool {
+    values.allSatisfy(isBoundedIdentifier) && Set(values).count == values.count
+  }
+
   private static func nonBlank(_ value: String) -> Bool {
     !value.trimmed.isEmpty
+  }
+
+  private static func isBoundedIdentifier(_ value: String) -> Bool {
+    nonBlank(value)
+      && UniversitySemesterDeskLimits.utf8ByteCount(of: value)
+        <= UniversitySemesterDeskLimits.maximumIdentifierUTF8ByteCount
+  }
+
+  private static func isBoundedShortText(_ value: String) -> Bool {
+    nonBlank(value)
+      && UniversitySemesterDeskLimits.utf8ByteCount(of: value)
+        <= UniversitySemesterDeskLimits.maximumShortTextUTF8ByteCount
+  }
+
+  private static func isBoundedLongText(_ value: String) -> Bool {
+    nonBlank(value)
+      && UniversitySemesterDeskLimits.utf8ByteCount(of: value)
+        <= UniversitySemesterDeskLimits.maximumLongTextUTF8ByteCount
   }
 
   private static func isValidDateOnly(_ value: String) -> Bool {

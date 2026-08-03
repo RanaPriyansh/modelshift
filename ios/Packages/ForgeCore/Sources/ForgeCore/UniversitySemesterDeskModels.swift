@@ -5,6 +5,20 @@ public enum UniversitySemesterDeskSchema {
   public static let version = "forge-semester-desk-v2"
 }
 
+/// Bounds each persisted Semester Desk scalar before it is created or accepted.
+///
+/// The values match the established native learning limits. They use UTF-8
+/// bytes so a multi-byte character cannot bypass a storage boundary.
+public enum UniversitySemesterDeskLimits {
+  public static let maximumIdentifierUTF8ByteCount = 128
+  public static let maximumShortTextUTF8ByteCount = 512
+  public static let maximumLongTextUTF8ByteCount = 4_096
+
+  public static func utf8ByteCount(of value: String) -> Int {
+    value.utf8.count
+  }
+}
+
 /// Names each deterministic identifier requested by the Semester Desk engine.
 public enum UniversitySemesterDeskIdentifierKind: String, Codable, CaseIterable, Equatable, Sendable
 {
