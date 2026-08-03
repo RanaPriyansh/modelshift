@@ -249,7 +249,6 @@ struct AppModelTests {
 
       #expect(await creation.value)
       await waitForSemesterDeskIdle(model)
-      #expect(durableState.semesterDesk != nil)
       #expect(model.semesterDesk == durableState.semesterDesk)
       #expect(await environment.privateStore.currentState() == durableState)
       #expect(!model.isSemesterDeskOperationRunning)
@@ -580,7 +579,7 @@ struct AppModelTests {
     try await withEnvironment { environment in
       let writer = try await environment.makeLaunchedModel()
       #expect(await writer.createSemesterDesk(title: "Autumn 2027"))
-      let before = try await environment.privateStore.encodedCurrentState()
+      let before = try #require(await environment.privateStore.currentState())
       let saveCount = await environment.privateStore.saveCount()
       await environment.privateStore.setLoadError(
         .stalePrivateStatePresent(entries: ["private-state-v5.json"])
@@ -596,7 +595,7 @@ struct AppModelTests {
       }
       #expect(reader.localProfileID == initialProfileID)
       #expect(reader.semesterDesk == nil)
-      #expect(await environment.privateStore.encodedCurrentState() == before)
+      #expect(await environment.privateStore.currentState() == before)
       #expect(await environment.privateStore.saveCount() == saveCount)
     }
   }

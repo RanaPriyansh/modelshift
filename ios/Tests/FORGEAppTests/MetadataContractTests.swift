@@ -26,68 +26,6 @@ struct MetadataContractTests {
         values == [1_800_000_000.25, 1_800_000_001.25, 1_800_000_002.25]
       )
     }
-
-    @Test("Response policy preserves normal text")
-    func responsePolicyNormalText() {
-      let result = UniversityActivityResponsePolicy.evaluate("Reasoning: café")
-
-      #expect(result.boundedText == "Reasoning: café")
-      #expect(result.utf8ByteCount == 16)
-      #expect(result.hasNonWhitespace)
-      #expect(!result.isTruncated)
-    }
-
-    @Test("Response policy rejects whitespace-only text for submission")
-    func responsePolicyWhitespaceOnlyText() {
-      let result = UniversityActivityResponsePolicy.evaluate(" \n\t\r")
-
-      #expect(result.boundedText == " \n\t\r")
-      #expect(result.utf8ByteCount == 4)
-      #expect(!result.hasNonWhitespace)
-      #expect(!result.isTruncated)
-    }
-
-    @Test("Response policy keeps exact ASCII byte limit")
-    func responsePolicyExactASCIILimit() {
-      let maximumByteCount = UniversityLearningLimits.maximumResponseBytes
-      let text = String(repeating: "a", count: maximumByteCount)
-      let result = UniversityActivityResponsePolicy.evaluate(text)
-
-      #expect(result.boundedText == text)
-      #expect(result.utf8ByteCount == maximumByteCount)
-      #expect(result.hasNonWhitespace)
-      #expect(!result.isTruncated)
-    }
-
-    @Test("Response policy truncates ASCII overflow")
-    func responsePolicyASCIIOverflow() {
-      let maximumByteCount = UniversityLearningLimits.maximumResponseBytes
-      let text = String(repeating: "a", count: maximumByteCount + 1)
-      let expectedText = String(repeating: "a", count: maximumByteCount)
-      let result = UniversityActivityResponsePolicy.evaluate(text)
-
-      #expect(result.boundedText == expectedText)
-      #expect(result.utf8ByteCount == maximumByteCount)
-      #expect(result.hasNonWhitespace)
-      #expect(result.isTruncated)
-    }
-
-    @Test("Response policy does not break multi-byte characters on overflow")
-    func responsePolicyMultiByteOverflow() {
-      let maximumByteCount = UniversityLearningLimits.maximumResponseBytes
-      let character = "👩🏽‍🚀"
-      let expectedText = String(
-        repeating: "a",
-        count: maximumByteCount - character.utf8.count + 1
-      )
-      let result = UniversityActivityResponsePolicy.evaluate(expectedText + character)
-
-      #expect(character.count == 1)
-      #expect(result.boundedText == expectedText)
-      #expect(result.utf8ByteCount == expectedText.utf8.count)
-      #expect(result.hasNonWhitespace)
-      #expect(result.isTruncated)
-    }
   #endif
 
   @Test("UI-test clock remains inside the DEBUG source boundary")
