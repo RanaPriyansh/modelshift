@@ -78,14 +78,13 @@ struct FORGEApp: App {
       let result = try await privateStateStore.clear(
         resetEpoch: resetEpoch
       )
-      guard
-        case .completed(let receipt) = result,
-        receipt.isComplete
-      else {
-        throw PrivateStateStoreError.clearVerification(
-          currentFileFailed: true,
-          legacyFileFailed: true
-        )
+      switch result {
+      case .completed(let receipt):
+        guard receipt.isComplete else {
+          throw PrivateStateStoreError.clearVerification(receipt: receipt)
+        }
+      case .superseded:
+        throw PrivateStateStoreError.writeVerification
       }
 
       try ForgeSharedStateStore().clearAll()
