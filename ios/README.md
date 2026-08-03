@@ -1,161 +1,85 @@
-# FORGE iOS Adult University V1
+# FORGE iOS: Semester Desk v2
 
-This folder contains the local iOS companion for adult university V1.
+FORGE is a private Semester Desk for university students.
 
-Use the checked-in Xcode project and the `FORGE` scheme.
+The app helps a student see course facts, state available time, recover a
+broken week, select one next action, study actively, and return later.
 
-## V1 scope
+The app does not give answers for protected study. It does not save raw
+practice or independent-proof text. Web and iPhone data do not sync.
 
-V1 supports one adult mechanics starter course.
+## Current local baseline
 
-V1 uses local deterministic checks for defined course and activity transitions.
+| Field | Value |
+| --- | --- |
+| Branch | `agent/forge-ios-foundation-20260801` |
+| Committed baseline | `27d807ef6a23eb54b6e758b26de0fd7a66116855` |
+| Source tree | `d67792e166fe85c084987ac95a588b09492afe4e` |
+| ForgeCore tests | 125 passed |
+| Focused private-store tests | 30 passed |
+| FORGEAppTests | 115 passed |
+| Debug simulator build | passed |
 
-V1 uses private v4 storage for course state on the device.
+This is local development evidence. It is not signing, archive, device,
+TestFlight, App Store, or production evidence.
 
-FORGE keeps written reasoning and values derived from written reasoning in
-memory while an activity is open and during submission. FORGE does not save
-them.
+## Product behavior
 
-FORGE uses selected-choice text to check an activity. FORGE does not save
-selected-choice text.
+- Create one private Semester Desk on this iPhone.
+- Add courses and course facts. Mark facts for review when they change or conflict.
+- State real capacity before recovery.
+- Review each recovery change before confirmation.
+- Select the next action yourself.
+- Complete protected practice, independent proof, and a delayed return.
+- Review answer-free progress evidence.
+- Export or remove local Semester Desk data from Settings.
 
-FORGE saves selected-choice check results, activity progress, help use, receipt
-metadata, and delayed-return schedules locally. FORGE needs this data for
-durable learning progress.
+FORGE stores the current private Semester Desk in the app container. The
+private record uses `semester-desk-private-state-v1.json`.
 
-FORGE shows visible recovery when it finds `private-state-v3.json` or
-`private-state-v2.json`. FORGE preserves each file until an explicit
-clear-local-data action.
+FORGE keeps the widget and reminder data minimal. The widget does not read the
+full private Semester Desk. A system route can open an allowed app surface. It
+cannot change Semester Desk data by itself.
 
-The App Group stores a typed v3 shared return projection. It contains only the
-return lifecycle and time boundaries.
+## Run local checks
 
-V1 supports delayed returns with package-derived `opensAt` and `dueAt` values.
+Run ForgeCore tests from the repository root:
 
-The learner can enable or cancel a local reminder for an available delayed return.
+```sh
+swift test --disable-sandbox --package-path ios/Packages/ForgeCore
+```
 
-The widget uses the typed shared projection and generic locked-device content.
-
-The parameter-free App Intent can write only one pending-focus handoff token.
-
-The handoff token is not learner state, course state, or evidence state.
-
-The App Intent cannot modify learner state, course state, evidence state, a
-receipt, or a delayed return.
-
-The application consumes the token only after it checks eligibility.
-
-V1 has no production AI and no network client.
-
-V1 does not create a canonical academic record or establish academic status.
-
-## Release record
-
-The iOS candidate state is `NOT_SELECTED`.
-
-The iOS release decision is `NO_SHIP`.
-
-Read the [iOS NOT_SELECTED / NO_SHIP record](../docs/ios/IOS_TEST_AND_RELEASE_PLAN.md).
-
-## Requirements
-
-- Use Xcode 26.6.
-- Use the `iphoneos` SDK 26 or later.
-- Use Swift 6.2 or later for `ForgeCore`.
-- Use XcodeGen 2.45.4 for project regeneration.
-
-The app targets iOS 18. The project also builds the `FORGEWidgets` extension.
-
-## Open the project
-
-Open `ios/FORGE.xcodeproj` in Xcode. Select the `FORGE` scheme.
-
-## Run local verification
-
-Run this command from the repository root:
+Run the local verification script from the repository root:
 
 ```sh
 ios/Scripts/verify.sh
 ```
 
-The command checks required project files, shell syntax, iOS-scope whitespace,
-Apple metadata, asset catalog JSON, ForgeCore, the checked-in project, and
-unsigned source targets.
-
-The command uses an isolated temporary directory.
-
-When no iOS Simulator runtime exists, the command can use source-only builds
-without asset compilation.
-
-Static checks still validate required icon files.
-
-Set `FORGE_REQUIRE_ASSET_BUILD=1` to reject the source-only fallback.
-
-The script accepts only `0` or `1` for this setting.
-
-## Run simulator verification
-
-Set `FORGE_REQUIRE_SIMULATOR_TESTS=1` to run app and UI tests on the
-`iPhone 17 Pro` simulator with iOS 26.5:
-
-```sh
-FORGE_REQUIRE_SIMULATOR_TESTS=1 ios/Scripts/verify.sh
-```
-
-Set `FORGE_RESULT_BUNDLE_PATH` to an absolute, unused path to keep a local
-simulator result bundle.
-
-The parent directory must exist and be writable.
-
-```sh
-FORGE_REQUIRE_SIMULATOR_TESTS=1 \
-FORGE_RESULT_BUNDLE_PATH="$PWD/FORGE-simulator-tests.xcresult" \
-ios/Scripts/verify.sh
-```
-
-## Run the metadata gate
-
-Set `FORGE_PRIVACY_POLICY_URL` and `FORGE_SUPPORT_URL` to approved HTTPS URLs.
-
-The command does not approve or authorize these URLs.
-
-Then run:
-
-```sh
-FORGE_REQUIRE_STORE_METADATA=1 ios/Scripts/verify.sh --static
-```
-
-Run static verification when storage or the Apple toolchain is unavailable:
-
-```sh
-ios/Scripts/verify.sh --static
-```
-
-Static verification does not compile code.
-
-## Regenerate the Xcode project
-
-Run XcodeGen after a source membership change.
-
-Run it after an intentional `ios/project.yml` change.
+Run XcodeGen after an intentional source-membership change:
 
 ```sh
 cd ios
 xcodegen generate
 ```
 
-Review all generated project changes before you keep them.
+Read [the Semester Desk v2 requirements](../docs/ios/IOS_SEMESTER_DESK_V2_REQUIREMENTS.md)
+and [the test and release plan](../docs/ios/IOS_TEST_AND_RELEASE_PLAN.md)
+before a release action.
+
+## Open internal gates
+
+- The 13-test final UI gate.
+- Small-device and iPad checks.
+- Release and device builds.
+- An unsigned archive check.
+- Final screenshots.
+- A final clean-candidate test and build rerun.
 
 ## External gates
 
-The following gates remain external and unresolved:
+- Apple signing identity and provisioning profiles.
+- A physical-device check.
+- Approved privacy and support URLs.
+- App Store metadata, review material, and submission authority.
 
-- Privacy-policy and support URLs.
-- Apple signing.
-- Export compliance.
-- TestFlight authority.
-- App Store authority.
-
-Participant evidence remains a separate gate.
-
-Local, simulator, metadata, and XcodeGen commands do not close these gates.
+Do not submit, upload, or release this app from the current local baseline.

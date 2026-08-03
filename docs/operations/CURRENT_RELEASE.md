@@ -7,7 +7,17 @@ This record covers the web deployment only.
 It is not an iOS build, signing, export-compliance, TestFlight, or App Store
 record.
 
-The iOS candidate record remains [`NOT_SELECTED` and `NO_SHIP`](../ios/IOS_TEST_AND_RELEASE_PLAN.md).
+## Native iOS candidate
+
+The native app has a separate local candidate record in
+[the Semester Desk v2 test and release plan](../ios/IOS_TEST_AND_RELEASE_PLAN.md).
+
+Its committed baseline is branch `agent/forge-ios-foundation-20260801`, commit
+`27d807ef6a23eb54b6e758b26de0fd7a66116855`, and tree
+`d67792e166fe85c084987ac95a588b09492afe4e`.
+
+The native record has local test and Debug simulator build evidence. It is not
+a web deployment, signed archive, TestFlight, or App Store record.
 
 ## Recorded tuple
 
