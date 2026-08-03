@@ -6,6 +6,7 @@ const FIRST_COURSE = "Mathematical methods";
 const FIRST_WORK = "Prepare the first problem set";
 const PRACTICE_NOTE = "I used my lecture notes to work through the first proof step.";
 const PROOF_NOTE = "I can now explain the method without the practice prompt.";
+const RETURN_NOTE = "I can explain the method again after time away from the prompt.";
 
 type NavigationExpectation = Readonly<{
   readonly name: string;
@@ -339,9 +340,9 @@ test("helps a student rebuild a semester, study, return, and continue on one loc
   await expect(page.getByRole("heading", { name: FIRST_WORK })).toBeVisible();
   await page.getByLabel("Your working notes").fill(PRACTICE_NOTE);
   await page.getByRole("button", { name: "Finish practice" }).click();
-  await expect(page.getByLabel("Your answer")).toBeVisible();
+  await expect(page.getByLabel("Your active-recall response")).toBeVisible();
 
-  await page.getByLabel("Your answer").fill(PROOF_NOTE);
+  await page.getByLabel("Your active-recall response").fill(PROOF_NOTE);
   await page.getByRole("button", { name: "I showed my understanding" }).click();
   await expect(page.getByLabel("Return date and time")).toBeVisible();
   await page.clock.install({ time: Date.now() });
@@ -350,12 +351,14 @@ test("helps a student rebuild a semester, study, return, and continue on one loc
   await page.clock.fastForward(2 * 60 * 1000);
   await page.getByRole("button", { name: "Open return" }).click();
   await expect(page.getByRole("button", { name: "I retained it" })).toBeVisible();
+  await page.getByLabel("Your fresh explanation").fill(RETURN_NOTE);
   await page.getByRole("button", { name: "I retained it" }).click();
   await expect(page.getByRole("heading", { name: "What you completed." })).toBeVisible();
 
   const persistedAfterReturn = await localDesk(page);
   expect(JSON.stringify(persistedAfterReturn)).not.toContain(PRACTICE_NOTE);
   expect(JSON.stringify(persistedAfterReturn)).not.toContain(PROOF_NOTE);
+  expect(JSON.stringify(persistedAfterReturn)).not.toContain(RETURN_NOTE);
   expect((persistedAfterReturn?.progressEvidence as unknown[]) ?? []).toHaveLength(3);
 
   await page.reload();
