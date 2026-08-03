@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 08:53 IST
+Updated: 2026-08-03 09:00 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -272,10 +272,15 @@ Status: **The native Semester Desk v2 product and private-state cutover pass the
 | Check | Result |
 |---|---|
 | Semester Desk application, persistence, accessibility-token, and domain tests | 66 passed |
+| Complete application tests | 191 files and 1,822 tests passed |
+| Complete evaluator tests | 2 files and 13 tests passed |
+| Complete ESLint and TypeScript checks | Pass |
 | TypeScript typecheck | Pass |
 | Scoped ESLint | Pass |
 | Git whitespace check | Pass |
 | Current `/app` browser console | Zero warnings and zero errors |
+| Production compilation, route boundary, and size budgets | Pass: 14 product routes, two framework routes, 73 retired modules excluded, 903,347 bytes initial JavaScript, and 31,570 bytes initial CSS |
+| Pre-integration source-bound receipt | Correctly rejected because the preserved external `AGENTS.md` change made the local build marker `unverified` |
 | Final exact-SHA production and browser gate | Open until integration |
 
 ### Web baseline at `3a11208d`
