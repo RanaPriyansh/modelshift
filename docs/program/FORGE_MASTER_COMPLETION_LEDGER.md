@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 09:00 IST
+Updated: 2026-08-03 09:04 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -46,6 +46,7 @@ Milestone completion does not complete the product task.
 | Web active-learning repair checkpoint | `55d89bfb83cfe228245d20b108c40da18c29f9d7` | Proof and return require process-only responses; storage, recovery, progress, and reset states are truthful |
 | Web history and response-ownership checkpoint | `9ad28a362dc14a7d02d0435b6ac02c864bd4c51d` | Direct hash changes fail closed; proof and return drafts cannot cross plan items; reset has one live announcement |
 | Web reset-verification checkpoint | `f40beec24f43573120d570ef117cac9654f31c24` | Local deletion is verified, successful reset restores main focus, and the commitment token meets text contrast |
+| Web transport-security checkpoint | `9fe2275025e9825f42df7d1863bbf46333e92b86` | All release pages require at least one year of HTTPS transport security, and deployment verification enforces the header |
 | Previous root branch | `agent/forge-local-refoundation-snapshot` at `cd84e20f6f78d68a430666c185b00efa99c49a87` | Preserve, do not use as base |
 | iOS source lane | `agent/forge-ios-foundation-20260801` at committed `0ef0c8c49bf5850a390fb070899124f0536f19f2`; native UI and storage receipt repairs remain in the working tree | Semester Desk v2 private state, system integration, production boundaries, export, release documentation, stale-state cleanup, and release automation are checkpointed |
 | iOS Semester Desk domain checkpoint | `45b61c656c278886b63619103389a633d48fc98d` | Profile-bound Semester Desk state machine |
@@ -279,6 +280,7 @@ Status: **The native Semester Desk v2 product and private-state cutover pass the
 | Scoped ESLint | Pass |
 | Git whitespace check | Pass |
 | Current `/app` browser console | Zero warnings and zero errors |
+| Web security checks | 57 focused checks passed; production and complete dependency audits found no known vulnerability; tracked-source credential scan found no matching secret |
 | Production compilation, route boundary, and size budgets | Pass: 14 product routes, two framework routes, 73 retired modules excluded, 903,347 bytes initial JavaScript, and 31,570 bytes initial CSS |
 | Pre-integration source-bound receipt | Correctly rejected because the preserved external `AGENTS.md` change made the local build marker `unverified` |
 | Final exact-SHA production and browser gate | Open until integration |
