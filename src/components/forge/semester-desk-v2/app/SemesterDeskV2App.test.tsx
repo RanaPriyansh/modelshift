@@ -85,6 +85,89 @@ function makeDesk(factStatus: CourseFactStatus = "checked"): SemesterDeskState {
   return state;
 }
 
+function makeTwoItemDesk(): SemesterDeskState {
+  let state = makeDesk();
+  const courseId = state.courses[0]?.id;
+  if (!courseId) throw new Error("Expected course.");
+  state = command(state, {
+    kind: "add-plan-item",
+    profileId: PROFILE_ID,
+    courseId,
+    title: "Tree induction review",
+    date: "2026-08-06",
+    minutes: 45,
+  });
+  return state;
+}
+
+function makeTwoPracticeCompleteDesk(): SemesterDeskState {
+  let state = makeTwoItemDesk();
+  const planItemIds = state.planItems.map((item) => item.id);
+  for (const planItemId of planItemIds) {
+    state = command(state, {
+      kind: "choose-next-action",
+      profileId: PROFILE_ID,
+      planItemId,
+    });
+    state = command(state, {
+      kind: "start-protected-study",
+      profileId: PROFILE_ID,
+      planItemId,
+    });
+    const session = state.protectedStudySessions.find((entry) => (
+      entry.planItemId === planItemId && entry.status === "active"
+    ));
+    if (!session) throw new Error("Expected active protected study.");
+    state = command(state, {
+      kind: "complete-practice",
+      profileId: PROFILE_ID,
+      studySessionId: session.id,
+      outcome: "completed",
+    });
+  }
+  return state;
+}
+
+function makeTwoOpenReturnDesk(): SemesterDeskState {
+  let state = makeTwoPracticeCompleteDesk();
+  const planItemIds = state.planItems.map((item) => item.id);
+  for (const planItemId of planItemIds) {
+    state = command(state, {
+      kind: "submit-independent-proof",
+      profileId: PROFILE_ID,
+      planItemId,
+      outcome: "demonstrated",
+    });
+    state = command(state, {
+      kind: "schedule-delayed-return",
+      profileId: PROFILE_ID,
+      planItemId,
+      dueAt: "2026-08-04T09:00:00.000Z",
+    });
+  }
+  currentTime = "2026-08-05T09:00:00.000Z";
+  const delayedReturnIds = state.delayedReturns.map((entry) => entry.id);
+  for (const delayedReturnId of delayedReturnIds) {
+    state = command(state, {
+      kind: "open-delayed-return",
+      profileId: PROFILE_ID,
+      delayedReturnId,
+    });
+  }
+  return state;
+}
+
+function workItemRow(title: string): HTMLElement {
+  const workList = screen.getByRole("list", { name: "All work in the order you added it" });
+  const row = within(workList).getByText(title).closest("li");
+  if (!row) throw new Error(`Expected ${title} work row.`);
+  return row;
+}
+
+function fireHashChange(oldURL: string, newURL: string) {
+  fireEvent(window, new HashChangeEvent("hashchange", { oldURL, newURL }));
+}
+
 function makeDeferredDesk(): SemesterDeskState {
   let state = makeDesk();
   const planItemId = state.planItems[0]?.id;
@@ -395,6 +478,50 @@ describe("SemesterDeskV2App", () => {
     expect(await screen.findByLabelText("Your fresh explanation")).toHaveValue("Keep this fresh explanation.");
   });
 
+  it("reloads a direct different-profile hash after the paired skip-anchor history event", async () => {
+    const state = makeDesk();
+    saveBrowserDesk(state);
+    window.history.replaceState(null, "", `/app#forge-profile=${encodeURIComponent(PROFILE_ID)}`);
+    renderBrowserApp();
+
+    expect(await screen.findByText("Algorithms")).toBeInTheDocument();
+    const profileUrl = window.location.href;
+    const anchorUrl = new URL("#semester-desk-main", profileUrl).toString();
+    window.history.pushState(null, "", anchorUrl);
+    fireEvent.popState(window);
+    fireHashChange(profileUrl, anchorUrl);
+    expect(screen.getByText("Algorithms")).toBeInTheDocument();
+
+    const otherProfileUrl = new URL("/app#forge-profile=profile.other", window.location.origin).toString();
+    window.history.replaceState(null, "", otherProfileUrl);
+    fireHashChange(anchorUrl, otherProfileUrl);
+
+    expect(await screen.findByRole("heading", { name: "FORGE did not change local data." })).toBeInTheDocument();
+    expect(within(screen.getByRole("main")).getByText("FORGE could not open that local desk from this link. It did not change local data.")).toBeInTheDocument();
+  });
+
+  it("reloads a direct invalid hash after the paired skip-anchor history event", async () => {
+    const state = makeDesk();
+    saveBrowserDesk(state);
+    window.history.replaceState(null, "", `/app#forge-profile=${encodeURIComponent(PROFILE_ID)}`);
+    renderBrowserApp();
+
+    expect(await screen.findByText("Algorithms")).toBeInTheDocument();
+    const profileUrl = window.location.href;
+    const anchorUrl = new URL("#semester-desk-main", profileUrl).toString();
+    window.history.pushState(null, "", anchorUrl);
+    fireEvent.popState(window);
+    fireHashChange(profileUrl, anchorUrl);
+    expect(screen.getByText("Algorithms")).toBeInTheDocument();
+
+    const invalidUrl = new URL("/app#not-a-semester-desk-reference", window.location.origin).toString();
+    window.history.replaceState(null, "", invalidUrl);
+    fireHashChange(anchorUrl, invalidUrl);
+
+    expect(await screen.findByRole("heading", { name: "FORGE did not change local data." })).toBeInTheDocument();
+    expect(within(screen.getByRole("main")).getByText("FORGE could not use this local desk link. It did not change local data.")).toBeInTheDocument();
+  });
+
   it("opens local data from a direct policy route and keeps the selected desk through reload and history navigation", async () => {
     const state = makeDesk();
     saveBrowserDesk(state);
@@ -499,7 +626,11 @@ describe("SemesterDeskV2App", () => {
     expect(window.location.hash).toBe("");
     const onboardingForm = screen.getByRole("button", { name: "Open your Semester Desk" }).closest("form");
     if (!onboardingForm) throw new Error("Expected the onboarding form.");
-    expect(within(onboardingForm).getByText("The local desk was removed from this device.")).toBeInTheDocument();
+    const resetMessage = "The local desk was removed from this device.";
+    const visibleSuccess = within(onboardingForm).getByText(resetMessage);
+    expect(visibleSuccess).toBeInTheDocument();
+    expect(visibleSuccess).not.toHaveAttribute("role", "status");
+    expect(screen.getAllByRole("status").filter((element) => element.textContent === resetMessage)).toHaveLength(1);
   });
 
   it("requires a checked course detail before a student can choose the work", async () => {
@@ -708,6 +839,46 @@ describe("SemesterDeskV2App", () => {
     expect(explanation).toHaveAttribute("aria-invalid", "true");
     expect(screen.queryByText("Delayed return · Retained")).not.toBeInTheDocument();
     expect(persistence.saved.at(-1)?.delayedReturns[0]).toMatchObject({ status: "open" });
+  });
+
+  it("clears proof drafts and errors when the focused work changes", async () => {
+    const persistence = new MemoryPersistence(makeTwoPracticeCompleteDesk());
+    renderApp(persistence);
+
+    await screen.findByText("Algorithms");
+    fireEvent.click(within(workItemRow("Graph proof practice")).getByRole("button", { name: "Open independent check" }));
+    const firstResponse = await screen.findByLabelText("Your active-recall response");
+    fireEvent.change(firstResponse, { target: { value: "First item response." } });
+
+    fireEvent.click(within(workItemRow("Tree induction review")).getByRole("button", { name: "Open independent check" }));
+    const secondResponse = await screen.findByLabelText("Your active-recall response");
+    expect(secondResponse).toHaveValue("");
+    fireEvent.click(screen.getByRole("button", { name: "I showed my understanding" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Write an active-recall response before you record this outcome.");
+
+    fireEvent.click(within(workItemRow("Graph proof practice")).getByRole("button", { name: "Open independent check" }));
+    expect(await screen.findByLabelText("Your active-recall response")).toHaveValue("");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("clears delayed-return drafts and errors when the focused work changes", async () => {
+    const persistence = new MemoryPersistence(makeTwoOpenReturnDesk());
+    renderApp(persistence);
+
+    await screen.findByText("Algorithms");
+    fireEvent.click(within(workItemRow("Graph proof practice")).getByRole("button", { name: "Continue return" }));
+    const firstExplanation = await screen.findByLabelText("Your fresh explanation");
+    fireEvent.change(firstExplanation, { target: { value: "First item explanation." } });
+
+    fireEvent.click(within(workItemRow("Tree induction review")).getByRole("button", { name: "Continue return" }));
+    const secondExplanation = await screen.findByLabelText("Your fresh explanation");
+    expect(secondExplanation).toHaveValue("");
+    fireEvent.click(screen.getByRole("button", { name: "I retained it" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Write a fresh explanation before you record this outcome.");
+
+    fireEvent.click(within(workItemRow("Graph proof practice")).getByRole("button", { name: "Continue return" }));
+    expect(await screen.findByLabelText("Your fresh explanation")).toHaveValue("");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("runs the chosen study, independent check, and delayed return without saving raw answer text", async () => {

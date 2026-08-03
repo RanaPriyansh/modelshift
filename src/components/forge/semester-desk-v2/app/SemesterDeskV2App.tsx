@@ -38,6 +38,16 @@ type AppScreen = "loading" | "onboarding" | "ready" | "malformed" | "blocked" | 
 type SaveStatus = "saved" | "saving" | "error";
 type AppSection = "overview" | "settings";
 
+type PendingSkipAnchorHashChange = {
+  readonly oldHash: string;
+  readonly newHash: string;
+};
+
+type FocusedResponseError = {
+  readonly planItemId: string;
+  readonly message: string;
+};
+
 type BlockedLocalReference = {
   readonly message: string;
   readonly activeProfileId: string | null;
@@ -195,8 +205,12 @@ function profileLocationFromWindow(): ProfileLocation {
     : { kind: "invalid", section };
 }
 
-function isSemesterDeskMainAnchor(url: string): boolean {
-  return new URL(url).hash.replace(/^#/, "") === semesterDeskMainAnchor;
+function hashFromUrl(url: string): string {
+  return new URL(url).hash;
+}
+
+function isSemesterDeskMainAnchor(hash: string): boolean {
+  return hash.replace(/^#/, "") === semesterDeskMainAnchor;
 }
 
 function browserLocalStorage(): Storage | null {
@@ -496,7 +510,7 @@ function Onboarding({
       </section>
 
       <form className={styles.onboardingForm} onSubmit={onSubmit} noValidate>
-        {successMessage ? <p className={styles.inlineSuccess} role="status">{successMessage}</p> : null}
+        {successMessage ? <p className={styles.inlineSuccess}>{successMessage}</p> : null}
         <fieldset>
           <legend>Semester</legend>
           <label>
@@ -1258,8 +1272,8 @@ function LearningLoop({
   readonly onCommand: (command: SemesterDeskCommand, successMessage: string) => boolean;
 }) {
   const [planItemDraft, setPlanItemDraft] = useState<PlanItemDraft>(emptyPlanItemDraft);
-  const [proofError, setProofError] = useState<string | null>(null);
-  const [returnError, setReturnError] = useState<string | null>(null);
+  const [proofError, setProofError] = useState<FocusedResponseError | null>(null);
+  const [returnError, setReturnError] = useState<FocusedResponseError | null>(null);
   const orderedItems = orderedPlanItems(desk);
   const selected = desk.selectedNextActionId
     ? planItemFor(desk, desk.selectedNextActionId)
@@ -1270,13 +1284,22 @@ function LearningLoop({
   const focusedReturn = focusedItem
     ? desk.delayedReturns.find((entry) => entry.planItemId === focusedItem.id && entry.status !== "completed")
     : undefined;
+  const proofErrorMessage = proofError && focusedItem?.id === proofError.planItemId
+    ? proofError.message
+    : null;
+  const returnErrorMessage = returnError && focusedItem?.id === returnError.planItemId
+    ? returnError.message
+    : null;
 
   function submitIndependentProof(outcome: "demonstrated" | "needs-return") {
+    if (!focusedItem) return;
     if (proofDraft.trim().length === 0) {
-      setProofError("Write an active-recall response before you record this outcome.");
+      setProofError({
+        planItemId: focusedItem.id,
+        message: "Write an active-recall response before you record this outcome.",
+      });
       return;
     }
-    if (!focusedItem) return;
     const saved = onCommand({
       kind: "submit-independent-proof",
       profileId: desk.profileId,
@@ -1287,11 +1310,14 @@ function LearningLoop({
   }
 
   function completeDelayedReturn(outcome: "retained" | "needs-more-work") {
+    if (!focusedItem || !focusedReturn) return;
     if (returnDraft.trim().length === 0) {
-      setReturnError("Write a fresh explanation before you record this outcome.");
+      setReturnError({
+        planItemId: focusedItem.id,
+        message: "Write a fresh explanation before you record this outcome.",
+      });
       return;
     }
-    if (!focusedReturn) return;
     const saved = onCommand({
       kind: "complete-delayed-return",
       profileId: desk.profileId,
@@ -1500,15 +1526,15 @@ function LearningLoop({
             Your active-recall response
             <textarea
               value={proofDraft}
-              aria-invalid={proofError ? true : undefined}
-              aria-describedby={proofError ? `proof-${focusedItem.id}-error` : undefined}
+              aria-invalid={proofErrorMessage ? true : undefined}
+              aria-describedby={proofErrorMessage ? `proof-${focusedItem.id}-error` : undefined}
               onChange={(event) => {
                 onProofDraftChange(event.target.value);
-                if (proofError) setProofError(null);
+                if (proofErrorMessage) setProofError(null);
               }}
               rows={5}
             />
-            {proofError ? <span id={`proof-${focusedItem.id}-error`} className={styles.inlineError} role="alert">{proofError}</span> : null}
+            {proofErrorMessage ? <span id={`proof-${focusedItem.id}-error`} className={styles.inlineError} role="alert">{proofErrorMessage}</span> : null}
           </label>
           <div className={styles.actionRow}>
             <button
@@ -1589,15 +1615,15 @@ function LearningLoop({
               Your fresh explanation
               <textarea
                 value={returnDraft}
-                aria-invalid={returnError ? true : undefined}
-                aria-describedby={returnError ? `delayed-${focusedReturn.id}-error` : undefined}
+                aria-invalid={returnErrorMessage ? true : undefined}
+                aria-describedby={returnErrorMessage ? `delayed-${focusedReturn.id}-error` : undefined}
                 onChange={(event) => {
                   onReturnDraftChange(event.target.value);
-                  if (returnError) setReturnError(null);
+                  if (returnErrorMessage) setReturnError(null);
                 }}
                 rows={5}
               />
-              {returnError ? <span id={`delayed-${focusedReturn.id}-error`} className={styles.inlineError} role="alert">{returnError}</span> : null}
+              {returnErrorMessage ? <span id={`delayed-${focusedReturn.id}-error`} className={styles.inlineError} role="alert">{returnErrorMessage}</span> : null}
             </label>
             <div className={styles.actionRow}>
               <button
@@ -1896,7 +1922,9 @@ export function SemesterDeskV2App({
   const profileIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
   const loadEpochRef = useRef(0);
-  const skipAnchorHistoryRef = useRef(false);
+  const observedHashRef = useRef("");
+  const pendingSkipAnchorHashChangeRef = useRef<PendingSkipAnchorHashChange | null>(null);
+  const focusedItemIdRef = useRef<string | null>(null);
   const storageQueueRef = useRef<Promise<void>>(Promise.resolve());
   const pendingSaveCountRef = useRef(0);
 
@@ -1918,8 +1946,18 @@ export function SemesterDeskV2App({
     setProofDraft("");
     setReturnDraft("");
     setDelayedReturnDate("");
+    focusedItemIdRef.current = null;
     setFocusedItemId(null);
     setResetOpen(false);
+  }, []);
+
+  const focusLearningItem = useCallback((planItemId: string | null) => {
+    if (focusedItemIdRef.current !== planItemId) {
+      setProofDraft("");
+      setReturnDraft("");
+    }
+    focusedItemIdRef.current = planItemId;
+    setFocusedItemId(planItemId);
   }, []);
 
   function openResetDialog() {
@@ -2147,25 +2185,34 @@ export function SemesterDeskV2App({
   useEffect(() => {
     mountedRef.current = true;
     let active = true;
+    observedHashRef.current = window.location.hash;
+    pendingSkipAnchorHashChangeRef.current = null;
     function handlePopState() {
-      if (window.location.hash.replace(/^#/, "") === semesterDeskMainAnchor) {
-        skipAnchorHistoryRef.current = true;
+      const oldHash = observedHashRef.current;
+      const newHash = window.location.hash;
+      observedHashRef.current = newHash;
+      const crossesSkipAnchor = oldHash !== newHash && (
+        isSemesterDeskMainAnchor(oldHash) || isSemesterDeskMainAnchor(newHash)
+      );
+      if (crossesSkipAnchor) {
+        pendingSkipAnchorHashChangeRef.current = { oldHash, newHash };
         return;
       }
-      if (skipAnchorHistoryRef.current) {
-        skipAnchorHistoryRef.current = false;
-        return;
-      }
+      pendingSkipAnchorHashChangeRef.current = null;
       loadLocation();
     }
     function handleHashChange(event: HashChangeEvent) {
-      const movedAcrossSkipAnchor = isSemesterDeskMainAnchor(event.oldURL)
-        || isSemesterDeskMainAnchor(event.newURL);
-      if (movedAcrossSkipAnchor) {
-        skipAnchorHistoryRef.current = isSemesterDeskMainAnchor(event.newURL);
+      const oldHash = hashFromUrl(event.oldURL);
+      const newHash = hashFromUrl(event.newURL);
+      observedHashRef.current = newHash;
+      const pending = pendingSkipAnchorHashChangeRef.current;
+      if (pending) {
+        pendingSkipAnchorHashChangeRef.current = null;
+        if (pending.oldHash === oldHash && pending.newHash === newHash) return;
+        loadLocation();
         return;
       }
-      skipAnchorHistoryRef.current = false;
+      if (isSemesterDeskMainAnchor(newHash)) return;
       loadLocation();
     }
     void Promise.resolve().then(() => {
@@ -2241,19 +2288,19 @@ export function SemesterDeskV2App({
     setDesk(result.value);
     setCapacityMinutes(String(result.value.capacityDraft?.availableMinutes ?? result.value.capacity?.availableMinutes ?? capacityMinutes));
     if (command.kind === "choose-next-action" || command.kind === "start-protected-study") {
-      setFocusedItemId(command.planItemId);
+      focusLearningItem(command.planItemId);
     }
     if (command.kind === "complete-practice") {
       const session = current.protectedStudySessions.find((entry) => entry.id === command.studySessionId);
       if (command.outcome === "completed") {
         setPracticeDraft("");
-        if (session) setFocusedItemId(session.planItemId);
+        if (session) focusLearningItem(session.planItemId);
       }
     }
     if (command.kind === "submit-independent-proof" || command.kind === "schedule-delayed-return") {
-      setFocusedItemId(command.planItemId);
+      focusLearningItem(command.planItemId);
     }
-    if (command.kind === "complete-delayed-return") setFocusedItemId(null);
+    if (command.kind === "complete-delayed-return") focusLearningItem(null);
     if (command.kind === "submit-independent-proof") setProofDraft("");
     if (command.kind === "complete-delayed-return") setReturnDraft("");
     if (command.kind === "schedule-delayed-return") setDelayedReturnDate("");
@@ -2578,7 +2625,7 @@ export function SemesterDeskV2App({
       onProofDraftChange={setProofDraft}
       onReturnDraftChange={setReturnDraft}
       onDelayedReturnDateChange={setDelayedReturnDate}
-      onFocusItem={setFocusedItemId}
+      onFocusItem={focusLearningItem}
       onRetrySave={() => {
         if (deskRef.current) void persist(deskRef.current);
       }}
