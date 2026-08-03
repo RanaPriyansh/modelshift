@@ -1736,32 +1736,31 @@ final class AppModel {
       }
 
       if Self.isStalePrivateStateError(error) {
-        recoveryState = .loadFailed(
+        await enterLoadRecoveryAfterExternalCleanup(
           message:
             "FORGE found local data from an older version. This version did not open, change, or replace that data. Clear local data to start again."
         )
         return false
       }
 
-      recoveryState = .loadFailed(message: "FORGE could not load local course data.")
-      await clearSharedStateAfterPrivateLoadFailure()
-      let didRemoveReminders =
-        notificationCoordinator.removeKnownReminderImmediately()
-      if !didRemoveReminders {
-        let cleanupMessage = " FORGE also could not remove the local reminder."
-        switch recoveryState {
-        case .protectedDataUnavailable(let message):
-          recoveryState = .protectedDataUnavailable(
-            message: message + cleanupMessage
-          )
-        case .loadFailed(let message):
-          recoveryState = .loadFailed(message: message + cleanupMessage)
-        default:
-          break
-        }
-      }
+      await enterLoadRecoveryAfterExternalCleanup(
+        message: "FORGE could not load local course data."
+      )
       return false
     }
+  }
+
+  private func enterLoadRecoveryAfterExternalCleanup(
+    message: String
+  ) async {
+    await clearSharedStateAfterPrivateLoadFailure()
+    let didRemoveReminders = await notificationCoordinator.disableReminders()
+    recoveryState = .loadFailed(
+      message:
+        didRemoveReminders
+        ? message
+        : message + " FORGE also could not remove local return reminders."
+    )
   }
 
   private func saveCandidate(

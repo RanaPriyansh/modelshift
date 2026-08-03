@@ -89,6 +89,35 @@ struct AppModelTests {
     }
   }
 
+  @Test("A ready Semester Desk routes root links to the selected surface")
+  func readySemesterDeskRoutesRootLinksToSelectedSurface() async throws {
+    try await withEnvironment { environment in
+      let model = try await environment.makeLaunchedModel()
+      #expect(await model.createSemesterDesk(title: "Autumn 2027"))
+      let semesterURL = try #require(URL(string: "forge://semester"))
+      let settingsURL = try #require(URL(string: "forge://settings"))
+
+      model.todayPath = [.privacySupport]
+      model.semesterPath = [.settings]
+      model.progressPath = [.privacySupport]
+      model.route(semesterURL)
+
+      #expect(model.selectedTab == .semester)
+      #expect(model.todayPath.isEmpty)
+      #expect(model.semesterPath.isEmpty)
+      #expect(model.progressPath.isEmpty)
+
+      model.semesterPath = [.privacySupport]
+      model.progressPath = [.settings]
+      model.route(settingsURL)
+
+      #expect(model.selectedTab == .today)
+      #expect(model.todayPath == [.settings])
+      #expect(model.semesterPath.isEmpty)
+      #expect(model.progressPath.isEmpty)
+    }
+  }
+
   @Test("Semester Desk creation saves before it applies to memory")
   func semesterDeskCreationSavesBeforeItAppliesToMemory() async throws {
     try await withEnvironment { environment in
@@ -597,6 +626,101 @@ struct AppModelTests {
       #expect(reader.semesterDesk == nil)
       #expect(await environment.privateStore.currentState() == before)
       #expect(await environment.privateStore.saveCount() == saveCount)
+    }
+  }
+
+  @Test("Stale private state keeps the file and removes shared return data")
+  func stalePrivateStateKeepsFileAndRemovesSharedReturnData() async throws {
+    try await withEnvironment { environment in
+      let privateDirectory = environment.rootURL.appendingPathComponent(
+        "private-state",
+        isDirectory: true
+      )
+      try FileManager.default.createDirectory(
+        at: privateDirectory,
+        withIntermediateDirectories: true
+      )
+      let currentStateURL = privateDirectory.appendingPathComponent(
+        "semester-desk-private-state-v1.json",
+        isDirectory: false
+      )
+      let staleStateURL = privateDirectory.appendingPathComponent(
+        "private-state-v5.json",
+        isDirectory: false
+      )
+      let staleStateData = Data("stale private state".utf8)
+      try staleStateData.write(to: staleStateURL, options: .atomic)
+
+      let generatedAt = environment.clock.now()
+      try environment.sharedStore.saveProjection(
+        ForgeSemesterDeskProjection(
+          status: .readyToWork,
+          dueAt: nil,
+          generatedAt: generatedAt,
+          validUntil: generatedAt.addingTimeInterval(3_600)
+        )
+      )
+      environment.notificationCenter.seedPendingIdentifiers([
+        "forge.return-reminder",
+        "forge.return-reminder.operation-1",
+        "outside.pending",
+      ])
+      environment.notificationCenter.seedDeliveredIdentifiers([
+        "forge.return-reminder",
+        "forge.return-reminder.operation-2",
+        "outside.delivered",
+      ])
+
+      let privateStore = PrivateStateStore(fileURL: currentStateURL)
+      let model = try environment.makeModel(privateStateStore: privateStore)
+      await model.launch()
+
+      guard case .loadFailed(let message) = model.recoveryState else {
+        Issue.record("Stale local state must enter recovery.")
+        return
+      }
+      #expect(message.contains("older version"))
+      #expect(model.localDataRecoveryMessage == message)
+      #expect(model.semesterDesk == nil)
+      #expect(FileManager.default.fileExists(atPath: staleStateURL.path))
+      #expect(try Data(contentsOf: staleStateURL) == staleStateData)
+      #expect(try environment.sharedStore.loadProjection() == nil)
+      #expect(
+        await environment.notificationCenter.pendingNotificationIdentifiers()
+          == ["outside.pending"]
+      )
+      #expect(
+        await environment.notificationCenter.deliveredNotificationIdentifiers()
+          == ["outside.delivered"]
+      )
+    }
+  }
+
+  @Test("A stale private-state cleanup failure keeps the stale error visible")
+  func stalePrivateStateCleanupFailureKeepsStaleErrorVisible() async throws {
+    try await withEnvironment { environment in
+      await environment.privateStore.setLoadError(
+        .stalePrivateStatePresent(entries: ["private-state-v5.json"])
+      )
+      environment.notificationCenter.seedPendingIdentifiers([
+        "forge.return-reminder"
+      ])
+      environment.notificationCenter.setManagedReminderRemovalBlocked(true)
+
+      let model = try environment.makeModel()
+      await model.launch()
+
+      guard case .loadFailed(let message) = model.recoveryState else {
+        Issue.record("Stale local state must keep the recovery error visible.")
+        return
+      }
+      #expect(message.contains("older version"))
+      #expect(message.contains("could not remove local return reminders"))
+      #expect(model.semesterDesk == nil)
+      #expect(
+        await environment.notificationCenter.pendingNotificationIdentifiers()
+          == ["forge.return-reminder"]
+      )
     }
   }
 
@@ -1166,8 +1290,14 @@ private final class TestEnvironment {
   }
 
   func makeModel() throws -> AppModel {
+    try makeModel(privateStateStore: privateStore)
+  }
+
+  func makeModel(
+    privateStateStore: any PrivateStateStoring
+  ) throws -> AppModel {
     try AppModel(
-      privateStateStore: privateStore,
+      privateStateStore: privateStateStore,
       sharedStore: sharedStore,
       notificationCoordinator: notificationCoordinator,
       timeBoundarySleeper: timeBoundarySleeper,
@@ -1398,6 +1528,19 @@ private final class TestNotificationCenter:
 {
   private var pendingIdentifiers = Set<String>()
   private var deliveredIdentifiers = Set<String>()
+  private var isManagedReminderRemovalBlocked = false
+
+  func seedPendingIdentifiers(_ identifiers: [String]) {
+    pendingIdentifiers.formUnion(identifiers)
+  }
+
+  func seedDeliveredIdentifiers(_ identifiers: [String]) {
+    deliveredIdentifiers.formUnion(identifiers)
+  }
+
+  func setManagedReminderRemovalBlocked(_ isBlocked: Bool) {
+    isManagedReminderRemovalBlocked = isBlocked
+  }
 
   func authorizationStatus() async -> LocalNotificationAuthorizationStatus {
     .authorized
@@ -1420,11 +1563,21 @@ private final class TestNotificationCenter:
   }
 
   func removePendingNotificationRequests(withIdentifiers identifiers: [String]) {
-    pendingIdentifiers.subtract(identifiers)
+    pendingIdentifiers.subtract(
+      identifiers.filter { identifier in
+        !isManagedReminderRemovalBlocked
+          || !Self.isManagedReminderIdentifier(identifier)
+      }
+    )
   }
 
   func removeDeliveredNotifications(withIdentifiers identifiers: [String]) {
-    deliveredIdentifiers.subtract(identifiers)
+    deliveredIdentifiers.subtract(
+      identifiers.filter { identifier in
+        !isManagedReminderRemovalBlocked
+          || !Self.isManagedReminderIdentifier(identifier)
+      }
+    )
   }
 
   func removePendingNotificationsImmediately(
@@ -1439,5 +1592,10 @@ private final class TestNotificationCenter:
   ) -> Bool {
     deliveredIdentifiers.subtract(identifiers)
     return true
+  }
+
+  private static func isManagedReminderIdentifier(_ identifier: String) -> Bool {
+    identifier == "forge.return-reminder"
+      || identifier.hasPrefix("forge.return-reminder.")
   }
 }
