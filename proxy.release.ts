@@ -49,6 +49,7 @@ function retiredRouteResponse(request: NextRequest, contentSecurityPolicy: strin
       "Content-Security-Policy": contentSecurityPolicy,
       "Content-Type": "text/html; charset=utf-8",
       "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Strict-Transport-Security": "max-age=31536000",
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
       "X-Robots-Tag": "noindex, nofollow",

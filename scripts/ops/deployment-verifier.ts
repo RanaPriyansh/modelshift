@@ -406,6 +406,14 @@ function headerChecks(checks: VerificationCheck[], response: Response, prefix: s
   record(checks, `${prefix}.csp.script_elements`, scriptElementsSafe, "every executable script element obeys the nonce or same-origin versioned-source policy");
   record(checks, `${prefix}.nosniff`, response.headers.get("x-content-type-options")?.toLowerCase() === "nosniff", "X-Content-Type-Options is nosniff");
   record(checks, `${prefix}.frame_protection`, response.headers.get("x-frame-options")?.toUpperCase() === "DENY", "X-Frame-Options is DENY");
+  const transportSecurity = response.headers.get("strict-transport-security") ?? "";
+  const transportMaxAge = transportSecurity.match(/(?:^|;)\s*max-age=(\d+)(?:;|$)/i)?.[1];
+  record(
+    checks,
+    `${prefix}.transport_security`,
+    transportMaxAge !== undefined && Number(transportMaxAge) >= 31_536_000,
+    "Strict-Transport-Security requires HTTPS for at least one year",
+  );
   record(checks, `${prefix}.referrer_policy`, response.headers.get("referrer-policy") === "strict-origin-when-cross-origin", "Referrer-Policy is strict-origin-when-cross-origin");
   const permissions = response.headers.get("permissions-policy") ?? "";
   record(checks, `${prefix}.permissions_policy`, ["camera=()", "microphone=()", "geolocation=()"].every((value) => permissions.includes(value)), "sensitive browser capabilities are disabled");

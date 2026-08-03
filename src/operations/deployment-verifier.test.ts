@@ -100,7 +100,7 @@ function mockFetch(asset = "self.__next_f=[]", defaultAssets: readonly string[] 
     if (url.pathname === "/api/health") return Response.json({ schema_version: "1.0", status: "ok", service: "forge-learning-os", app_name: "FORGE", release_sha: SHA, build_source_sha: SHA, build_time: healthBuildTime, runtime_mode: "fallback_only", cloud_accounts_enabled: false, cloud_auth_configured: false, device_profiles: "device_only", learner_evidence_sync: "disabled", dependency_lock_digest: DIGEST, content_package_manifest_digest: DIGEST, evaluator_baseline_digest: DIGEST, database_migration_identity: "not_configured", managed_surface_flags: { lesson_studio: false, interpretation: false, planner: false }, managed_provider_flags: { openai: false, anthropic: false, gemini: false, openrouter: false }, provider_mode: "disabled", release_manifest: releaseManifest }, { headers: { "cache-control": "no-store", "x-forge-release-sha": SHA, "x-forge-build-source-sha": SHA } });
     if (url.pathname.startsWith("/_next/static/")) return new Response(asset, { headers: { "content-type": "application/javascript" } });
     const scripts = routeAssets[url.pathname] ?? defaultAssets;
-    return new Response(`<html><body>${pages[url.pathname] ?? ""}${scripts.map(scriptTag).join("")}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "content-security-policy": CSP, "x-content-type-options": "nosniff", "x-frame-options": "DENY", "referrer-policy": "strict-origin-when-cross-origin", "permissions-policy": "camera=(), microphone=(), geolocation=()" } });
+    return new Response(`<html><body>${pages[url.pathname] ?? ""}${scripts.map(scriptTag).join("")}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "content-security-policy": CSP, "x-content-type-options": "nosniff", "x-frame-options": "DENY", "strict-transport-security": "max-age=31536000", "referrer-policy": "strict-origin-when-cross-origin", "permissions-policy": "camera=(), microphone=(), geolocation=()" } });
   };
 }
 async function run(fetchImpl = mockFetch(), externalProviderReceipt?: unknown): Promise<DeploymentVerificationReport> { return verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, expectedSourceTree: TREE, expectedPublicDirectoryIdentity: { publicDirectoryDigest: `sha256:${DIGEST}`, publicDirectoryFileCount: 5 }, expectedRuntimeConfigurationIdentity: { runtimeConfigurationDigest: `sha256:${DIGEST}`, runtimeConfigurationFileCount: 4 }, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:03.000Z", expectedLockfileDigest: DIGEST, externalProviderReceipt, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", deploymentTarget: TEST_DEPLOYMENT_TARGET, resolveHostname: async () => ["8.8.8.8"] }); }
@@ -402,6 +402,19 @@ describe("deployment verifier", () => {
     const redTeam = await run(redTeamFetch as typeof fetch);
     expect(redTeam.status).toBe("fail");
     expect(redTeam.checks.some((item) => item.id === "home.csp.contract" && item.status === "fail")).toBe(true);
+  });
+  it("requires one year of HTTPS transport security", async () => {
+    const baseFetch = mockFetch();
+    const badFetch = async (input: string | URL | Request) => {
+      const response = await baseFetch(input);
+      if (new URL(input instanceof Request ? input.url : input.toString()).pathname === "/api/health") return response;
+      const headers = new Headers(response.headers);
+      headers.set("strict-transport-security", "max-age=3600");
+      return new Response(await response.text(), { status: response.status, headers });
+    };
+    const report = await run(badFetch as typeof fetch);
+    expect(report.status).toBe("fail");
+    expect(report.checks.some((item) => item.id === "home.transport_security" && item.status === "fail")).toBe(true);
   });
   it("rejects terminal-state and live-proof inputs from the worker verifier", async () => {
     await expect(verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, allowedHosts: ["forge.example"], fetchImpl: mockFetch() as typeof fetch, candidateState: "PRODUCTION_VERIFIED", expectedLockfileDigest: DIGEST, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", resolveHostname: async () => ["8.8.8.8"] })).rejects.toThrow(/terminal/);
