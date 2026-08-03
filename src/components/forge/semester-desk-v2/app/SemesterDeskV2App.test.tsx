@@ -286,6 +286,32 @@ describe("SemesterDeskV2App", () => {
     expect(screen.getByText("No work is in this desk yet.")).toBeInTheDocument();
   });
 
+  it("shows a local-storage-unavailable recovery state when browser storage cannot be acquired", async () => {
+    vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+      throw new DOMException("Storage is blocked.", "SecurityError");
+    });
+    renderBrowserApp();
+
+    expect(await screen.findByRole("heading", { name: "FORGE cannot use local storage." })).toBeInTheDocument();
+    expect(screen.getByText(/FORGE did not open, change, or remove local desk data/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Try local storage again" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open your Semester Desk" })).not.toBeInTheDocument();
+  });
+
+  it("shows a local-storage-unavailable recovery state when a browser storage read throws", async () => {
+    const storage = {
+      getItem: vi.fn(() => {
+        throw new DOMException("Storage is blocked.", "SecurityError");
+      }),
+    } as unknown as Storage;
+    vi.spyOn(window, "localStorage", "get").mockReturnValue(storage);
+    renderBrowserApp();
+
+    expect(await screen.findByRole("heading", { name: "FORGE cannot use local storage." })).toBeInTheDocument();
+    expect(storage.getItem).toHaveBeenCalledWith(semesterDeskActiveProfileStorageKey);
+    expect(screen.queryByRole("button", { name: "Open your Semester Desk" })).not.toBeInTheDocument();
+  });
+
   it("keeps onboarding available after the skip link changes the fragment and after reload", async () => {
     const firstRender = renderBrowserApp();
 
@@ -298,6 +324,11 @@ describe("SemesterDeskV2App", () => {
     expect(screen.getByRole("heading", { name: "Start with what is real." })).toBeInTheDocument();
     expect(screen.getByLabelText("Semester title")).toHaveValue("Autumn recovery");
     expect(screen.queryByRole("heading", { name: "FORGE did not change local data." })).not.toBeInTheDocument();
+
+    window.history.back();
+    await waitFor(() => expect(window.location.hash).toBe(""));
+    expect(screen.getByRole("heading", { name: "Start with what is real." })).toBeInTheDocument();
+    expect(screen.getByLabelText("Semester title")).toHaveValue("Autumn recovery");
 
     firstRender.unmount();
     renderBrowserApp();
@@ -324,6 +355,44 @@ describe("SemesterDeskV2App", () => {
     expect(await screen.findByLabelText("Your working notes")).toHaveValue("Keep this local working note.");
     expect(screen.queryByRole("heading", { name: "FORGE did not change local data." })).not.toBeInTheDocument();
     expect(window.localStorage.getItem(semesterDeskActiveProfileStorageKey)).toBe(PROFILE_ID);
+
+    window.history.back();
+    await waitFor(() => expect(window.location.hash).toBe(`#forge-profile=${encodeURIComponent(PROFILE_ID)}`));
+    expect(await screen.findByLabelText("Your working notes")).toHaveValue("Keep this local working note.");
+  });
+
+  it("keeps independent and delayed-return drafts through both skip-anchor history directions", async () => {
+    const state = makeDesk();
+    saveBrowserDesk(state);
+    window.history.replaceState(null, "", `/app#forge-profile=${encodeURIComponent(PROFILE_ID)}`);
+    renderBrowserApp();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Choose this work" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Start protected study" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finish practice" }));
+    const proof = await screen.findByLabelText("Your active-recall response");
+    fireEvent.change(proof, { target: { value: "Keep this active-recall response." } });
+    fireEvent.click(screen.getByRole("link", { name: "Skip to main content" }));
+
+    await waitFor(() => expect(window.location.hash).toBe("#semester-desk-main"));
+    window.history.back();
+    await waitFor(() => expect(window.location.hash).toBe(`#forge-profile=${encodeURIComponent(PROFILE_ID)}`));
+    expect(await screen.findByLabelText("Your active-recall response")).toHaveValue("Keep this active-recall response.");
+
+    fireEvent.click(screen.getByRole("button", { name: "I showed my understanding" }));
+    const returnDate = await screen.findByLabelText("Return date and time");
+    fireEvent.change(returnDate, { target: { value: "2026-08-10T09:00" } });
+    fireEvent.submit(returnDate.closest("form")!);
+    currentTime = "2026-08-11T09:00:00.000Z";
+    fireEvent.click(screen.getByRole("button", { name: "Open return" }));
+    const explanation = await screen.findByLabelText("Your fresh explanation");
+    fireEvent.change(explanation, { target: { value: "Keep this fresh explanation." } });
+    fireEvent.click(screen.getByRole("link", { name: "Skip to main content" }));
+
+    await waitFor(() => expect(window.location.hash).toBe("#semester-desk-main"));
+    window.history.back();
+    await waitFor(() => expect(window.location.hash).toBe(`#forge-profile=${encodeURIComponent(PROFILE_ID)}`));
+    expect(await screen.findByLabelText("Your fresh explanation")).toHaveValue("Keep this fresh explanation.");
   });
 
   it("opens local data from a direct policy route and keeps the selected desk through reload and history navigation", async () => {
@@ -428,6 +497,9 @@ describe("SemesterDeskV2App", () => {
     expect(window.localStorage.getItem(semesterDeskStorageKey(PROFILE_ID))).toBeNull();
     expect(window.localStorage.getItem(semesterDeskActiveProfileStorageKey)).toBeNull();
     expect(window.location.hash).toBe("");
+    const onboardingForm = screen.getByRole("button", { name: "Open your Semester Desk" }).closest("form");
+    if (!onboardingForm) throw new Error("Expected the onboarding form.");
+    expect(within(onboardingForm).getByText("The local desk was removed from this device.")).toBeInTheDocument();
   });
 
   it("requires a checked course detail before a student can choose the work", async () => {
@@ -505,10 +577,20 @@ describe("SemesterDeskV2App", () => {
     expect(await screen.findByRole("heading", { name: "Rebuild this week in the open." })).toBeInTheDocument();
     const reason = screen.getByLabelText("Why this is honest today");
     expect(reason).toHaveValue("");
+    fireEvent.click(screen.getByRole("button", { name: "Review these changes" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Write why this is honest today.");
+    expect(reason).toHaveAttribute("aria-invalid", "true");
+
+    fireEvent.change(screen.getByLabelText("Keep, move, reduce, or defer"), { target: { value: "moved" } });
     fireEvent.change(reason, { target: { value: "This work still fits today." } });
     fireEvent.click(screen.getByRole("button", { name: "Review these changes" }));
+    const date = await screen.findByLabelText(/^New date/);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Choose a different date.");
+    expect(date).toHaveAttribute("aria-invalid", "true");
+    fireEvent.change(date, { target: { value: "2026-08-06" } });
+    fireEvent.click(screen.getByRole("button", { name: "Review these changes" }));
     expect(await screen.findByRole("button", { name: "Confirm these changes" })).toBeInTheDocument();
-    expect(screen.getByText("Kept")).toBeInTheDocument();
+    expect(screen.getByText("Moved")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Confirm these changes" }));
     expect(await screen.findByRole("heading", { name: "What changed" })).toBeInTheDocument();
@@ -568,7 +650,64 @@ describe("SemesterDeskV2App", () => {
     fireEvent.click(screen.getByRole("button", { name: "I need more work" }));
 
     expect(await screen.findByLabelText("Your working notes")).toHaveValue("Keep working on this proof.");
-    expect(screen.queryByLabelText("Your answer")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Your active-recall response")).not.toBeInTheDocument();
+  });
+
+  it("requires an active-recall response before it records an independent outcome", async () => {
+    const persistence = new MemoryPersistence(makeDesk());
+    renderApp(persistence);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Choose this work" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Start protected study" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finish practice" }));
+
+    const response = await screen.findByLabelText("Your active-recall response");
+    fireEvent.change(response, { target: { value: "   " } });
+    fireEvent.click(screen.getByRole("button", { name: "I need to return to this" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Write an active-recall response before you record this outcome.");
+    expect(response).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByLabelText("Return date and time")).not.toBeInTheDocument();
+    expect(persistence.saved.at(-1)?.independentProofs).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "I showed my understanding" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Write an active-recall response before you record this outcome.");
+    expect(response).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByLabelText("Return date and time")).not.toBeInTheDocument();
+    expect(persistence.saved.at(-1)?.independentProofs).toHaveLength(0);
+  });
+
+  it("requires a fresh explanation before it records a delayed-return outcome", async () => {
+    const persistence = new MemoryPersistence(makeDesk());
+    renderApp(persistence);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Choose this work" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Start protected study" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finish practice" }));
+    fireEvent.change(await screen.findByLabelText("Your active-recall response"), { target: { value: "A local response." } });
+    fireEvent.click(screen.getByRole("button", { name: "I showed my understanding" }));
+    const returnDate = await screen.findByLabelText("Return date and time");
+    fireEvent.change(returnDate, { target: { value: "2026-08-10T09:00" } });
+    fireEvent.submit(returnDate.closest("form")!);
+
+    currentTime = "2026-08-11T09:00:00.000Z";
+    fireEvent.click(screen.getByRole("button", { name: "Open return" }));
+    const explanation = await screen.findByLabelText("Your fresh explanation");
+    fireEvent.change(explanation, { target: { value: "   " } });
+    fireEvent.click(screen.getByRole("button", { name: "I need more work" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Write a fresh explanation before you record this outcome.");
+    expect(explanation).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText("Delayed return · Needs more work")).not.toBeInTheDocument();
+    expect(persistence.saved.at(-1)?.delayedReturns[0]).toMatchObject({ status: "open" });
+
+    fireEvent.click(screen.getByRole("button", { name: "I retained it" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Write a fresh explanation before you record this outcome.");
+    expect(explanation).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText("Delayed return · Retained")).not.toBeInTheDocument();
+    expect(persistence.saved.at(-1)?.delayedReturns[0]).toMatchObject({ status: "open" });
   });
 
   it("runs the chosen study, independent check, and delayed return without saving raw answer text", async () => {
@@ -580,7 +719,7 @@ describe("SemesterDeskV2App", () => {
     fireEvent.change(await screen.findByLabelText("Your working notes"), { target: { value: "PRIVATE_PRACTICE_TEXT" } });
     fireEvent.click(screen.getByRole("button", { name: "Finish practice" }));
 
-    fireEvent.change(await screen.findByLabelText("Your answer"), { target: { value: "PRIVATE_PROOF_TEXT" } });
+    fireEvent.change(await screen.findByLabelText("Your active-recall response"), { target: { value: "PRIVATE_PROOF_TEXT" } });
     fireEvent.click(screen.getByRole("button", { name: "I showed my understanding" }));
     const returnDate = await screen.findByLabelText("Return date and time");
     fireEvent.change(returnDate, { target: { value: "2026-08-10T09:00" } });
@@ -592,8 +731,21 @@ describe("SemesterDeskV2App", () => {
 
     currentTime = "2026-08-11T09:00:00.000Z";
     fireEvent.click(screen.getByRole("button", { name: "Open return" }));
+    fireEvent.change(await screen.findByLabelText("Your fresh explanation"), { target: { value: "PRIVATE_RETURN_TEXT" } });
     fireEvent.click(await screen.findByRole("button", { name: "I retained it" }));
-    expect(await screen.findByText("delayed return completed · retained")).toBeInTheDocument();
+    expect(await screen.findByText("Protected practice · Practice complete")).toBeInTheDocument();
+    expect(screen.getByText("Independent check · Demonstrated")).toBeInTheDocument();
+    expect(await screen.findByText("Delayed return · Retained")).toBeInTheDocument();
+    expect(screen.getAllByText(/^Recorded /).at(-1)).toHaveAttribute("dateTime", currentTime);
+    expect(JSON.stringify(persistence.saved)).not.toContain("PRIVATE_RETURN_TEXT");
+
+    const exported = await persistence.exportRaw(PROFILE_ID);
+    expect(exported).toMatchObject({ ok: true });
+    if (exported.ok) {
+      expect(exported.raw).not.toContain("PRIVATE_PRACTICE_TEXT");
+      expect(exported.raw).not.toContain("PRIVATE_PROOF_TEXT");
+      expect(exported.raw).not.toContain("PRIVATE_RETURN_TEXT");
+    }
   });
 
   it("keeps entered state visible when a save fails and supports a local reset confirmation", async () => {

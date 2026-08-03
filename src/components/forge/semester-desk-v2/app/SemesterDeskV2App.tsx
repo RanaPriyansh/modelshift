@@ -26,6 +26,7 @@ import {
   BrowserSemesterDeskPersistence,
   normalizeSemesterDeskProfileIdentifier,
   semesterDeskActiveProfileStorageKey,
+  semesterDeskStorageKey,
   type SemesterDeskPersistence,
   type SemesterDeskPersistenceRead,
   type SemesterDeskPersistenceResult,
@@ -33,7 +34,7 @@ import {
 
 import styles from "./SemesterDeskV2App.module.css";
 
-type AppScreen = "loading" | "onboarding" | "ready" | "malformed" | "blocked";
+type AppScreen = "loading" | "onboarding" | "ready" | "malformed" | "blocked" | "storage-unavailable";
 type SaveStatus = "saved" | "saving" | "error";
 type AppSection = "overview" | "settings";
 
@@ -73,6 +74,8 @@ type RecoveryChoice = {
   readonly nextDate: string;
   readonly nextMinutes: string;
 };
+
+type RecoveryValidationErrors = Record<string, Partial<Record<"reason" | "nextDate" | "nextMinutes", string>>>;
 
 type CourseDraft = {
   readonly code: string;
@@ -140,6 +143,20 @@ const factStatusLabels: Record<CourseFactStatus, string> = {
   "changed-since-last-check": "Changed since last check",
 };
 
+const progressKindLabels = {
+  "practice-completed": "Protected practice",
+  "independent-proof-completed": "Independent check",
+  "delayed-return-completed": "Delayed return",
+} as const;
+
+const progressOutcomeLabels = {
+  completed: "Practice complete",
+  "needs-more-work": "Needs more work",
+  demonstrated: "Demonstrated",
+  "needs-return": "Not yet demonstrated",
+  retained: "Retained",
+} as const;
+
 const semesterDeskMainAnchor = "semester-desk-main";
 
 export type SemesterDeskV2AppProps = {
@@ -178,9 +195,30 @@ function profileLocationFromWindow(): ProfileLocation {
     : { kind: "invalid", section };
 }
 
-function activeProfileReferenceFromStorage(): ActiveProfileReference {
+function isSemesterDeskMainAnchor(url: string): boolean {
+  return new URL(url).hash.replace(/^#/, "") === semesterDeskMainAnchor;
+}
+
+function browserLocalStorage(): Storage | null {
   try {
-    const storedProfileId = window.localStorage.getItem(semesterDeskActiveProfileStorageKey);
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function canReadBrowserStorage(storage: Storage, key: string): boolean {
+  try {
+    storage.getItem(key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function activeProfileReferenceFromStorage(storage: Storage): ActiveProfileReference {
+  try {
+    const storedProfileId = storage.getItem(semesterDeskActiveProfileStorageKey);
     if (storedProfileId === null) return { kind: "missing" };
     const profileId = normalizeSemesterDeskProfileIdentifier(storedProfileId);
     return profileId ? { kind: "profile", profileId } : { kind: "invalid" };
@@ -189,25 +227,25 @@ function activeProfileReferenceFromStorage(): ActiveProfileReference {
   }
 }
 
-function writeActiveProfileReference(profileId: string | null): boolean {
+function writeActiveProfileReference(storage: Storage, profileId: string | null): boolean {
   try {
     if (profileId === null) {
-      window.localStorage.removeItem(semesterDeskActiveProfileStorageKey);
+      storage.removeItem(semesterDeskActiveProfileStorageKey);
       return true;
     }
     const normalized = normalizeSemesterDeskProfileIdentifier(profileId);
     if (!normalized) return false;
-    window.localStorage.setItem(semesterDeskActiveProfileStorageKey, normalized);
+    storage.setItem(semesterDeskActiveProfileStorageKey, normalized);
     return true;
   } catch {
     return false;
   }
 }
 
-function clearActiveProfileReference(profileId: string): boolean {
-  const activeReference = activeProfileReferenceFromStorage();
+function clearActiveProfileReference(storage: Storage, profileId: string): boolean {
+  const activeReference = activeProfileReferenceFromStorage(storage);
   if (activeReference.kind === "profile" && activeReference.profileId !== profileId) return true;
-  return writeActiveProfileReference(null);
+  return writeActiveProfileReference(storage, null);
 }
 
 function writeProfileIdToLocation(profileId: string | null, section: AppSection): boolean {
@@ -263,6 +301,28 @@ function defaultRecoveryChoice(): RecoveryChoice {
   };
 }
 
+function recoveryValidationErrorsFor(
+  item: SemesterDeskState["planItems"][number],
+  choice: RecoveryChoice,
+): Partial<Record<"reason" | "nextDate" | "nextMinutes", string>> {
+  const errors: Partial<Record<"reason" | "nextDate" | "nextMinutes", string>> = {};
+  if (choice.reason.trim().length === 0) {
+    errors.reason = "Write why this is honest today.";
+  }
+  if (choice.outcome === "moved" || choice.outcome === "deferred") {
+    if (!choice.nextDate || choice.nextDate === item.currentDate) {
+      errors.nextDate = "Choose a different date.";
+    }
+  }
+  if (choice.outcome === "reduced") {
+    const minutes = Number(choice.nextMinutes);
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes >= item.currentMinutes) {
+      errors.nextMinutes = "Set fewer whole minutes.";
+    }
+  }
+  return errors;
+}
+
 function messageForError(result: SemesterDeskResult<unknown>): string {
   if (result.ok) return "";
   switch (result.error.code) {
@@ -304,6 +364,15 @@ function factFreshnessLabel(checkedAt: string | null): string {
   const date = new Date(checkedAt);
   if (Number.isNaN(date.getTime())) return "Check time needs review";
   return `Last checked ${new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date)}`;
+}
+
+function occurredAtLabel(occurredAt: string): string {
+  const date = new Date(occurredAt);
+  if (Number.isNaN(date.getTime())) return "Recorded time needs review";
+  return `Recorded ${new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date)}`;
@@ -402,12 +471,14 @@ function Onboarding({
   onChange,
   onSubmit,
   submitError,
+  successMessage,
   saving,
 }: {
   readonly draft: OnboardingDraft;
   readonly onChange: (next: OnboardingDraft) => void;
   readonly onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   readonly submitError: string | null;
+  readonly successMessage: string | null;
   readonly saving: boolean;
 }) {
   function update<Key extends keyof OnboardingDraft>(key: Key, value: OnboardingDraft[Key]) {
@@ -425,6 +496,7 @@ function Onboarding({
       </section>
 
       <form className={styles.onboardingForm} onSubmit={onSubmit} noValidate>
+        {successMessage ? <p className={styles.inlineSuccess} role="status">{successMessage}</p> : null}
         <fieldset>
           <legend>Semester</legend>
           <label>
@@ -604,6 +676,26 @@ function BlockedLocalReferenceState({
             </button>
           </div>
         ) : null}
+      </section>
+    </main>
+  );
+}
+
+function LocalStorageUnavailable({ onRetry }: { readonly onRetry: () => void }) {
+  return (
+    <main id="semester-desk-main" className={styles.recoveryState} tabIndex={-1}>
+      <section aria-labelledby="local-storage-unavailable-title">
+        <p className={styles.sectionMarker}>LOCAL STORAGE UNAVAILABLE</p>
+        <h1 id="local-storage-unavailable-title">FORGE cannot use local storage.</h1>
+        <p>
+          Your browser did not allow local storage. FORGE did not open, change, or remove local desk data.
+          Allow local storage for this site, then try again.
+        </p>
+        <div className={styles.actionRow}>
+          <button className={styles.secondaryAction} type="button" onClick={onRetry}>
+            Try local storage again
+          </button>
+        </div>
       </section>
     </main>
   );
@@ -969,12 +1061,14 @@ function CapacitySection({
 function RecoverySection({
   desk,
   choices,
+  validationErrors,
   onChoiceChange,
   onPrepare,
   onConfirm,
 }: {
   readonly desk: SemesterDeskState;
   readonly choices: Readonly<Record<string, RecoveryChoice>>;
+  readonly validationErrors: Readonly<RecoveryValidationErrors>;
   readonly onChoiceChange: (planItemId: string, choice: RecoveryChoice) => void;
   readonly onPrepare: () => void;
   readonly onConfirm: () => void;
@@ -1027,6 +1121,10 @@ function RecoverySection({
             {plannedItems.map((item) => {
               const choice = choices[item.id] ?? defaultRecoveryChoice();
               const course = courses.get(item.courseId);
+              const errors = validationErrors[item.id] ?? {};
+              const dateErrorId = `recovery-${item.id}-date-error`;
+              const minutesErrorId = `recovery-${item.id}-minutes-error`;
+              const reasonErrorId = `recovery-${item.id}-reason-error`;
               return (
                 <li key={item.id}>
                   <div className={styles.workIdentity}>
@@ -1054,11 +1152,14 @@ function RecoverySection({
                       <input
                         type="date"
                         value={choice.nextDate}
+                        aria-invalid={errors.nextDate ? true : undefined}
+                        aria-describedby={errors.nextDate ? dateErrorId : undefined}
                         onChange={(event) => onChoiceChange(item.id, {
                           ...choice,
                           nextDate: event.target.value,
                         })}
                       />
+                      {errors.nextDate ? <span id={dateErrorId} className={styles.inlineError} role="alert">{errors.nextDate}</span> : null}
                     </label>
                   ) : null}
                   {choice.outcome === "reduced" ? (
@@ -1071,11 +1172,14 @@ function RecoverySection({
                         step="1"
                         inputMode="numeric"
                         value={choice.nextMinutes}
+                        aria-invalid={errors.nextMinutes ? true : undefined}
+                        aria-describedby={errors.nextMinutes ? minutesErrorId : undefined}
                         onChange={(event) => onChoiceChange(item.id, {
                           ...choice,
                           nextMinutes: event.target.value,
                         })}
                       />
+                      {errors.nextMinutes ? <span id={minutesErrorId} className={styles.inlineError} role="alert">{errors.nextMinutes}</span> : null}
                     </label>
                   ) : null}
                   <label className={styles.recoveryReason}>
@@ -1083,11 +1187,14 @@ function RecoverySection({
                     <input
                       placeholder="Write why this is honest today"
                       value={choice.reason}
+                      aria-invalid={errors.reason ? true : undefined}
+                      aria-describedby={errors.reason ? reasonErrorId : undefined}
                       onChange={(event) => onChoiceChange(item.id, {
                         ...choice,
                         reason: event.target.value,
                       })}
                     />
+                    {errors.reason ? <span id={reasonErrorId} className={styles.inlineError} role="alert">{errors.reason}</span> : null}
                   </label>
                 </li>
               );
@@ -1127,10 +1234,12 @@ function LearningLoop({
   desk,
   practiceDraft,
   proofDraft,
+  returnDraft,
   delayedReturnDate,
   focusedItemId,
   onPracticeDraftChange,
   onProofDraftChange,
+  onReturnDraftChange,
   onDelayedReturnDateChange,
   onFocusItem,
   onCommand,
@@ -1138,15 +1247,19 @@ function LearningLoop({
   readonly desk: SemesterDeskState;
   readonly practiceDraft: string;
   readonly proofDraft: string;
+  readonly returnDraft: string;
   readonly delayedReturnDate: string;
   readonly focusedItemId: string | null;
   readonly onPracticeDraftChange: (value: string) => void;
   readonly onProofDraftChange: (value: string) => void;
+  readonly onReturnDraftChange: (value: string) => void;
   readonly onDelayedReturnDateChange: (value: string) => void;
   readonly onFocusItem: (planItemId: string) => void;
   readonly onCommand: (command: SemesterDeskCommand, successMessage: string) => boolean;
 }) {
   const [planItemDraft, setPlanItemDraft] = useState<PlanItemDraft>(emptyPlanItemDraft);
+  const [proofError, setProofError] = useState<string | null>(null);
+  const [returnError, setReturnError] = useState<string | null>(null);
   const orderedItems = orderedPlanItems(desk);
   const selected = desk.selectedNextActionId
     ? planItemFor(desk, desk.selectedNextActionId)
@@ -1157,6 +1270,36 @@ function LearningLoop({
   const focusedReturn = focusedItem
     ? desk.delayedReturns.find((entry) => entry.planItemId === focusedItem.id && entry.status !== "completed")
     : undefined;
+
+  function submitIndependentProof(outcome: "demonstrated" | "needs-return") {
+    if (proofDraft.trim().length === 0) {
+      setProofError("Write an active-recall response before you record this outcome.");
+      return;
+    }
+    if (!focusedItem) return;
+    const saved = onCommand({
+      kind: "submit-independent-proof",
+      profileId: desk.profileId,
+      planItemId: focusedItem.id,
+      outcome,
+    }, "Your independent check is complete. Your response stayed only on this screen.");
+    if (saved) setProofError(null);
+  }
+
+  function completeDelayedReturn(outcome: "retained" | "needs-more-work") {
+    if (returnDraft.trim().length === 0) {
+      setReturnError("Write a fresh explanation before you record this outcome.");
+      return;
+    }
+    if (!focusedReturn) return;
+    const saved = onCommand({
+      kind: "complete-delayed-return",
+      profileId: desk.profileId,
+      delayedReturnId: focusedReturn.id,
+      outcome,
+    }, "Your return is recorded. Your fresh explanation stayed only on this screen.");
+    if (saved) setReturnError(null);
+  }
 
   return (
     <section className={styles.ruledSection} id="learning" aria-labelledby="next-action-title">
@@ -1352,37 +1495,33 @@ function LearningLoop({
         <div className={styles.focusRegion} aria-labelledby={`proof-${focusedItem.id}`}>
           <p className={styles.sectionMarker}>INDEPENDENT CHECK</p>
           <h3 id={`proof-${focusedItem.id}`}>{focusedItem.title}</h3>
-          <p>Answer without FORGE. The answer text stays only on this screen.</p>
+          <p>Answer without FORGE. This active-recall response stays only on this screen.</p>
           <label>
-            Your answer
+            Your active-recall response
             <textarea
               value={proofDraft}
-              onChange={(event) => onProofDraftChange(event.target.value)}
+              aria-invalid={proofError ? true : undefined}
+              aria-describedby={proofError ? `proof-${focusedItem.id}-error` : undefined}
+              onChange={(event) => {
+                onProofDraftChange(event.target.value);
+                if (proofError) setProofError(null);
+              }}
               rows={5}
             />
+            {proofError ? <span id={`proof-${focusedItem.id}-error`} className={styles.inlineError} role="alert">{proofError}</span> : null}
           </label>
           <div className={styles.actionRow}>
             <button
               className={styles.secondaryAction}
               type="button"
-              onClick={() => onCommand({
-                kind: "submit-independent-proof",
-                profileId: desk.profileId,
-                planItemId: focusedItem.id,
-                outcome: "needs-return",
-              }, "Your independent check is complete. Your answer stayed only on this screen.")}
+              onClick={() => submitIndependentProof("needs-return")}
             >
               I need to return to this
             </button>
             <button
               className={styles.commitAction}
               type="button"
-              onClick={() => onCommand({
-                kind: "submit-independent-proof",
-                profileId: desk.profileId,
-                planItemId: focusedItem.id,
-                outcome: "demonstrated",
-              }, "Your independent check is complete. Your answer stayed only on this screen.")}
+              onClick={() => submitIndependentProof("demonstrated")}
             >
               I showed my understanding
               <ArrowIcon />
@@ -1445,29 +1584,33 @@ function LearningLoop({
           <div className={styles.focusRegion} aria-labelledby={`delayed-${focusedReturn.id}`}>
             <p className={styles.sectionMarker}>DELAYED RETURN</p>
             <h3 id={`delayed-${focusedReturn.id}`}>{focusedItem.title}</h3>
-            <p>Try to recall without looking at saved answer text. FORGE does not keep your answer.</p>
+            <p>Explain it again without looking at saved answer text. FORGE does not keep this text.</p>
+            <label>
+              Your fresh explanation
+              <textarea
+                value={returnDraft}
+                aria-invalid={returnError ? true : undefined}
+                aria-describedby={returnError ? `delayed-${focusedReturn.id}-error` : undefined}
+                onChange={(event) => {
+                  onReturnDraftChange(event.target.value);
+                  if (returnError) setReturnError(null);
+                }}
+                rows={5}
+              />
+              {returnError ? <span id={`delayed-${focusedReturn.id}-error`} className={styles.inlineError} role="alert">{returnError}</span> : null}
+            </label>
             <div className={styles.actionRow}>
               <button
                 className={styles.secondaryAction}
                 type="button"
-                onClick={() => onCommand({
-                  kind: "complete-delayed-return",
-                  profileId: desk.profileId,
-                  delayedReturnId: focusedReturn.id,
-                  outcome: "needs-more-work",
-                }, "Your return is recorded. You can make more space for this work later.")}
+                onClick={() => completeDelayedReturn("needs-more-work")}
               >
                 I need more work
               </button>
               <button
                 className={styles.commitAction}
                 type="button"
-                onClick={() => onCommand({
-                  kind: "complete-delayed-return",
-                  profileId: desk.profileId,
-                  delayedReturnId: focusedReturn.id,
-                  outcome: "retained",
-                }, "Your return is recorded.")}
+                onClick={() => completeDelayedReturn("retained")}
               >
                 I retained it
                 <ArrowIcon />
@@ -1497,7 +1640,8 @@ function AnswerFreeProgress({ desk }: { readonly desk: SemesterDeskState }) {
             return (
               <li key={entry.id}>
                 <strong>{item?.title ?? "Learning action"}</strong>
-                <span>{entry.kind.replaceAll("-", " ")} · {entry.outcome.replaceAll("-", " ")}</span>
+                <span>{progressKindLabels[entry.kind]} · {progressOutcomeLabels[entry.outcome]}</span>
+                <time dateTime={entry.occurredAt}>{occurredAtLabel(entry.occurredAt)}</time>
               </li>
             );
           })}
@@ -1608,8 +1752,10 @@ function SemesterDeskReady({
   saveError,
   capacityMinutes,
   recoveryChoices,
+  recoveryValidationErrors,
   practiceDraft,
   proofDraft,
+  returnDraft,
   delayedReturnDate,
   focusedItemId,
   resetOpen,
@@ -1620,6 +1766,7 @@ function SemesterDeskReady({
   onConfirmRecovery,
   onPracticeDraftChange,
   onProofDraftChange,
+  onReturnDraftChange,
   onDelayedReturnDateChange,
   onFocusItem,
   onRetrySave,
@@ -1636,8 +1783,10 @@ function SemesterDeskReady({
   readonly saveError: string | null;
   readonly capacityMinutes: string;
   readonly recoveryChoices: Readonly<Record<string, RecoveryChoice>>;
+  readonly recoveryValidationErrors: Readonly<RecoveryValidationErrors>;
   readonly practiceDraft: string;
   readonly proofDraft: string;
+  readonly returnDraft: string;
   readonly delayedReturnDate: string;
   readonly focusedItemId: string | null;
   readonly resetOpen: boolean;
@@ -1648,6 +1797,7 @@ function SemesterDeskReady({
   readonly onConfirmRecovery: () => void;
   readonly onPracticeDraftChange: (value: string) => void;
   readonly onProofDraftChange: (value: string) => void;
+  readonly onReturnDraftChange: (value: string) => void;
   readonly onDelayedReturnDateChange: (value: string) => void;
   readonly onFocusItem: (planItemId: string) => void;
   readonly onRetrySave: () => void;
@@ -1678,6 +1828,7 @@ function SemesterDeskReady({
         <RecoverySection
           desk={desk}
           choices={recoveryChoices}
+          validationErrors={recoveryValidationErrors}
           onChoiceChange={onRecoveryChoiceChange}
           onPrepare={onPrepareRecovery}
           onConfirm={onConfirmRecovery}
@@ -1686,10 +1837,12 @@ function SemesterDeskReady({
           desk={desk}
           practiceDraft={practiceDraft}
           proofDraft={proofDraft}
+          returnDraft={returnDraft}
           delayedReturnDate={delayedReturnDate}
           focusedItemId={focusedItemId}
           onPracticeDraftChange={onPracticeDraftChange}
           onProofDraftChange={onProofDraftChange}
+          onReturnDraftChange={onReturnDraftChange}
           onDelayedReturnDateChange={onDelayedReturnDateChange}
           onFocusItem={onFocusItem}
           onCommand={onCommand}
@@ -1719,14 +1872,17 @@ export function SemesterDeskV2App({
   const [desk, setDesk] = useState<SemesterDeskState | null>(null);
   const [onboardingDraft, setOnboardingDraft] = useState<OnboardingDraft>(emptyOnboardingDraft);
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
+  const [onboardingSuccess, setOnboardingSuccess] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [notice, setNotice] = useState("Opening your Semester Desk.");
   const [offline, setOffline] = useState(false);
   const [capacityMinutes, setCapacityMinutes] = useState("");
   const [recoveryChoices, setRecoveryChoices] = useState<Record<string, RecoveryChoice>>({});
+  const [recoveryValidationErrors, setRecoveryValidationErrors] = useState<RecoveryValidationErrors>({});
   const [practiceDraft, setPracticeDraft] = useState("");
   const [proofDraft, setProofDraft] = useState("");
+  const [returnDraft, setReturnDraft] = useState("");
   const [delayedReturnDate, setDelayedReturnDate] = useState("");
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
@@ -1734,11 +1890,13 @@ export function SemesterDeskV2App({
 
   const persistenceRef = useRef<SemesterDeskPersistence | null>(null);
   const browserPersistenceRef = useRef<BrowserSemesterDeskPersistence | null>(null);
+  const browserStorageRef = useRef<Storage | null>(null);
   const resetOpenerRef = useRef<HTMLElement | null>(null);
   const deskRef = useRef<SemesterDeskState | null>(null);
   const profileIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
   const loadEpochRef = useRef(0);
+  const skipAnchorHistoryRef = useRef(false);
   const storageQueueRef = useRef<Promise<void>>(Promise.resolve());
   const pendingSaveCountRef = useRef(0);
 
@@ -1752,10 +1910,13 @@ export function SemesterDeskV2App({
   const clearTransientExperience = useCallback((options: { readonly includeOnboarding?: boolean } = {}) => {
     if (options.includeOnboarding) setOnboardingDraft(emptyOnboardingDraft);
     setOnboardingError(null);
+    setOnboardingSuccess(null);
     setCapacityMinutes("");
     setRecoveryChoices({});
+    setRecoveryValidationErrors({});
     setPracticeDraft("");
     setProofDraft("");
+    setReturnDraft("");
     setDelayedReturnDate("");
     setFocusedItemId(null);
     setResetOpen(false);
@@ -1809,6 +1970,21 @@ export function SemesterDeskV2App({
     setNotice(message);
   }, [clearTransientExperience]);
 
+  const showLocalStorageUnavailable = useCallback(() => {
+    profileIdRef.current = null;
+    deskRef.current = null;
+    persistenceRef.current = null;
+    browserPersistenceRef.current = null;
+    browserStorageRef.current = null;
+    setDesk(null);
+    clearTransientExperience({ includeOnboarding: true });
+    setBlockedReference(null);
+    setSaveStatus("error");
+    setSaveError(null);
+    setScreen("storage-unavailable");
+    setNotice("Browser local storage is unavailable.");
+  }, [clearTransientExperience]);
+
   const showRead = useCallback((
     read: SemesterDeskPersistenceRead,
     profileId: string,
@@ -1841,8 +2017,18 @@ export function SemesterDeskV2App({
   const loadLocation = useCallback(() => {
     const loadEpoch = ++loadEpochRef.current;
     const usesBrowserStorage = persistence === undefined;
-    if (usesBrowserStorage && !browserPersistenceRef.current) {
-      browserPersistenceRef.current = new BrowserSemesterDeskPersistence(window.localStorage);
+    const browserStorage = usesBrowserStorage
+      ? browserStorageRef.current ?? browserLocalStorage()
+      : null;
+    if (usesBrowserStorage) {
+      if (!browserStorage) {
+        showLocalStorageUnavailable();
+        return;
+      }
+      browserStorageRef.current = browserStorage;
+      if (!browserPersistenceRef.current) {
+        browserPersistenceRef.current = new BrowserSemesterDeskPersistence(browserStorage);
+      }
     }
     const devicePersistence = persistence ?? browserPersistenceRef.current;
     if (!devicePersistence) return;
@@ -1859,9 +2045,14 @@ export function SemesterDeskV2App({
     const location = explicitProfileId
       ? { kind: "profile" as const, profileId: explicitProfileId, section: currentSection }
       : profileLocationFromWindow();
-    const activeReference = usesBrowserStorage && !explicitProfileId
-      ? activeProfileReferenceFromStorage()
+    const storedActiveReference = usesBrowserStorage && browserStorage
+      ? activeProfileReferenceFromStorage(browserStorage)
       : null;
+    if (storedActiveReference?.kind === "unavailable") {
+      showLocalStorageUnavailable();
+      return;
+    }
+    const activeReference = explicitProfileId ? null : storedActiveReference;
     if (location.kind === "invalid") {
       showBlockedReference(
         "FORGE could not use this local desk link. It did not change local data.",
@@ -1883,13 +2074,13 @@ export function SemesterDeskV2App({
           );
           return;
         }
-        if (activeReference.kind === "invalid" || activeReference.kind === "unavailable") {
+        if (activeReference.kind === "invalid") {
           showBlockedReference("FORGE could not identify the saved local desk. It did not change local data.");
           return;
         }
       } else if (activeReference.kind === "profile") {
         profileId = activeReference.profileId;
-      } else if (activeReference.kind === "invalid" || activeReference.kind === "unavailable") {
+      } else if (activeReference.kind === "invalid") {
         showBlockedReference("FORGE could not identify the saved local desk. It did not change local data.");
         return;
       }
@@ -1900,10 +2091,24 @@ export function SemesterDeskV2App({
       return;
     }
 
+    if (
+      usesBrowserStorage
+      && browserStorage
+      && !canReadBrowserStorage(browserStorage, semesterDeskStorageKey(profileId))
+    ) {
+      showLocalStorageUnavailable();
+      return;
+    }
+
     void devicePersistence.read(profileId).then((read) => {
       if (!mountedRef.current || loadEpochRef.current !== loadEpoch) return;
       let readyNotice = "Your Semester Desk is ready.";
-      if (read.kind === "loaded" && usesBrowserStorage && !writeActiveProfileReference(profileId)) {
+      if (
+        read.kind === "loaded"
+        && usesBrowserStorage
+        && browserStorage
+        && !writeActiveProfileReference(browserStorage, profileId)
+      ) {
         readyNotice = "Your Semester Desk is ready. FORGE could not save its local return reference.";
       }
       showRead(read, profileId, readyNotice);
@@ -1915,6 +2120,10 @@ export function SemesterDeskV2App({
       }
     }).catch((error: unknown) => {
       if (!mountedRef.current || loadEpochRef.current !== loadEpoch) return;
+      if (usesBrowserStorage && error instanceof DOMException && error.name === "SecurityError") {
+        showLocalStorageUnavailable();
+        return;
+      }
       const detail = error instanceof Error && error.message.trim().length > 0
         ? ` ${error.message.trim()}`
         : "";
@@ -1923,7 +2132,7 @@ export function SemesterDeskV2App({
         usesBrowserStorage ? profileId : null,
       );
     });
-  }, [initialProfileId, persistence, showBlockedReference, showOnboarding, showRead]);
+  }, [initialProfileId, persistence, showBlockedReference, showLocalStorageUnavailable, showOnboarding, showRead]);
 
   function openBlockedSavedDesk() {
     const profileId = blockedReference?.activeProfileId;
@@ -1938,19 +2147,36 @@ export function SemesterDeskV2App({
   useEffect(() => {
     mountedRef.current = true;
     let active = true;
-    function handleLocationChange() {
-      if (window.location.hash.replace(/^#/, "") === semesterDeskMainAnchor) return;
+    function handlePopState() {
+      if (window.location.hash.replace(/^#/, "") === semesterDeskMainAnchor) {
+        skipAnchorHistoryRef.current = true;
+        return;
+      }
+      if (skipAnchorHistoryRef.current) {
+        skipAnchorHistoryRef.current = false;
+        return;
+      }
+      loadLocation();
+    }
+    function handleHashChange(event: HashChangeEvent) {
+      const movedAcrossSkipAnchor = isSemesterDeskMainAnchor(event.oldURL)
+        || isSemesterDeskMainAnchor(event.newURL);
+      if (movedAcrossSkipAnchor) {
+        skipAnchorHistoryRef.current = isSemesterDeskMainAnchor(event.newURL);
+        return;
+      }
+      skipAnchorHistoryRef.current = false;
       loadLocation();
     }
     void Promise.resolve().then(() => {
       if (active) loadLocation();
     });
-    window.addEventListener("popstate", handleLocationChange);
-    window.addEventListener("hashchange", handleLocationChange);
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("hashchange", handleHashChange);
     return () => {
       active = false;
-      window.removeEventListener("popstate", handleLocationChange);
-      window.removeEventListener("hashchange", handleLocationChange);
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("hashchange", handleHashChange);
       mountedRef.current = false;
     };
   }, [loadLocation]);
@@ -2029,7 +2255,9 @@ export function SemesterDeskV2App({
     }
     if (command.kind === "complete-delayed-return") setFocusedItemId(null);
     if (command.kind === "submit-independent-proof") setProofDraft("");
+    if (command.kind === "complete-delayed-return") setReturnDraft("");
     if (command.kind === "schedule-delayed-return") setDelayedReturnDate("");
+    if (command.kind === "prepare-recovery") setRecoveryValidationErrors({});
     setNotice(successMessage);
     void persist(result.value);
     return true;
@@ -2038,6 +2266,7 @@ export function SemesterDeskV2App({
   async function submitOnboarding(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setOnboardingError(null);
+    setOnboardingSuccess(null);
     const profileId = createLocalProfileId();
     const initial = createSemesterDesk({
       profileId,
@@ -2135,7 +2364,7 @@ export function SemesterDeskV2App({
     setCapacityMinutes("");
     setScreen("ready");
     const savedReturnReference = persistence === undefined
-      ? writeActiveProfileReference(profileId)
+      ? browserStorageRef.current !== null && writeActiveProfileReference(browserStorageRef.current, profileId)
       : true;
     setNotice(savedReturnReference
       ? "Your Semester Desk is open."
@@ -2147,6 +2376,18 @@ export function SemesterDeskV2App({
     const current = deskRef.current;
     if (!current) return;
     const plannedItems = current.planItems.filter((item) => item.status === "planned");
+    const validationErrors: RecoveryValidationErrors = {};
+    for (const item of plannedItems) {
+      const choice = recoveryChoices[item.id] ?? defaultRecoveryChoice();
+      const errors = recoveryValidationErrorsFor(item, choice);
+      if (Object.keys(errors).length > 0) validationErrors[item.id] = errors;
+    }
+    if (Object.keys(validationErrors).length > 0) {
+      setRecoveryValidationErrors(validationErrors);
+      setNotice("Complete the marked recovery fields before you review these changes.");
+      return;
+    }
+    setRecoveryValidationErrors({});
     const decisions = plannedItems.map((item) => {
       const choice = recoveryChoices[item.id] ?? defaultRecoveryChoice();
       return {
@@ -2207,8 +2448,11 @@ export function SemesterDeskV2App({
       return;
     }
     const clearedReturnReference = persistence === undefined
-      ? clearActiveProfileReference(profileId)
+      ? browserStorageRef.current !== null && clearActiveProfileReference(browserStorageRef.current, profileId)
       : true;
+    const resetMessage = clearedReturnReference
+      ? "The local desk was removed from this device."
+      : "The local desk was removed. FORGE could not clear its local return reference.";
     writeProfileIdToLocation(null, "overview");
     deskRef.current = null;
     profileIdRef.current = null;
@@ -2218,9 +2462,8 @@ export function SemesterDeskV2App({
     setSaveStatus("saved");
     setResetOpen(false);
     setScreen("onboarding");
-    setNotice(clearedReturnReference
-      ? "The local desk was removed from this device."
-      : "The local desk was removed. FORGE could not clear its local return reference.");
+    setOnboardingSuccess(resetMessage);
+    setNotice(resetMessage);
   }
 
   if (screen === "loading") {
@@ -2236,6 +2479,7 @@ export function SemesterDeskV2App({
           onChange={setOnboardingDraft}
           onSubmit={submitOnboarding}
           submitError={onboardingError}
+          successMessage={onboardingSuccess}
           saving={saveStatus === "saving"}
         />
       </AppFrame>
@@ -2276,6 +2520,15 @@ export function SemesterDeskV2App({
     );
   }
 
+  if (screen === "storage-unavailable") {
+    return (
+      <AppFrame>
+        <Notice message={notice} />
+        <LocalStorageUnavailable onRetry={loadLocation} />
+      </AppFrame>
+    );
+  }
+
   if (!desk) {
     return <AppFrame><LoadingState /></AppFrame>;
   }
@@ -2289,21 +2542,41 @@ export function SemesterDeskV2App({
       saveError={saveError}
       capacityMinutes={capacityMinutes}
       recoveryChoices={recoveryChoices}
+      recoveryValidationErrors={recoveryValidationErrors}
       practiceDraft={practiceDraft}
       proofDraft={proofDraft}
+      returnDraft={returnDraft}
       delayedReturnDate={delayedReturnDate}
       focusedItemId={focusedItemId}
       resetOpen={resetOpen}
       onCommand={applyCommand}
       onCapacityMinutesChange={setCapacityMinutes}
-      onRecoveryChoiceChange={(planItemId, choice) => setRecoveryChoices((current) => ({
-        ...current,
-        [planItemId]: choice,
-      }))}
+      onRecoveryChoiceChange={(planItemId, choice) => {
+        setRecoveryChoices((current) => ({
+          ...current,
+          [planItemId]: choice,
+        }));
+        setRecoveryValidationErrors((current) => {
+          if (!current[planItemId]) return current;
+          const item = planItemFor(desk, planItemId);
+          if (!item) return current;
+          const errors = recoveryValidationErrorsFor(item, choice);
+          if (Object.keys(errors).length === 0) {
+            const remaining = { ...current };
+            delete remaining[planItemId];
+            return remaining;
+          }
+          return {
+            ...current,
+            [planItemId]: errors,
+          };
+        });
+      }}
       onPrepareRecovery={prepareRecovery}
       onConfirmRecovery={confirmRecovery}
       onPracticeDraftChange={setPracticeDraft}
       onProofDraftChange={setProofDraft}
+      onReturnDraftChange={setReturnDraft}
       onDelayedReturnDateChange={setDelayedReturnDate}
       onFocusItem={setFocusedItemId}
       onRetrySave={() => {
