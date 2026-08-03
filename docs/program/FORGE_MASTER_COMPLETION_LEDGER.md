@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 04:33 IST
+Updated: 2026-08-03 05:42 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -24,7 +24,7 @@ Milestone completion does not complete the product task.
 | Canonical branch | `agent/forge-semester-desk-v2-release-20260802` | Created |
 | Clean starting baseline | `3a11208d68e55179aaa3b54833a2376f0970be71` | Confirmed |
 | Local integration reference | `origin/main` at `c4abe33bc5bc611a02eded4288e2a2949a2808f3` | Stored locally, not fetched |
-| Current working state | Canonical web line is at `4a1d24243d36d58db8ad98bbe74075e3e4ad4065`; only the preserved external `AGENTS.md` change is outside the current product checkpoint | Confirmed |
+| Current working state | Canonical web line is at clean product SHA `6f12ad4e73ac7665ee5d24e8d1c58c9dcbe2d5b5`; only the preserved external `AGENTS.md` change is outside the product checkpoint | Confirmed |
 | First Semester Desk v2 checkpoint | `c4c42b40d571763fbe80fd7ed1895017442fce5e` | Design, public site, policies, and web domain |
 | Device-local web-app checkpoint | `d7f1d82781799923d41951d8e1dd5961581da84e` | Canonical `/app`, profile-bound persistence, tests, and ledger |
 | Public release-surface checkpoint | `85575d2fe3f0e4b1002bb3310b24beb1d59b9a65` | Metadata, crawler files, manifest, error pages, and truthful policy links |
@@ -41,6 +41,8 @@ Milestone completion does not complete the product task.
 | Canonical browser-gate checkpoint | `be0f1ee7b5942bee003af96ac2f8a77d405696e9` | Local and production gates use one exact-SHA Semester Desk v2 browser contract |
 | Public social-preview checkpoint | `e5dfdf11a5c456a229018519b246acb5dcf8afba` | Six public routes emit complete Open Graph and Twitter image metadata |
 | Public browser-route checkpoint | `4a1d24243d36d58db8ad98bbe74075e3e4ad4065` | Desktop and mobile release gates cover every public route, 320 px stress width, console errors, and retired-route rejection |
+| Web release-hardening checkpoint | `305823fb56df83b9b24cc10ff2af4c5cfe6af43f` | Bounded local references, safe recovery, policy routing, and release budgets |
+| Web exact-SHA release checkpoint | `6f12ad4e73ac7665ee5d24e8d1c58c9dcbe2d5b5` | Skip navigation preserves active work; all clean production gates pass |
 | Previous root branch | `agent/forge-local-refoundation-snapshot` at `cd84e20f6f78d68a430666c185b00efa99c49a87` | Preserve, do not use as base |
 | iOS source lane | `agent/forge-ios-foundation-20260801` at committed `f3ac00023f843b228f19549d46a4850741c52c47` | Verified native Semester Desk v2 shell and deterministic action runtime; system integration repair is running |
 | iOS Semester Desk domain checkpoint | `45b61c656c278886b63619103389a633d48fc98d` | Profile-bound Semester Desk state machine |
@@ -116,7 +118,7 @@ Milestone completion does not complete the product task.
 
 ## Website status
 
-Status: **Canonical public candidate and route artifact are complete; final production-artifact performance and keyboard QA remain**
+Status: **The clean exact-SHA public candidate passes the production artifact and browser gates**
 
 - The current application is one Next.js 16.2.11 repository.
 - Historical route source remains in the repository as inactive reference code.
@@ -138,12 +140,12 @@ Status: **Canonical public candidate and route artifact are complete; final prod
 | Authentication entry | Device-local only | Keep local operation clear until cloud identity exists. |
 | Metadata and social preview | Implemented | Semantic Open Graph and Twitter images exist. Final absolute origin is external. |
 | Error and not-found states | Implemented | Focused semantic and recovery tests passed. |
-| Responsive and accessibility QA | Rendered route sweep complete | Final restarted production keyboard and assistive-technology proof remains. |
-| Performance and bundle QA | Not run on the final design | Required. |
+| Responsive and accessibility QA | Rendered route sweep and production browser gate complete | Final cross-platform review remains. |
+| Performance and bundle QA | Passed on exact SHA `6f12ad4` | JavaScript, CSS, images, route count, and artifact size are within release budgets. |
 
 ## Web-application status
 
-Status: **Canonical Semester Desk v2 candidate is implemented and under integration review**
+Status: **The canonical device-local Semester Desk v2 candidate passes the clean production gate**
 
 - `/app/**` used the older learner shell at the clean baseline.
 - A newer refoundation application surface exists but has no production route import.
@@ -229,6 +231,27 @@ Status: **The native Semester Desk v2 loop is reachable and tested; system integ
 
 ## Current test and build evidence
 
+### Web exact SHA `6f12ad4`
+
+| Check | Result |
+|---|---|
+| Source tree | `938e7e70452d13b7dab83b205eb0dc973b3bf962` |
+| Offline frozen install, lint, type generation, and typecheck | Pass |
+| Application tests | 191 files and 1,810 tests passed |
+| Evaluator tests | 2 files and 13 tests passed |
+| Production build and release boundary | Pass |
+| Production browser journeys | 4 passed, 0 failed, 0 skipped, and 0 flaky |
+| Browser console and page errors | Zero |
+| Release routes | 14 product routes and two framework routes |
+| Retired route modules | 73 excluded |
+| Initial JavaScript | `897769 / 1000000` bytes |
+| Initial CSS | `30653 / 36000` bytes |
+| Deployable public images | `0 / 500000` bytes |
+| Artifact digest | `sha256:680349367bdfb12179383d4c89d10fa9e7e88ca51f75ce6c137bc2dd6d23ded6` |
+| Public asset digest | `sha256:c0c185926eeb8f8e5d834571a6665ead5cf5547edd8a728c889e999cd7b3a664` |
+| Browser report digest | `0cfc97245f5df6171c6e9a71bcb5eaed0b7e9999ba4f1ef740a39e475412ec2a` |
+| Preserved evidence | `/tmp/forge-web-exact-evidence-6f12ad4.uILD1z` |
+
 ### Web baseline at `3a11208d`
 
 | Command | Result |
@@ -301,7 +324,7 @@ No confirmed P0 defect exists at this baseline.
 
 1. Native system integrations and private state are not yet cut over to Semester Desk v2.
 2. Web and iOS lineages are not yet consolidated into one canonical release branch.
-3. Final production-artifact accessibility and performance evidence is incomplete.
+3. Final integrated accessibility review is incomplete.
 
 ### P2
 
@@ -321,8 +344,8 @@ No confirmed P0 defect exists at this baseline.
 | Public alias | `https://modelshift.vercel.app` |
 | Recorded deployment | `dpl_ET6nUWvjeVMEdacWJgCbxVsCT1qn` |
 | Recorded deployed SHA | `04eab4263658725d7a228c67682c40fc469757b1` |
-| Release status | Final Semester Desk v2 candidate is not deployed |
-| Exact block | The final branch exists only in the local repository. It is not pushed or deployed. |
+| Release status | The verified web candidate is not deployed because native integration is incomplete |
+| Exact block | SHA `6f12ad4` exists only in the local repository. It is not pushed or deployed. |
 | External action after final candidate | Push the clean canonical branch, then deploy the saved final source through Vercel project `forge-learning-os`. |
 
 Do not deploy the final product until the final candidate is clean, tested, reviewed, and explicitly ready.
@@ -360,10 +383,8 @@ These are not current reasons to stop internal work.
 
 ## Next internally executable action
 
-1. Cut reminder, widget, App Intent, deep-link, export, and shared-state systems to Semester Desk v2.
-2. Close native dirty-form, protected-draft, VoiceOver, and deterministic return-date defects.
-3. Cut private storage to one fail-closed Semester Desk v2 schema.
-4. Run native UI automation and full simulator, device, archive, accessibility, and runtime checks.
-5. Run the final clean web production build, performance audit, and security audit.
-6. Consolidate web and iOS into one canonical release lineage.
-7. Run final rendered, cross-platform, release, and deployment-readiness checks.
+1. Complete and checkpoint the native system-integration and form-repair wave.
+2. Cut private storage to one fail-closed Semester Desk v2 schema.
+3. Run native UI automation and full simulator, device, archive, accessibility, and runtime checks.
+4. Consolidate web and iOS into one canonical release lineage.
+5. Run final rendered, cross-platform, security, release, and deployment-readiness checks.
