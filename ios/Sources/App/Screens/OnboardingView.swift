@@ -7,7 +7,12 @@ struct OnboardingView: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @FocusState private var semesterNameIsFocused: Bool
-  @AccessibilityFocusState private var statusIsFocused: Bool
+  @AccessibilityFocusState private var statusFocus: StatusFocus?
+
+  private enum StatusFocus: Hashable {
+    case reset
+    case semesterDesk
+  }
 
   init(model _: AppModel) {}
 
@@ -51,11 +56,10 @@ struct OnboardingView: View {
       }
     }
     .onChange(of: model.semesterDeskStatusMessage, initial: false) { _, message in
-      guard let message, !message.isEmpty else {
-        return
-      }
-      statusIsFocused = true
-      AccessibilityNotification.Announcement(message).post()
+      focusAndAnnounce(message, focus: .semesterDesk)
+    }
+    .onChange(of: model.localDataResetStatusMessage, initial: true) { _, message in
+      focusAndAnnounce(message, focus: .reset)
     }
   }
 
@@ -175,20 +179,21 @@ struct OnboardingView: View {
   }
 
   private func resetResult(_ message: String) -> some View {
-    Label(message, systemImage: "checkmark.circle")
+    Label(message, systemImage: "info.circle")
       .font(.body)
-      .foregroundStyle(ForgeDesign.checkedEvidence)
+      .foregroundStyle(ForgeDesign.text)
       .fixedSize(horizontal: false, vertical: true)
       .accessibilityElement(children: .combine)
+      .accessibilityFocused($statusFocus, equals: .reset)
       .accessibilityIdentifier("onboarding.reset-result")
   }
 
   private func saveStatus(_ message: String) -> some View {
-    Label(message, systemImage: "exclamationmark.circle")
+    Label(message, systemImage: "info.circle")
       .font(.body)
       .fixedSize(horizontal: false, vertical: true)
       .accessibilityElement(children: .combine)
-      .accessibilityFocused($statusIsFocused)
+      .accessibilityFocused($statusFocus, equals: .semesterDesk)
       .accessibilityIdentifier("onboarding.save-status")
   }
 
@@ -232,6 +237,34 @@ struct OnboardingView: View {
     semesterNameIsFocused = false
     Task { @MainActor in
       _ = await model.createSemesterDesk(title: model.semesterNameDraft)
+    }
+  }
+
+  private func focusAndAnnounce(
+    _ message: String?,
+    focus: StatusFocus
+  ) {
+    guard let message, !message.isEmpty else {
+      return
+    }
+
+    statusFocus = nil
+    Task { @MainActor in
+      await Task.yield()
+      guard isCurrentStatus(message, for: focus) else {
+        return
+      }
+      statusFocus = focus
+      AccessibilityNotification.Announcement(message).post()
+    }
+  }
+
+  private func isCurrentStatus(_ message: String, for focus: StatusFocus) -> Bool {
+    switch focus {
+    case .reset:
+      model.localDataResetStatusMessage == message
+    case .semesterDesk:
+      model.semesterDeskStatusMessage == message
     }
   }
 }

@@ -54,7 +54,7 @@ struct LocalDataRecoveryView: View {
       }
 
       AccessibilityNotification.Announcement(
-        "Recovery operation in progress. FORGE has not reported a ready state."
+        "Recovery operation in progress. FORGE cannot safely continue yet."
       ).post()
     }
   }
@@ -151,7 +151,7 @@ struct LocalDataRecoveryView: View {
       .foregroundStyle(ForgeDesign.secondaryText)
       .fixedSize(horizontal: false, vertical: true)
 
-      Text("The recovery screen stays open until FORGE reports a ready state.")
+      Text("The recovery screen stays open until FORGE can safely continue.")
         .foregroundStyle(ForgeDesign.secondaryText)
         .fixedSize(horizontal: false, vertical: true)
     }
@@ -352,7 +352,7 @@ struct LocalDataRecoveryView: View {
     .fixedSize(horizontal: false, vertical: true)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel("Recovery operation in progress")
-    .accessibilityValue("FORGE has not reported a ready state.")
+    .accessibilityValue("FORGE cannot safely continue yet.")
   }
 
   @ViewBuilder
@@ -368,7 +368,7 @@ struct LocalDataRecoveryView: View {
 
   private var recoveryProgressMessage: some View {
     Text(
-      "FORGE is trying the requested action. This screen stays open until FORGE reports a ready state."
+      "FORGE is trying the requested action. This screen stays open until FORGE can safely continue."
     )
     .font(.subheadline)
     .fixedSize(horizontal: false, vertical: true)

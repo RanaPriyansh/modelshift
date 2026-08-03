@@ -4,6 +4,8 @@ import SwiftUI
 
 struct SemesterDeskSheetView: View {
   @Environment(AppModel.self) private var model
+  @State private var formHasUnsavedChanges = false
+  @State private var isDiscardConfirmationPresented = false
 
   let sheet: SemesterDeskSheet
 
@@ -13,49 +15,86 @@ struct SemesterDeskSheetView: View {
         .toolbar {
           ToolbarItem(placement: .cancellationAction) {
             Button("Close") {
-              model.dismissSemesterDeskSheet()
+              requestDismissal()
             }
             .disabled(model.isSemesterDeskOperationRunning)
-            .accessibilityHint("Closes this form without another saved change.")
+            .accessibilityHint(
+              formHasUnsavedChanges
+                ? "Shows a confirmation before it discards unsaved changes."
+                : "Closes this form."
+            )
           }
         }
     }
-    .interactiveDismissDisabled(model.isSemesterDeskOperationRunning)
+    .interactiveDismissDisabled(
+      model.isSemesterDeskOperationRunning || formHasUnsavedChanges
+    )
     .presentationDragIndicator(.visible)
+    .alert(
+      "Discard unsaved changes?",
+      isPresented: $isDiscardConfirmationPresented
+    ) {
+      Button("Discard changes", role: .destructive) {
+        formHasUnsavedChanges = false
+        model.dismissSemesterDeskSheet()
+      }
+      Button("Keep editing", role: .cancel) {}
+    } message: {
+      Text("Your unsaved form changes will be lost.")
+    }
   }
 
   @ViewBuilder
   private var form: some View {
+    let initialCurrentDate = model.semesterDeskCurrentDate
+    let calendar = model.semesterDeskCalendar
+
     switch sheet {
     case .addCourse:
-      AddSemesterCourseForm()
+      AddSemesterCourseForm(isDirty: $formHasUnsavedChanges)
     case .addCourseFact(let courseID):
-      AddSemesterCourseFactForm(courseID: courseID)
+      AddSemesterCourseFactForm(
+        isDirty: $formHasUnsavedChanges,
+        courseID: courseID
+      )
     case .changeFactStatus(let courseID, let factID):
       ChangeSemesterCourseFactStatusForm(
+        isDirty: $formHasUnsavedChanges,
         courseID: courseID,
         factID: factID,
         initialStatus: fact(courseID: courseID, factID: factID)?.status ?? .needsReview
       )
     case .recordFactConflict(let courseID):
-      RecordSemesterFactConflictForm(courseID: courseID)
+      RecordSemesterFactConflictForm(
+        isDirty: $formHasUnsavedChanges,
+        courseID: courseID
+      )
     case .capacity:
       SemesterCapacityForm(
+        isDirty: $formHasUnsavedChanges,
         initialMinutes:
           model.semesterDesk?.capacityDraft?.availableMinutes
           ?? model.semesterDesk?.capacity?.availableMinutes
           ?? 60
       )
     case .addPlannedWork(let courseID):
-      AddSemesterPlanItemForm(initialCourseID: courseID)
+      AddSemesterPlanItemForm(
+        isDirty: $formHasUnsavedChanges,
+        initialCourseID: courseID,
+        initialCurrentDate: initialCurrentDate,
+        calendar: calendar
+      )
     case .prepareRecovery:
       PrepareSemesterRecoveryForm(
-        plannedItems: model.semesterDesk?.planItems.filter { $0.status == .planned } ?? []
+        isDirty: $formHasUnsavedChanges,
+        plannedItems: model.semesterDesk?.planItems.filter { $0.status == .planned } ?? [],
+        initialCurrentDate: initialCurrentDate,
+        calendar: calendar
       )
     case .reviewRecovery:
       ReviewSemesterRecoveryForm()
     case .chooseNextAction:
-      ChooseSemesterNextActionForm()
+      ChooseSemesterNextActionForm(isDirty: $formHasUnsavedChanges)
     }
   }
 
@@ -68,10 +107,22 @@ struct SemesterDeskSheetView: View {
       .facts
       .first(where: { $0.id == factID })
   }
+
+  private func requestDismissal() {
+    guard !model.isSemesterDeskOperationRunning else {
+      return
+    }
+    guard formHasUnsavedChanges else {
+      model.dismissSemesterDeskSheet()
+      return
+    }
+    isDiscardConfirmationPresented = true
+  }
 }
 
 private struct AddSemesterCourseForm: View {
   @Environment(AppModel.self) private var model
+  @Binding var isDirty: Bool
   @State private var code = ""
   @State private var title = ""
 
@@ -108,6 +159,9 @@ private struct AddSemesterCourseForm: View {
     }
     .navigationTitle("Add Course")
     .navigationBarTitleDisplayMode(.inline)
+    .semesterDeskFormDirtyState($isDirty) {
+      !code.isEmpty || !title.isEmpty
+    }
   }
 
   private var canSave: Bool {
@@ -134,6 +188,7 @@ private struct AddSemesterCourseForm: View {
 
 private struct AddSemesterCourseFactForm: View {
   @Environment(AppModel.self) private var model
+  @Binding var isDirty: Bool
   @State private var label = ""
   @State private var value = ""
   @State private var sourceLabel = ""
@@ -161,8 +216,7 @@ private struct AddSemesterCourseFactForm: View {
       } header: {
         Text("Course fact")
       } footer: {
-        Text(
-          "The source label is supporting context. FORGE does not show an internal source object.")
+        Text("Add a short source name for later review.")
       }
 
       Section("Review status") {
@@ -198,6 +252,12 @@ private struct AddSemesterCourseFactForm: View {
     }
     .navigationTitle("Add Course Fact")
     .navigationBarTitleDisplayMode(.inline)
+    .semesterDeskFormDirtyState($isDirty) {
+      !label.isEmpty
+        || !value.isEmpty
+        || !sourceLabel.isEmpty
+        || status != .notConfirmed
+    }
   }
 
   private var course: UniversitySemesterDeskCourse? {
@@ -236,18 +296,23 @@ private struct AddSemesterCourseFactForm: View {
 
 private struct ChangeSemesterCourseFactStatusForm: View {
   @Environment(AppModel.self) private var model
+  @Binding var isDirty: Bool
   @State private var status: UniversitySemesterDeskCourseFactStatus
 
   let courseID: String
   let factID: String
+  let initialStatus: UniversitySemesterDeskCourseFactStatus
 
   init(
+    isDirty: Binding<Bool>,
     courseID: String,
     factID: String,
     initialStatus: UniversitySemesterDeskCourseFactStatus
   ) {
+    _isDirty = isDirty
     self.courseID = courseID
     self.factID = factID
+    self.initialStatus = initialStatus
     _status = State(initialValue: initialStatus)
   }
 
@@ -299,6 +364,9 @@ private struct ChangeSemesterCourseFactStatusForm: View {
     }
     .navigationTitle("Change Fact Status")
     .navigationBarTitleDisplayMode(.inline)
+    .semesterDeskFormDirtyState($isDirty) {
+      status != initialStatus
+    }
   }
 
   private var fact: UniversitySemesterDeskCourseFact? {
@@ -330,6 +398,7 @@ private struct ChangeSemesterCourseFactStatusForm: View {
 
 private struct RecordSemesterFactConflictForm: View {
   @Environment(AppModel.self) private var model
+  @Binding var isDirty: Bool
   @State private var selectedFactIDs = Set<String>()
   @State private var summary = ""
 
@@ -384,6 +453,9 @@ private struct RecordSemesterFactConflictForm: View {
     }
     .navigationTitle("Record Fact Conflict")
     .navigationBarTitleDisplayMode(.inline)
+    .semesterDeskFormDirtyState($isDirty) {
+      !selectedFactIDs.isEmpty || !summary.isEmpty
+    }
   }
 
   private var course: UniversitySemesterDeskCourse? {
@@ -432,10 +504,14 @@ private struct RecordSemesterFactConflictForm: View {
 
 private struct SemesterCapacityForm: View {
   @Environment(AppModel.self) private var model
+  @Binding var isDirty: Bool
   @State private var availableMinutes: Int
+  @State private var savedAvailableMinutes: Int
 
-  init(initialMinutes: Int) {
+  init(isDirty: Binding<Bool>, initialMinutes: Int) {
+    _isDirty = isDirty
     _availableMinutes = State(initialValue: initialMinutes)
+    _savedAvailableMinutes = State(initialValue: initialMinutes)
   }
 
   var body: some View {
@@ -501,28 +577,45 @@ private struct SemesterCapacityForm: View {
           .frame(maxWidth: .infinity, minHeight: 48)
           .buttonStyle(.borderedProminent)
           .tint(ForgeDesign.checkedEvidence)
-          .disabled(model.isSemesterDeskOperationRunning)
-          .accessibilityHint("Confirms the saved capacity draft and closes this form.")
+          .disabled(
+            model.isSemesterDeskOperationRunning
+              || availableMinutes != savedAvailableMinutes
+          )
+          .accessibilityHint(
+            availableMinutes == savedAvailableMinutes
+              ? "Confirms the saved capacity draft and closes this form."
+              : "Save the changed capacity draft before confirmation."
+          )
           .accessibilityIdentifier("capacity-form.confirm")
         }
       }
     }
     .navigationTitle("Capacity")
     .navigationBarTitleDisplayMode(.inline)
+    .semesterDeskFormDirtyState($isDirty) {
+      availableMinutes != savedAvailableMinutes
+    }
   }
 
   private func saveDraft() {
+    let draftMinutes = availableMinutes
     Task { @MainActor in
-      _ = await model.applySemesterDeskCommand(
+      let didSave = await model.applySemesterDeskCommand(
         .draftCapacity(
           profileID: model.localProfileID,
-          availableMinutes: availableMinutes
+          availableMinutes: draftMinutes
         )
       )
+      if didSave {
+        savedAvailableMinutes = draftMinutes
+      }
     }
   }
 
   private func confirm() {
+    guard availableMinutes == savedAvailableMinutes else {
+      return
+    }
     Task { @MainActor in
       let didSave = await model.applySemesterDeskCommand(
         .confirmCapacity(profileID: model.localProfileID)
@@ -536,13 +629,34 @@ private struct SemesterCapacityForm: View {
 
 private struct AddSemesterPlanItemForm: View {
   @Environment(AppModel.self) private var model
+  @Binding var isDirty: Bool
   @State private var courseID: String
   @State private var title = ""
-  @State private var plannedDate = Date.now
+  @State private var plannedDate: Date
   @State private var minutes = 30
+  @State private var savedCourseID: String
+  @State private var savedPlannedDate: String
+  @State private var savedMinutes: Int
+  private let calendar: Calendar
 
-  init(initialCourseID: String?) {
-    _courseID = State(initialValue: initialCourseID ?? "")
+  init(
+    isDirty: Binding<Bool>,
+    initialCourseID: String?,
+    initialCurrentDate: Date,
+    calendar: Calendar
+  ) {
+    let initialCourseID = initialCourseID ?? ""
+    let initialPlannedDate = SemesterDeskDisplay.dateOnly(
+      initialCurrentDate,
+      calendar: calendar
+    )
+    _isDirty = isDirty
+    _courseID = State(initialValue: initialCourseID)
+    _plannedDate = State(initialValue: initialCurrentDate)
+    _savedCourseID = State(initialValue: initialCourseID)
+    _savedPlannedDate = State(initialValue: initialPlannedDate)
+    _savedMinutes = State(initialValue: 30)
+    self.calendar = calendar
   }
 
   var body: some View {
@@ -567,6 +681,7 @@ private struct AddSemesterPlanItemForm: View {
           selection: $plannedDate,
           displayedComponents: .date
         )
+        .environment(\.calendar, calendar)
         .accessibilityIdentifier("plan-form.date")
 
         Stepper(value: $minutes, in: 1...1_440, step: 15) {
@@ -591,9 +706,17 @@ private struct AddSemesterPlanItemForm: View {
     }
     .navigationTitle("Add Planned Work")
     .navigationBarTitleDisplayMode(.inline)
+    .semesterDeskFormDirtyState($isDirty) {
+      courseID != savedCourseID
+        || !title.isEmpty
+        || SemesterDeskDisplay.dateOnly(plannedDate, calendar: calendar) != savedPlannedDate
+        || minutes != savedMinutes
+    }
     .task {
       if courseID.isEmpty {
-        courseID = model.semesterDesk?.courses.first?.id ?? ""
+        let defaultCourseID = model.semesterDesk?.courses.first?.id ?? ""
+        courseID = defaultCourseID
+        savedCourseID = defaultCourseID
       }
     }
   }
@@ -612,7 +735,7 @@ private struct AddSemesterPlanItemForm: View {
           profileID: model.localProfileID,
           courseID: courseID,
           title: title,
-          date: SemesterDeskDisplay.dateOnly(plannedDate),
+          date: SemesterDeskDisplay.dateOnly(plannedDate, calendar: calendar),
           minutes: minutes
         )
       )
@@ -625,6 +748,7 @@ private struct AddSemesterPlanItemForm: View {
 
 private struct ChooseSemesterNextActionForm: View {
   @Environment(AppModel.self) private var model
+  @Binding var isDirty: Bool
   @State private var selectedPlanItemID: String?
 
   var body: some View {
@@ -715,6 +839,9 @@ private struct ChooseSemesterNextActionForm: View {
     }
     .navigationTitle("Choose Next Action")
     .navigationBarTitleDisplayMode(.inline)
+    .semesterDeskFormDirtyState($isDirty) {
+      selectedPlanItemID != nil
+    }
   }
 
   private var plannedItems: [UniversitySemesterDeskPlanItem] {
@@ -758,5 +885,34 @@ private struct ChooseSemesterNextActionForm: View {
 private var formStatusSection: some View {
   Section {
     SemesterDeskFormStatus()
+  }
+}
+
+struct SemesterDeskFormDirtyState: ViewModifier {
+  @Binding var isDirty: Bool
+  let hasUnsavedChanges: () -> Bool
+
+  func body(content: Content) -> some View {
+    content
+      .onAppear {
+        isDirty = hasUnsavedChanges()
+      }
+      .onChange(of: hasUnsavedChanges()) { _, hasUnsavedChanges in
+        isDirty = hasUnsavedChanges
+      }
+  }
+}
+
+extension View {
+  func semesterDeskFormDirtyState(
+    _ isDirty: Binding<Bool>,
+    hasUnsavedChanges: @escaping () -> Bool
+  ) -> some View {
+    modifier(
+      SemesterDeskFormDirtyState(
+        isDirty: isDirty,
+        hasUnsavedChanges: hasUnsavedChanges
+      )
+    )
   }
 }

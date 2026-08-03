@@ -11,17 +11,31 @@ private struct SemesterRecoveryDecisionDraft: Equatable {
 
 struct PrepareSemesterRecoveryForm: View {
   @Environment(AppModel.self) private var model
+  @Binding var isDirty: Bool
   @State private var recoverySummary = ""
   @State private var decisions: [String: SemesterRecoveryDecisionDraft]
 
   let plannedItems: [UniversitySemesterDeskPlanItem]
+  private let initialCurrentDate: Date
+  private let calendar: Calendar
+  private let initialDecisions: [String: SemesterRecoveryDecisionDraft]
 
-  init(plannedItems: [UniversitySemesterDeskPlanItem]) {
+  init(
+    isDirty: Binding<Bool>,
+    plannedItems: [UniversitySemesterDeskPlanItem],
+    initialCurrentDate: Date,
+    calendar: Calendar
+  ) {
+    _isDirty = isDirty
     self.plannedItems = plannedItems
-    let calendar = Calendar.autoupdatingCurrent
+    self.initialCurrentDate = initialCurrentDate
+    self.calendar = calendar
     let pairs = plannedItems.map { item in
       let currentDate =
-        SemesterDeskDisplay.dateOnlyDate(item.currentDate, calendar: calendar) ?? Date.now
+        SemesterDeskDisplay.dateOnlyDate(
+          item.currentDate,
+          calendar: calendar
+        ) ?? initialCurrentDate
       let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
       return (
         item.id,
@@ -33,7 +47,9 @@ struct PrepareSemesterRecoveryForm: View {
         )
       )
     }
-    _decisions = State(initialValue: Dictionary(uniqueKeysWithValues: pairs))
+    let initialDecisions = Dictionary(uniqueKeysWithValues: pairs)
+    self.initialDecisions = initialDecisions
+    _decisions = State(initialValue: initialDecisions)
   }
 
   var body: some View {
@@ -84,6 +100,9 @@ struct PrepareSemesterRecoveryForm: View {
     }
     .navigationTitle("Prepare Recovery")
     .navigationBarTitleDisplayMode(.inline)
+    .semesterDeskFormDirtyState($isDirty) {
+      !recoverySummary.isEmpty || decisions != initialDecisions
+    }
   }
 
   private func decisionSection(
@@ -112,6 +131,7 @@ struct PrepareSemesterRecoveryForm: View {
             selection: dateBinding(for: item.id),
             displayedComponents: .date
           )
+          .environment(\.calendar, calendar)
           .accessibilityIdentifier("recovery-form.date.\(item.id)")
         case .reduced:
           Stepper(
@@ -160,7 +180,7 @@ struct PrepareSemesterRecoveryForm: View {
 
     switch draft.outcome {
     case .moved, .deferred:
-      return SemesterDeskDisplay.dateOnly(draft.nextDate) != item.currentDate
+      return SemesterDeskDisplay.dateOnly(draft.nextDate, calendar: calendar) != item.currentDate
     case .reduced:
       return draft.nextMinutes > 0 && draft.nextMinutes < item.currentMinutes
     case .kept:
@@ -185,7 +205,11 @@ struct PrepareSemesterRecoveryForm: View {
 
   private func dateBinding(for planItemID: String) -> Binding<Date> {
     Binding(
-      get: { decisions[planItemID]?.nextDate ?? Date.now },
+      get: {
+        decisions[planItemID]?.nextDate
+          ?? initialDecisions[planItemID]?.nextDate
+          ?? initialCurrentDate
+      },
       set: { value in
         guard var draft = decisions[planItemID] else {
           return
@@ -231,7 +255,7 @@ struct PrepareSemesterRecoveryForm: View {
       let nextMinutes: Int?
       switch draft.outcome {
       case .moved, .deferred:
-        nextDate = SemesterDeskDisplay.dateOnly(draft.nextDate)
+        nextDate = SemesterDeskDisplay.dateOnly(draft.nextDate, calendar: calendar)
         nextMinutes = nil
       case .reduced:
         nextDate = nil

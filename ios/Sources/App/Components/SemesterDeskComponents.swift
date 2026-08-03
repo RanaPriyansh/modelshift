@@ -241,6 +241,8 @@ struct SemesterDeskFactStatusLabel: View {
 
 struct SemesterDeskFormStatus: View {
   @Environment(AppModel.self) private var model
+  @AccessibilityFocusState private var statusIsFocused: Bool
+  @State private var pendingStatusMessage: String?
 
   var body: some View {
     Group {
@@ -249,13 +251,56 @@ struct SemesterDeskFormStatus: View {
           .frame(maxWidth: .infinity, alignment: .leading)
           .accessibilityIdentifier("semester-desk.form-saving")
       } else if let message = model.semesterDeskStatusMessage, !message.isEmpty {
-        Label(message, systemImage: "exclamationmark.circle")
+        Label(message, systemImage: "info.circle")
           .font(.subheadline)
           .foregroundStyle(ForgeDesign.text)
           .fixedSize(horizontal: false, vertical: true)
           .accessibilityElement(children: .combine)
+          .accessibilityFocused($statusIsFocused)
           .accessibilityIdentifier("semester-desk.form-status")
       }
     }
+    .onChange(of: model.semesterDeskStatusMessage, initial: false) { _, message in
+      updateStatusAnnouncement(for: message)
+    }
+    .onChange(of: model.isSemesterDeskOperationRunning, initial: false) { _, isRunning in
+      guard !isRunning else {
+        return
+      }
+      announcePendingStatusMessage()
+    }
+  }
+
+  private func updateStatusAnnouncement(for message: String?) {
+    guard let message, !message.isEmpty else {
+      pendingStatusMessage = nil
+      statusIsFocused = false
+      return
+    }
+
+    statusIsFocused = false
+    guard !model.isSemesterDeskOperationRunning else {
+      pendingStatusMessage = message
+      return
+    }
+
+    announce(message)
+  }
+
+  private func announcePendingStatusMessage() {
+    guard
+      let message = pendingStatusMessage,
+      model.semesterDeskStatusMessage == message
+    else {
+      return
+    }
+
+    pendingStatusMessage = nil
+    announce(message)
+  }
+
+  private func announce(_ message: String) {
+    statusIsFocused = true
+    AccessibilityNotification.Announcement(message).post()
   }
 }
