@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 06:56 IST
+Updated: 2026-08-03 08:25 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -24,7 +24,7 @@ Milestone completion does not complete the product task.
 | Canonical branch | `agent/forge-semester-desk-v2-release-20260802` | Created |
 | Clean starting baseline | `3a11208d68e55179aaa3b54833a2376f0970be71` | Confirmed |
 | Local integration reference | `origin/main` at `c4abe33bc5bc611a02eded4288e2a2949a2808f3` | Stored locally, not fetched |
-| Current working state | Canonical web line is at clean product SHA `6f12ad4e73ac7665ee5d24e8d1c58c9dcbe2d5b5`; only the preserved external `AGENTS.md` change is outside the product checkpoint | Confirmed |
+| Current working state | Canonical web line is at product SHA `9ad28a362dc14a7d02d0435b6ac02c864bd4c51d`; only the preserved external `AGENTS.md` change is outside the product checkpoint | Confirmed |
 | First Semester Desk v2 checkpoint | `c4c42b40d571763fbe80fd7ed1895017442fce5e` | Design, public site, policies, and web domain |
 | Device-local web-app checkpoint | `d7f1d82781799923d41951d8e1dd5961581da84e` | Canonical `/app`, profile-bound persistence, tests, and ledger |
 | Public release-surface checkpoint | `85575d2fe3f0e4b1002bb3310b24beb1d59b9a65` | Metadata, crawler files, manifest, error pages, and truthful policy links |
@@ -43,6 +43,8 @@ Milestone completion does not complete the product task.
 | Public browser-route checkpoint | `4a1d24243d36d58db8ad98bbe74075e3e4ad4065` | Desktop and mobile release gates cover every public route, 320 px stress width, console errors, and retired-route rejection |
 | Web release-hardening checkpoint | `305823fb56df83b9b24cc10ff2af4c5cfe6af43f` | Bounded local references, safe recovery, policy routing, and release budgets |
 | Web exact-SHA release checkpoint | `6f12ad4e73ac7665ee5d24e8d1c58c9dcbe2d5b5` | Skip navigation preserves active work; all clean production gates pass |
+| Web active-learning repair checkpoint | `55d89bfb83cfe228245d20b108c40da18c29f9d7` | Proof and return require process-only responses; storage, recovery, progress, and reset states are truthful |
+| Web history and response-ownership checkpoint | `9ad28a362dc14a7d02d0435b6ac02c864bd4c51d` | Direct hash changes fail closed; proof and return drafts cannot cross plan items; reset has one live announcement |
 | Previous root branch | `agent/forge-local-refoundation-snapshot` at `cd84e20f6f78d68a430666c185b00efa99c49a87` | Preserve, do not use as base |
 | iOS source lane | `agent/forge-ios-foundation-20260801` at committed `ee25c94d5ccb4c6e055f8f28a07144f830739a79` and tree `f4827c2711f359bde56a8f909db9416f4af93e94` | Semester Desk v2 private state, system integration, production boundaries, export, release documentation, and stale-state external cleanup are complete |
 | iOS Semester Desk domain checkpoint | `45b61c656c278886b63619103389a633d48fc98d` | Profile-bound Semester Desk state machine |
@@ -121,7 +123,7 @@ Milestone completion does not complete the product task.
 
 ## Website status
 
-Status: **The clean exact-SHA public candidate passes the production artifact and browser gates**
+Status: **The exact-SHA public candidate passed at `6f12ad4`; focused repairs through `9ad28a3` pass and require the final integrated gate**
 
 - The current application is one Next.js 16.2.11 repository.
 - Historical route source remains in the repository as inactive reference code.
@@ -148,7 +150,7 @@ Status: **The clean exact-SHA public candidate passes the production artifact an
 
 ## Web-application status
 
-Status: **The canonical device-local Semester Desk v2 candidate passes the clean production gate**
+Status: **The canonical device-local Semester Desk v2 candidate is complete through `9ad28a3`; the final integrated production gate remains**
 
 - `/app/**` used the older learner shell at the clean baseline.
 - A newer refoundation application surface exists but has no production route import.
@@ -160,6 +162,10 @@ Status: **The canonical device-local Semester Desk v2 candidate passes the clean
 - Cloud authentication is structurally disabled.
 - Supabase packages and migrations exist, but no live project is connected.
 - OpenAI providers are off by default.
+- Independent proof and delayed return require a nonblank process-only response.
+- Proof and return drafts clear when focused work changes.
+- Blocked browser storage and invalid profile changes fail closed.
+- Recovery validation and reset results are visible.
 
 ### Semester Desk v2 feature matrix
 
@@ -258,6 +264,16 @@ Status: **The native Semester Desk v2 product and private-state cutover pass the
 | Public asset digest | `sha256:c0c185926eeb8f8e5d834571a6665ead5cf5547edd8a728c889e999cd7b3a664` |
 | Browser report digest | `0cfc97245f5df6171c6e9a71bcb5eaed0b7e9999ba4f1ef740a39e475412ec2a` |
 | Preserved evidence | `/tmp/forge-web-exact-evidence-6f12ad4.uILD1z` |
+
+### Web focused repairs through `9ad28a3`
+
+| Check | Result |
+|---|---|
+| Semester Desk application and domain tests | 53 passed |
+| TypeScript typecheck | Pass |
+| Scoped ESLint | Pass |
+| Git whitespace check | Pass |
+| Final exact-SHA production and browser gate | Open until integration |
 
 ### Web baseline at `3a11208d`
 
