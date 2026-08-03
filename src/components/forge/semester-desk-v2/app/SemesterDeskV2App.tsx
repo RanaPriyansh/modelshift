@@ -245,7 +245,7 @@ function writeActiveProfileReference(storage: Storage, profileId: string | null)
   try {
     if (profileId === null) {
       storage.removeItem(semesterDeskActiveProfileStorageKey);
-      return true;
+      return storage.getItem(semesterDeskActiveProfileStorageKey) === null;
     }
     const normalized = normalizeSemesterDeskProfileIdentifier(profileId);
     if (!normalized) return false;
@@ -1927,6 +1927,7 @@ export function SemesterDeskV2App({
   const focusedItemIdRef = useRef<string | null>(null);
   const storageQueueRef = useRef<Promise<void>>(Promise.resolve());
   const pendingSaveCountRef = useRef(0);
+  const pendingResetMainFocusRef = useRef(false);
 
   function runtime(): SemesterDeskRuntime {
     return {
@@ -2241,6 +2242,12 @@ export function SemesterDeskV2App({
     };
   }, []);
 
+  useEffect(() => {
+    if (screen !== "onboarding" || !pendingResetMainFocusRef.current) return;
+    pendingResetMainFocusRef.current = false;
+    document.getElementById(semesterDeskMainAnchor)?.focus({ preventScroll: true });
+  }, [screen]);
+
   function persist(next: SemesterDeskState): Promise<void> {
     const activePersistence = persistenceRef.current;
     if (!activePersistence) return Promise.resolve();
@@ -2497,9 +2504,14 @@ export function SemesterDeskV2App({
     const clearedReturnReference = persistence === undefined
       ? browserStorageRef.current !== null && clearActiveProfileReference(browserStorageRef.current, profileId)
       : true;
-    const resetMessage = clearedReturnReference
-      ? "The local desk was removed from this device."
-      : "The local desk was removed. FORGE could not clear its local return reference.";
+    if (!clearedReturnReference) {
+      const message = "FORGE could not verify removal of all local desk data on this device.";
+      setSaveStatus("error");
+      setSaveError(message);
+      setNotice(message);
+      return;
+    }
+    const resetMessage = "The local desk was removed from this device.";
     writeProfileIdToLocation(null, "overview");
     deskRef.current = null;
     profileIdRef.current = null;
@@ -2508,6 +2520,7 @@ export function SemesterDeskV2App({
     setSaveError(null);
     setSaveStatus("saved");
     setResetOpen(false);
+    pendingResetMainFocusRef.current = true;
     setScreen("onboarding");
     setOnboardingSuccess(resetMessage);
     setNotice(resetMessage);

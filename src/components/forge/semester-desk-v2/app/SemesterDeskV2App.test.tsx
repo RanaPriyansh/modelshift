@@ -263,6 +263,23 @@ function saveBrowserDesk(state: SemesterDeskState, activeProfileId: string | nul
   window.localStorage.setItem(semesterDeskActiveProfileStorageKey, activeProfileId);
 }
 
+function storageWithSilentRemove(
+  entries: readonly (readonly [string, string])[],
+  silentRemoveKey: string,
+): Storage {
+  const values = new Map(entries);
+  return {
+    get length() { return values.size; },
+    clear() { values.clear(); },
+    getItem(key) { return values.get(key) ?? null; },
+    key(index) { return [...values.keys()][index] ?? null; },
+    removeItem(key) {
+      if (key !== silentRemoveKey) values.delete(key);
+    },
+    setItem(key, value) { values.set(key, value); },
+  };
+}
+
 function fillOnboarding() {
   fireEvent.change(screen.getByLabelText("Semester title"), { target: { value: "Autumn 2026" } });
   fireEvent.change(screen.getByLabelText("Course code"), { target: { value: "CS201" } });
@@ -624,6 +641,7 @@ describe("SemesterDeskV2App", () => {
     expect(window.localStorage.getItem(semesterDeskStorageKey(PROFILE_ID))).toBeNull();
     expect(window.localStorage.getItem(semesterDeskActiveProfileStorageKey)).toBeNull();
     expect(window.location.hash).toBe("");
+    await waitFor(() => expect(screen.getByRole("main")).toHaveFocus());
     const onboardingForm = screen.getByRole("button", { name: "Open your Semester Desk" }).closest("form");
     if (!onboardingForm) throw new Error("Expected the onboarding form.");
     const resetMessage = "The local desk was removed from this device.";
@@ -631,6 +649,29 @@ describe("SemesterDeskV2App", () => {
     expect(visibleSuccess).toBeInTheDocument();
     expect(visibleSuccess).not.toHaveAttribute("role", "status");
     expect(screen.getAllByRole("status").filter((element) => element.textContent === resetMessage)).toHaveLength(1);
+  });
+
+  it("does not claim deletion when the active profile reference remains after removal", async () => {
+    const state = makeDesk();
+    const dataKey = semesterDeskStorageKey(PROFILE_ID);
+    const storage = storageWithSilentRemove([
+      [dataKey, JSON.stringify(state)],
+      [semesterDeskActiveProfileStorageKey, PROFILE_ID],
+    ], semesterDeskActiveProfileStorageKey);
+    vi.spyOn(window, "localStorage", "get").mockReturnValue(storage);
+    window.history.replaceState(null, "", `/app#forge-profile=${encodeURIComponent(PROFILE_ID)}`);
+    renderBrowserApp();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Reset this device" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Remove this local desk?" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Remove local desk" }));
+
+    const message = "FORGE could not verify removal of all local desk data on this device.";
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(message);
+    expect(storage.getItem(dataKey)).toBeNull();
+    expect(storage.getItem(semesterDeskActiveProfileStorageKey)).toBe(PROFILE_ID);
+    expect(screen.queryByText("The local desk was removed from this device.")).not.toBeInTheDocument();
+    expect(screen.getByText("Algorithms")).toBeInTheDocument();
   });
 
   it("requires a checked course detail before a student can choose the work", async () => {

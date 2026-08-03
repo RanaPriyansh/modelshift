@@ -357,7 +357,14 @@ export class BrowserSemesterDeskPersistence implements SemesterDeskPersistence {
       return { ok: false, message: "The local profile reference is invalid." };
     }
     try {
-      this.storage.removeItem(semesterDeskStorageKey(boundedProfileId));
+      const key = semesterDeskStorageKey(boundedProfileId);
+      this.storage.removeItem(key);
+      if (this.storage.getItem(key) !== null) {
+        return {
+          ok: false,
+          message: "FORGE could not verify local data removal on this device.",
+        };
+      }
       return { ok: true };
     } catch (error) {
       return storageFailure(error, "remove local data");

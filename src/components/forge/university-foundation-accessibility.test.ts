@@ -53,4 +53,14 @@ describe("university foundation accessibility tokens", () => {
       expect(css).toContain("var(--forge-cyan-deep)");
     }
   });
+
+  it("uses a Semester Desk commitment token with sufficient text contrast", () => {
+    const css = readSource(
+      "src/components/forge/semester-desk-v2/app/SemesterDeskV2App.module.css",
+    );
+    const commitment = cssHexVariable(css, "--orange");
+
+    expect(css).toContain("color: #fffaf4");
+    expect(contrastRatio(commitment, "#fffaf4")).toBeGreaterThanOrEqual(4.5);
+  });
 });

@@ -99,11 +99,33 @@ describe("BrowserSemesterDeskPersistence", () => {
     await expect(persistence.exportRaw(first.profileId)).resolves.toEqual({ ok: true, raw });
     await expect(persistence.reset(first.profileId)).resolves.toEqual({ ok: true });
 
+    expect(window.localStorage.getItem(semesterDeskStorageKey(first.profileId))).toBeNull();
     expect(await persistence.read(first.profileId)).toEqual({ kind: "missing" });
     expect(await persistence.read(second.profileId)).toMatchObject({
       kind: "loaded",
       state: { profileId: second.profileId },
     });
+  });
+
+  it("reports a failed reset when storage silently keeps the profile data", async () => {
+    const profileId = "profile.silent-reset";
+    const key = semesterDeskStorageKey(profileId);
+    const raw = JSON.stringify(desk(profileId));
+    const removeItem = vi.fn<Storage["removeItem"]>();
+    const storage = storageWith({
+      getItem(requestedKey) {
+        return requestedKey === key ? raw : null;
+      },
+      removeItem,
+    });
+    const persistence = new BrowserSemesterDeskPersistence(storage);
+
+    await expect(persistence.reset(profileId)).resolves.toEqual({
+      ok: false,
+      message: "FORGE could not verify local data removal on this device.",
+    });
+    expect(removeItem).toHaveBeenCalledWith(key);
+    expect(storage.getItem(key)).toBe(raw);
   });
 
   it("exports raw local data byte for byte, even when the data needs review", async () => {
