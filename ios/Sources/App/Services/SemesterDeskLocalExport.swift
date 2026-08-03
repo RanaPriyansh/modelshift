@@ -30,7 +30,7 @@ struct SemesterDeskLocalExport: Equatable, Transferable {
   static func make(
     semesterDesk: UniversitySemesterDeskState,
     profileID: String,
-    remindersEnabled: Bool,
+    returnRemindersEnabled: Bool,
     exportedAt: Date
   ) throws -> SemesterDeskLocalExport {
     guard exportedAt.timeIntervalSinceReferenceDate.isFinite else {
@@ -53,7 +53,7 @@ struct SemesterDeskLocalExport: Equatable, Transferable {
       schemaLabel: schemaLabel,
       exportedAt: exportedAtTimestamp,
       profileID: profileID,
-      remindersEnabled: remindersEnabled,
+      returnRemindersEnabled: returnRemindersEnabled,
       semesterDesk: semesterDesk
     )
     let encoder = JSONEncoder()
@@ -77,7 +77,7 @@ struct SemesterDeskLocalExport: Equatable, Transferable {
     let schemaLabel: String
     let exportedAt: String
     let profileID: String
-    let remindersEnabled: Bool
+    let returnRemindersEnabled: Bool
     let semesterDesk: UniversitySemesterDeskState
   }
 }

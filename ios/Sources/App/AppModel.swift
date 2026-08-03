@@ -1065,7 +1065,7 @@ final class AppModel {
     return try SemesterDeskLocalExport.make(
       semesterDesk: semesterDesk,
       profileID: localProfileID,
-      remindersEnabled: remindersEnabled,
+      returnRemindersEnabled: remindersEnabled,
       exportedAt: now()
     )
   }
