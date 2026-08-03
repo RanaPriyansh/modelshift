@@ -281,16 +281,6 @@ private enum ForgeSemesterDeskProjectionDecoder {
 }
 
 public struct ForgeSharedStateStore {
-  private enum LegacyKey {
-    static let v1 = [
-      "forge.snapshot.v1", "forge.onboarding.v1", "forge.onboarding-dismissed.v1",
-      "forge.pending-destination.v1", "forge.reminders-enabled.v1",
-      "forge.grown-up-manages-reminders.v1",
-    ]
-    static let v2 = ["forge.due-return-projection.v2", "forge.pending-focus.v2"]
-    static let all = v1 + v2
-  }
-
   private enum StateFile: CaseIterable {
     case pendingDestination
     case projection
@@ -365,27 +355,23 @@ public struct ForgeSharedStateStore {
 
   private let sharedRootDirectory: URL
   private let inProcessLock: NSLock
-  private let legacyDefaults: UserDefaults?
   private let testHooks: ForgeSharedStateStoreTestHooks
 
   public init() throws {
     guard
       let sharedRootDirectory = FileManager.default.containerURL(
         forSecurityApplicationGroupIdentifier: Self.appGroupIdentifier
-      ),
-      let legacyDefaults = UserDefaults(suiteName: Self.appGroupIdentifier)
+      )
     else { throw ForgeSharedStateStoreError.appGroupUnavailable }
-    self.init(sharedRootDirectory: sharedRootDirectory, legacyDefaults: legacyDefaults)
+    self.init(sharedRootDirectory: sharedRootDirectory)
   }
 
   init(
     sharedRootDirectory: URL,
-    legacyDefaults: UserDefaults? = nil,
     testHooks: ForgeSharedStateStoreTestHooks = .init()
   ) {
     self.sharedRootDirectory = sharedRootDirectory.standardizedFileURL
     inProcessLock = Self.inProcessLockRegistry.lock(for: self.sharedRootDirectory)
-    self.legacyDefaults = legacyDefaults
     self.testHooks = testHooks
   }
 
@@ -465,7 +451,6 @@ public struct ForgeSharedStateStore {
   public func purgeLegacyState() throws -> Bool {
     try withExclusiveLock { directory in
       removeFiles(Self.obsoleteStateFileNames, in: directory)
-        && removeLegacyValues()
     }
   }
 
@@ -475,8 +460,7 @@ public struct ForgeSharedStateStore {
         allStateFileNames + Self.obsoleteStateFileNames,
         in: directory
       )
-      let legacyValuesRemoved = removeLegacyValues()
-      guard stateFilesRemoved && legacyValuesRemoved else {
+      guard stateFilesRemoved else {
         throw ForgeSharedStateStoreError.removalVerificationFailed
       }
     }
@@ -593,12 +577,6 @@ public struct ForgeSharedStateStore {
       guard unlinkEntry(named: name, in: directory) else { return .failed }
       return try entryMetadata(named: name, in: directory) == nil ? .removed : .failed
     } catch { return .failed }
-  }
-
-  private func removeLegacyValues() -> Bool {
-    guard let legacyDefaults else { return true }
-    for key in LegacyKey.all { legacyDefaults.removeObject(forKey: key) }
-    return LegacyKey.all.allSatisfy { legacyDefaults.object(forKey: $0) == nil }
   }
 
   private func withExclusiveLock<T>(_ operation: (LockedDirectory) throws -> T) throws -> T {

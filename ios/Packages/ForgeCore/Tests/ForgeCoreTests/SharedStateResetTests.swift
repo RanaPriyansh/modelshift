@@ -4,30 +4,28 @@ import Testing
 @testable import ForgeCore
 
 struct SharedStateResetTests {
-  @Test("Clear all removes v2 shared state and obsolete integration files")
+  @Test("Clear all removes current and obsolete shared-state files")
   func clearAllRemovesManagedState() throws {
     let fixture = try SharedStoreTestSupport.fixture()
     defer { SharedStoreTestSupport.clean(fixture) }
     try fixture.store.saveProjection(
       SharedStoreTestSupport.projection()
     )
+    try fixture.store.setPendingDestination(.settings)
     for fileName in SharedStoreTestSupport.obsoleteFileNames {
       try Data("legacy".utf8).write(
         to: fixture.root.appendingPathComponent(fileName)
       )
     }
-    fixture.defaults.set("preserve", forKey: "unrelated")
-    for key in SharedStoreTestSupport.legacyKeys {
-      fixture.defaults.set("legacy", forKey: key)
-    }
 
     try fixture.store.clearAll()
 
     #expect(try fixture.store.loadProjection() == nil)
-    #expect(fixture.defaults.string(forKey: "unrelated") == "preserve")
-    for key in SharedStoreTestSupport.legacyKeys {
-      #expect(fixture.defaults.object(forKey: key) == nil)
-    }
+    #expect(
+      !FileManager.default.fileExists(
+        atPath: fixture.pendingDestinationURL.path
+      )
+    )
     for fileName in SharedStoreTestSupport.obsoleteFileNames {
       #expect(
         !FileManager.default.fileExists(

@@ -174,8 +174,8 @@ struct ReleaseSourceBoundaryTests {
     expectDebugBoundary(for: corruptWrites, in: SourceFile.privateStateStore)
   }
 
-  @Test("Keeps adult university V1 product source boundaries")
-  func adultUniversityV1ProductSourceBoundaries() throws {
+  @Test("Keeps Semester Desk v2 product source boundaries")
+  func semesterDeskV2ProductSourceBoundaries() throws {
     let sources = try ProductSwiftSources.read()
     let violations = ProductSourceBoundary.violations(in: sources)
 
@@ -185,40 +185,60 @@ struct ReleaseSourceBoundaryTests {
     )
   }
 
-  @Test("Allows only the exact retained legacy grown-up key")
-  func retainedLegacyGrownUpKeyExceptionIsExact() throws {
-    let retainedKey = "\"forge.grown-up-manages-reminders.v1\""
-    let sharedStorePath = "Packages/ForgeCore/Sources/ForgeCore/SharedStateStore.swift"
-
-    let allowed = try productBoundaryViolations(
-      relativePath: sharedStorePath,
-      code: retainedKey
+  @Test("Rejects UserDefaults and standard storage shortcuts")
+  func userDefaultsAndStandardStorageAreRejected() throws {
+    try expectProductBoundaryViolation(
+      code: "let store = UserDefaults.standard",
+      expectedViolation: "contains prohibited identifier UserDefaults."
     )
-    #expect(allowed.isEmpty)
-
-    let versionVariant = try productBoundaryViolations(
-      relativePath: sharedStorePath,
-      code: "\"forge.grown-up-manages-reminders.v2\""
+    try expectProductBoundaryViolation(
+      code: "let store = FileManager.standard",
+      expectedViolation: "contains prohibited raw member .standard."
     )
-    #expect(!versionVariant.isEmpty)
+  }
 
-    let unquotedVariant = try productBoundaryViolations(
-      relativePath: sharedStorePath,
-      code: "forge.grown-up-manages-reminders.v1"
+  @Test("Private state persistence contains no V1 envelope fields")
+  func privateStatePersistenceContainsNoV1EnvelopeFields() throws {
+    let source = try SourceFile.privateStateStore.read()
+    let rawCode = SourceLexicon.codeWithoutStringLiterals(
+      in: source.lines.map(\.code).joined(separator: "\n")
     )
-    #expect(!unquotedVariant.isEmpty)
+    let identifiers = Set(SourceLexicon.identifiers(in: rawCode))
 
-    let wrongFile = try productBoundaryViolations(
-      relativePath: "Sources/App/Settings.swift",
-      code: retainedKey
-    )
-    #expect(!wrongFile.isEmpty)
+    for identifier in [
+      "LocalLearnerState",
+      "UniversityExperienceProjection",
+      "learnerState",
+      "isCourseStarted",
+      "remindersEnabled",
+    ] {
+      #expect(
+        !identifiers.contains(identifier),
+        "\(SourceFile.privateStateStore.relativePath) contains retired private-state identifier \(identifier)."
+      )
+    }
+  }
 
-    let surroundingProductLanguage = try productBoundaryViolations(
-      relativePath: sharedStorePath,
-      code: "\(retainedKey), \"grown-up settings\""
-    )
-    #expect(!surroundingProductLanguage.isEmpty)
+  @Test("Archived V1 sources are excluded from the application target")
+  func archivedV1SourcesAreExcludedFromApplicationTarget() throws {
+    let project = try SourceFile.project.readRawText()
+
+    for archivedSource in [
+      "PathView.swift",
+      "EvidenceView.swift",
+      "UniversityActivityView.swift",
+      "SettingsView.swift",
+      "PrivacySupportView.swift",
+      "UniversitySurfaceComponents.swift",
+    ] {
+      #expect(
+        !project.contains("/* \(archivedSource) */"),
+        "Project still contains archived source \(archivedSource)."
+      )
+    }
+
+    #expect(project.contains("SemesterDeskLocalExport.swift in Sources"))
+    #expect(project.contains("SemesterDeskSettingsView.swift in Sources"))
   }
 
   @Test("Rejects source-review and source-trust code but allows limitation prose")
@@ -277,6 +297,18 @@ struct ReleaseSourceBoundaryTests {
         expectedViolation: "contains prohibited \(violation)."
       )
     }
+  }
+
+  @Test("Rejects V1 root URLs and product surfaces from application sources")
+  func v1RootURLsAndProductSurfacesAreRejected() throws {
+    try expectProductBoundaryViolation(
+      code: "let url = \"forge://path\"",
+      expectedViolation: "contains prohibited V1 root URL forge://path."
+    )
+    try expectProductBoundaryViolation(
+      code: "let view = PathView()",
+      expectedViolation: "contains prohibited V1 product surface PathView."
+    )
   }
 
   @Test("Rejects retired cancellation domains only")
@@ -397,6 +429,7 @@ struct ReleaseSourceBoundaryTests {
 private enum SourceFile: String {
   case forgeApp = "Sources/App/FORGEApp.swift"
   case privateStateStore = "Sources/App/Services/PrivateStateStore.swift"
+  case project = "FORGE.xcodeproj/project.pbxproj"
   case verificationScript = "Scripts/verify.sh"
 
   static let maximumByteCount = 256 * 1024
@@ -607,7 +640,12 @@ private enum ProductSourceBoundary {
     let depth: Int
   }
 
-  private static let prohibitedProductPhrases = [
+  private static let compiledApplicationSourcePrefixes = [
+    "Sources/App/",
+    "Sources/SystemIntegration/",
+    "Sources/Widgets/",
+  ]
+  private static let prohibitedApplicationProductPhrases = [
     ProhibitedProductPhrase(label: "child language", words: ["child"]),
     ProhibitedProductPhrase(label: "teen language", words: ["teen"]),
     ProhibitedProductPhrase(label: "teenager language", words: ["teenager"]),
@@ -638,17 +676,28 @@ private enum ProductSourceBoundary {
       ]
     ),
   ]
-  private static let retainedLegacyGrownUpKeySourcePath =
-    "Packages/ForgeCore/Sources/ForgeCore/SharedStateStore.swift"
-  private static let retainedLegacyGrownUpKeyLiteral =
-    "\"forge.grown-up-manages-reminders.v1\""
+  private static let prohibitedV1ProductSurfaceIdentifiers = [
+    "EvidenceView",
+    "PathView",
+    "PrivacySupportView",
+    "SettingsView",
+    "UniversityActivityView",
+    "UniversitySurfaceComponents",
+  ].sorted()
+  private static let prohibitedV1RootURLs = [
+    "forge://activity",
+    "forge://evidence",
+    "forge://focus",
+    "forge://path",
+    "forge://returns",
+  ].sorted()
   private static let prohibitedCodeIdentifiers = [
     "CatalogSource",
     "SourceReview",
     "SourceDecisionID",
   ]
   private static let prohibitedIdentifiers = [
-    "FocusPreviewView",
+    "UserDefaults",
     "URLSession",
     "URLSessionConfiguration",
     "URLSessionWebSocketTask",
@@ -761,6 +810,9 @@ private enum ProductSourceBoundary {
     violations: inout [String],
     isTruncated: inout Bool
   ) {
+    guard isCompiledApplicationSource(source.relativePath) else {
+      return
+    }
     var braceDepth = 0
     var activeScopes: [CancellationDomainScope] = []
     var pendingDeclarationDomains: [ProhibitedCancellationDomain] = []
@@ -823,18 +875,34 @@ private enum ProductSourceBoundary {
     violations: inout [String],
     isTruncated: inout Bool
   ) {
-    let productLanguageText = textForProductLanguageScan(
-      text,
-      sourceRelativePath: sourceRelativePath
-    )
-    let words = SourceLexicon.words(in: productLanguageText)
-    for phrase in prohibitedProductPhrases
-    where SourceLexicon.contains(phrase.words, in: words) {
-      record(
-        "\(location) contains prohibited \(phrase.label).",
-        violations: &violations,
-        isTruncated: &isTruncated
-      )
+    if isCompiledApplicationSource(sourceRelativePath) {
+      let words = SourceLexicon.words(in: text)
+      for phrase in prohibitedApplicationProductPhrases
+      where SourceLexicon.contains(phrase.words, in: words) {
+        record(
+          "\(location) contains prohibited \(phrase.label).",
+          violations: &violations,
+          isTruncated: &isTruncated
+        )
+      }
+
+      let identifiers = SourceLexicon.identifiers(in: text)
+      for identifier in prohibitedV1ProductSurfaceIdentifiers
+      where identifiers.contains(identifier) {
+        record(
+          "\(location) contains prohibited V1 product surface \(identifier).",
+          violations: &violations,
+          isTruncated: &isTruncated
+        )
+      }
+
+      for rootURL in prohibitedV1RootURLs where text.contains(rootURL) {
+        record(
+          "\(location) contains prohibited V1 root URL \(rootURL).",
+          violations: &violations,
+          isTruncated: &isTruncated
+        )
+      }
     }
 
     let identifiers = SourceLexicon.identifiers(in: text)
@@ -851,6 +919,13 @@ private enum ProductSourceBoundary {
     for identifier in prohibitedCodeIdentifiers where rawIdentifiers.contains(identifier) {
       record(
         "\(location) contains prohibited identifier \(identifier).",
+        violations: &violations,
+        isTruncated: &isTruncated
+      )
+    }
+    if SourceLexicon.containsMemberUse("standard", in: rawCode) {
+      record(
+        "\(location) contains prohibited raw member .standard.",
         violations: &violations,
         isTruncated: &isTruncated
       )
@@ -893,18 +968,8 @@ private enum ProductSourceBoundary {
     }
   }
 
-  private static func textForProductLanguageScan(
-    _ text: String,
-    sourceRelativePath: String
-  ) -> String {
-    guard sourceRelativePath == retainedLegacyGrownUpKeySourcePath else {
-      return text
-    }
-
-    return text.replacingOccurrences(
-      of: retainedLegacyGrownUpKeyLiteral,
-      with: ""
-    )
+  private static func isCompiledApplicationSource(_ relativePath: String) -> Bool {
+    compiledApplicationSourcePrefixes.contains { relativePath.hasPrefix($0) }
   }
 
   private static func appendImportViolation(

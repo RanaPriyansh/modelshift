@@ -210,15 +210,14 @@ struct MetadataContractTests {
     #expect(widgetGroups == applicationGroups)
   }
 
-  @Test("Privacy manifest declares no tracking and required reason categories")
+  @Test("Privacy manifest declares no tracking and required file metadata reason")
   func privacyManifest() throws {
     let privacyManifest = try MetadataContractFiles.plist(
       at: "ios/Resources/PrivacyInfo.xcprivacy"
     )
     let categories = try privacyReasonCategories(in: privacyManifest)
     let requiredCategories: [String: Set<String>] = [
-      "NSPrivacyAccessedAPICategoryUserDefaults": Set(["1C8F.1"]),
-      "NSPrivacyAccessedAPICategoryFileTimestamp": Set(["C617.1"]),
+      "NSPrivacyAccessedAPICategoryFileTimestamp": Set(["C617.1"])
     ]
     let requiredKeys: Set<String> = [
       "NSPrivacyTracking",

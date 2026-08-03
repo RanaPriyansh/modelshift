@@ -168,14 +168,12 @@ struct SharedProjectionStoreTests {
     #expect(try Data(contentsOf: outsideURL) == Data("preserve".utf8))
   }
 
-  @Test("Legacy integration data is purged without changing unrelated defaults")
+  @Test("Legacy integration files are purged without changing current shared state")
   func purgesLegacyState() throws {
     let fixture = try SharedStoreTestSupport.fixture()
     defer { SharedStoreTestSupport.clean(fixture) }
-    fixture.defaults.set("preserve", forKey: "unrelated")
-    for key in SharedStoreTestSupport.legacyKeys {
-      fixture.defaults.set("legacy", forKey: key)
-    }
+    let projection = try SharedStoreTestSupport.projection()
+    try fixture.store.saveProjection(projection)
     for fileName in SharedStoreTestSupport.obsoleteFileNames {
       try Data("legacy".utf8).write(
         to: fixture.root.appendingPathComponent(fileName)
@@ -183,10 +181,7 @@ struct SharedProjectionStoreTests {
     }
 
     #expect(try fixture.store.purgeLegacyState())
-    #expect(fixture.defaults.string(forKey: "unrelated") == "preserve")
-    for key in SharedStoreTestSupport.legacyKeys {
-      #expect(fixture.defaults.object(forKey: key) == nil)
-    }
+    #expect(try fixture.store.loadProjection() == projection)
     for fileName in SharedStoreTestSupport.obsoleteFileNames {
       #expect(
         !FileManager.default.fileExists(
@@ -212,18 +207,14 @@ struct SharedProjectionStoreTests {
     let stores = [
       SharedStoreFixture(
         root: fixture.root,
-        defaults: fixture.defaults,
         store: ForgeSharedStateStore(
-          sharedRootDirectory: fixture.root,
-          legacyDefaults: fixture.defaults
+          sharedRootDirectory: fixture.root
         )
       ),
       SharedStoreFixture(
         root: fixture.root,
-        defaults: fixture.defaults,
         store: ForgeSharedStateStore(
-          sharedRootDirectory: fixture.root,
-          legacyDefaults: fixture.defaults
+          sharedRootDirectory: fixture.root
         )
       ),
     ]
@@ -270,7 +261,6 @@ struct SharedProjectionStoreTests {
 
 struct SharedStoreFixture: @unchecked Sendable {
   let root: URL
-  let defaults: UserDefaults
   let store: ForgeSharedStateStore
 
   var projectionURL: URL {
@@ -291,17 +281,6 @@ struct SharedStoreFixture: @unchecked Sendable {
 }
 
 enum SharedStoreTestSupport {
-  static let legacyKeys = [
-    "forge.snapshot.v1",
-    "forge.onboarding.v1",
-    "forge.onboarding-dismissed.v1",
-    "forge.pending-destination.v1",
-    "forge.reminders-enabled.v1",
-    "forge.grown-up-manages-reminders.v1",
-    "forge.due-return-projection.v2",
-    "forge.pending-focus.v2",
-  ]
-
   static let obsoleteFileNames = [
     "forge.return-projection.v3.json",
     "forge.return-projection.v3.json.staging",
@@ -322,24 +301,16 @@ enum SharedStoreTestSupport {
       at: root,
       withIntermediateDirectories: true
     )
-    let suiteName = "forge-shared-tests-\(UUID().uuidString)"
-    let defaults = try #require(UserDefaults(suiteName: suiteName))
-    defaults.removePersistentDomain(forName: suiteName)
     return SharedStoreFixture(
       root: root,
-      defaults: defaults,
       store: ForgeSharedStateStore(
-        sharedRootDirectory: root,
-        legacyDefaults: defaults
+        sharedRootDirectory: root
       )
     )
   }
 
   static func clean(_ fixture: SharedStoreFixture) {
     try? FileManager.default.removeItem(at: fixture.root)
-    for key in legacyKeys + ["unrelated"] {
-      fixture.defaults.removeObject(forKey: key)
-    }
   }
 
   static func projection(
