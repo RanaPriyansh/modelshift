@@ -106,8 +106,8 @@ struct AppModelTests {
       #expect(model.semesterDesk == nil)
       #expect(model.isSemesterDeskOperationRunning)
       #expect(candidate.localProfileID == model.localProfileID)
-      #expect(candidate.semesterDesk?.profileID == model.localProfileID)
-      #expect(candidate.semesterDesk?.title == "Autumn 2027")
+      #expect(candidate.semesterDesk.profileID == model.localProfileID)
+      #expect(candidate.semesterDesk.title == "Autumn 2027")
 
       await environment.privateStore.releaseBlockedSave()
       #expect(await creation.value)
@@ -141,7 +141,7 @@ struct AppModelTests {
 
       #expect(model.semesterDesk == priorDesk)
       #expect(model.isSemesterDeskOperationRunning)
-      #expect(candidate.semesterDesk?.courses.map(\.code) == ["MAT220"])
+      #expect(candidate.semesterDesk.courses.map(\.code) == ["MAT220"])
 
       await environment.privateStore.releaseBlockedSave()
       #expect(await transition.value)
@@ -513,10 +513,8 @@ struct AppModelTests {
       let storedState = try #require(await environment.privateStore.currentState())
       let mismatchedState = PrivateStateEnvelope(
         localProfileID: "profile.someone-else",
-        learnerState: storedState.learnerState,
-        isCourseStarted: storedState.isCourseStarted,
-        remindersEnabled: storedState.remindersEnabled,
-        semesterDesk: storedState.semesterDesk
+        semesterDesk: storedState.semesterDesk,
+        returnRemindersEnabled: storedState.returnRemindersEnabled
       )
       await environment.privateStore.replaceState(mismatchedState)
 
@@ -529,6 +527,211 @@ struct AppModelTests {
         return
       }
       #expect(reader.semesterDesk == nil)
+    }
+  }
+
+  @Test("An empty launch does not create a private state file")
+  func emptyLaunchDoesNotSavePrivateState() async throws {
+    try await withEnvironment { environment in
+      let model = try environment.makeModel()
+      model.handleScenePhaseChange(.active)
+      await model.launch()
+
+      #expect(model.recoveryState == nil)
+      #expect(model.semesterDesk == nil)
+      #expect(await environment.privateStore.saveCount() == 0)
+      #expect(await environment.privateStore.currentState() == nil)
+    }
+  }
+
+  @Test("Background entry during onboarding does not create private state")
+  func backgroundOnboardingDoesNotSavePrivateState() async throws {
+    try await withEnvironment { environment in
+      let model = try await environment.makeLaunchedModel()
+      model.handleScenePhaseChange(.background)
+      await settleMainActorWork()
+
+      #expect(model.semesterDesk == nil)
+      #expect(await environment.privateStore.saveCount() == 0)
+      #expect(await environment.privateStore.currentState() == nil)
+    }
+  }
+
+  @Test("A schema-one envelope restores the Semester Desk")
+  func schemaOneEnvelopeRestoresSemesterDesk() async throws {
+    try await withEnvironment { environment in
+      let writer = try await environment.makeLaunchedModel()
+      #expect(await writer.createSemesterDesk(title: "Autumn 2027"))
+      let stored = try #require(await environment.privateStore.currentState())
+      #expect(stored.schemaVersion == 1)
+      #expect(stored.returnRemindersEnabled == false)
+
+      let reader = try environment.makeModel()
+      await reader.launch()
+
+      #expect(reader.localProfileID == stored.localProfileID)
+      #expect(reader.semesterDesk == stored.semesterDesk)
+      #expect(reader.remindersEnabled == stored.returnRemindersEnabled)
+    }
+  }
+
+  @Test("Stale private state enters recovery without a private mutation")
+  func stalePrivateStateEntersRecoveryWithoutMutation() async throws {
+    try await withEnvironment { environment in
+      let writer = try await environment.makeLaunchedModel()
+      #expect(await writer.createSemesterDesk(title: "Autumn 2027"))
+      let before = try await environment.privateStore.encodedCurrentState()
+      let saveCount = await environment.privateStore.saveCount()
+      await environment.privateStore.setLoadError(
+        .stalePrivateStatePresent(entries: ["private-state-v5.json"])
+      )
+
+      let reader = try environment.makeModel()
+      let initialProfileID = reader.localProfileID
+      await reader.launch()
+
+      guard case .loadFailed = reader.recoveryState else {
+        Issue.record("Stale local state must enter recovery.")
+        return
+      }
+      #expect(reader.localProfileID == initialProfileID)
+      #expect(reader.semesterDesk == nil)
+      #expect(await environment.privateStore.encodedCurrentState() == before)
+      #expect(await environment.privateStore.saveCount() == saveCount)
+    }
+  }
+
+  @Test("A first save failure retries against a nil persisted baseline")
+  func firstSaveFailureRetriesAgainstNilPersistedBaseline() async throws {
+    try await withEnvironment { environment in
+      let model = try await environment.makeLaunchedModel()
+      await environment.privateStore.setSaveError(.writeVerification)
+
+      #expect(!(await model.createSemesterDesk(title: "Autumn 2027")))
+      guard case .saveFailed = model.recoveryState else {
+        Issue.record("A failed first save must enter recovery.")
+        return
+      }
+      #expect(model.semesterDesk == nil)
+      #expect(await environment.privateStore.currentState() == nil)
+
+      await environment.privateStore.setSaveError(nil)
+      model.retryLocalDataLoad()
+      await model.waitForRecoveryOperationForTesting()
+
+      #expect(model.recoveryState == nil)
+      #expect(model.semesterDesk == nil)
+      #expect(await environment.privateStore.currentState() == nil)
+    }
+  }
+
+  @Test("A failed command retries against the exact persisted baseline")
+  func persistedStateRetryUsesExactBaseline() async throws {
+    try await withEnvironment { environment in
+      let model = try await environment.makeLaunchedModel()
+      #expect(await model.createSemesterDesk(title: "Autumn 2027"))
+      let baseline = try #require(await environment.privateStore.currentState())
+      await environment.privateStore.setSaveError(.writeVerification)
+
+      #expect(
+        !(await model.applySemesterDeskCommand(
+          .addCourse(
+            profileID: model.localProfileID,
+            code: "MAT220",
+            title: "Linear algebra"
+          )
+        ))
+      )
+      guard case .saveFailed = model.recoveryState else {
+        Issue.record("A failed command save must enter recovery.")
+        return
+      }
+
+      await environment.privateStore.setSaveError(nil)
+      await environment.privateStore.replaceState(nil)
+      model.retryLocalDataLoad()
+      await model.waitForRecoveryOperationForTesting()
+      #expect(model.recoveryState != nil)
+      #expect(model.semesterDesk == baseline.semesterDesk)
+
+      await environment.privateStore.replaceState(baseline)
+      model.retryLocalDataLoad()
+      await model.waitForRecoveryOperationForTesting()
+      #expect(model.recoveryState == nil)
+      #expect(model.semesterDesk == baseline.semesterDesk)
+    }
+  }
+
+  @Test("A partial private reset keeps the current profile and Semester Desk")
+  func partialResetKeepsProfileAndSemesterDesk() async throws {
+    try await withEnvironment { environment in
+      let model = try await environment.makeLaunchedModel()
+      #expect(await model.createSemesterDesk(title: "Autumn 2027"))
+      let profileID = model.localProfileID
+      let desk = try #require(model.semesterDesk)
+      await environment.privateStore.setNextClearResult(
+        .completed(
+          PrivateStateClearReceipt(
+            files: [
+              PrivateStateRemovalRecord(
+                name: "semester-desk-private-state-v1.json",
+                disposition: .retained
+              )
+            ],
+            stages: [],
+            namespace: .notRequired
+          )
+        )
+      )
+
+      model.clearLocalData()
+      await model.waitForLocalDataResetOperationForTesting()
+
+      guard case .resetFailed = model.recoveryState else {
+        Issue.record("A partial private reset must remain in recovery.")
+        return
+      }
+      #expect(model.localProfileID == profileID)
+      #expect(model.semesterDesk == desk)
+    }
+  }
+
+  @Test("The return reminder preference restores on relaunch")
+  func returnReminderPreferenceRestoresOnRelaunch() async throws {
+    try await withEnvironment { environment in
+      let writer = try await environment.makeLaunchedModel()
+      #expect(await writer.createSemesterDesk(title: "Autumn 2027"))
+      let stored = try #require(await environment.privateStore.currentState())
+      let reminderState = PrivateStateEnvelope(
+        localProfileID: stored.localProfileID,
+        semesterDesk: stored.semesterDesk,
+        returnRemindersEnabled: true
+      )
+      await environment.privateStore.replaceState(reminderState)
+
+      let reader = try environment.makeModel()
+      await reader.launch()
+
+      #expect(reader.remindersEnabled)
+      #expect(reader.semesterDesk == stored.semesterDesk)
+    }
+  }
+
+  @Test("Encoded private state excludes drafts and legacy fields")
+  func encodedPrivateStateExcludesDraftsAndLegacyFields() async throws {
+    try await withEnvironment { environment in
+      let model = try await environment.makeLaunchedModel()
+      #expect(await model.createSemesterDesk(title: "Autumn 2027"))
+      let data = try await environment.privateStore.encodedCurrentState()
+      let text = try #require(String(data: data, encoding: .utf8))
+
+      #expect(!text.contains("learnerState"))
+      #expect(!text.contains("isCourseStarted"))
+      #expect(!text.contains("remindersEnabled"))
+      #expect(!text.contains("practiceText"))
+      #expect(!text.contains("independentCheckText"))
+      #expect(!text.contains("delayedReturnText"))
+      #expect(text.contains("returnRemindersEnabled"))
     }
   }
 
@@ -727,10 +930,8 @@ struct AppModelTests {
     }
   }
 
-  @Test(
-    "A nonfinite clock rejects Semester Desk commands and a mismatched catalog rejects initialization"
-  )
-  func nonfiniteClockAndCatalogMismatchAreRejected() async throws {
+  @Test("A nonfinite clock rejects Semester Desk commands")
+  func nonfiniteClockRejectsSemesterDeskCommands() async throws {
     try await withEnvironment { environment in
       let model = try await environment.makeLaunchedModel()
       #expect(await model.createSemesterDesk(title: "Autumn 2027"))
@@ -755,26 +956,6 @@ struct AppModelTests {
           == "FORGE could not read the current time."
       )
 
-      let alternateCatalog = try ReleasedCatalogSnapshot(
-        catalogReleaseID: CatalogReleaseID("forge.catalog.alternate"),
-        package: environment.catalog.package,
-        courseID: environment.catalog.courseID,
-        capabilities: environment.catalog.capabilities,
-        activities: environment.catalog.activities,
-        sourceBindings: environment.catalog.sourceBindings,
-        proofClaimIDs: environment.catalog.proofClaimIDs,
-        limitations: environment.catalog.limitations
-      )
-      let mismatchedEngine = try UniversityLearningEngine(
-        catalog: alternateCatalog,
-        validators: ValidatorRegistry()
-      )
-      #expect(throws: UniversityLearningError.self) {
-        try environment.makeModel(
-          learningEngine: mismatchedEngine,
-          now: { environment.clock.now() }
-        )
-      }
     }
   }
 
@@ -934,8 +1115,6 @@ private final class TestSemesterDeskIdentifierFactory:
 private final class TestEnvironment {
   let rootURL: URL
   let sharedRootURL: URL
-  let catalog: ReleasedCatalogSnapshot
-  let learningEngine: UniversityLearningEngine
   let calendar: Calendar
   let clock: TestClock
   let privateStore: TestPrivateStateStore
@@ -961,11 +1140,6 @@ private final class TestEnvironment {
     let timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = timeZone
-    let catalog = try UniversityStarterCourse.catalog()
-    let learningEngine = try UniversityLearningEngine(
-      catalog: catalog,
-      validators: ValidatorRegistry()
-    )
     let clock = TestClock(date: Date(timeIntervalSince1970: 2_000_000_000))
     let privateStore = TestPrivateStateStore()
     let notificationCenter = TestNotificationCenter()
@@ -977,8 +1151,6 @@ private final class TestEnvironment {
       now: { clock.now() }
     )
 
-    self.catalog = catalog
-    self.learningEngine = learningEngine
     self.calendar = calendar
     self.clock = clock
     self.privateStore = privateStore
@@ -995,26 +1167,13 @@ private final class TestEnvironment {
   }
 
   func makeModel() throws -> AppModel {
-    try makeModel(
-      learningEngine: learningEngine,
-      now: { [clock] in clock.now() }
-    )
-  }
-
-  func makeModel(
-    learningEngine: UniversityLearningEngine,
-    now: @escaping @MainActor () -> Date
-  ) throws -> AppModel {
     try AppModel(
-      catalog: catalog,
-      learningEngine: learningEngine,
       privateStateStore: privateStore,
       sharedStore: sharedStore,
       notificationCoordinator: notificationCoordinator,
       timeBoundarySleeper: timeBoundarySleeper,
-      now: now,
+      now: { [clock] in clock.now() },
       calendar: calendar,
-      evidenceIDGenerator: { "evidence.app-model" },
       localProfileIDGenerator: { [weak self] in
         guard let self else {
           return "profile.unavailable"
@@ -1054,6 +1213,7 @@ private actor TestPrivateStateStore: PrivateStateStoring {
   private var loadError: PrivateStateStoreError?
   private var saveError: PrivateStateStoreError?
   private var nextSaveResult: PrivateStateSaveResult?
+  private var nextClearResult: PrivateStateClearResult?
   private var latestResetEpoch: UInt64 = 0
   private var latestSequence: UInt64 = 0
   private var shouldBlockNextSave = false
@@ -1074,6 +1234,10 @@ private actor TestPrivateStateStore: PrivateStateStoring {
 
   func setNextSaveResult(_ result: PrivateStateSaveResult?) {
     nextSaveResult = result
+  }
+
+  func setNextClearResult(_ result: PrivateStateClearResult?) {
+    nextClearResult = result
   }
 
   func blockNextSave(checkCancellationBeforeInstallation: Bool) {
@@ -1206,15 +1370,21 @@ private actor TestPrivateStateStore: PrivateStateStoring {
     }
     latestResetEpoch = resetEpoch
     latestSequence = 0
+    if let nextClearResult {
+      self.nextClearResult = nil
+      return nextClearResult
+    }
     let disposition: PrivateStateRemovalDisposition =
       state == nil ? .alreadyAbsent : .removed
     state = nil
     return .completed(
       PrivateStateClearReceipt(
-        current: disposition,
-        v4: .alreadyAbsent,
-        v3: .alreadyAbsent,
-        v2: .alreadyAbsent,
+        files: [
+          PrivateStateRemovalRecord(
+            name: "semester-desk-private-state-v1.json",
+            disposition: disposition
+          )
+        ],
         stages: [],
         namespace: disposition == .removed ? .changed(.synchronized) : .notRequired
       )

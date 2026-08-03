@@ -115,22 +115,6 @@ struct SemesterDeskStudyDraft: Equatable, Sendable {
   }
 }
 
-enum ActivitySubmissionOutcome: Equatable, Sendable {
-  case recorded(ValidatorResult)
-  case failed(String)
-}
-
-struct ActivityDraft: Equatable, Sendable {
-  static let empty = ActivityDraft(selectedChoice: nil, responseText: "")
-
-  let selectedChoice: String?
-  let responseText: String
-
-  var hasContent: Bool {
-    selectedChoice != nil || !responseText.isEmpty
-  }
-}
-
 enum AppLaunchState: Equatable, Sendable {
   case loading
   case ready
@@ -376,31 +360,28 @@ final class AppModel {
     case failed(
       stages: [ResetCleanupStage],
       protectedDataUnavailable: Bool,
-      privateStateWasRemoved: Bool,
+      privateStateWasCleared: Bool,
       namespaceSynchronizationUncertain: Bool
     )
   }
 
   private struct PrivateResetResult {
-    let didFail: Bool
+    let isComplete: Bool
     let protectedDataUnavailable: Bool
-    let privateStateWasRemoved: Bool
     let namespaceSynchronizationUncertain: Bool
   }
 
   private enum RecoveryOrigin: Equatable {
     case initialLoad
-    case saveFailure(baseline: PrivateStateEnvelope)
+    case saveFailure(baseline: PrivateStateEnvelope?)
   }
 
-  @ObservationIgnored private let learningEngine: UniversityLearningEngine
   @ObservationIgnored private let privateStateStore: any PrivateStateStoring
   @ObservationIgnored private let sharedStateService: AppSharedStateService
   @ObservationIgnored private let notificationCoordinator: NotificationCoordinator
   @ObservationIgnored private let timeBoundarySleeper: any TimeBoundarySleeping
   @ObservationIgnored private let now: @MainActor () -> Date
   @ObservationIgnored private let calendar: Calendar
-  @ObservationIgnored private let evidenceIDGenerator: @MainActor () -> String
   @ObservationIgnored private let localProfileIDGenerator: @MainActor () -> String
   @ObservationIgnored private let semesterDeskIdentifiers:
     any UniversitySemesterDeskIdentifierFactory
@@ -437,23 +418,12 @@ final class AppModel {
   @ObservationIgnored private var sharedIntegrationIssue: SharedIntegrationIssue?
   @ObservationIgnored private var privateNamespaceSynchronizationPending = false
   @ObservationIgnored private var pendingLaunchDestination: ForgeDestination?
-  private var activityDrafts: [ActivityID: ActivityDraft]
   private var semesterDeskStudyDrafts: [String: SemesterDeskStudyDraft]
 
-  let catalog: ReleasedCatalogSnapshot
-  var learnerState: LocalLearnerState
-  var experience: UniversityExperienceProjection.Projection?
-  var experienceErrorMessage: String?
   var selectedTab: AppTab
   var todayPath: [AppRoute]
   var semesterPath: [AppRoute]
   var progressPath: [AppRoute]
-  var isCourseStarted: Bool
-  var isActivityPresented: Bool
-  var isCourseStartRunning: Bool
-  var isCourseReviewRunning: Bool
-  var courseStartStatusMessage: String?
-  var activityStatusMessage: String?
   var remindersEnabled: Bool
   var isReminderOperationRunning: Bool
   var reminderStatusMessage: String?
@@ -464,7 +434,6 @@ final class AppModel {
     didSet {
       if recoveryState != nil {
         cancelTimeBoundaryTask()
-        isActivityPresented = false
       }
     }
   }
@@ -472,7 +441,6 @@ final class AppModel {
   var localIntegrationStatusMessage: String?
   var localPersistenceStatusMessage: String?
   var launchState: AppLaunchState
-  var isActivitySubmissionRunning: Bool
   var localProfileID: String
   var semesterDesk: UniversitySemesterDeskState?
   var isSemesterDeskOperationRunning: Bool
@@ -483,15 +451,12 @@ final class AppModel {
   var protectedStudyPlanItemID: String?
 
   init(
-    catalog: ReleasedCatalogSnapshot,
-    learningEngine: UniversityLearningEngine,
     privateStateStore: any PrivateStateStoring,
     sharedStore: ForgeSharedStateStore?,
     notificationCoordinator: NotificationCoordinator,
     timeBoundarySleeper: any TimeBoundarySleeping,
     now: @escaping @MainActor () -> Date,
     calendar: Calendar,
-    evidenceIDGenerator: @escaping @MainActor () -> String,
     localProfileIDGenerator: @escaping @MainActor () -> String = {
       "profile.\(UUID().uuidString.lowercased())"
     },
@@ -503,20 +468,10 @@ final class AppModel {
       nil
     }
   ) throws {
-    try catalog.validate()
-    guard learningEngine.catalog == catalog else {
-      throw UniversityLearningError.invalidCatalog(
-        path: "appModel.learningEngine.catalog",
-        reason: "The learning engine catalog must match the app catalog."
-      )
-    }
-
     let initialNow = now()
     guard initialNow.timeIntervalSinceReferenceDate.isFinite else {
       throw UniversityLearningError.invalidDate(path: "appModel.initialNow")
     }
-    let initialLearnerState = try UniversityStarterCourse.initialState(updatedAt: initialNow)
-    try initialLearnerState.validate(against: catalog)
     let initialLocalProfileID = localProfileIDGenerator()
       .trimmingCharacters(in: .whitespacesAndNewlines)
     guard !initialLocalProfileID.isEmpty else {
@@ -526,8 +481,6 @@ final class AppModel {
       )
     }
 
-    self.catalog = catalog
-    self.learningEngine = learningEngine
     self.privateStateStore = privateStateStore
     self.sharedStateService = AppSharedStateService(
       handle: AppSharedStateStoreHandle(store: sharedStore)
@@ -536,24 +489,14 @@ final class AppModel {
     self.timeBoundarySleeper = timeBoundarySleeper
     self.now = now
     self.calendar = calendar
-    self.evidenceIDGenerator = evidenceIDGenerator
     self.localProfileIDGenerator = localProfileIDGenerator
     self.semesterDeskIdentifiers = semesterDeskIdentifiers
     self.widgetReloader = widgetReloader
     self.launchPreparation = launchPreparation
-    self.learnerState = initialLearnerState
-    self.experience = nil
-    self.experienceErrorMessage = nil
     self.selectedTab = .today
     self.todayPath = []
     self.semesterPath = []
     self.progressPath = []
-    self.isCourseStarted = false
-    self.isActivityPresented = false
-    self.isCourseStartRunning = false
-    self.isCourseReviewRunning = false
-    self.courseStartStatusMessage = nil
-    self.activityStatusMessage = nil
     self.remindersEnabled = false
     self.isReminderOperationRunning = false
     self.reminderStatusMessage = nil
@@ -565,7 +508,6 @@ final class AppModel {
     self.localIntegrationStatusMessage = nil
     self.localPersistenceStatusMessage = nil
     self.launchState = .loading
-    self.isActivitySubmissionRunning = false
     self.localProfileID = initialLocalProfileID
     self.semesterDesk = nil
     self.isSemesterDeskOperationRunning = false
@@ -577,7 +519,6 @@ final class AppModel {
     self.lastPersistedEnvelope = nil
     self.recoveryOrigin = nil
     self.sharedIntegrationIssue = nil
-    self.activityDrafts = [:]
     self.semesterDeskStudyDrafts = [:]
   }
 
@@ -654,7 +595,7 @@ final class AppModel {
     guard !Task.isCancelled, generation == launchGeneration else {
       return
     }
-    guard let capturedNow = captureNow() else {
+    guard let capturedNow = captureSemesterDeskNow() else {
       recoveryState = .loadFailed(
         message: "FORGE could not load local course data."
       )
@@ -672,7 +613,7 @@ final class AppModel {
     if didLoad {
       await consumePendingSystemDestinationNow()
       await consumePendingLaunchDestination()
-      await replayInitialActiveLifecycle()
+      await replayInitialActiveLifecycle(at: capturedNow)
     }
   }
 
@@ -708,60 +649,6 @@ final class AppModel {
 
   private func resumeLaunchWaiter(_ waiterID: UInt64) {
     launchCompletionWaiters.removeValue(forKey: waiterID)?.resume()
-  }
-
-  var courseTitle: String {
-    UniversityStarterCourse.courseTitle
-  }
-
-  var courseSummary: String {
-    UniversityStarterCourse.courseSummary
-  }
-
-  var currentActivity: CatalogActivity? {
-    catalog.activities.first { $0.id == learnerState.activeActivityID }
-  }
-
-  var currentActivityDraft: ActivityDraft {
-    guard let activityID = currentActivity?.id else {
-      return .empty
-    }
-
-    return activityDrafts[activityID] ?? .empty
-  }
-
-  var currentDelayedReturn: UniversityExperienceProjection.DelayedReturnRow? {
-    experience?.delayedReturns.first { $0.activityID == learnerState.activeActivityID }
-  }
-
-  var canPresentCurrentActivity: Bool {
-    guard
-      isCourseStarted,
-      launchState == .ready,
-      !isLocalDataResetRunning,
-      recoveryState == nil,
-      !isCourseStartRunning,
-      !isCourseReviewRunning,
-      experience != nil,
-      let activity = currentActivity
-    else {
-      return false
-    }
-
-    guard activity.kind == .delayedReturn else {
-      return true
-    }
-
-    guard let delayedReturn = currentDelayedReturn else {
-      return false
-    }
-
-    switch delayedReturn.status {
-    case .open, .due:
-      return true
-    case .scheduled, .expired, .completed:
-      return false
-    }
   }
 
   var canEnableReminders: Bool {
@@ -1183,19 +1070,12 @@ final class AppModel {
     )
   }
 
-  func choiceLabel(for choice: String) -> String {
-    UniversityStarterCourse.choiceLabel(for: choice)
-  }
-
   @discardableResult
   func createSemesterDesk(title: String) async -> Bool {
     guard
       launchState == .ready,
       semesterDesk == nil,
       !isSemesterDeskOperationRunning,
-      !isCourseStartRunning,
-      !isCourseReviewRunning,
-      !isActivitySubmissionRunning,
       !isReminderOperationRunning,
       !isLocalDataResetRunning,
       recoveryState == nil
@@ -1250,7 +1130,7 @@ final class AppModel {
     guard ownsStateMutation(mutationToken) else {
       return false
     }
-    reconcileReminders()
+    reconcileReminders(at: capturedNow)
     semesterNameDraft = ""
     localDataResetStatusMessage = nil
     semesterDeskStatusMessage = "Your Semester Desk is ready."
@@ -1279,9 +1159,6 @@ final class AppModel {
     guard
       launchState == .ready,
       !isSemesterDeskOperationRunning,
-      !isCourseStartRunning,
-      !isCourseReviewRunning,
-      !isActivitySubmissionRunning,
       !isReminderOperationRunning,
       !isLocalDataResetRunning,
       recoveryState == nil
@@ -1337,285 +1214,24 @@ final class AppModel {
     guard ownsStateMutation(mutationToken) else {
       return false
     }
-    reconcileReminders()
+    reconcileReminders(at: actionNow)
     semesterDeskStatusMessage = "Your Semester Desk is updated."
     return true
-  }
-
-  @discardableResult
-  func startUniversityCourse() async -> Bool {
-    guard
-      launchState == .ready,
-      !isCourseStartRunning,
-      !isCourseReviewRunning,
-      !isLocalDataResetRunning,
-      !isActivitySubmissionRunning,
-      !isSemesterDeskOperationRunning,
-      recoveryState == nil
-    else {
-      return false
-    }
-
-    let mutationToken = beginStateMutation()
-    isCourseStartRunning = true
-    defer {
-      if ownsStateMutation(mutationToken) {
-        isCourseStartRunning = false
-      }
-    }
-    cancelReminderOperationWithoutWaiting()
-
-    let candidate = envelope(
-      learnerState: learnerState,
-      isCourseStarted: true,
-      remindersEnabled: remindersEnabled
-    )
-    let didSave = await saveCandidate(candidate)
-    guard ownsStateMutation(mutationToken) else {
-      return false
-    }
-    guard didSave else {
-      courseStartStatusMessage = "FORGE could not start the local course."
-      return false
-    }
-
-    apply(candidate)
-    courseStartStatusMessage = "The local course is ready."
-    if let capturedNow = captureNow() {
-      refreshExperience(at: capturedNow)
-      scheduleNextTimeBoundary(after: capturedNow)
-      await syncSharedProjection(at: capturedNow)
-    }
-    guard ownsStateMutation(mutationToken) else {
-      return false
-    }
-    reconcileReminders()
-    return true
-  }
-
-  func reviewCourseSetup() async {
-    guard
-      launchState == .ready,
-      isCourseStarted,
-      !isCourseStartRunning,
-      !isCourseReviewRunning,
-      !isLocalDataResetRunning,
-      !isActivitySubmissionRunning,
-      !isSemesterDeskOperationRunning,
-      recoveryState == nil
-    else {
-      return
-    }
-    let mutationToken = beginStateMutation()
-    isCourseReviewRunning = true
-    cancelTimeBoundaryTask()
-    var shouldRestoreTimeBoundary = false
-    defer {
-      if ownsStateMutation(mutationToken) {
-        isCourseReviewRunning = false
-        if shouldRestoreTimeBoundary {
-          restoreTimeBoundaryAfterFailedCourseReview()
-        }
-      }
-    }
-
-    let candidate = envelope(
-      learnerState: learnerState,
-      isCourseStarted: false,
-      remindersEnabled: false
-    )
-    let didSave = await saveCandidate(candidate)
-    guard ownsStateMutation(mutationToken) else {
-      return
-    }
-    guard didSave else {
-      courseStartStatusMessage = "FORGE could not open course setup."
-      shouldRestoreTimeBoundary = true
-      return
-    }
-
-    cancelReminderOperationWithoutWaiting()
-    let didRequestReminderRemoval =
-      notificationCoordinator.removeKnownReminderImmediately()
-    discardAllActivityDrafts()
-    dismissActivity()
-    apply(candidate)
-    await syncSharedProjection(at: nil)
-    guard ownsStateMutation(mutationToken) else {
-      return
-    }
-    courseStartStatusMessage = nil
-    if !didRequestReminderRemoval {
-      reminderStatusMessage = "FORGE could not update the local reminder."
-    }
-  }
-
-  func presentActivity() {
-    presentActivityAfterRefreshingEligibility()
-  }
-
-  func dismissActivity() {
-    isActivityPresented = false
-  }
-
-  func updateCurrentActivityDraft(
-    selectedChoice: String?,
-    responseText: String
-  ) {
-    guard let activity = currentActivity else {
-      return
-    }
-
-    let validChoice = selectedChoice.flatMap { choice in
-      activity.choices.contains(choice) ? choice : nil
-    }
-    let draft = ActivityDraft(
-      selectedChoice: validChoice,
-      responseText: responseText
-    )
-
-    if draft.hasContent {
-      activityDrafts[activity.id] = draft
-    } else {
-      activityDrafts.removeValue(forKey: activity.id)
-    }
-  }
-
-  func discardCurrentActivityDraft() {
-    guard let activityID = currentActivity?.id else {
-      return
-    }
-
-    discardActivityDraft(for: activityID)
-  }
-
-  func submitCurrentActivity(
-    selectedChoice: String,
-    responseText: String
-  ) async -> ActivitySubmissionOutcome {
-    guard !isActivitySubmissionRunning, !isSemesterDeskOperationRunning else {
-      return activitySubmissionFailure()
-    }
-    guard let capturedNow = captureNow() else {
-      dismissActivity()
-      return activitySubmissionFailure()
-    }
-    refreshExperience(at: capturedNow)
-    scheduleNextTimeBoundary(after: capturedNow)
-    guard canPresentCurrentActivity else {
-      dismissActivity()
-      return activitySubmissionFailure()
-    }
-    let mutationToken = beginStateMutation()
-    isActivitySubmissionRunning = true
-    defer {
-      if ownsStateMutation(mutationToken) {
-        isActivitySubmissionRunning = false
-      }
-    }
-    cancelReminderOperationWithoutWaiting()
-    guard
-      learnerState.evidence.count
-        < UniversityLearningLimits.maximumEvidence
-    else {
-      let message =
-        "This device has reached the local evidence limit. Clear local data before you record another check."
-      activityStatusMessage = message
-      return .failed(message)
-    }
-    guard let activity = currentActivity else {
-      return activitySubmissionFailure()
-    }
-
-    let delayedReturnID: DelayedReturnID?
-    if activity.kind == .delayedReturn {
-      guard let delayedReturn = currentDelayedReturn else {
-        return activitySubmissionFailure()
-      }
-      delayedReturnID = delayedReturn.id
-    } else {
-      delayedReturnID = nil
-    }
-
-    do {
-      let evidenceID = try EvidenceID(evidenceIDGenerator())
-      let submission = try LearnerSubmission(
-        activityID: activity.id,
-        evidenceID: evidenceID,
-        selectedChoice: selectedChoice,
-        responseText: responseText,
-        delayedReturnID: delayedReturnID,
-        assistance: []
-      )
-      let transitionedState = try learningEngine.transition(
-        state: learnerState,
-        submission: submission,
-        now: capturedNow
-      )
-      guard let receipt = transitionedState.evidence.first(where: { $0.id == evidenceID }) else {
-        return activitySubmissionFailure()
-      }
-
-      let candidate = envelope(
-        learnerState: transitionedState,
-        isCourseStarted: isCourseStarted,
-        remindersEnabled: remindersEnabled
-      )
-      let didSave = await saveCandidate(candidate)
-      guard ownsStateMutation(mutationToken) else {
-        return staleActivitySubmissionFailure()
-      }
-      guard didSave else {
-        return activitySubmissionFailure()
-      }
-
-      discardActivityDraft(for: activity.id)
-      apply(candidate)
-      activityStatusMessage = "FORGE recorded the local activity."
-      refreshExperience(at: capturedNow)
-      scheduleNextTimeBoundary(after: capturedNow)
-      await syncSharedProjection(at: capturedNow)
-      guard ownsStateMutation(mutationToken) else {
-        return staleActivitySubmissionFailure()
-      }
-      reconcileReminders()
-      return .recorded(receipt.validatorResult)
-    } catch {
-      guard ownsStateMutation(mutationToken) else {
-        return staleActivitySubmissionFailure()
-      }
-      return activitySubmissionFailure()
-    }
-  }
-
-  func beginActivitySubmission(
-    selectedChoice: String,
-    responseText: String,
-    completion: @escaping @MainActor (ActivitySubmissionOutcome) -> Void
-  ) {
-    Task { @MainActor [weak self] in
-      guard let self else {
-        completion(
-          .failed("FORGE could not record this local activity.")
-        )
-        return
-      }
-      let outcome = await self.submitCurrentActivity(
-        selectedChoice: selectedChoice,
-        responseText: responseText
-      )
-      completion(outcome)
-    }
   }
 
   func setRemindersEnabled(_ isEnabled: Bool) {
     guard
       launchState == .ready,
       !isLocalDataResetRunning,
-      !isActivitySubmissionRunning,
       !isSemesterDeskOperationRunning,
+      semesterDesk != nil,
       recoveryState == nil
     else {
+      return
+    }
+
+    guard let capturedNow = captureSemesterDeskNow() else {
+      reminderStatusMessage = "FORGE could not update the local reminder."
       return
     }
 
@@ -1624,11 +1240,11 @@ final class AppModel {
         reminderStatusMessage = reminderBoundaryText
         return
       }
-      beginExplicitReminderEnable()
+      beginExplicitReminderEnable(at: capturedNow)
       return
     }
 
-    beginExplicitReminderDisable()
+    beginExplicitReminderDisable(at: capturedNow)
   }
 
   func clearLocalData() {
@@ -1652,23 +1268,10 @@ final class AppModel {
     privateStateSaveSequence = 0
     let resetEpoch = privateStateResetEpoch
     stateMutationGeneration &+= 1
-    isCourseStartRunning = false
-    isCourseReviewRunning = false
-    isActivitySubmissionRunning = false
     isSemesterDeskOperationRunning = false
-    courseStartStatusMessage = nil
-    activityStatusMessage = nil
-    semesterDeskStatusMessage = nil
-    semesterNameDraft = ""
     recoveryOrigin = nil
     isLocalDataResetRunning = true
     isRecoveryOperationRunning = true
-    discardAllActivityDrafts()
-    discardAllSemesterDeskStudyDrafts()
-    isActivityPresented = false
-    activeSemesterDeskSheet = nil
-    dismissProtectedStudy()
-    resetNavigation()
     let priorSharedProjectionOperation = cancelSharedProjectionOperation()
 
     let notificationCoordinator = notificationCoordinator
@@ -1689,7 +1292,7 @@ final class AppModel {
         return
       }
 
-      if privateResult.protectedDataUnavailable {
+      guard privateResult.isComplete else {
         if let priorSharedProjectionOperation {
           await priorSharedProjectionOperation.value
         }
@@ -1743,7 +1346,7 @@ final class AppModel {
       clearLocalData()
       return
     }
-    guard let capturedNow = captureNow() else {
+    guard let capturedNow = captureSemesterDeskNow() else {
       return
     }
     cancelReminderOperationWithoutWaiting()
@@ -1776,7 +1379,7 @@ final class AppModel {
       if didLoad {
         await self.consumePendingSystemDestinationNow()
         await self.consumePendingLaunchDestination()
-        await self.replayInitialActiveLifecycle()
+        await self.replayInitialActiveLifecycle(at: capturedNow)
       }
     }
   }
@@ -1890,7 +1493,7 @@ final class AppModel {
     }
   #endif
 
-  private func replayInitialActiveLifecycle() async {
+  private func replayInitialActiveLifecycle(at capturedNow: Date) async {
     guard latestScenePhase == .active else {
       cancelTimeBoundaryTask()
       return
@@ -1899,13 +1502,8 @@ final class AppModel {
       cancelTimeBoundaryTask()
       return
     }
-    guard let capturedNow = captureNow() else {
-      cancelTimeBoundaryTask()
-      return
-    }
-    refreshExperience(at: capturedNow)
     await syncSharedProjection(at: capturedNow)
-    reconcileReminders()
+    reconcileReminders(at: capturedNow)
     scheduleNextTimeBoundary(after: capturedNow)
   }
 
@@ -1924,12 +1522,11 @@ final class AppModel {
         cancelTimeBoundaryTask()
         return
       }
-      guard let capturedNow = captureNow() else {
+      guard let capturedNow = captureSemesterDeskNow() else {
         cancelTimeBoundaryTask()
         return
       }
 
-      refreshExperience(at: capturedNow)
       scheduleSharedProjection(at: capturedNow)
       scheduleNextTimeBoundary(after: capturedNow)
       let actions = AppLifecyclePolicy.actions(for: phase)
@@ -1947,7 +1544,7 @@ final class AppModel {
           case .consumePendingSystemDestination:
             await self.consumePendingSystemDestinationNow()
           case .reconcileReminders:
-            self.reconcileReminders()
+            self.reconcileReminders(at: capturedNow)
           case .persistCurrentState:
             break
           }
@@ -1972,7 +1569,7 @@ final class AppModel {
     guard
       latestScenePhase == .active,
       routesAreEligible,
-      let capturedNow = captureNow()
+      let capturedNow = captureSemesterDeskNow()
     else {
       return
     }
@@ -1982,9 +1579,6 @@ final class AppModel {
 
   func persistCurrentState() async {
     guard
-      !isCourseStartRunning,
-      !isCourseReviewRunning,
-      !isActivitySubmissionRunning,
       !isSemesterDeskOperationRunning,
       !isReminderOperationRunning,
       !isLocalDataResetRunning,
@@ -1993,10 +1587,21 @@ final class AppModel {
       return
     }
 
+    guard let currentEnvelope else {
+      return
+    }
     _ = await saveCandidate(currentEnvelope)
   }
 
   func reconcileReminders() {
+    guard let capturedNow = captureSemesterDeskNow() else {
+      reminderStatusMessage = "FORGE could not update the local reminder."
+      return
+    }
+    reconcileReminders(at: capturedNow)
+  }
+
+  private func reconcileReminders(at capturedNow: Date) {
     guard
       launchState == .ready,
       !isLocalDataResetRunning,
@@ -2005,26 +1610,21 @@ final class AppModel {
       return
     }
 
-    beginReminderReconciliation(isEnabled: remindersEnabled)
+    beginReminderReconciliation(
+      isEnabled: remindersEnabled,
+      at: capturedNow
+    )
   }
 
   static func preview() -> AppModel {
     do {
-      let catalog = try UniversityStarterCourse.catalog()
-      let engine = try UniversityLearningEngine(
-        catalog: catalog,
-        validators: ValidatorRegistry()
-      )
       return try AppModel(
-        catalog: catalog,
-        learningEngine: engine,
         privateStateStore: InMemoryPrivateStateStore(),
         sharedStore: nil,
         notificationCoordinator: NotificationCoordinator(),
         timeBoundarySleeper: SystemTimeBoundarySleeper(),
         now: Date.init,
         calendar: .autoupdatingCurrent,
-        evidenceIDGenerator: { "evidence.\(UUID().uuidString.lowercased())" },
         widgetReloader: {}
       )
     } catch {
@@ -2032,12 +1632,11 @@ final class AppModel {
     }
   }
 
-  private var currentEnvelope: PrivateStateEnvelope {
-    envelope(
-      learnerState: learnerState,
-      isCourseStarted: isCourseStarted,
-      remindersEnabled: remindersEnabled
-    )
+  private var currentEnvelope: PrivateStateEnvelope? {
+    guard let semesterDesk else {
+      return nil
+    }
+    return envelope(semesterDesk: semesterDesk)
   }
 
   private var routesAreEligible: Bool {
@@ -2068,28 +1667,13 @@ final class AppModel {
   }
 
   private func envelope(
-    learnerState: LocalLearnerState,
-    isCourseStarted: Bool,
-    remindersEnabled: Bool
+    semesterDesk: UniversitySemesterDeskState,
+    returnRemindersEnabled: Bool? = nil
   ) -> PrivateStateEnvelope {
     PrivateStateEnvelope(
       localProfileID: localProfileID,
-      learnerState: learnerState,
-      isCourseStarted: isCourseStarted,
-      remindersEnabled: remindersEnabled,
-      semesterDesk: semesterDesk
-    )
-  }
-
-  private func envelope(
-    semesterDesk: UniversitySemesterDeskState?
-  ) -> PrivateStateEnvelope {
-    PrivateStateEnvelope(
-      localProfileID: localProfileID,
-      learnerState: learnerState,
-      isCourseStarted: isCourseStarted,
-      remindersEnabled: remindersEnabled,
-      semesterDesk: semesterDesk
+      semesterDesk: semesterDesk,
+      returnRemindersEnabled: returnRemindersEnabled ?? remindersEnabled
     )
   }
 
@@ -2116,14 +1700,9 @@ final class AppModel {
           throw PrivateStateStoreError.unsupportedSchema(stored.schemaVersion)
         }
         try validateProfileAndSemesterDesk(in: stored)
-        try stored.learnerState.validate(against: catalog)
         apply(stored)
         lastPersistedEnvelope = stored
       } else {
-        let initialState = try UniversityStarterCourse.initialState(updatedAt: capturedNow)
-        try initialState.validate(against: catalog)
-        replaceLearnerState(with: initialState)
-        isCourseStarted = false
         remindersEnabled = false
         semesterDesk = nil
         stateRevision += 1
@@ -2135,7 +1714,6 @@ final class AppModel {
       localPersistenceStatusMessage = nil
       privateNamespaceSynchronizationPending = false
       localDataResetStatusMessage = nil
-      refreshExperience(at: capturedNow)
       _ = await purgeLegacySharedState()
       await syncSharedProjection(at: semesterDesk != nil ? capturedNow : nil)
       return true
@@ -2147,7 +1725,6 @@ final class AppModel {
       else {
         return false
       }
-      isActivityPresented = false
       if recoveryOrigin == nil {
         recoveryOrigin = .initialLoad
       }
@@ -2158,10 +1735,10 @@ final class AppModel {
         return false
       }
 
-      if Self.isLegacyStateError(error) {
+      if Self.isStalePrivateStateError(error) {
         recoveryState = .loadFailed(
           message:
-            "FORGE found older local course data. This version did not open, change, or replace that data. Clear local data to start again."
+            "FORGE found local data from an older version. This version did not open, change, or replace that data. Clear local data to start again."
         )
         return false
       }
@@ -2198,7 +1775,7 @@ final class AppModel {
     }
 
     guard privateStateSaveSequence < UInt64.max else {
-      recoveryOrigin = .saveFailure(baseline: currentEnvelope)
+      recoveryOrigin = .saveFailure(baseline: lastPersistedEnvelope)
       recoveryState = .saveFailed(
         message: "FORGE could not save local course data."
       )
@@ -2254,8 +1831,7 @@ final class AppModel {
       else {
         return false
       }
-      isActivityPresented = false
-      recoveryOrigin = .saveFailure(baseline: currentEnvelope)
+      recoveryOrigin = .saveFailure(baseline: lastPersistedEnvelope)
       if Self.isProtectedDataError(error) {
         recoveryState = .protectedDataUnavailable(
           message: "Local data is unavailable. Unlock the device, then retry."
@@ -2270,9 +1846,7 @@ final class AppModel {
 
   private func apply(_ envelope: PrivateStateEnvelope) {
     localProfileID = envelope.localProfileID
-    replaceLearnerState(with: envelope.learnerState)
-    isCourseStarted = envelope.isCourseStarted
-    remindersEnabled = envelope.remindersEnabled
+    remindersEnabled = envelope.returnRemindersEnabled
     semesterDesk = envelope.semesterDesk
     stateRevision += 1
   }
@@ -2287,32 +1861,14 @@ final class AppModel {
     else {
       throw PrivateStateStoreError.invalidProfile
     }
-    guard let desk = envelope.semesterDesk else {
-      return
-    }
-    guard desk.profileID == envelope.localProfileID else {
+    guard envelope.semesterDesk.profileID == envelope.localProfileID else {
       throw PrivateStateStoreError.profileMismatch
     }
-    if case .failure = UniversitySemesterDeskEngine.validate(state: desk) {
+    if case .failure = UniversitySemesterDeskEngine.validate(
+      state: envelope.semesterDesk
+    ) {
       throw PrivateStateStoreError.invalidSemesterDesk
     }
-  }
-
-  private func replaceLearnerState(with learnerState: LocalLearnerState) {
-    let previousActivityID = self.learnerState.activeActivityID
-    self.learnerState = learnerState
-
-    if previousActivityID != learnerState.activeActivityID {
-      discardActivityDraft(for: previousActivityID)
-    }
-  }
-
-  private func discardActivityDraft(for activityID: ActivityID) {
-    activityDrafts.removeValue(forKey: activityID)
-  }
-
-  private func discardAllActivityDrafts() {
-    activityDrafts.removeAll()
   }
 
   private func discardSemesterDeskStudyDraft(for planItemID: String) {
@@ -2323,29 +1879,9 @@ final class AppModel {
     semesterDeskStudyDrafts.removeAll()
   }
 
-  private func refreshExperience(at capturedNow: Date) {
-    do {
-      experience = try UniversityExperienceProjection.project(
-        catalog: catalog,
-        state: learnerState,
-        now: capturedNow,
-        calendar: calendar
-      )
-      experienceErrorMessage = nil
-    } catch {
-      experience = nil
-      experienceErrorMessage = "Current local activity data is unavailable."
-      isActivityPresented = false
-    }
-  }
-
   private func refreshForActiveTimeChange(at capturedNow: Date) {
-    refreshExperience(at: capturedNow)
-    if isActivityPresented, !canPresentCurrentActivity {
-      dismissActivity()
-    }
     scheduleSharedProjection(at: capturedNow)
-    reconcileReminders()
+    reconcileReminders(at: capturedNow)
     scheduleNextTimeBoundary(after: capturedNow)
   }
 
@@ -2388,7 +1924,6 @@ final class AppModel {
     guard
       latestScenePhase == .active,
       routesAreEligible,
-      !isCourseReviewRunning,
       let deadline = nextTimeBoundary(after: capturedNow)
     else {
       return
@@ -2416,18 +1951,6 @@ final class AppModel {
     }
   }
 
-  private func restoreTimeBoundaryAfterFailedCourseReview() {
-    guard
-      isCourseStarted,
-      routesAreEligible,
-      let capturedNow = captureNow()
-    else {
-      return
-    }
-
-    scheduleNextTimeBoundary(after: capturedNow)
-  }
-
   private func handleTimeBoundaryWake(_ token: TimeBoundaryToken) {
     guard
       token.generation == timeBoundaryGeneration,
@@ -2442,9 +1965,8 @@ final class AppModel {
 
     timeBoundaryTask = nil
     timeBoundaryDeadline = nil
-    guard let capturedNow = captureNow() else {
+    guard let capturedNow = captureSemesterDeskNow() else {
       cancelTimeBoundaryTask()
-      dismissActivity()
       return
     }
 
@@ -2464,33 +1986,6 @@ final class AppModel {
     timeBoundaryTask?.cancel()
     timeBoundaryTask = nil
     timeBoundaryDeadline = nil
-  }
-
-  private func presentActivityAfterRefreshingEligibility() {
-    guard let capturedNow = captureNow() else {
-      dismissActivity()
-      return
-    }
-
-    refreshExperience(at: capturedNow)
-    scheduleNextTimeBoundary(after: capturedNow)
-    guard canPresentCurrentActivity else {
-      dismissActivity()
-      return
-    }
-
-    activityStatusMessage = nil
-    isActivityPresented = true
-  }
-
-  private func captureNow() -> Date? {
-    let capturedNow = now()
-    guard capturedNow.timeIntervalSinceReferenceDate.isFinite else {
-      experienceErrorMessage = "Current local activity data is unavailable."
-      return nil
-    }
-
-    return capturedNow
   }
 
   private func captureSemesterDeskNow() -> Date? {
@@ -2514,22 +2009,7 @@ final class AppModel {
     )
   }
 
-  private func activitySubmissionFailure() -> ActivitySubmissionOutcome {
-    let message = "FORGE could not record this local activity."
-    activityStatusMessage = message
-    return .failed(message)
-  }
-
-  private func staleActivitySubmissionFailure() -> ActivitySubmissionOutcome {
-    .failed("FORGE could not record this local activity.")
-  }
-
-  private func beginExplicitReminderEnable() {
-    guard captureNow() != nil else {
-      reminderStatusMessage = "FORGE could not update the local reminder."
-      return
-    }
-
+  private func beginExplicitReminderEnable(at capturedNow: Date) {
     let delayedReturns = semesterDesk?.delayedReturns ?? []
     let (token, previousOperation) = beginReminderOperation()
     let coordinator = notificationCoordinator
@@ -2552,12 +2032,11 @@ final class AppModel {
       if self?.ownsReminderOperation(token) == true {
         self?.reminderAuthorizationStatus = authorizationStatus
       }
-      let completionNow = self?.captureNow()
       let requiresCleanup =
         await self?.completeExplicitReminderEnable(
           result,
           token: token,
-          now: completionNow
+          now: capturedNow
         ) ?? (result == .scheduled)
       if requiresCleanup {
         let didCleanUp = await coordinator.disableReminders()
@@ -2569,18 +2048,19 @@ final class AppModel {
     }
   }
 
-  private func beginExplicitReminderDisable() {
-    guard captureNow() != nil else {
+  private func beginExplicitReminderDisable(at capturedNow: Date) {
+    guard
+      let semesterDesk
+    else {
       reminderStatusMessage = "FORGE could not update the local reminder."
       return
     }
 
     let priorPreference = remindersEnabled
-    let delayedReturns = semesterDesk?.delayedReturns ?? []
+    let delayedReturns = semesterDesk.delayedReturns
     let candidate = envelope(
-      learnerState: learnerState,
-      isCourseStarted: isCourseStarted,
-      remindersEnabled: false
+      semesterDesk: semesterDesk,
+      returnRemindersEnabled: false
     )
     let (token, previousOperation) = beginReminderOperation()
     let coordinator = notificationCoordinator
@@ -2617,17 +2097,15 @@ final class AppModel {
         priorPreference: priorPreference,
         candidate: candidate,
         token: token,
-        now: self.captureNow()
+        now: capturedNow
       )
     }
   }
 
-  private func beginReminderReconciliation(isEnabled: Bool) {
-    guard captureNow() != nil else {
-      reminderStatusMessage = "FORGE could not update the local reminder."
-      return
-    }
-
+  private func beginReminderReconciliation(
+    isEnabled: Bool,
+    at capturedNow: Date
+  ) {
     let delayedReturns = semesterDesk?.delayedReturns ?? []
     let (token, previousOperation) = beginReminderOperation()
     let coordinator = notificationCoordinator
@@ -2651,12 +2129,11 @@ final class AppModel {
       if self?.ownsReminderOperation(token) == true {
         self?.reminderAuthorizationStatus = authorizationStatus
       }
-      let completionNow = self?.captureNow()
       let requiresCleanup =
         await self?.completeReminderReconciliation(
           result,
           token: token,
-          now: completionNow
+          now: capturedNow
         ) ?? (result == .scheduled)
       if requiresCleanup {
         let didCleanUp = await coordinator.disableReminders()
@@ -2780,16 +2257,14 @@ final class AppModel {
       apply(candidate)
       reminderStatusMessage = "The local reminder is removed."
       if let capturedNow {
-        refreshExperience(at: capturedNow)
         scheduleNextTimeBoundary(after: capturedNow)
         await syncSharedProjection(at: capturedNow)
       }
     case .scheduled, .cleanupFailed, .schedulingFailed:
-      if priorPreference {
+      if priorPreference, let semesterDesk {
         let rollback = envelope(
-          learnerState: learnerState,
-          isCourseStarted: isCourseStarted,
-          remindersEnabled: true
+          semesterDesk: semesterDesk,
+          returnRemindersEnabled: true
         )
         let didRestore = await saveCandidate(rollback)
         guard isReminderStateCurrent(token), didRestore else {
@@ -2845,10 +2320,13 @@ final class AppModel {
       return false
     }
 
+    guard let semesterDesk else {
+      finishReminderOperation(token)
+      return didSchedule
+    }
     let candidate = envelope(
-      learnerState: learnerState,
-      isCourseStarted: isCourseStarted,
-      remindersEnabled: preference
+      semesterDesk: semesterDesk,
+      returnRemindersEnabled: preference
     )
     guard await saveCandidate(candidate) else {
       finishReminderOperation(token)
@@ -2857,7 +2335,6 @@ final class AppModel {
 
     apply(candidate)
     reminderStatusMessage = statusMessage
-    refreshExperience(at: capturedNow)
     scheduleNextTimeBoundary(after: capturedNow)
     await syncSharedProjection(at: capturedNow)
     finishReminderOperation(token)
@@ -3071,7 +2548,6 @@ final class AppModel {
   }
 
   private func handleRootRoute(tab: AppTab, route: AppRoute?) {
-    dismissActivity()
     resetNavigation()
     selectedTab = tab
     if let route {
@@ -3112,41 +2588,32 @@ final class AppModel {
     privateStateStore: any PrivateStateStoring,
     resetEpoch: UInt64
   ) async -> PrivateResetResult {
-    var didFail = false
-    var privateStateWasRemoved = false
-    var namespaceSynchronizationUncertain = false
-
     do {
       let result = try await privateStateStore.clear(
         resetEpoch: resetEpoch
       )
       switch result {
       case .completed(let receipt):
-        privateStateWasRemoved = receipt.removedCurrentState
-        namespaceSynchronizationUncertain =
-          receipt.namespace == .changed(.synchronizationUncertain)
-        if !receipt.isComplete {
-          didFail = true
-        }
+        return PrivateResetResult(
+          isComplete: receipt.isComplete,
+          protectedDataUnavailable: false,
+          namespaceSynchronizationUncertain:
+            receipt.namespaceSynchronizationUncertain
+        )
       case .superseded:
-        didFail = true
+        return PrivateResetResult(
+          isComplete: false,
+          protectedDataUnavailable: false,
+          namespaceSynchronizationUncertain: false
+        )
       }
     } catch {
       return PrivateResetResult(
-        didFail: true,
+        isComplete: false,
         protectedDataUnavailable: Self.isProtectedDataError(error),
-        privateStateWasRemoved: false,
         namespaceSynchronizationUncertain: false
       )
     }
-
-    return PrivateResetResult(
-      didFail: didFail,
-      protectedDataUnavailable: false,
-      privateStateWasRemoved: privateStateWasRemoved,
-      namespaceSynchronizationUncertain:
-        namespaceSynchronizationUncertain
-    )
   }
 
   private static func clearExternalStateAfterPrivateReset(
@@ -3182,7 +2649,7 @@ final class AppModel {
     externalFailures: Set<ResetCleanupStage>
   ) -> ResetResult {
     var failedStages = externalFailures
-    if privateResult.didFail {
+    if !privateResult.isComplete {
       failedStages.insert(.privateState)
     }
     let orderedFailures: [ResetCleanupStage] = [
@@ -3196,8 +2663,7 @@ final class AppModel {
         stages: orderedFailures,
         protectedDataUnavailable:
           privateResult.protectedDataUnavailable,
-        privateStateWasRemoved:
-          privateResult.privateStateWasRemoved,
+        privateStateWasCleared: privateResult.isComplete,
         namespaceSynchronizationUncertain:
           privateResult.namespaceSynchronizationUncertain
       )
@@ -3230,10 +2696,10 @@ final class AppModel {
     case .failed(
       let failedStages,
       let protectedDataUnavailable,
-      let privateStateWasRemoved,
+      let privateStateWasCleared,
       let namespaceSynchronizationUncertain
     ):
-      if privateStateWasRemoved {
+      if privateStateWasCleared {
         guard resetCurrentStateAfterPrivateRemoval() else {
           return
         }
@@ -3259,52 +2725,30 @@ final class AppModel {
   }
 
   private func resetCurrentStateAfterPrivateRemoval() -> Bool {
-    guard let capturedNow = captureNow() else {
+    let replacementProfileID = localProfileIDGenerator()
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !replacementProfileID.isEmpty else {
       recoveryState = .resetFailed(
-        message: "FORGE could not reset local data. Failed step: new local course state."
+        message: "FORGE could not reset local data. Failed step: new local profile."
       )
       return false
     }
-    do {
-      let replacementProfileID = localProfileIDGenerator()
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-      guard !replacementProfileID.isEmpty else {
-        recoveryState = .resetFailed(
-          message: "FORGE could not reset local data. Failed step: new local profile."
-        )
-        return false
-      }
-      replaceLearnerState(
-        with: try UniversityStarterCourse.initialState(
-          updatedAt: capturedNow
-        )
-      )
-      localProfileID = replacementProfileID
-      semesterDesk = nil
-      isCourseStarted = false
-      remindersEnabled = false
-      semesterNameDraft = ""
-      activeSemesterDeskSheet = nil
-      dismissProtectedStudy()
-      discardAllSemesterDeskStudyDrafts()
-      lastPersistedEnvelope = nil
-      privateNamespaceSynchronizationPending = false
-      stateRevision += 1
-      resetNavigation()
-      selectedTab = .today
-      isActivityPresented = false
-      reminderStatusMessage = nil
-      activityStatusMessage = nil
-      courseStartStatusMessage = nil
-      semesterDeskStatusMessage = nil
-      refreshExperience(at: capturedNow)
-      return true
-    } catch {
-      recoveryState = .resetFailed(
-        message: "FORGE could not reset local data. Failed step: new local course state."
-      )
-      return false
-    }
+
+    localProfileID = replacementProfileID
+    semesterDesk = nil
+    remindersEnabled = false
+    semesterNameDraft = ""
+    activeSemesterDeskSheet = nil
+    dismissProtectedStudy()
+    discardAllSemesterDeskStudyDrafts()
+    lastPersistedEnvelope = nil
+    privateNamespaceSynchronizationPending = false
+    stateRevision += 1
+    resetNavigation()
+    selectedTab = .today
+    reminderStatusMessage = nil
+    semesterDeskStatusMessage = nil
+    return true
   }
 
   private static func isProtectedDataError(_ error: Error) -> Bool {
@@ -3315,12 +2759,14 @@ final class AppModel {
     return storeError == .protectedDataUnavailable
   }
 
-  private static func isLegacyStateError(_ error: Error) -> Bool {
+  private static func isStalePrivateStateError(_ error: Error) -> Bool {
     guard let storeError = error as? PrivateStateStoreError else {
       return false
     }
-
-    return storeError == .legacyStatePresent
+    if case .stalePrivateStatePresent = storeError {
+      return true
+    }
+    return false
   }
 }
 
@@ -3335,21 +2781,13 @@ enum AppComposition {
     }
   ) -> AppModel {
     do {
-      let catalog = try UniversityStarterCourse.catalog()
-      let learningEngine = try UniversityLearningEngine(
-        catalog: catalog,
-        validators: ValidatorRegistry()
-      )
       return try AppModel(
-        catalog: catalog,
-        learningEngine: learningEngine,
         privateStateStore: privateStateStore,
         sharedStore: try? ForgeSharedStateStore(),
         notificationCoordinator: NotificationCoordinator(now: now),
         timeBoundarySleeper: timeBoundarySleeper,
         now: now,
         calendar: .autoupdatingCurrent,
-        evidenceIDGenerator: { "evidence.\(UUID().uuidString.lowercased())" },
         widgetReloader: { WidgetCenter.shared.reloadAllTimelines() },
         launchPreparation: launchPreparation
       )
@@ -3404,10 +2842,12 @@ private actor InMemoryPrivateStateStore: PrivateStateStoring {
     envelope = nil
     return .completed(
       PrivateStateClearReceipt(
-        current: disposition,
-        v4: .alreadyAbsent,
-        v3: .alreadyAbsent,
-        v2: .alreadyAbsent,
+        files: [
+          PrivateStateRemovalRecord(
+            name: "semester-desk-private-state-v1.json",
+            disposition: disposition
+          )
+        ],
         stages: [],
         namespace:
           disposition == .removed
