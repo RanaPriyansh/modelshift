@@ -22,7 +22,6 @@ enum PrivateJSONPreflight {
     private enum ObjectKind {
       case unknown
       case envelope
-      case learnerState
       case semesterDesk
       case semesterDeskCourse
       case semesterDeskFact
@@ -37,13 +36,6 @@ enum PrivateJSONPreflight {
       case semesterDeskProof
       case semesterDeskDelayedReturn
       case semesterDeskProgressEvidence
-      case progress
-      case assistance
-      case evidence
-      case package
-      case limitation
-      case digest
-      case delayedReturn
 
       func expectation(for key: String) -> ValueExpectation {
         switch self {
@@ -51,35 +43,8 @@ enum PrivateJSONPreflight {
           .unknown
         case .envelope:
           switch key {
-          case "learnerState":
-            .object(.learnerState)
           case "semesterDesk":
             .object(.semesterDesk)
-          default:
-            .noArray
-          }
-        case .learnerState:
-          switch key {
-          case "progress":
-            .array(
-              maximumCount: UniversityLearningLimits.maximumProgress,
-              elementObject: .progress
-            )
-          case "assistance":
-            .array(
-              maximumCount: UniversityLearningLimits.maximumAssistance,
-              elementObject: .assistance
-            )
-          case "evidence":
-            .array(
-              maximumCount: UniversityLearningLimits.maximumEvidence,
-              elementObject: .evidence
-            )
-          case "delayedReturns":
-            .array(
-              maximumCount: UniversityLearningLimits.maximumReturns,
-              elementObject: .delayedReturn
-            )
           default:
             .noArray
           }
@@ -125,25 +90,6 @@ enum PrivateJSONPreflight {
           key == "decisions"
             ? .array(maximumCount: 2_048, elementObject: .semesterDeskRecoveryDecision)
             : .noArray
-        case .evidence:
-          switch key {
-          case "package":
-            .object(.package)
-          case "limitations":
-            .array(
-              maximumCount: UniversityLearningLimits.maximumLimitations,
-              elementObject: .limitation
-            )
-          case "assistanceIDs":
-            .array(
-              maximumCount: UniversityLearningLimits.maximumAssistance,
-              elementObject: nil
-            )
-          default:
-            .noArray
-          }
-        case .package:
-          key == "digest" ? .object(.digest) : .noArray
         case .semesterDeskFact,
           .semesterDeskCapacity,
           .semesterDeskCapacityDraft,
@@ -153,12 +99,7 @@ enum PrivateJSONPreflight {
           .semesterDeskStudySession,
           .semesterDeskProof,
           .semesterDeskDelayedReturn,
-          .semesterDeskProgressEvidence,
-          .progress,
-          .assistance,
-          .limitation,
-          .digest,
-          .delayedReturn:
+          .semesterDeskProgressEvidence:
           .noArray
         }
       }

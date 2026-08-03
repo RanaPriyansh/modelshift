@@ -14,48 +14,41 @@ import Foundation
   import UIKit
 #endif
 struct PrivateStateEnvelope: Codable, Equatable, Sendable {
-  static let currentSchemaVersion = 5
+  static let currentSchemaVersion = 1
   let schemaVersion: Int
   let localProfileID: String
-  let learnerState: LocalLearnerState
-  let isCourseStarted: Bool
-  let remindersEnabled: Bool
-  let semesterDesk: UniversitySemesterDeskState?
+  let semesterDesk: UniversitySemesterDeskState
+  let returnRemindersEnabled: Bool
 
   private enum CodingKeys: String, CodingKey {
     case schemaVersion
     case localProfileID
-    case learnerState
-    case isCourseStarted
-    case remindersEnabled
     case semesterDesk
+    case returnRemindersEnabled
   }
 
   init(
     localProfileID: String = "profile.local.default",
-    learnerState: LocalLearnerState,
-    isCourseStarted: Bool,
-    remindersEnabled: Bool,
-    semesterDesk: UniversitySemesterDeskState? = nil
+    semesterDesk: UniversitySemesterDeskState,
+    returnRemindersEnabled: Bool
   ) {
     self.schemaVersion = Self.currentSchemaVersion
     self.localProfileID = localProfileID
-    self.learnerState = learnerState
-    self.isCourseStarted = isCourseStarted
-    self.remindersEnabled = remindersEnabled
     self.semesterDesk = semesterDesk
+    self.returnRemindersEnabled = returnRemindersEnabled
   }
 
   init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
     localProfileID = try container.decode(String.self, forKey: .localProfileID)
-    learnerState = try container.decode(LocalLearnerState.self, forKey: .learnerState)
-    isCourseStarted = try container.decode(Bool.self, forKey: .isCourseStarted)
-    remindersEnabled = try container.decode(Bool.self, forKey: .remindersEnabled)
-    semesterDesk = try container.decodeIfPresent(
+    semesterDesk = try container.decode(
       UniversitySemesterDeskState.self,
       forKey: .semesterDesk
+    )
+    returnRemindersEnabled = try container.decode(
+      Bool.self,
+      forKey: .returnRemindersEnabled
     )
   }
 
@@ -63,14 +56,11 @@ struct PrivateStateEnvelope: Codable, Equatable, Sendable {
     var container = encoder.container(keyedBy: CodingKeys.self)
     try container.encode(schemaVersion, forKey: .schemaVersion)
     try container.encode(localProfileID, forKey: .localProfileID)
-    try container.encode(learnerState, forKey: .learnerState)
-    try container.encode(isCourseStarted, forKey: .isCourseStarted)
-    try container.encode(remindersEnabled, forKey: .remindersEnabled)
-    if let semesterDesk {
-      try container.encode(semesterDesk, forKey: .semesterDesk)
-    } else {
-      try container.encodeNil(forKey: .semesterDesk)
-    }
+    try container.encode(semesterDesk, forKey: .semesterDesk)
+    try container.encode(
+      returnRemindersEnabled,
+      forKey: .returnRemindersEnabled
+    )
   }
 }
 protocol ProtectedDataAvailability: Sendable {
@@ -112,29 +102,45 @@ enum PrivateStateRemovalDisposition: Equatable, Sendable {
   case retained
 }
 
+struct PrivateStateRemovalRecord: Equatable, Sendable {
+  let name: String
+  let disposition: PrivateStateRemovalDisposition
+}
+
 enum PrivateStateClearNamespaceResult: Equatable, Sendable {
   case notRequired
   case changed(PrivateStateNamespaceSynchronization)
 }
 
 struct PrivateStateClearReceipt: Equatable, Sendable {
-  let current: PrivateStateRemovalDisposition
-  let v4: PrivateStateRemovalDisposition
-  let v3: PrivateStateRemovalDisposition
-  let v2: PrivateStateRemovalDisposition
-  let stages: [PrivateStateRemovalDisposition]
+  let files: [PrivateStateRemovalRecord]
+  let stages: [PrivateStateRemovalRecord]
   let namespace: PrivateStateClearNamespaceResult
 
   var removedCurrentState: Bool {
-    current == .alreadyAbsent || current == .removed
+    guard
+      let current = files.first(where: {
+        $0.name == PrivateStateStore.stateFileName
+      })
+    else {
+      return false
+    }
+    return current.disposition == .alreadyAbsent
+      || current.disposition == .removed
   }
 
   var isComplete: Bool {
     removedCurrentState
-      && (v4 == .alreadyAbsent || v4 == .removed)
-      && (v3 == .alreadyAbsent || v3 == .removed)
-      && (v2 == .alreadyAbsent || v2 == .removed)
-      && stages.allSatisfy { $0 == .alreadyAbsent || $0 == .removed }
+      && files.allSatisfy { record in
+        record.disposition == .alreadyAbsent || record.disposition == .removed
+      }
+      && stages.allSatisfy { record in
+        record.disposition == .alreadyAbsent || record.disposition == .removed
+      }
+  }
+
+  var namespaceSynchronizationUncertain: Bool {
+    namespace == .changed(.synchronizationUncertain)
   }
 }
 
@@ -204,7 +210,7 @@ private struct NoPrivateStateStoreFailure:
 enum PrivateStateStoreError: Error, Equatable, Sendable {
   case unavailableDirectory
   case unsafePath
-  case legacyStatePresent
+  case stalePrivateStatePresent(entries: [String])
   case protectedDataUnavailable
   case oversizedData
   case corruptData
@@ -215,23 +221,27 @@ enum PrivateStateStoreError: Error, Equatable, Sendable {
   case writeVerification
   case stageCleanupUncertain
   case namespaceLockUnavailable
-  case clearVerification(
-    currentFileFailed: Bool,
-    legacyFileFailed: Bool
-  )
+  case clearVerification(receipt: PrivateStateClearReceipt)
 }
 actor PrivateStateStore: PrivateStateStoring {
   static let maximumDataByteCount = 1_048_576
   static let maximumJSONNestingDepth = 64
   private static let stateDirectoryName = "FORGE"
-  private static let stateFileName = "private-state-v5.json"
+  static let stateFileName = "semester-desk-private-state-v1.json"
+  static let v5StateFileName = "private-state-v5.json"
   static let v4StateFileName = "private-state-v4.json"
   static let v3StateFileName = "private-state-v3.json"
   static let v2StateFileName = "private-state-v2.json"
   static var legacyStateFileNames: [String] {
-    [Self.v4StateFileName, Self.v3StateFileName, Self.v2StateFileName]
+    [
+      Self.v5StateFileName,
+      Self.v4StateFileName,
+      Self.v3StateFileName,
+      Self.v2StateFileName,
+    ]
   }
-  static let stageFileNamePrefix = ".private-state-v5.json.stage-"
+  static let stageFileNamePrefix = ".semester-desk-private-state-v1.json.stage-"
+  static let v5StageFileNamePrefix = ".private-state-v5.json.stage-"
   static let v4StageFileNamePrefix = ".private-state-v4.json.stage-"
   static let v3StageFileNamePrefix = ".private-state-v3.json.stage-"
   static let v2StageFileNamePrefix = ".private-state-v2.json.stage-"
@@ -240,6 +250,7 @@ actor PrivateStateStore: PrivateStateStoring {
       Self.v4StageFileNamePrefix,
       Self.v3StageFileNamePrefix,
       Self.v2StageFileNamePrefix,
+      Self.v5StageFileNamePrefix,
     ]
   }
   private static var recognizedStageFileNamePrefixes: [String] {
@@ -466,10 +477,7 @@ actor PrivateStateStore: PrivateStateStoring {
       self.pendingConvenienceClearEpoch = nil
       let latestEpoch = max(convenienceResetEpoch, latestResetEpoch)
       guard latestEpoch < UInt64.max else {
-        throw PrivateStateStoreError.clearVerification(
-          currentFileFailed: true,
-          legacyFileFailed: true
-        )
+        throw PrivateStateStoreError.writeVerification
       }
       resetEpoch = latestEpoch + 1
       pendingConvenienceClearEpoch = resetEpoch
@@ -552,13 +560,9 @@ actor PrivateStateStore: PrivateStateStoring {
       at: fileURL.deletingLastPathComponent()
     ) {
       let fileName = try fileName(for: fileURL)
-      let currentStages = try preflightLoadOrSaveNamespace(
+      try preflightNoStalePrivateState(
         in: parentDirectory,
         currentFileName: fileName
-      )
-      try purgePreflightedStages(
-        currentStages,
-        in: parentDirectory
       )
       guard
         let entry = try entryMetadata(
@@ -581,18 +585,10 @@ actor PrivateStateStore: PrivateStateStoring {
         named: fileName,
         expectedIdentity: entry.identity
       )
-      try preflightNoLegacyState(
+      try preflightNoStalePrivateState(
         in: parentDirectory,
         currentFileName: fileName
       )
-      guard
-        try preflightStages(
-          in: parentDirectory,
-          matching: [Self.stageFileNamePrefix]
-        ).isEmpty
-      else {
-        throw PrivateStateStoreError.unsafePath
-      }
       return state
     }
   }
@@ -636,13 +632,9 @@ actor PrivateStateStore: PrivateStateStoring {
       in: parentDirectory,
       at: fileURL.deletingLastPathComponent()
     ) {
-      let currentStages = try preflightLoadOrSaveNamespace(
+      try preflightNoStalePrivateState(
         in: parentDirectory,
         currentFileName: fileName
-      )
-      try purgePreflightedStages(
-        currentStages,
-        in: parentDirectory
       )
       let existingState = try validatedExistingState(
         in: parentDirectory,
@@ -682,12 +674,6 @@ actor PrivateStateStore: PrivateStateStoring {
           guard try decode(stagedData) == state else {
             throw PrivateStateStoreError.writeVerification
           }
-        },
-        verifyBeforeInstallation: {
-          try self.preflightNoLegacyState(
-            in: parentDirectory,
-            currentFileName: fileName
-          )
         }
       )
       return .installed(namespace: namespace)
@@ -718,13 +704,9 @@ actor PrivateStateStore: PrivateStateStoring {
         in: parentDirectory,
         at: fileURL.deletingLastPathComponent()
       ) {
-        let currentStages = try preflightLoadOrSaveNamespace(
+        try preflightNoStalePrivateState(
           in: parentDirectory,
           currentFileName: fileName
-        )
-        try purgePreflightedStages(
-          currentStages,
-          in: parentDirectory
         )
         let existingState = try validatedExistingState(
           in: parentDirectory,
@@ -754,12 +736,6 @@ actor PrivateStateStore: PrivateStateStoring {
             guard stagedData == invalidJSONData else {
               throw PrivateStateStoreError.writeVerification
             }
-          },
-          verifyBeforeInstallation: {
-            try self.preflightNoLegacyState(
-              in: parentDirectory,
-              currentFileName: fileName
-            )
           }
         )
         guard
@@ -821,14 +797,7 @@ actor PrivateStateStore: PrivateStateStoring {
         createIfMissing: false
       )
     else {
-      return PrivateStateClearReceipt(
-        current: .alreadyAbsent,
-        v4: .alreadyAbsent,
-        v3: .alreadyAbsent,
-        v2: .alreadyAbsent,
-        stages: [],
-        namespace: .notRequired
-      )
+      return emptyClearReceipt(currentFileName: try fileName(for: fileURL))
     }
     defer { closeDescriptor(parentDirectory) }
     return try withNamespaceLock(
@@ -847,202 +816,145 @@ actor PrivateStateStore: PrivateStateStoring {
     fileURL: URL
   ) throws -> PrivateStateClearReceipt {
     let fileName = try fileName(for: fileURL)
-    let currentEntry = try preflightClearEntry(
-      in: parentDirectory,
-      named: fileName
-    )
-    let v4Entry: FileMetadata?
-    if fileName == Self.v4StateFileName {
-      v4Entry = nil
-    } else {
-      v4Entry = try preflightClearEntry(
-        in: parentDirectory,
-        named: Self.v4StateFileName
-      )
+    let fileNames = recognizedStateFileNames(currentFileName: fileName)
+    let initialFileEntries = try fileNames.map { name in
+      (name, try preflightClearEntry(in: parentDirectory, named: name))
     }
-    let v3Entry: FileMetadata?
-    if fileName == Self.v3StateFileName {
-      v3Entry = nil
-    } else {
-      v3Entry = try preflightClearEntry(
-        in: parentDirectory,
-        named: Self.v3StateFileName
-      )
-    }
-    let v2Entry: FileMetadata?
-    if fileName == Self.v2StateFileName {
-      v2Entry = nil
-    } else {
-      v2Entry = try preflightClearEntry(
-        in: parentDirectory,
-        named: Self.v2StateFileName
-      )
-    }
-    let stageEntries = try preflightStages(
+    let initialStageEntries = try preflightStages(
       in: parentDirectory,
       matching: Self.recognizedStageFileNamePrefixes
     )
 
-    let current = removePreflightedEntry(
-      currentEntry,
-      in: parentDirectory,
-      named: fileName
+    var fileDispositions: [String: PrivateStateRemovalDisposition] = Dictionary(
+      uniqueKeysWithValues: initialFileEntries.map { name, metadata in
+        (
+          name,
+          metadata == nil
+            ? PrivateStateRemovalDisposition.alreadyAbsent
+            : PrivateStateRemovalDisposition.retained
+        )
+      }
     )
-    let v4 = removePreflightedEntry(
-      v4Entry,
-      in: parentDirectory,
-      named: Self.v4StateFileName
-    )
-    let v3 = removePreflightedEntry(
-      v3Entry,
-      in: parentDirectory,
-      named: Self.v3StateFileName
-    )
-    let v2 = removePreflightedEntry(
-      v2Entry,
-      in: parentDirectory,
-      named: Self.v2StateFileName
-    )
-    let stages = stageEntries.map { entry in
-      removePreflightedEntry(
+    var stageDispositions = [String: PrivateStateRemovalDisposition]()
+
+    for (name, metadata) in initialFileEntries {
+      fileDispositions[name] = removePreflightedEntry(
+        metadata,
+        in: parentDirectory,
+        named: name
+      )
+    }
+    for entry in initialStageEntries {
+      stageDispositions[entry.name] = removePreflightedEntry(
         entry.metadata,
         in: parentDirectory,
         named: entry.name
       )
     }
-    try failIfInjected(at: .clearFinalVerification)
+
+    do {
+      try failIfInjected(at: .clearFinalVerification)
+    } catch {
+      throw PrivateStateStoreError.clearVerification(
+        receipt: makeClearReceipt(
+          fileDispositions: fileDispositions,
+          stageDispositions: stageDispositions,
+          namespace: .notRequired
+        )
+      )
+    }
+
+    let lateFileEntries = try fileNames.map { name in
+      (name, try preflightClearEntry(in: parentDirectory, named: name))
+    }
+    for (name, metadata) in lateFileEntries where metadata != nil {
+      fileDispositions[name] = removePreflightedEntry(
+        metadata,
+        in: parentDirectory,
+        named: name
+      )
+    }
     let lateStageEntries = try preflightStages(
       in: parentDirectory,
       matching: Self.recognizedStageFileNamePrefixes
     )
-    let lateStages = lateStageEntries.map { entry in
-      removePreflightedEntry(
+    for entry in lateStageEntries {
+      stageDispositions[entry.name] = removePreflightedEntry(
         entry.metadata,
         in: parentDirectory,
         named: entry.name
       )
     }
-    let allStages = stages + lateStages
 
-    let finalCurrentEntry = try preflightClearEntry(
-      in: parentDirectory,
-      named: fileName
-    )
-    let finalV4Entry =
-      fileName == Self.v4StateFileName
-      ? nil
-      : try preflightClearEntry(
-        in: parentDirectory,
-        named: Self.v4StateFileName
-      )
-    let finalV3Entry =
-      fileName == Self.v3StateFileName
-      ? nil
-      : try preflightClearEntry(
-        in: parentDirectory,
-        named: Self.v3StateFileName
-      )
-    let finalV2Entry =
-      fileName == Self.v2StateFileName
-      ? nil
-      : try preflightClearEntry(
-        in: parentDirectory,
-        named: Self.v2StateFileName
-      )
+    let didChangeNamespace =
+      fileDispositions.values.contains(PrivateStateRemovalDisposition.removed)
+      || stageDispositions.values.contains(PrivateStateRemovalDisposition.removed)
+    let namespace: PrivateStateClearNamespaceResult =
+      didChangeNamespace
+      ? .changed(synchronizeNamespace(parentDirectory))
+      : .notRequired
+
+    let finalFileEntries = try fileNames.map { name in
+      (name, try preflightClearEntry(in: parentDirectory, named: name))
+    }
+    for (name, metadata) in finalFileEntries where metadata != nil {
+      fileDispositions[name] = PrivateStateRemovalDisposition.retained
+    }
     let finalStageEntries = try preflightStages(
       in: parentDirectory,
       matching: Self.recognizedStageFileNamePrefixes
     )
-    guard
-      current != .retained,
-      v4 != .retained,
-      v3 != .retained,
-      v2 != .retained,
-      allStages.allSatisfy({ $0 != .retained }),
-      finalCurrentEntry == nil,
-      finalV4Entry == nil,
-      finalV3Entry == nil,
-      finalV2Entry == nil,
-      finalStageEntries.isEmpty
-    else {
-      throw PrivateStateStoreError.clearVerification(
-        currentFileFailed: current == .retained || finalCurrentEntry != nil,
-        legacyFileFailed: v4 == .retained || v3 == .retained || v2 == .retained
-          || allStages.contains(.retained) || finalV3Entry != nil
-          || finalV4Entry != nil || finalV2Entry != nil || !finalStageEntries.isEmpty
-      )
+    for entry in finalStageEntries {
+      stageDispositions[entry.name] = PrivateStateRemovalDisposition.retained
     }
 
-    let didChangeNamespace =
-      current == .removed
-      || v4 == .removed
-      || v3 == .removed
-      || v2 == .removed
-      || allStages.contains(.removed)
-    let namespace: PrivateStateClearNamespaceResult
-    if didChangeNamespace {
-      namespace = .changed(synchronizeNamespace(parentDirectory))
-    } else {
-      namespace = .notRequired
+    let receipt = makeClearReceipt(
+      fileDispositions: fileDispositions,
+      stageDispositions: stageDispositions,
+      namespace: namespace
+    )
+    guard receipt.isComplete else {
+      throw PrivateStateStoreError.clearVerification(receipt: receipt)
     }
-    let currentEntryIsAbsent =
-      try preflightClearEntry(
-        in: parentDirectory,
-        named: fileName
-      ) == nil
-    let v4EntryIsAbsent: Bool
-    if fileName == Self.v4StateFileName {
-      v4EntryIsAbsent = true
-    } else {
-      v4EntryIsAbsent =
-        try preflightClearEntry(
-          in: parentDirectory,
-          named: Self.v4StateFileName
-        ) == nil
-    }
-    let v3EntryIsAbsent: Bool
-    if fileName == Self.v3StateFileName {
-      v3EntryIsAbsent = true
-    } else {
-      v3EntryIsAbsent =
-        try preflightClearEntry(
-          in: parentDirectory,
-          named: Self.v3StateFileName
-        ) == nil
-    }
-    let v2EntryIsAbsent: Bool
-    if fileName == Self.v2StateFileName {
-      v2EntryIsAbsent = true
-    } else {
-      v2EntryIsAbsent =
-        try preflightClearEntry(
-          in: parentDirectory,
-          named: Self.v2StateFileName
-        ) == nil
-    }
-    let stageEntriesAreAbsent =
-      try preflightStages(
-        in: parentDirectory,
-        matching: Self.recognizedStageFileNamePrefixes
-      ).isEmpty
-    guard
-      currentEntryIsAbsent,
-      v4EntryIsAbsent,
-      v3EntryIsAbsent,
-      v2EntryIsAbsent,
-      stageEntriesAreAbsent
-    else {
-      throw PrivateStateStoreError.clearVerification(
-        currentFileFailed: true,
-        legacyFileFailed: true
-      )
-    }
-    return PrivateStateClearReceipt(
-      current: current,
-      v4: v4,
-      v3: v3,
-      v2: v2,
-      stages: allStages,
+    return receipt
+  }
+
+  private func recognizedStateFileNames(
+    currentFileName: String
+  ) -> [String] {
+    Array(Set([currentFileName] + Self.legacyStateFileNames)).sorted()
+  }
+
+  private func emptyClearReceipt(
+    currentFileName: String
+  ) -> PrivateStateClearReceipt {
+    PrivateStateClearReceipt(
+      files: recognizedStateFileNames(currentFileName: currentFileName).map {
+        PrivateStateRemovalRecord(name: $0, disposition: .alreadyAbsent)
+      },
+      stages: [],
+      namespace: .notRequired
+    )
+  }
+
+  private func makeClearReceipt(
+    fileDispositions: [String: PrivateStateRemovalDisposition],
+    stageDispositions: [String: PrivateStateRemovalDisposition],
+    namespace: PrivateStateClearNamespaceResult
+  ) -> PrivateStateClearReceipt {
+    PrivateStateClearReceipt(
+      files: fileDispositions.keys.sorted().map { name in
+        PrivateStateRemovalRecord(
+          name: name,
+          disposition: fileDispositions[name] ?? .retained
+        )
+      },
+      stages: stageDispositions.keys.sorted().map { name in
+        PrivateStateRemovalRecord(
+          name: name,
+          disposition: stageDispositions[name] ?? .retained
+        )
+      },
       namespace: namespace
     )
   }
@@ -1097,54 +1009,40 @@ actor PrivateStateStore: PrivateStateStoring {
     }
     return fileName
   }
-  private func legacyStateFileNames(excluding currentFileName: String) -> [String] {
-    Self.legacyStateFileNames.filter { $0 != currentFileName }
+  private func staleStateFileNames(
+    excluding currentFileName: String
+  ) -> [String] {
+    Self.legacyStateFileNames
+      .filter { $0 != currentFileName }
+      .sorted()
   }
-  private func preflightLoadOrSaveNamespace(
+
+  private func preflightNoStalePrivateState(
     in parentDirectory: Int32,
-    currentFileName: String
-  ) throws -> [NamedEntry] {
+    currentFileName: String,
+    allowingStageNamed allowedStageName: String? = nil
+  ) throws {
     _ = try preflightClearEntry(
       in: parentDirectory,
       named: currentFileName
     )
-    let legacyFileEntries = try legacyStateFileNames(
+    let staleFileNames = try staleStateFileNames(
       excluding: currentFileName
-    ).map {
-      try preflightClearEntry(in: parentDirectory, named: $0)
+    ).compactMap { name in
+      try preflightClearEntry(in: parentDirectory, named: name) == nil
+        ? nil
+        : name
     }
-    let stages = try preflightStages(
+    let staleStageNames = try preflightStages(
       in: parentDirectory,
       matching: Self.recognizedStageFileNamePrefixes
     )
-    let currentStages = stages.filter {
-      $0.name.hasPrefix(Self.stageFileNamePrefix)
-    }
-    let legacyStages = stages.filter { stage in
-      Self.legacyStageFileNamePrefixes.contains { prefix in
-        stage.name.hasPrefix(prefix)
-      }
-    }
-    guard legacyFileEntries.allSatisfy({ $0 == nil }), legacyStages.isEmpty else {
-      throw PrivateStateStoreError.legacyStatePresent
-    }
-    return currentStages
-  }
-  private func preflightNoLegacyState(
-    in parentDirectory: Int32,
-    currentFileName: String
-  ) throws {
-    let legacyFileEntries = try legacyStateFileNames(
-      excluding: currentFileName
-    ).map {
-      try preflightClearEntry(in: parentDirectory, named: $0)
-    }
-    let legacyStages = try preflightStages(
-      in: parentDirectory,
-      matching: Self.legacyStageFileNamePrefixes
-    )
-    guard legacyFileEntries.allSatisfy({ $0 == nil }), legacyStages.isEmpty else {
-      throw PrivateStateStoreError.legacyStatePresent
+    .map(\.name)
+    .filter { $0 != allowedStageName }
+    .sorted()
+    let entries = (staleFileNames + staleStageNames).sorted()
+    guard entries.isEmpty else {
+      throw PrivateStateStoreError.stalePrivateStatePresent(entries: entries)
     }
   }
   private func prepareParentDirectory(for fileURL: URL) throws -> Int32 {
@@ -1560,9 +1458,7 @@ actor PrivateStateStore: PrivateStateStoring {
     guard !state.localProfileID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
       throw PrivateStateStoreError.invalidProfile
     }
-    guard let semesterDesk = state.semesterDesk else {
-      return
-    }
+    let semesterDesk = state.semesterDesk
     guard semesterDesk.profileID == state.localProfileID else {
       throw PrivateStateStoreError.profileMismatch
     }
@@ -1681,8 +1577,7 @@ actor PrivateStateStore: PrivateStateStoring {
     parentURL: URL,
     replacing fileName: String,
     expectedExistingState: ValidatedExistingState?,
-    verifyStagedData: (Data) throws -> Void,
-    verifyBeforeInstallation: () throws -> Void
+    verifyStagedData: (Data) throws -> Void
   ) throws -> PrivateStateNamespaceSynchronization {
     try requireProtectedData()
     let expectedExistingIdentity = expectedExistingState?.metadata.identity
@@ -1750,7 +1645,21 @@ actor PrivateStateStore: PrivateStateStoring {
         finalStagedData,
         verification: verifyStagedData
       )
-      try verifyBeforeInstallation()
+      try preflightNoStalePrivateState(
+        in: parentDirectory,
+        currentFileName: fileName,
+        allowingStageNamed: stage.name
+      )
+      try verifyExpectedEntry(
+        in: parentDirectory,
+        named: fileName,
+        expectedIdentity: expectedExistingIdentity
+      )
+      try verifyStage(
+        named: stage.name,
+        in: parentDirectory,
+        expectedIdentity: stage.identity
+      )
       try requireProtectedData()
       let installation = try installStage(
         stage,
@@ -1766,8 +1675,7 @@ actor PrivateStateStore: PrivateStateStoring {
           installation: installation,
           in: parentDirectory,
           replacing: fileName,
-          verifyStagedData: verifyStagedData,
-          verifyNamespace: verifyBeforeInstallation
+          verifyStagedData: verifyStagedData
         )
       } catch {
         do {
@@ -1819,6 +1727,10 @@ actor PrivateStateStore: PrivateStateStoring {
       else {
         throw PrivateStateStoreError.stageCleanupUncertain
       }
+      try preflightNoStalePrivateState(
+        in: parentDirectory,
+        currentFileName: fileName
+      )
       closeDescriptor(stageDescriptor)
       return synchronizeNamespace(parentDirectory)
     } catch let error as PrivateStateStoreError {
@@ -1913,8 +1825,7 @@ actor PrivateStateStore: PrivateStateStoring {
     installation: StageInstallation,
     in parentDirectory: Int32,
     replacing fileName: String,
-    verifyStagedData: (Data) throws -> Void,
-    verifyNamespace: () throws -> Void
+    verifyStagedData: (Data) throws -> Void
   ) throws {
     try verifyExpectedEntry(
       in: parentDirectory,
@@ -1932,7 +1843,6 @@ actor PrivateStateStore: PrivateStateStoring {
       installedData,
       verification: verifyStagedData
     )
-    try verifyNamespace()
     let currentStages = try preflightStages(
       in: parentDirectory,
       matching: [Self.stageFileNamePrefix]
@@ -2205,31 +2115,6 @@ actor PrivateStateStore: PrivateStateStoring {
       }
   }
 
-  private func purgePreflightedStages(
-    _ stages: [NamedEntry],
-    in parentDirectory: Int32
-  ) throws {
-    guard !stages.isEmpty else {
-      return
-    }
-    let dispositions = stages.map { entry in
-      removePreflightedEntry(
-        entry.metadata,
-        in: parentDirectory,
-        named: entry.name
-      )
-    }
-    guard dispositions.allSatisfy({ $0 == .removed }) else {
-      throw PrivateStateStoreError.clearVerification(
-        currentFileFailed: false,
-        legacyFileFailed: true
-      )
-    }
-    guard synchronizeNamespace(parentDirectory) == .synchronized else {
-      throw PrivateStateStoreError.writeVerification
-    }
-  }
-
   private func directoryEntryNames(
     in parentDirectory: Int32
   ) throws -> [String] {
@@ -2306,10 +2191,7 @@ actor PrivateStateStore: PrivateStateStoring {
         in: parentDirectory,
         named: fileName,
         expectedIdentity: entry.identity,
-        failure: .clearVerification(
-          currentFileFailed: false,
-          legacyFileFailed: false
-        )
+        failure: .writeVerification
       )
       guard try entryMetadata(in: parentDirectory, named: fileName) == nil else {
         return .retained
