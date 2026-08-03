@@ -1,6 +1,6 @@
 # FORGE Master Completion Ledger
 
-Updated: 2026-08-03 06:33 IST
+Updated: 2026-08-03 06:56 IST
 
 This ledger is the sole completion source for the complete FORGE product stack.
 
@@ -44,13 +44,15 @@ Milestone completion does not complete the product task.
 | Web release-hardening checkpoint | `305823fb56df83b9b24cc10ff2af4c5cfe6af43f` | Bounded local references, safe recovery, policy routing, and release budgets |
 | Web exact-SHA release checkpoint | `6f12ad4e73ac7665ee5d24e8d1c58c9dcbe2d5b5` | Skip navigation preserves active work; all clean production gates pass |
 | Previous root branch | `agent/forge-local-refoundation-snapshot` at `cd84e20f6f78d68a430666c185b00efa99c49a87` | Preserve, do not use as base |
-| iOS source lane | `agent/forge-ios-foundation-20260801` at committed `27d807ef6a23eb54b6e758b26de0fd7a66116855` and tree `d67792e166fe85c084987ac95a588b09492afe4e` | Semester Desk v2 private state, system integration, production boundaries, export, and application-test integration are complete |
+| iOS source lane | `agent/forge-ios-foundation-20260801` at committed `ee25c94d5ccb4c6e055f8f28a07144f830739a79` and tree `f4827c2711f359bde56a8f909db9416f4af93e94` | Semester Desk v2 private state, system integration, production boundaries, export, release documentation, and stale-state external cleanup are complete |
 | iOS Semester Desk domain checkpoint | `45b61c656c278886b63619103389a633d48fc98d` | Profile-bound Semester Desk state machine |
 | iOS university learning core checkpoint | `7f6cac4112c3017d9f06384303da8dc579da8f3e` | Bounded university learning core, shared projection, widget policy, and 156 passing tests |
 | iOS verified native-foundation checkpoint | `f687e99d67e1d990264a2f82b39cc95a226fd9b3` | Private state, app model, interruption safety, AXXXL access, device builds, tests, and Editorial Terrain assets |
 | iOS Semester Desk v2 shell checkpoint | `690caddcaf4c919ca634c3b8ae1074da809be477` | Native Today, Semester, Progress, recovery, study, return, settings, and 255 passing app tests |
 | iOS deterministic action checkpoint | `f3ac00023f843b228f19549d46a4850741c52c47` | One captured time per action, duplicate-action rejection, cancellation boundaries, and 130 passing AppModel tests |
 | iOS Semester Desk v2 integration checkpoint | `27d807ef6a23eb54b6e758b26de0fd7a66116855` | Private schema 1, stale-state blocking, system surfaces, process-only drafts, UTF-8 limits, export, and 115 passing app tests |
+| iOS Semester Desk v2 release-document checkpoint | `56295eb045ab088ee75d23fb895c5e8b904f42de` | Active native documentation now describes Semester Desk v2; exact V1 documents remain in the archive |
+| iOS stale-state external-cleanup checkpoint | `ee25c94d5ccb4c6e055f8f28a07144f830739a79` | Stale private bytes remain unchanged while managed shared projection and reminder state are removed; 36 focused AppModel tests pass |
 
 ## Accepted and rejected lineage inputs
 
@@ -187,14 +189,14 @@ Status: **The native Semester Desk v2 product and private-state cutover pass the
 
 - Worktree: `/Users/Priyansh/Documents/codex-buildweek/worktrees/forge-ios-foundation-20260801`
 - Branch: `agent/forge-ios-foundation-20260801`
-- Current native HEAD: `27d807ef6a23eb54b6e758b26de0fd7a66116855`
-- Current native tree: `d67792e166fe85c084987ac95a588b09492afe4e`
+- Current native HEAD: `ee25c94d5ccb4c6e055f8f28a07144f830739a79`
+- Current native tree: `f4827c2711f359bde56a8f909db9416f4af93e94`
 - The preserved external `AGENTS.md` change is outside the product checkpoint.
 - The checkpoint includes Today, Semester, Progress, recovery, protected study, delayed return, privacy, export, reminders, widgets, App Intents, deep links, and reset.
 - Private state uses `semester-desk-private-state-v1.json` with a nonoptional Semester Desk and profile-bound reminder preference.
 - Recognized v5, v4, v3, and v2 files or stages block load and save until explicit reset.
 - The current native action runtime uses one injected time for each Semester Desk transition and rejects overlapping writes.
-- The final UI suite contains 12 canonical Semester Desk, interruption, accessibility, and small-device journeys. Simulator execution is running.
+- The current UI suite contains 14 Semester Desk, recovery, privacy-cover, interruption, accessibility, and small-device journeys. Final simulator execution remains open.
 
 ### Verified evidence
 
@@ -231,6 +233,8 @@ Status: **The native Semester Desk v2 product and private-state cutover pass the
 | P1 | Sheet save failures are visible but are not announced or focused for VoiceOver. | Closed at `cea296a` and `708232c` |
 | P1 | Protected-study return date uses `Date.now`, and dirty draft dismissal has no final confirmation. | Closed at `62cf793` |
 | P2 | Final Dynamic Type, VoiceOver, Reduced Motion, interruption, and system-integration proof is missing. | Open |
+| P1 | The application-switcher privacy cover and every protected-study stage need final runtime proof. | Repair in progress |
+| P1 | Small-device, iPad, and unsigned-archive automation is incomplete. | Repair in progress |
 
 ## Current test and build evidence
 
@@ -385,7 +389,7 @@ These are not current reasons to stop internal work.
 
 ## Next internally executable action
 
-1. Run all 12 native UI journeys and capture final native screenshots.
+1. Run all 14 native UI journeys and capture final native screenshots.
 2. Run native device, Release, archive, accessibility, and runtime checks.
 3. Consolidate web and iOS into one canonical release lineage.
 4. Run final rendered, cross-platform, security, release, and deployment-readiness checks.
