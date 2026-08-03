@@ -44,6 +44,7 @@ type BlockedLocalReference = {
 
 type ProfileLocation =
   | { readonly kind: "missing"; readonly section: AppSection }
+  | { readonly kind: "anchor"; readonly section: AppSection }
   | { readonly kind: "profile"; readonly profileId: string; readonly section: AppSection }
   | { readonly kind: "invalid"; readonly section: AppSection };
 
@@ -139,6 +140,8 @@ const factStatusLabels: Record<CourseFactStatus, string> = {
   "changed-since-last-check": "Changed since last check",
 };
 
+const semesterDeskMainAnchor = "semester-desk-main";
+
 export type SemesterDeskV2AppProps = {
   readonly persistence?: SemesterDeskPersistence;
   readonly initialProfileId?: string | null;
@@ -156,6 +159,7 @@ function profileLocationFromWindow(): ProfileLocation {
   const section = sectionFromLocation();
   const hash = window.location.hash.replace(/^#/, "");
   if (hash.length === 0) return { kind: "missing", section };
+  if (hash === semesterDeskMainAnchor) return { kind: "anchor", section };
 
   const parameters = new URLSearchParams(hash);
   const profileIds = parameters.getAll("forge-profile");
@@ -1934,15 +1938,19 @@ export function SemesterDeskV2App({
   useEffect(() => {
     mountedRef.current = true;
     let active = true;
+    function handleLocationChange() {
+      if (window.location.hash.replace(/^#/, "") === semesterDeskMainAnchor) return;
+      loadLocation();
+    }
     void Promise.resolve().then(() => {
       if (active) loadLocation();
     });
-    window.addEventListener("popstate", loadLocation);
-    window.addEventListener("hashchange", loadLocation);
+    window.addEventListener("popstate", handleLocationChange);
+    window.addEventListener("hashchange", handleLocationChange);
     return () => {
       active = false;
-      window.removeEventListener("popstate", loadLocation);
-      window.removeEventListener("hashchange", loadLocation);
+      window.removeEventListener("popstate", handleLocationChange);
+      window.removeEventListener("hashchange", handleLocationChange);
       mountedRef.current = false;
     };
   }, [loadLocation]);

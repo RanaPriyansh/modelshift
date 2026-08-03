@@ -286,6 +286,46 @@ describe("SemesterDeskV2App", () => {
     expect(screen.getByText("No work is in this desk yet.")).toBeInTheDocument();
   });
 
+  it("keeps onboarding available after the skip link changes the fragment and after reload", async () => {
+    const firstRender = renderBrowserApp();
+
+    expect(await screen.findByRole("heading", { name: "Start with what is real." })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Semester title"), { target: { value: "Autumn recovery" } });
+    expect(screen.getByLabelText("Semester title")).toHaveValue("Autumn recovery");
+    fireEvent.click(screen.getByRole("link", { name: "Skip to main content" }));
+
+    await waitFor(() => expect(window.location.hash).toBe("#semester-desk-main"));
+    expect(screen.getByRole("heading", { name: "Start with what is real." })).toBeInTheDocument();
+    expect(screen.getByLabelText("Semester title")).toHaveValue("Autumn recovery");
+    expect(screen.queryByRole("heading", { name: "FORGE did not change local data." })).not.toBeInTheDocument();
+
+    firstRender.unmount();
+    renderBrowserApp();
+
+    expect(await screen.findByRole("heading", { name: "Start with what is real." })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "FORGE did not change local data." })).not.toBeInTheDocument();
+  });
+
+  it("keeps an active protected-study draft after the skip link changes the fragment", async () => {
+    const state = makeDesk();
+    saveBrowserDesk(state);
+    window.history.replaceState(null, "", `/app#forge-profile=${encodeURIComponent(PROFILE_ID)}`);
+    renderBrowserApp();
+
+    expect(await screen.findByText("Algorithms")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Choose this work" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Start protected study" }));
+    const note = await screen.findByLabelText("Your working notes");
+    fireEvent.change(note, { target: { value: "Keep this local working note." } });
+    expect(note).toHaveValue("Keep this local working note.");
+    fireEvent.click(screen.getByRole("link", { name: "Skip to main content" }));
+
+    await waitFor(() => expect(window.location.hash).toBe("#semester-desk-main"));
+    expect(await screen.findByLabelText("Your working notes")).toHaveValue("Keep this local working note.");
+    expect(screen.queryByRole("heading", { name: "FORGE did not change local data." })).not.toBeInTheDocument();
+    expect(window.localStorage.getItem(semesterDeskActiveProfileStorageKey)).toBe(PROFILE_ID);
+  });
+
   it("opens local data from a direct policy route and keeps the selected desk through reload and history navigation", async () => {
     const state = makeDesk();
     saveBrowserDesk(state);
