@@ -2,10 +2,8 @@ import Foundation
 
 public enum ForgeDestination: String, Codable, CaseIterable, Sendable {
   case today
-  case path
-  case evidence
-  case returns
-  case focus
+  case semester
+  case progress
   case settings
 }
 

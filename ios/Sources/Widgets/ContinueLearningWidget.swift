@@ -38,8 +38,12 @@ private struct ContinueLearningWidgetPresentation {
     switch route {
     case .today:
       closedRoute = .today
-    case .focus:
-      closedRoute = .focus
+    case .semester:
+      closedRoute = .semester
+    case .progress:
+      closedRoute = .progress
+    case .settings:
+      closedRoute = .settings
     @unknown default:
       closedRoute = .today
     }
@@ -52,8 +56,8 @@ private struct ContinueLearningWidgetPresentation {
     Self(
       copy: WidgetProjectionPolicy.Copy(
         status: "Loading",
-        title: "FORGE learning space",
-        detail: "Loading local return status",
+        title: "FORGE Semester Desk",
+        detail: "Loading local status",
         accessibilityLabel: "FORGE. Widget content is loading.",
         accessibilityHint: "Opens the local FORGE Today view."
       ),
@@ -68,7 +72,7 @@ private struct ContinueLearningWidgetPresentation {
     Self(
       copy: WidgetProjectionPolicy.Copy(
         status: "Preview",
-        title: "FORGE learning space",
+        title: "FORGE Semester Desk",
         detail: "Local status is hidden",
         accessibilityLabel: "FORGE. Widget preview.",
         accessibilityHint: "Opens the local FORGE Today view."
@@ -312,8 +316,8 @@ struct FORGEWidgets: Widget {
     ) { entry in
       ContinueLearningWidgetView(entry: entry)
     }
-    .configurationDisplayName("Continue Learning")
-    .description("Open FORGE without showing learner details.")
+    .configurationDisplayName("Semester Desk")
+    .description("See the next safe Semester Desk action.")
     .supportedFamilies([.systemSmall])
   }
 }

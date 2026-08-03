@@ -5,21 +5,34 @@ import UserNotifications
 
 @testable import FORGE
 
-@Suite("Notification coordinator")
+@Suite("Semester Desk reminder coordinator")
 @MainActor
 struct NotificationCoordinatorTests {
-  @Test("Explicit scheduling requests authorization without reading its status")
-  func explicitSchedulingRequestsAuthorization() async throws {
+  @Test("Explicit reminder scheduling requests permission and uses the earliest future due return")
+  func explicitSchedulingRequestsPermissionAndUsesEarliestFutureDueReturn() async throws {
     let now = Date(timeIntervalSince1970: 1_800_000_000)
-    let delayedReturn = try makeDelayedReturn(
-      opensAt: now.addingTimeInterval(3_600),
-      dueAt: now.addingTimeInterval(7_200)
-    )
+    let earliestDueAt = now.addingTimeInterval(3_600)
     let center = FakeLocalNotificationCenter()
     let coordinator = try makeCoordinator(center: center, now: now)
+    let earliestReturn = makeDelayedReturn(
+      id: "return.earliest",
+      planItemID: "private-plan-item-42",
+      dueAt: earliestDueAt
+    )
 
     let result = await coordinator.requestAndSchedule(
-      delayedReturns: [delayedReturn]
+      delayedReturns: [
+        makeDelayedReturn(
+          id: "return.later",
+          dueAt: now.addingTimeInterval(7_200)
+        ),
+        makeDelayedReturn(
+          id: "return.open",
+          dueAt: now.addingTimeInterval(1_800),
+          status: .open
+        ),
+        earliestReturn,
+      ]
     )
 
     #expect(result == .scheduled)
@@ -29,44 +42,49 @@ struct NotificationCoordinatorTests {
 
     let request = try #require(center.addedRequests.first)
     #expect(request.identifier == managedReminderIdentifier)
-    #expect(request.content.title == ReturnReminderPolicy.title)
-    #expect(request.content.body == ReturnReminderPolicy.body)
-    #expect(!request.content.title.contains(delayedReturn.id.rawValue))
-    #expect(!request.content.body.contains(delayedReturn.id.rawValue))
-    #expect(!request.content.title.contains(delayedReturn.courseID.rawValue))
-    #expect(!request.content.body.contains(delayedReturn.courseID.rawValue))
-    #expect(!request.content.title.contains(delayedReturn.activityID.rawValue))
-    #expect(!request.content.body.contains(delayedReturn.activityID.rawValue))
-    #expect(!request.content.title.contains(delayedReturn.originEvidenceID.rawValue))
-    #expect(!request.content.body.contains(delayedReturn.originEvidenceID.rawValue))
+    #expect(try triggerDate(from: request) == earliestDueAt)
+    #expect(request.content.title == "Come back on this date")
+    #expect(request.content.body == "Open FORGE Today to check what you retained.")
+    #expect(!request.content.title.contains(earliestReturn.id))
+    #expect(!request.content.body.contains(earliestReturn.id))
+    #expect(!request.content.title.contains(earliestReturn.planItemID))
+    #expect(!request.content.body.contains(earliestReturn.planItemID))
+    #expect(!request.content.title.contains(earliestReturn.dueAt))
+    #expect(!request.content.body.contains(earliestReturn.dueAt))
     #expect(request.content.userInfo.isEmpty)
     #expect(request.content.interruptionLevel == .passive)
     #expect(request.content.sound == nil)
   }
 
-  @Test("Reconciliation reads authorization without requesting it")
-  func reconciliationReadsAuthorizationWithoutRequest() async throws {
+  @Test("Reconciliation reads existing permission and removes only managed reminders")
+  func reconciliationReadsPermissionAndRemovesOnlyManagedReminders() async throws {
     let now = Date(timeIntervalSince1970: 1_800_000_000)
     let center = FakeLocalNotificationCenter()
     center.seedPending(managedReminderIdentifier)
+    center.seedPending(staleOperationReminderIdentifier)
     center.seedPending("unmanaged-notification")
-    center.delivered = [managedReminderIdentifier, "unmanaged-delivered"]
+    center.delivered = [
+      managedReminderIdentifier,
+      staleOperationReminderIdentifier,
+      "unmanaged-delivered",
+    ]
     let coordinator = try makeCoordinator(center: center, now: now)
 
     let result = await coordinator.reconcile(
       isEnabled: true,
       delayedReturns: [
-        try makeDelayedReturn(
-          opensAt: now.addingTimeInterval(3_600),
-          dueAt: now.addingTimeInterval(7_200)
-        )
+        makeDelayedReturn(dueAt: now.addingTimeInterval(3_600))
       ]
     )
 
     #expect(result == .scheduled)
     #expect(center.authorizationStatusReadCount == 1)
     #expect(center.authorizationRequestCount == 0)
-    #expect(center.pending["unmanaged-notification"] != nil)
+    #expect(
+      Set(center.pending.keys) == [
+        managedReminderIdentifier,
+        "unmanaged-notification",
+      ])
     #expect(center.delivered == ["unmanaged-delivered"])
 
     let addIndex = try #require(center.events.firstIndex(of: "add"))
@@ -80,213 +98,46 @@ struct NotificationCoordinatorTests {
     #expect(deliveredRemovalIndex < addIndex)
   }
 
-  @Test("Removes stale operation-specific reminders before scheduling")
-  func removesStaleOperationSpecificReminders() async throws {
+  @Test("Only a future due return can schedule a reminder")
+  func onlyFutureDueReturnCanScheduleReminder() async throws {
     let now = Date(timeIntervalSince1970: 1_800_000_000)
     let center = FakeLocalNotificationCenter()
-    center.seedPending(staleOperationReminderIdentifier)
-    center.seedPending("unmanaged-notification")
-    center.delivered = [
-      staleOperationReminderIdentifier,
-      "unmanaged-delivered",
-    ]
+    center.seedPending(managedReminderIdentifier)
     let coordinator = try makeCoordinator(center: center, now: now)
 
     let result = await coordinator.reconcile(
       isEnabled: true,
       delayedReturns: [
-        try makeDelayedReturn(
-          opensAt: now.addingTimeInterval(3_600),
-          dueAt: now.addingTimeInterval(7_200)
-        )
-      ]
-    )
-
-    #expect(result == .scheduled)
-    #expect(center.pending[staleOperationReminderIdentifier] == nil)
-    #expect(center.pending["unmanaged-notification"] != nil)
-    #expect(Set(center.pending.keys) == [managedReminderIdentifier, "unmanaged-notification"])
-    #expect(center.delivered == ["unmanaged-delivered"])
-  }
-
-  @Test("Schedules from opensAt instead of dueAt")
-  func schedulesFromReturnOpenDate() async throws {
-    let timeZone = try #require(TimeZone(secondsFromGMT: 0))
-    let calendar = makeCalendar(timeZone: timeZone)
-    let now = try makeDate(
-      calendar: calendar,
-      year: 2027,
-      month: 1,
-      day: 2,
-      hour: 10
-    )
-    let opensAt = try makeDate(
-      calendar: calendar,
-      year: 2027,
-      month: 1,
-      day: 2,
-      hour: 10,
-      minute: 30,
-      second: 47
-    )
-    let dueAt = try makeDate(
-      calendar: calendar,
-      year: 2027,
-      month: 1,
-      day: 2,
-      hour: 12
-    )
-    let center = FakeLocalNotificationCenter()
-    let coordinator = try makeCoordinator(
-      center: center,
-      now: now,
-      timeZone: timeZone
-    )
-
-    let result = await coordinator.reconcile(
-      isEnabled: true,
-      delayedReturns: [try makeDelayedReturn(opensAt: opensAt, dueAt: dueAt)]
-    )
-
-    #expect(result == .scheduled)
-    let request = try #require(center.addedRequests.first)
-    #expect(try triggerDate(from: request) == opensAt)
-  }
-
-  @Test("Uses 9 AM local time after quiet hours")
-  func movesLateReturnToNextMorning() async throws {
-    let timeZone = try #require(TimeZone(secondsFromGMT: 0))
-    let calendar = makeCalendar(timeZone: timeZone)
-    let now = try makeDate(
-      calendar: calendar,
-      year: 2027,
-      month: 1,
-      day: 2,
-      hour: 20
-    )
-    let opensAt = try makeDate(
-      calendar: calendar,
-      year: 2027,
-      month: 1,
-      day: 2,
-      hour: 21,
-      minute: 30
-    )
-    let dueAt = try makeDate(
-      calendar: calendar,
-      year: 2027,
-      month: 1,
-      day: 3,
-      hour: 10
-    )
-    let expectedDate = try makeDate(
-      calendar: calendar,
-      year: 2027,
-      month: 1,
-      day: 3,
-      hour: 9
-    )
-    let center = FakeLocalNotificationCenter()
-    let coordinator = try makeCoordinator(
-      center: center,
-      now: now,
-      timeZone: timeZone
-    )
-
-    let result = await coordinator.requestAndSchedule(
-      delayedReturns: [try makeDelayedReturn(opensAt: opensAt, dueAt: dueAt)]
-    )
-
-    #expect(result == .scheduled)
-    let request = try #require(center.addedRequests.first)
-    #expect(try triggerDate(from: request) == expectedDate)
-  }
-
-  @Test("Preserves local time through daylight-saving change")
-  func preservesLocalTimeThroughDaylightSavingChange() async throws {
-    let timeZone = try #require(TimeZone(identifier: "America/New_York"))
-    let calendar = makeCalendar(timeZone: timeZone)
-    let now = try makeDate(
-      calendar: calendar,
-      year: 2027,
-      month: 3,
-      day: 13,
-      hour: 20
-    )
-    let opensAt = try makeDate(
-      calendar: calendar,
-      year: 2027,
-      month: 3,
-      day: 13,
-      hour: 21,
-      minute: 30
-    )
-    let dueAt = try makeDate(
-      calendar: calendar,
-      year: 2027,
-      month: 3,
-      day: 14,
-      hour: 10
-    )
-    let expectedDate = try makeDate(
-      calendar: calendar,
-      year: 2027,
-      month: 3,
-      day: 14,
-      hour: 9
-    )
-    let center = FakeLocalNotificationCenter()
-    let coordinator = try makeCoordinator(
-      center: center,
-      now: now,
-      timeZone: timeZone
-    )
-
-    let result = await coordinator.reconcile(
-      isEnabled: true,
-      delayedReturns: [try makeDelayedReturn(opensAt: opensAt, dueAt: dueAt)]
-    )
-
-    #expect(result == .scheduled)
-    let request = try #require(center.addedRequests.first)
-    let trigger = try #require(
-      request.trigger as? UNCalendarNotificationTrigger
-    )
-    #expect(try triggerDate(from: request) == expectedDate)
-    #expect(trigger.dateComponents.timeZone?.identifier == timeZone.identifier)
-  }
-
-  @Test("Selects the earliest scheduled return")
-  func selectsEarliestScheduledReturn() async throws {
-    let now = Date(timeIntervalSince1970: 1_800_000_000)
-    let earlierOpen = now.addingTimeInterval(3_600)
-    let laterOpen = now.addingTimeInterval(7_200)
-    let center = FakeLocalNotificationCenter()
-    let coordinator = try makeCoordinator(center: center, now: now)
-
-    let result = await coordinator.reconcile(
-      isEnabled: true,
-      delayedReturns: [
-        try makeDelayedReturn(
-          id: "return2",
-          opensAt: laterOpen,
-          dueAt: laterOpen.addingTimeInterval(3_600)
+        makeDelayedReturn(
+          id: "return.past",
+          dueAt: now.addingTimeInterval(-1)
         ),
-        try makeDelayedReturn(
-          id: "return1",
-          opensAt: earlierOpen,
-          dueAt: earlierOpen.addingTimeInterval(3_600)
+        makeDelayedReturn(
+          id: "return.open",
+          dueAt: now.addingTimeInterval(3_600),
+          status: .open
+        ),
+        makeDelayedReturn(
+          id: "return.completed",
+          dueAt: now.addingTimeInterval(7_200),
+          status: .completed,
+          completedAt: now
+        ),
+        makeDelayedReturn(
+          id: "return.invalid",
+          dueAt: "not-a-date"
         ),
       ]
     )
 
-    #expect(result == .scheduled)
-    let request = try #require(center.addedRequests.first)
-    #expect(try triggerDate(from: request) == earlierOpen)
+    #expect(result == .removed(reason: .noScheduledReturn))
+    #expect(center.authorizationStatusReadCount == 0)
+    #expect(center.authorizationRequestCount == 0)
+    #expect(center.pending[managedReminderIdentifier] == nil)
   }
 
-  @Test("Removes a reminder when preference is disabled")
-  func removesReminderWhenPreferenceDisabled() async throws {
+  @Test("Disabled reminders remove the managed request without reading permission")
+  func disabledRemindersRemoveManagedRequestWithoutReadingPermission() async throws {
     let now = Date(timeIntervalSince1970: 1_800_000_000)
     let center = FakeLocalNotificationCenter()
     center.seedPending(managedReminderIdentifier)
@@ -305,170 +156,8 @@ struct NotificationCoordinatorTests {
     #expect(center.delivered == ["unmanaged-delivered"])
   }
 
-  @Test("Removes a reminder when no scheduled return exists")
-  func removesReminderWhenNoScheduledReturnExists() async throws {
-    let now = Date(timeIntervalSince1970: 1_800_000_000)
-    let center = FakeLocalNotificationCenter()
-    center.seedPending(managedReminderIdentifier)
-    center.delivered = [managedReminderIdentifier]
-    let coordinator = try makeCoordinator(center: center, now: now)
-
-    let result = await coordinator.reconcile(
-      isEnabled: true,
-      delayedReturns: []
-    )
-
-    #expect(result == .removed(reason: .noScheduledReturn))
-    #expect(center.authorizationStatusReadCount == 0)
-    #expect(center.pending[managedReminderIdentifier] == nil)
-    #expect(center.delivered.isEmpty)
-  }
-
-  @Test("Removes a reminder for non-scheduled return states")
-  func removesReminderForNonScheduledReturns() async throws {
-    let now = Date(timeIntervalSince1970: 1_800_000_000)
-    let delayedReturns = [
-      try makeDelayedReturn(
-        id: "open1",
-        opensAt: now.addingTimeInterval(-3_600),
-        dueAt: now.addingTimeInterval(3_600)
-      ),
-      try makeDelayedReturn(
-        id: "due1",
-        opensAt: now.addingTimeInterval(-7_200),
-        dueAt: now
-      ),
-      try makeDelayedReturn(
-        id: "expired1",
-        opensAt: now.addingTimeInterval(-7_200),
-        dueAt: now.addingTimeInterval(-1)
-      ),
-      try makeDelayedReturn(
-        id: "completed1",
-        opensAt: now.addingTimeInterval(3_600),
-        dueAt: now.addingTimeInterval(7_200),
-        completedAt: now
-      ),
-    ]
-
-    for delayedReturn in delayedReturns {
-      let center = FakeLocalNotificationCenter()
-      center.seedPending(managedReminderIdentifier)
-      let coordinator = try makeCoordinator(center: center, now: now)
-
-      let result = await coordinator.reconcile(
-        isEnabled: true,
-        delayedReturns: [delayedReturn]
-      )
-
-      #expect(result == .removed(reason: .noScheduledReturn))
-      #expect(center.pending[managedReminderIdentifier] == nil)
-      #expect(center.authorizationStatusReadCount == 0)
-    }
-  }
-
-  @Test("Reports an invalid return date and removes the reminder")
-  func reportsInvalidReturnDate() async throws {
-    let timeZone = try #require(TimeZone(secondsFromGMT: 0))
-    let calendar = makeCalendar(timeZone: timeZone)
-    let now = try makeDate(
-      calendar: calendar,
-      year: 2027,
-      month: 1,
-      day: 2,
-      hour: 20
-    )
-    let opensAt = try makeDate(
-      calendar: calendar,
-      year: 2027,
-      month: 1,
-      day: 2,
-      hour: 21,
-      minute: 30
-    )
-    let dueAt = try makeDate(
-      calendar: calendar,
-      year: 2027,
-      month: 1,
-      day: 3,
-      hour: 8
-    )
-    let center = FakeLocalNotificationCenter()
-    center.seedPending(managedReminderIdentifier)
-    let coordinator = try makeCoordinator(
-      center: center,
-      now: now,
-      timeZone: timeZone
-    )
-
-    let result = await coordinator.reconcile(
-      isEnabled: true,
-      delayedReturns: [try makeDelayedReturn(opensAt: opensAt, dueAt: dueAt)]
-    )
-
-    #expect(result == .removed(reason: .invalidReturnDate))
-    #expect(center.authorizationStatusReadCount == 0)
-    #expect(center.pending[managedReminderIdentifier] == nil)
-  }
-
-  @Test("Explicit authorization denial removes the reminder")
-  func explicitAuthorizationDenialRemovesReminder() async throws {
-    let now = Date(timeIntervalSince1970: 1_800_000_000)
-    let center = FakeLocalNotificationCenter()
-    center.requestAuthorizationResult = false
-    center.seedPending(managedReminderIdentifier)
-    center.delivered = [managedReminderIdentifier]
-    let coordinator = try makeCoordinator(center: center, now: now)
-
-    let result = await coordinator.requestAndSchedule(
-      delayedReturns: [
-        try makeDelayedReturn(
-          opensAt: now.addingTimeInterval(3_600),
-          dueAt: now.addingTimeInterval(7_200)
-        )
-      ]
-    )
-
-    #expect(result == .notScheduled)
-    #expect(center.authorizationRequestCount == 1)
-    #expect(center.authorizationStatusReadCount == 0)
-    #expect(center.pending[managedReminderIdentifier] == nil)
-    #expect(center.delivered.isEmpty)
-  }
-
-  @Test("Explicit authorization errors remove current and stale reminders")
-  func explicitAuthorizationErrorRemovesReminders() async throws {
-    let now = Date(timeIntervalSince1970: 1_800_000_000)
-    let center = FakeLocalNotificationCenter()
-    center.authorizationRequestThrows = true
-    center.seedPending(managedReminderIdentifier)
-    center.seedPending(staleOperationReminderIdentifier)
-    center.delivered = [
-      managedReminderIdentifier,
-      staleOperationReminderIdentifier,
-      "unmanaged-delivered",
-    ]
-    let coordinator = try makeCoordinator(center: center, now: now)
-
-    let result = await coordinator.requestAndSchedule(
-      delayedReturns: [
-        try makeDelayedReturn(
-          opensAt: now.addingTimeInterval(3_600),
-          dueAt: now.addingTimeInterval(7_200)
-        )
-      ]
-    )
-
-    #expect(result == .notScheduled)
-    #expect(center.authorizationRequestCount == 1)
-    #expect(center.addedRequests.isEmpty)
-    #expect(center.pending[managedReminderIdentifier] == nil)
-    #expect(center.pending[staleOperationReminderIdentifier] == nil)
-    #expect(center.delivered == ["unmanaged-delivered"])
-  }
-
-  @Test("Reconciliation denial removes the reminder without a prompt")
-  func reconciliationAuthorizationDenialRemovesReminder() async throws {
+  @Test("Denied reconciliation permission removes the managed request without a prompt")
+  func deniedReconciliationPermissionRemovesManagedRequestWithoutPrompt() async throws {
     let now = Date(timeIntervalSince1970: 1_800_000_000)
     let center = FakeLocalNotificationCenter()
     center.authorizationStatusValue = .denied
@@ -478,10 +167,7 @@ struct NotificationCoordinatorTests {
     let result = await coordinator.reconcile(
       isEnabled: true,
       delayedReturns: [
-        try makeDelayedReturn(
-          opensAt: now.addingTimeInterval(3_600),
-          dueAt: now.addingTimeInterval(7_200)
-        )
+        makeDelayedReturn(dueAt: now.addingTimeInterval(3_600))
       ]
     )
 
@@ -491,24 +177,48 @@ struct NotificationCoordinatorTests {
     #expect(center.pending[managedReminderIdentifier] == nil)
   }
 
-  @Test("Does not report success after an add failure")
-  func reportsAddFailuresAndRemovesTheRequest() async throws {
+  @Test("Explicit permission denial or error removes managed reminders")
+  func explicitPermissionFailureRemovesManagedReminders() async throws {
     let now = Date(timeIntervalSince1970: 1_800_000_000)
-    let delayedReturn = try makeDelayedReturn(
-      opensAt: now.addingTimeInterval(3_600),
-      dueAt: now.addingTimeInterval(7_200)
-    )
+
+    for shouldThrow in [false, true] {
+      let center = FakeLocalNotificationCenter()
+      center.requestAuthorizationResult = false
+      center.authorizationRequestThrows = shouldThrow
+      center.seedPending(managedReminderIdentifier)
+      center.seedPending(staleOperationReminderIdentifier)
+      center.delivered = [managedReminderIdentifier]
+      let coordinator = try makeCoordinator(center: center, now: now)
+
+      let result = await coordinator.requestAndSchedule(
+        delayedReturns: [
+          makeDelayedReturn(dueAt: now.addingTimeInterval(3_600))
+        ]
+      )
+
+      #expect(result == .notScheduled)
+      #expect(center.authorizationRequestCount == 1)
+      #expect(center.authorizationStatusReadCount == 0)
+      #expect(center.pending[managedReminderIdentifier] == nil)
+      #expect(center.pending[staleOperationReminderIdentifier] == nil)
+      #expect(center.delivered.isEmpty)
+    }
+  }
+
+  @Test("Scheduling failure removes the request and reports the failure mode")
+  func schedulingFailureRemovesRequestAndReportsFailureMode() async throws {
+    let now = Date(timeIntervalSince1970: 1_800_000_000)
+    let delayedReturn = makeDelayedReturn(dueAt: now.addingTimeInterval(3_600))
+
     let explicitCenter = FakeLocalNotificationCenter()
     explicitCenter.addThrowsAfterRecording = true
     let explicitCoordinator = try makeCoordinator(
       center: explicitCenter,
       now: now
     )
-
     let explicitResult = await explicitCoordinator.requestAndSchedule(
       delayedReturns: [delayedReturn]
     )
-
     #expect(explicitResult == .notScheduled)
     #expect(explicitCenter.pending[managedReminderIdentifier] == nil)
 
@@ -518,149 +228,238 @@ struct NotificationCoordinatorTests {
       center: reconciliationCenter,
       now: now
     )
-
     let reconciliationResult = await reconciliationCoordinator.reconcile(
       isEnabled: true,
       delayedReturns: [delayedReturn]
     )
-
     #expect(reconciliationResult == .schedulingFailed)
     #expect(reconciliationCenter.pending[managedReminderIdentifier] == nil)
   }
 
-  @Test("Reports pending cleanup failure separately")
-  func reportsPendingCleanupFailure() async throws {
+  @Test("Cleanup failures are reported and leave the managed request visible")
+  func cleanupFailuresAreReportedAndLeaveManagedRequestVisible() async throws {
     let now = Date(timeIntervalSince1970: 1_800_000_000)
-    let center = FakeLocalNotificationCenter()
-    center.seedPending(managedReminderIdentifier)
-    center.failPendingRemoval = true
-    let coordinator = try makeCoordinator(center: center, now: now)
 
-    let result = await coordinator.requestAndSchedule(
+    let pendingCenter = FakeLocalNotificationCenter()
+    pendingCenter.seedPending(managedReminderIdentifier)
+    pendingCenter.failPendingRemoval = true
+    let pendingCoordinator = try makeCoordinator(center: pendingCenter, now: now)
+    let pendingResult = await pendingCoordinator.requestAndSchedule(
       delayedReturns: [
-        try makeDelayedReturn(
-          opensAt: now.addingTimeInterval(3_600),
-          dueAt: now.addingTimeInterval(7_200)
-        )
+        makeDelayedReturn(dueAt: now.addingTimeInterval(3_600))
       ]
     )
+    #expect(pendingResult == .cleanupFailed)
+    #expect(pendingCenter.pending[managedReminderIdentifier] != nil)
 
-    #expect(result == .cleanupFailed)
-    #expect(center.addedRequests.isEmpty)
-    #expect(center.pending[managedReminderIdentifier] != nil)
-  }
-
-  @Test("Reports delivered cleanup failure separately")
-  func reportsDeliveredCleanupFailure() async throws {
-    let now = Date(timeIntervalSince1970: 1_800_000_000)
-    let center = FakeLocalNotificationCenter()
-    center.delivered = [managedReminderIdentifier]
-    center.failDeliveredRemoval = true
-    let coordinator = try makeCoordinator(center: center, now: now)
-
-    let result = await coordinator.reconcile(
+    let deliveredCenter = FakeLocalNotificationCenter()
+    deliveredCenter.delivered = [managedReminderIdentifier]
+    deliveredCenter.failDeliveredRemoval = true
+    let deliveredCoordinator = try makeCoordinator(
+      center: deliveredCenter,
+      now: now
+    )
+    let deliveredResult = await deliveredCoordinator.reconcile(
       isEnabled: false,
       delayedReturns: []
     )
-
-    #expect(result == .cleanupFailed)
-    #expect(center.delivered == [managedReminderIdentifier])
+    #expect(deliveredResult == .cleanupFailed)
+    #expect(deliveredCenter.delivered == [managedReminderIdentifier])
   }
 
   @Test("Cancellation after add removes the managed reminder")
-  func cancellationAfterAddRemovesReminder() async throws {
+  func cancellationAfterAddRemovesManagedReminder() async throws {
     let now = Date(timeIntervalSince1970: 1_800_000_000)
     let center = FakeLocalNotificationCenter()
     center.suspendNextAdd = true
     let coordinator = try makeCoordinator(center: center, now: now)
-    let delayedReturn = try makeDelayedReturn(
-      opensAt: now.addingTimeInterval(3_600),
-      dueAt: now.addingTimeInterval(7_200)
-    )
 
     let task = Task { @MainActor in
-      await coordinator.requestAndSchedule(delayedReturns: [delayedReturn])
+      await coordinator.requestAndSchedule(
+        delayedReturns: [
+          makeDelayedReturn(dueAt: now.addingTimeInterval(3_600))
+        ]
+      )
     }
 
     try await center.waitForSuspendedAdd()
     task.cancel()
     center.resumeSuspendedAdd()
 
-    let result = await task.value
-
-    #expect(result == .notScheduled)
+    #expect(await task.value == .notScheduled)
     #expect(center.pending[managedReminderIdentifier] == nil)
   }
 
-  @Test("Serializes a later disable operation after a scheduling operation")
-  func serializesDisableAfterScheduling() async throws {
+  @Test("A later disable waits for the current scheduling operation")
+  func laterDisableWaitsForCurrentSchedulingOperation() async throws {
     let now = Date(timeIntervalSince1970: 1_800_000_000)
     let center = FakeLocalNotificationCenter()
     center.suspendNextAdd = true
     let coordinator = try makeCoordinator(center: center, now: now)
-    let delayedReturn = try makeDelayedReturn(
-      opensAt: now.addingTimeInterval(3_600),
-      dueAt: now.addingTimeInterval(7_200)
-    )
 
     let schedulingTask = Task { @MainActor in
-      await coordinator.requestAndSchedule(delayedReturns: [delayedReturn])
+      await coordinator.requestAndSchedule(
+        delayedReturns: [
+          makeDelayedReturn(dueAt: now.addingTimeInterval(3_600))
+        ]
+      )
     }
-
     try await center.waitForSuspendedAdd()
 
     let disableTask = Task { @MainActor in
       await coordinator.disableReminders()
     }
-
     await Task.yield()
     #expect(center.pending[managedReminderIdentifier] != nil)
 
     center.resumeSuspendedAdd()
 
-    let schedulingResult = await schedulingTask.value
-    let disableResult = await disableTask.value
-
-    #expect(schedulingResult == .scheduled)
-    #expect(disableResult)
+    #expect(await schedulingTask.value == .scheduled)
+    #expect(await disableTask.value)
     #expect(center.pending[managedReminderIdentifier] == nil)
   }
 
   @Test("Each coordinator operation reads the injected time once")
-  func readsInjectedTimeOncePerOperation() async throws {
+  func eachCoordinatorOperationReadsInjectedTimeOnce() async throws {
     let now = Date(timeIntervalSince1970: 1_800_000_000)
-    let nowRecorder = NowReadRecorder(date: now)
+    let recorder = NowReadRecorder(date: now)
     let center = FakeLocalNotificationCenter()
     let coordinator = try makeCoordinator(
       center: center,
-      nowProvider: nowRecorder.read
+      nowProvider: recorder.read
     )
-    let delayedReturn = try makeDelayedReturn(
-      opensAt: now.addingTimeInterval(3_600),
-      dueAt: now.addingTimeInterval(7_200)
-    )
+    let delayedReturn = makeDelayedReturn(dueAt: now.addingTimeInterval(3_600))
 
     _ = await coordinator.requestAndSchedule(delayedReturns: [delayedReturn])
-    #expect(nowRecorder.readCount == 1)
+    #expect(recorder.readCount == 1)
 
     _ = await coordinator.reconcile(
       isEnabled: true,
       delayedReturns: [delayedReturn]
     )
-    #expect(nowRecorder.readCount == 2)
+    #expect(recorder.readCount == 2)
 
     _ = await coordinator.disableReminders()
-    #expect(nowRecorder.readCount == 3)
+    #expect(recorder.readCount == 3)
+  }
+
+  @Test("A daylight-saving return keeps its exact local reminder components")
+  func daylightSavingReturnKeepsExactLocalReminderComponents() async throws {
+    let timeZone = try #require(TimeZone(identifier: "America/New_York"))
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = timeZone
+    let now = try #require(
+      calendar.date(
+        from: DateComponents(
+          year: 2027,
+          month: 3,
+          day: 13,
+          hour: 20,
+          minute: 0,
+          second: 0
+        )
+      )
+    )
+    let dueAt = try #require(
+      calendar.date(
+        from: DateComponents(
+          year: 2027,
+          month: 3,
+          day: 14,
+          hour: 9,
+          minute: 0,
+          second: 0
+        )
+      )
+    )
+    let center = FakeLocalNotificationCenter()
+    let coordinator = makeCoordinator(
+      center: center,
+      now: now,
+      calendar: calendar,
+      timeZone: timeZone
+    )
+
+    #expect(
+      await coordinator.requestAndSchedule(
+        delayedReturns: [makeDelayedReturn(dueAt: dueAt)]
+      ) == .scheduled
+    )
+
+    let request = try #require(center.addedRequests.first)
+    let trigger = try #require(
+      request.trigger as? UNCalendarNotificationTrigger
+    )
+    #expect(try triggerDate(from: request) == dueAt)
+    #expect(trigger.dateComponents.year == 2027)
+    #expect(trigger.dateComponents.month == 3)
+    #expect(trigger.dateComponents.day == 14)
+    #expect(trigger.dateComponents.hour == 9)
+    #expect(trigger.dateComponents.minute == 0)
+    #expect(trigger.dateComponents.second == 0)
+    #expect(trigger.dateComponents.timeZone?.identifier == timeZone.identifier)
+  }
+
+  @Test("A fractional return time rounds forward without scheduling early")
+  func fractionalReturnTimeRoundsForwardWithoutSchedulingEarly() async throws {
+    let timeZone = try #require(TimeZone(secondsFromGMT: 0))
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = timeZone
+    let now = Date(timeIntervalSince1970: 1_800_000_000)
+    let dueAt = now.addingTimeInterval(3_600.125)
+    let center = FakeLocalNotificationCenter()
+    let coordinator = makeCoordinator(
+      center: center,
+      now: now,
+      calendar: calendar,
+      timeZone: timeZone
+    )
+
+    #expect(
+      await coordinator.requestAndSchedule(
+        delayedReturns: [makeDelayedReturn(dueAt: dueAt)]
+      ) == .scheduled
+    )
+
+    let request = try #require(center.addedRequests.first)
+    let triggerAt = try triggerDate(from: request)
+    #expect(triggerAt >= dueAt)
+    #expect(triggerAt > now)
+    #expect(triggerAt < dueAt.addingTimeInterval(2))
+  }
+
+  private func makeCoordinator(
+    center: FakeLocalNotificationCenter,
+    now: Date
+  ) throws -> NotificationCoordinator {
+    try makeCoordinator(center: center, nowProvider: { now })
+  }
+
+  private func makeCoordinator(
+    center: FakeLocalNotificationCenter,
+    nowProvider: @escaping @MainActor () -> Date
+  ) throws -> NotificationCoordinator {
+    let timeZone = try #require(TimeZone(secondsFromGMT: 0))
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = timeZone
+    return makeCoordinator(
+      center: center,
+      nowProvider: nowProvider,
+      calendar: calendar,
+      timeZone: timeZone
+    )
   }
 
   private func makeCoordinator(
     center: FakeLocalNotificationCenter,
     now: Date,
-    timeZone: TimeZone? = nil
-  ) throws -> NotificationCoordinator {
-    try makeCoordinator(
+    calendar: Calendar,
+    timeZone: TimeZone
+  ) -> NotificationCoordinator {
+    makeCoordinator(
       center: center,
       nowProvider: { now },
+      calendar: calendar,
       timeZone: timeZone
     )
   }
@@ -668,80 +467,62 @@ struct NotificationCoordinatorTests {
   private func makeCoordinator(
     center: FakeLocalNotificationCenter,
     nowProvider: @escaping @MainActor () -> Date,
-    timeZone: TimeZone? = nil
-  ) throws -> NotificationCoordinator {
-    let timeZone = try #require(timeZone ?? TimeZone(secondsFromGMT: 0))
+    calendar: Calendar,
+    timeZone: TimeZone
+  ) -> NotificationCoordinator {
     return NotificationCoordinator(
       center: center,
-      calendar: makeCalendar(timeZone: timeZone),
+      calendar: calendar,
       timeZone: timeZone,
       now: nowProvider
     )
   }
 
-  private func makeCalendar(timeZone: TimeZone) -> Calendar {
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = timeZone
-    return calendar
-  }
-
-  private func makeDate(
-    calendar: Calendar,
-    year: Int,
-    month: Int,
-    day: Int,
-    hour: Int,
-    minute: Int = 0,
-    second: Int = 0
-  ) throws -> Date {
-    guard
-      let date = calendar.date(
-        from: DateComponents(
-          year: year,
-          month: month,
-          day: day,
-          hour: hour,
-          minute: minute,
-          second: second
-        )
-      )
-    else {
-      throw NotificationCoordinatorTestError.invalidDate
-    }
-
-    return date
+  private func makeDelayedReturn(
+    id: String = "return.default",
+    planItemID: String = "plan-item.default",
+    dueAt: Date,
+    status: UniversitySemesterDeskDelayedReturnStatus = .due,
+    completedAt: Date? = nil
+  ) -> UniversitySemesterDeskDelayedReturn {
+    makeDelayedReturn(
+      id: id,
+      planItemID: planItemID,
+      dueAt: AppModel.semesterDeskTimestamp(for: dueAt),
+      status: status,
+      completedAt: completedAt.map(AppModel.semesterDeskTimestamp(for:))
+    )
   }
 
   private func makeDelayedReturn(
-    id: String = "return1",
-    opensAt: Date,
-    dueAt: Date,
-    completedAt: Date? = nil
-  ) throws -> DelayedReturnRecord {
-    var json: [String: Any] = [
+    id: String,
+    planItemID: String = "plan-item.default",
+    dueAt: String,
+    status: UniversitySemesterDeskDelayedReturnStatus = .due,
+    completedAt: String? = nil
+  ) -> UniversitySemesterDeskDelayedReturn {
+    let object: [String: Any] = [
       "id": id,
-      "courseID": "course1",
-      "activityID": "activity1",
-      "originEvidenceID": "evidence1",
-      "opensAt": opensAt.timeIntervalSince1970,
-      "dueAt": dueAt.timeIntervalSince1970,
+      "planItemID": planItemID,
+      "dueAt": dueAt,
+      "status": status.rawValue,
+      "openedAt": status == .open ? dueAt : NSNull(),
+      "completedAt": completedAt ?? NSNull(),
+      "retentionOutcome": status == .completed
+        ? UniversitySemesterDeskRetentionOutcome.retained.rawValue : NSNull(),
     ]
-
-    if let completedAt {
-      json["completedAt"] = completedAt.timeIntervalSince1970
-      json["completionEvidenceID"] = "completion\(id)"
-    } else {
-      json["completedAt"] = NSNull()
-      json["completionEvidenceID"] = NSNull()
+    do {
+      let data = try JSONSerialization.data(
+        withJSONObject: object,
+        options: [.sortedKeys]
+      )
+      return try JSONDecoder().decode(
+        UniversitySemesterDeskDelayedReturn.self,
+        from: data
+      )
+    } catch {
+      preconditionFailure("The test delayed return must decode: \(error)")
     }
-
-    let data = try JSONSerialization.data(
-      withJSONObject: json,
-      options: [.sortedKeys]
-    )
-    let decoder = JSONDecoder()
-    decoder.dateDecodingStrategy = .secondsSince1970
-    return try decoder.decode(DelayedReturnRecord.self, from: data)
   }
 
   private func triggerDate(from request: UNNotificationRequest) throws -> Date {
@@ -752,7 +533,6 @@ struct NotificationCoordinatorTests {
     guard let date = calendar.date(from: trigger.dateComponents) else {
       throw NotificationCoordinatorTestError.invalidDate
     }
-
     return date
   }
 }
@@ -774,10 +554,8 @@ private func waitUntil(
     if condition() {
       return
     }
-
     await Task.yield()
   }
-
   throw NotificationCoordinatorTestError.timedOut(description)
 }
 
@@ -828,11 +606,9 @@ private final class FakeLocalNotificationCenter: LocalNotificationCenter {
   func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool {
     events.append("requestAuthorization")
     authorizationRequestCount += 1
-
     if authorizationRequestThrows {
       throw FakeLocalNotificationCenterError.authorizationRequest
     }
-
     return requestAuthorizationResult
   }
 
@@ -840,14 +616,12 @@ private final class FakeLocalNotificationCenter: LocalNotificationCenter {
     events.append("add")
     addedRequests.append(request)
     pending[request.identifier] = request
-
     if suspendNextAdd {
       suspendNextAdd = false
       await withCheckedContinuation { continuation in
         suspendedAddContinuation = continuation
       }
     }
-
     if addThrowsAfterRecording {
       throw FakeLocalNotificationCenterError.add
     }
@@ -868,7 +642,6 @@ private final class FakeLocalNotificationCenter: LocalNotificationCenter {
     guard !failPendingRemoval else {
       return
     }
-
     for identifier in identifiers {
       pending.removeValue(forKey: identifier)
     }
@@ -879,7 +652,6 @@ private final class FakeLocalNotificationCenter: LocalNotificationCenter {
     guard !failDeliveredRemoval else {
       return
     }
-
     delivered.subtract(identifiers)
   }
 

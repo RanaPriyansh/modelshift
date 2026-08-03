@@ -5,502 +5,182 @@ import Testing
 
 struct WidgetProjectionPolicyTests {
   @Test(
-    "Unavailable and invalid inputs have generic Today outputs",
+    "Fallback states open Today",
     arguments: [
-      (
-        WidgetProjectionPolicy.Input.unavailableStore,
-        WidgetProjectionPolicy.State.unavailableStore,
-        "Unavailable",
-        "Widget data unavailable",
-        "Open FORGE to view Today",
-        "FORGE. Widget data is unavailable. Open FORGE.",
-        "Opens the local FORGE Today view.",
-        "xmark.circle"
-      ),
-      (
-        WidgetProjectionPolicy.Input.noData,
-        WidgetProjectionPolicy.State.noData,
-        "No data",
-        "No delayed return",
-        "Open FORGE to view Today",
-        "FORGE. No delayed return is shown. Open FORGE.",
-        "Opens the local FORGE Today view.",
-        "minus.circle"
-      ),
-      (
-        WidgetProjectionPolicy.Input.corruptData,
-        WidgetProjectionPolicy.State.corruptData,
-        "Corrupt data",
-        "Return data unreadable",
-        "Open FORGE to view Today",
-        "FORGE. Return data cannot be read. Open FORGE.",
-        "Opens the local FORGE Today view.",
-        "exclamationmark.octagon"
-      ),
+      WidgetProjectionPolicy.Input.unavailableStore,
+      .noData,
+      .corruptData,
     ]
   )
-  func nonProjectionInputsUseGenericTodayCopy(
-    input: WidgetProjectionPolicy.Input,
-    expectedState: WidgetProjectionPolicy.State,
-    expectedStatus: String,
-    expectedTitle: String,
-    expectedDetail: String,
-    expectedAccessibilityLabel: String,
-    expectedAccessibilityHint: String,
-    expectedSymbol: String
-  ) throws {
-    let now = try utcDate(year: 2026, month: 8, day: 2, hour: 12)
+  func fallbackStatesOpenToday(
+    input: WidgetProjectionPolicy.Input
+  ) {
+    let now = Date(timeIntervalSinceReferenceDate: 100)
     let presentation = WidgetProjectionPolicy.presentation(
       for: input,
       now: now,
       calendar: utcCalendar()
     )
 
-    #expect(presentation.state == expectedState)
-    #expect(presentation.copy.status == expectedStatus)
-    #expect(presentation.copy.title == expectedTitle)
-    #expect(presentation.copy.detail == expectedDetail)
-    #expect(presentation.copy.accessibilityLabel == expectedAccessibilityLabel)
-    #expect(presentation.copy.accessibilityHint == expectedAccessibilityHint)
-    #expect(presentation.symbol == expectedSymbol)
-    #expect(presentation.route.url.absoluteString == "forge://today")
+    #expect(presentation.route == .today)
     #expect(
       presentation.nextRefreshDate
-        == now.addingTimeInterval(WidgetProjectionPolicy.maximumRefreshInterval)
+        == now.addingTimeInterval(
+          WidgetProjectionPolicy.maximumRefreshInterval
+        )
     )
   }
 
-  @Test
-  func transientStoreUnavailableUsesGenericCopyAndShortRetry() throws {
-    let now = try utcDate(year: 2026, month: 8, day: 2, hour: 12)
-    let hardFailure = WidgetProjectionPolicy.presentation(
-      for: .unavailableStore,
-      now: now,
-      calendar: utcCalendar()
-    )
-    let transientFailure = WidgetProjectionPolicy.presentation(
+  @Test("A transient store failure retries after one minute")
+  func transientFailureUsesShortRetry() {
+    let now = Date(timeIntervalSinceReferenceDate: 100)
+    let presentation = WidgetProjectionPolicy.presentation(
       for: .transientlyUnavailableStore,
       now: now,
       calendar: utcCalendar()
     )
-    let noData = WidgetProjectionPolicy.presentation(
-      for: .noData,
-      now: now,
-      calendar: utcCalendar()
-    )
 
-    #expect(transientFailure.state == hardFailure.state)
-    #expect(transientFailure.copy == hardFailure.copy)
-    #expect(transientFailure.symbol == hardFailure.symbol)
-    #expect(transientFailure.route == hardFailure.route)
+    #expect(presentation.state == .unavailableStore)
     #expect(
-      transientFailure.nextRefreshDate
-        == now.addingTimeInterval(WidgetProjectionPolicy.transientRetryInterval)
-    )
-    #expect(
-      hardFailure.nextRefreshDate
-        == now.addingTimeInterval(WidgetProjectionPolicy.maximumRefreshInterval)
-    )
-    #expect(
-      noData.nextRefreshDate
-        == now.addingTimeInterval(WidgetProjectionPolicy.maximumRefreshInterval)
+      presentation.nextRefreshDate
+        == now.addingTimeInterval(
+          WidgetProjectionPolicy.transientRetryInterval
+        )
     )
   }
 
-  @Test
-  func scheduledProjectionUsesTodayAndRefreshesAtOpening() throws {
-    let now = try utcDate(year: 2026, month: 8, day: 2, hour: 12)
-    let opensAt = now.addingTimeInterval(3_600)
+  @Test("Needs review opens Semester with generic copy")
+  func needsReviewPresentation() throws {
+    let now = Date(timeIntervalSinceReferenceDate: 100)
+    let projection = try SharedStoreTestSupport.projection(
+      status: .needsReview,
+      dueAt: nil,
+      generatedAt: now,
+      validUntil: now.addingTimeInterval(3_600)
+    )
+
     let presentation = WidgetProjectionPolicy.presentation(
-      for: .projection(
-        try projection(
-          lifecycle: .scheduled,
-          opensAt: opensAt,
-          dueAt: now.addingTimeInterval(86_400),
-          generatedAt: now,
-          validUntil: now.addingTimeInterval(172_800)
-        )
-      ),
+      for: .projection(projection),
       now: now,
       calendar: utcCalendar()
     )
 
-    #expect(presentation.state == .scheduled)
-    #expect(presentation.copy.status == "Scheduled")
-    #expect(presentation.copy.title == "Return activity scheduled")
-    #expect(presentation.copy.detail == "Open FORGE to view Today")
-    #expect(
-      presentation.copy.accessibilityLabel
-        == "FORGE. Return activity is scheduled. Open FORGE."
-    )
-    #expect(
-      presentation.copy.accessibilityHint == "Opens the local FORGE Today view."
-    )
-    #expect(presentation.symbol == "calendar")
-    #expect(presentation.route.url.absoluteString == "forge://today")
-    #expect(presentation.nextRefreshDate == opensAt)
+    #expect(presentation.state == .needsReview)
+    #expect(presentation.route == .semester)
+    #expect(presentation.copy.status == "Needs review")
+    #expect(presentation.copy.title == "Check your semester")
+    #expect(presentation.copy.detail == "See what changed in Semester")
+    #expect(presentation.dueAt == nil)
   }
 
-  @Test
-  func openProjectionUsesFocusAndGenericCopy() throws {
-    let now = try utcDate(year: 2026, month: 8, day: 2, hour: 12)
+  @Test("Ready work opens Today with generic copy")
+  func readyToWorkPresentation() throws {
+    let now = Date(timeIntervalSinceReferenceDate: 100)
+    let projection = try SharedStoreTestSupport.projection(
+      status: .readyToWork,
+      dueAt: nil,
+      generatedAt: now,
+      validUntil: now.addingTimeInterval(3_600)
+    )
+
     let presentation = WidgetProjectionPolicy.presentation(
-      for: .projection(
-        try projection(
-          lifecycle: .open,
-          opensAt: now.addingTimeInterval(-3_600),
-          dueAt: now.addingTimeInterval(86_400),
-          generatedAt: now.addingTimeInterval(-1_800),
-          validUntil: now.addingTimeInterval(172_800)
-        )
-      ),
+      for: .projection(projection),
       now: now,
       calendar: utcCalendar()
     )
 
-    #expect(presentation.state == .open)
-    #expect(presentation.copy.status == "Open")
-    #expect(presentation.copy.title == "Return activity open")
-    #expect(presentation.copy.detail == "Open FORGE to continue")
-    #expect(
-      presentation.copy.accessibilityLabel
-        == "FORGE. Return activity is open. Open FORGE."
-    )
-    #expect(
-      presentation.copy.accessibilityHint == "Opens the local FORGE focus view."
-    )
-    #expect(presentation.symbol == "arrow.right.circle")
-    #expect(presentation.route.url.absoluteString == "forge://focus")
+    #expect(presentation.state == .readyToWork)
+    #expect(presentation.route == .today)
+    #expect(presentation.copy.status == "Ready to work on")
+    #expect(presentation.copy.title == "Your next action is ready")
+    #expect(presentation.copy.detail == "Open Today to begin")
+    #expect(presentation.dueAt == nil)
   }
 
-  @Test
-  func dueProjectionUsesFocusOnTheLocalDueDay() throws {
-    let now = try utcDate(year: 2026, month: 8, day: 2, hour: 12)
-    let dueAt = now.addingTimeInterval(3_600)
+  @Test("Come back uses the due date as the next boundary")
+  func comeBackPresentation() throws {
+    let now = Date(timeIntervalSinceReferenceDate: 100)
+    let dueAt = now.addingTimeInterval(1_800)
+    let projection = try SharedStoreTestSupport.projection(
+      status: .comeBack,
+      dueAt: dueAt,
+      generatedAt: now,
+      validUntil: now.addingTimeInterval(3_600)
+    )
+
     let presentation = WidgetProjectionPolicy.presentation(
-      for: .projection(
-        try projection(
-          lifecycle: .open,
-          opensAt: now.addingTimeInterval(-3_600),
-          dueAt: dueAt,
-          generatedAt: now.addingTimeInterval(-1_800),
-          validUntil: now.addingTimeInterval(86_400)
-        )
-      ),
+      for: .projection(projection),
       now: now,
       calendar: utcCalendar()
     )
 
-    #expect(presentation.state == .due)
-    #expect(presentation.copy.status == "Due today")
-    #expect(presentation.copy.title == "Return activity due today")
-    #expect(presentation.copy.detail == "Open FORGE to continue")
-    #expect(
-      presentation.copy.accessibilityLabel
-        == "FORGE. Return activity is due today. Open FORGE."
-    )
-    #expect(
-      presentation.copy.accessibilityHint == "Opens the local FORGE focus view."
-    )
-    #expect(presentation.symbol == "exclamationmark.circle")
-    #expect(presentation.route.url.absoluteString == "forge://focus")
+    #expect(presentation.state == .comeBack)
+    #expect(presentation.route == .today)
+    #expect(presentation.copy.status == "Come back on this date")
+    #expect(presentation.copy.title == "Return to your work")
+    #expect(presentation.dueAt == dueAt)
     #expect(presentation.nextRefreshDate == dueAt)
   }
 
-  @Test
-  func localCalendarChangesOpenToDueAtTheLocalDayBoundary() throws {
-    let timeZone = try #require(TimeZone(identifier: "Asia/Kolkata"))
-    var localCalendar = Calendar(identifier: .gregorian)
-    localCalendar.timeZone = timeZone
-    let opensAt = try utcDate(year: 2026, month: 8, day: 2, hour: 12)
-    let beforeDueDay = try utcDate(
-      year: 2026,
-      month: 8,
-      day: 2,
-      hour: 17,
-      minute: 30
-    )
-    let dueAt = try utcDate(
-      year: 2026,
-      month: 8,
-      day: 2,
-      hour: 19,
-      minute: 30
-    )
-    let onLocalDueDay = try utcDate(
-      year: 2026,
-      month: 8,
-      day: 2,
-      hour: 19
-    )
-    let returnProjection = try projection(
-      lifecycle: .open,
-      opensAt: opensAt,
-      dueAt: dueAt,
-      generatedAt: beforeDueDay,
-      validUntil: dueAt.addingTimeInterval(86_400)
+  @Test("A projection becomes stale at its validity boundary")
+  func staleProjection() throws {
+    let generatedAt = Date(timeIntervalSinceReferenceDate: 100)
+    let validUntil = generatedAt.addingTimeInterval(3_600)
+    let projection = try SharedStoreTestSupport.projection(
+      status: .readyToWork,
+      dueAt: nil,
+      generatedAt: generatedAt,
+      validUntil: validUntil
     )
 
-    let openPresentation = WidgetProjectionPolicy.presentation(
-      for: .projection(returnProjection),
-      now: beforeDueDay,
-      calendar: localCalendar
-    )
-    let duePresentation = WidgetProjectionPolicy.presentation(
-      for: .projection(returnProjection),
-      now: onLocalDueDay,
-      calendar: localCalendar
-    )
-
-    #expect(utcCalendar().isDate(dueAt, inSameDayAs: beforeDueDay))
-    #expect(!localCalendar.isDate(dueAt, inSameDayAs: beforeDueDay))
-    #expect(openPresentation.state == .open)
-    #expect(
-      openPresentation.nextRefreshDate
-        == localCalendar.startOfDay(for: dueAt)
-    )
-    #expect(duePresentation.state == .due)
-    #expect(duePresentation.route.url.absoluteString == "forge://focus")
-  }
-
-  @Test(
-    "The due boundary expires only after dueAt",
-    arguments: [
-      (0.0, WidgetProjectionPolicy.State.due),
-      (1.0, WidgetProjectionPolicy.State.expired),
-    ]
-  )
-  func dueBoundary(
-    nowOffset: TimeInterval,
-    expectedState: WidgetProjectionPolicy.State
-  ) throws {
-    let dueAt = try utcDate(year: 2026, month: 8, day: 2, hour: 12)
     let presentation = WidgetProjectionPolicy.presentation(
-      for: .projection(
-        try projection(
-          lifecycle: .due,
-          opensAt: dueAt.addingTimeInterval(-3_600),
-          dueAt: dueAt,
-          generatedAt: dueAt,
-          validUntil: dueAt.addingTimeInterval(86_400)
-        )
-      ),
-      now: dueAt.addingTimeInterval(nowOffset),
-      calendar: utcCalendar()
-    )
-
-    #expect(presentation.state == expectedState)
-  }
-
-  @Test
-  func nowEqualDueAtKeepsDueStateAndSchedulesAFutureRefresh() throws {
-    let dueAt = try utcDate(year: 2026, month: 8, day: 2, hour: 12)
-    let presentation = WidgetProjectionPolicy.presentation(
-      for: .projection(
-        try projection(
-          lifecycle: .due,
-          opensAt: dueAt.addingTimeInterval(-3_600),
-          dueAt: dueAt,
-          generatedAt: dueAt,
-          validUntil: dueAt.addingTimeInterval(86_400)
-        )
-      ),
-      now: dueAt,
-      calendar: utcCalendar()
-    )
-
-    #expect(presentation.state == .due)
-    #expect(presentation.nextRefreshDate > dueAt)
-    #expect(
-      presentation.nextRefreshDate
-        == dueAt.addingTimeInterval(WidgetProjectionPolicy.maximumRefreshInterval)
-    )
-  }
-
-  @Test
-  func expiredProjectionUsesTodayAndClosedWindowCopy() throws {
-    let now = try utcDate(year: 2026, month: 8, day: 2, hour: 12)
-    let dueAt = now.addingTimeInterval(-1)
-    let presentation = WidgetProjectionPolicy.presentation(
-      for: .projection(
-        try projection(
-          lifecycle: .due,
-          opensAt: now.addingTimeInterval(-3_600),
-          dueAt: dueAt,
-          generatedAt: dueAt,
-          validUntil: now.addingTimeInterval(3_600)
-        )
-      ),
-      now: now,
-      calendar: utcCalendar()
-    )
-
-    #expect(presentation.state == .expired)
-    #expect(presentation.copy.status == "Window closed")
-    #expect(presentation.copy.title == "Return window closed")
-    #expect(presentation.copy.detail == "Open FORGE to view Today")
-    #expect(
-      presentation.copy.accessibilityLabel
-        == "FORGE. Return window is closed. Open FORGE."
-    )
-    #expect(
-      presentation.copy.accessibilityHint == "Opens the local FORGE Today view."
-    )
-    #expect(presentation.route.url.absoluteString == "forge://today")
-    #expect(presentation.nextRefreshDate == now.addingTimeInterval(3_600))
-  }
-
-  @Test
-  func staleProjectionUsesTodayAndRefreshCopy() throws {
-    let now = try utcDate(year: 2026, month: 8, day: 2, hour: 12)
-    let presentation = WidgetProjectionPolicy.presentation(
-      for: .projection(
-        try projection(
-          lifecycle: .scheduled,
-          opensAt: now.addingTimeInterval(3_600),
-          dueAt: now.addingTimeInterval(86_400),
-          generatedAt: now.addingTimeInterval(-2),
-          validUntil: now.addingTimeInterval(-1)
-        )
-      ),
-      now: now,
+      for: .projection(projection),
+      now: validUntil,
       calendar: utcCalendar()
     )
 
     #expect(presentation.state == .stale)
-    #expect(presentation.copy.status == "Refresh needed")
-    #expect(presentation.copy.title == "Widget data expired")
-    #expect(presentation.copy.detail == "Open FORGE to refresh")
-    #expect(
-      presentation.copy.accessibilityLabel
-        == "FORGE. Widget data is stale. Open FORGE to refresh."
-    )
-    #expect(
-      presentation.copy.accessibilityHint == "Opens the local FORGE Today view."
-    )
-    #expect(presentation.route.url.absoluteString == "forge://today")
-    #expect(
-      presentation.nextRefreshDate
-        == now.addingTimeInterval(WidgetProjectionPolicy.maximumRefreshInterval)
-    )
+    #expect(presentation.route == .today)
   }
 
-  @Test
-  func nowEqualValidUntilUsesStaleState() throws {
-    let now = try utcDate(year: 2026, month: 8, day: 2, hour: 12)
+  @Test("The validity boundary wins before the six-hour cap")
+  func validityBoundaryWins() throws {
+    let now = Date(timeIntervalSinceReferenceDate: 100)
+    let validUntil = now.addingTimeInterval(600)
+    let projection = try SharedStoreTestSupport.projection(
+      status: .readyToWork,
+      dueAt: nil,
+      generatedAt: now,
+      validUntil: validUntil
+    )
+
     let presentation = WidgetProjectionPolicy.presentation(
-      for: .projection(
-        try projection(
-          lifecycle: .scheduled,
-          opensAt: now.addingTimeInterval(3_600),
-          dueAt: now.addingTimeInterval(86_400),
-          generatedAt: now.addingTimeInterval(-1),
-          validUntil: now
-        )
-      ),
+      for: .projection(projection),
       now: now,
       calendar: utcCalendar()
     )
 
-    #expect(presentation.state == .stale)
-    #expect(presentation.nextRefreshDate > now)
-  }
-
-  @Test
-  func validUntilBoundsScheduledRefreshes() throws {
-    let now = try utcDate(year: 2026, month: 8, day: 2, hour: 12)
-    let validUntil = now.addingTimeInterval(1_800)
-    let presentation = WidgetProjectionPolicy.presentation(
-      for: .projection(
-        try projection(
-          lifecycle: .scheduled,
-          opensAt: now.addingTimeInterval(7_200),
-          dueAt: now.addingTimeInterval(86_400),
-          generatedAt: now,
-          validUntil: validUntil
-        )
-      ),
-      now: now,
-      calendar: utcCalendar()
-    )
-
-    #expect(presentation.state == .scheduled)
     #expect(presentation.nextRefreshDate == validUntil)
   }
 
-  @Test
-  func sixHourRefreshCapBoundsFutureStateChanges() throws {
-    let now = try utcDate(year: 2026, month: 8, day: 2, hour: 12)
-    let presentation = WidgetProjectionPolicy.presentation(
-      for: .projection(
-        try projection(
-          lifecycle: .scheduled,
-          opensAt: now.addingTimeInterval(86_400),
-          dueAt: now.addingTimeInterval(172_800),
-          generatedAt: now,
-          validUntil: now.addingTimeInterval(259_200)
-        )
-      ),
-      now: now,
-      calendar: utcCalendar()
-    )
-
-    #expect(
-      presentation.nextRefreshDate
-        == now.addingTimeInterval(WidgetProjectionPolicy.maximumRefreshInterval)
-    )
-  }
-
-  @Test
-  func everyPresentationSchedulesARefreshAfterNow() throws {
-    let now = try utcDate(year: 2026, month: 8, day: 2, hour: 12)
+  @Test("Widget copy excludes protected study and source detail vocabulary")
+  func presentationCopyExcludesPrivateVocabulary() throws {
+    let now = Date(timeIntervalSinceReferenceDate: 100)
     let inputs: [WidgetProjectionPolicy.Input] = [
-      .unavailableStore,
-      .noData,
-      .corruptData,
       .projection(
-        try projection(
-          lifecycle: .scheduled,
-          opensAt: now.addingTimeInterval(3_600),
-          dueAt: now.addingTimeInterval(86_400),
+        try SharedStoreTestSupport.projection(
+          status: .needsReview,
+          dueAt: nil,
           generatedAt: now,
-          validUntil: now.addingTimeInterval(172_800)
+          validUntil: now.addingTimeInterval(600)
         )
       ),
       .projection(
-        try projection(
-          lifecycle: .open,
-          opensAt: now.addingTimeInterval(-3_600),
-          dueAt: now.addingTimeInterval(86_400),
-          generatedAt: now.addingTimeInterval(-1),
-          validUntil: now.addingTimeInterval(172_800)
-        )
-      ),
-      .projection(
-        try projection(
-          lifecycle: .due,
-          opensAt: now.addingTimeInterval(-3_600),
-          dueAt: now,
+        try SharedStoreTestSupport.projection(
+          status: .readyToWork,
+          dueAt: nil,
           generatedAt: now,
-          validUntil: now.addingTimeInterval(86_400)
-        )
-      ),
-      .projection(
-        try projection(
-          lifecycle: .due,
-          opensAt: now.addingTimeInterval(-7_200),
-          dueAt: now.addingTimeInterval(-3_600),
-          generatedAt: now.addingTimeInterval(-3_600),
-          validUntil: now.addingTimeInterval(3_600)
-        )
-      ),
-      .projection(
-        try projection(
-          lifecycle: .scheduled,
-          opensAt: now.addingTimeInterval(3_600),
-          dueAt: now.addingTimeInterval(86_400),
-          generatedAt: now.addingTimeInterval(-2),
-          validUntil: now.addingTimeInterval(-1)
+          validUntil: now.addingTimeInterval(600)
         )
       ),
     ]
@@ -511,24 +191,46 @@ struct WidgetProjectionPolicyTests {
         now: now,
         calendar: utcCalendar()
       )
-
-      #expect(presentation.nextRefreshDate > now)
+      let copy = [
+        presentation.copy.status,
+        presentation.copy.title,
+        presentation.copy.detail,
+        presentation.copy.accessibilityLabel,
+        presentation.copy.accessibilityHint,
+      ].joined(separator: " ").lowercased()
+      for forbidden in [
+        "practice text",
+        "proof text",
+        "answer",
+        "course",
+        "plan item",
+        "activity",
+        "source label",
+        "conflict detail",
+        "learner state",
+        "evidence",
+        "response",
+        "selected choice",
+      ] {
+        #expect(!copy.contains(forbidden))
+      }
     }
   }
 
-  private func projection(
-    lifecycle: ForgeReturnProjectionLifecycle,
-    opensAt: Date,
-    dueAt: Date,
-    generatedAt: Date,
-    validUntil: Date
-  ) throws -> ForgeReturnProjection {
-    try ForgeReturnProjection(
-      lifecycle: lifecycle,
-      opensAt: opensAt,
-      dueAt: dueAt,
-      generatedAt: generatedAt,
-      validUntil: validUntil
+  @Test("All widget routes are canonical v2 routes")
+  func v2Routes() {
+    #expect(WidgetProjectionPolicy.Route.today.url.absoluteString == "forge://today")
+    #expect(
+      WidgetProjectionPolicy.Route.semester.url.absoluteString
+        == "forge://semester"
+    )
+    #expect(
+      WidgetProjectionPolicy.Route.progress.url.absoluteString
+        == "forge://progress"
+    )
+    #expect(
+      WidgetProjectionPolicy.Route.settings.url.absoluteString
+        == "forge://settings"
     )
   }
 
@@ -536,25 +238,5 @@ struct WidgetProjectionPolicyTests {
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = TimeZone(secondsFromGMT: 0)!
     return calendar
-  }
-
-  private func utcDate(
-    year: Int,
-    month: Int,
-    day: Int,
-    hour: Int,
-    minute: Int = 0
-  ) throws -> Date {
-    try #require(
-      utcCalendar().date(
-        from: DateComponents(
-          year: year,
-          month: month,
-          day: day,
-          hour: hour,
-          minute: minute
-        )
-      )
-    )
   }
 }

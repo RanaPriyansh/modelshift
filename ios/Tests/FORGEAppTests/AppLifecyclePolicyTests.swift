@@ -12,11 +12,11 @@ struct AppLifecyclePolicyTests {
     #expect(AppLifecyclePolicy.phase(for: ScenePhase.background) == .background)
   }
 
-  @Test("Active requests focus before reminder reconciliation")
-  func activeRequestsFocusBeforeReminderReconciliation() {
+  @Test("Active consumes a pending system route before reminder reconciliation")
+  func activeConsumesSystemRouteBeforeReminderReconciliation() {
     #expect(
       AppLifecyclePolicy.actions(for: AppLifecyclePolicy.Phase.active)
-        == [.consumePendingFocus, .reconcileReminders]
+        == [.consumePendingSystemDestination, .reconcileReminders]
     )
   }
 

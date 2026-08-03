@@ -188,7 +188,7 @@ final class NotificationCoordinator {
 
   /// Call this method only from an explicit return-reminder user action.
   func requestAndSchedule(
-    delayedReturns: [DelayedReturnRecord]
+    delayedReturns: [UniversitySemesterDeskDelayedReturn]
   ) async -> ReminderSchedulingResult {
     await enqueue { [self] in
       await requestAndScheduleOperation(delayedReturns: delayedReturns)
@@ -197,7 +197,7 @@ final class NotificationCoordinator {
 
   func reconcile(
     isEnabled: Bool,
-    delayedReturns: [DelayedReturnRecord]
+    delayedReturns: [UniversitySemesterDeskDelayedReturn]
   ) async -> ReminderReconciliationResult {
     await enqueue { [self] in
       await reconcileOperation(
@@ -212,6 +212,10 @@ final class NotificationCoordinator {
       _ = now()
       return await cancelManagedReminders()
     }
+  }
+
+  func authorizationStatus() async -> LocalNotificationAuthorizationStatus {
+    await center.authorizationStatus()
   }
 
   func removeKnownReminderImmediately() -> Bool {
@@ -240,7 +244,7 @@ final class NotificationCoordinator {
   }
 
   private func requestAndScheduleOperation(
-    delayedReturns: [DelayedReturnRecord]
+    delayedReturns: [UniversitySemesterDeskDelayedReturn]
   ) async -> ReminderSchedulingResult {
     let capturedNow = now()
 
@@ -249,7 +253,7 @@ final class NotificationCoordinator {
     }
 
     guard
-      let delayedReturn = ReturnReminderPolicy.eligibleReturn(
+      let scheduledDate = eligibleReturnDate(
         in: delayedReturns,
         now: capturedNow
       )
@@ -258,12 +262,6 @@ final class NotificationCoordinator {
     }
 
     guard
-      let scheduledDate = ReturnReminderPolicy.scheduledDate(
-        for: delayedReturn,
-        now: capturedNow,
-        timeZone: timeZone,
-        calendar: calendar
-      ),
       let trigger = makeReminderTrigger(
         for: scheduledDate,
         after: capturedNow
@@ -308,7 +306,7 @@ final class NotificationCoordinator {
 
   private func reconcileOperation(
     isEnabled: Bool,
-    delayedReturns: [DelayedReturnRecord]
+    delayedReturns: [UniversitySemesterDeskDelayedReturn]
   ) async -> ReminderReconciliationResult {
     let capturedNow = now()
 
@@ -321,7 +319,7 @@ final class NotificationCoordinator {
     }
 
     guard
-      let delayedReturn = ReturnReminderPolicy.eligibleReturn(
+      let scheduledDate = eligibleReturnDate(
         in: delayedReturns,
         now: capturedNow
       )
@@ -330,12 +328,6 @@ final class NotificationCoordinator {
     }
 
     guard
-      let scheduledDate = ReturnReminderPolicy.scheduledDate(
-        for: delayedReturn,
-        now: capturedNow,
-        timeZone: timeZone,
-        calendar: calendar
-      ),
       let trigger = makeReminderTrigger(
         for: scheduledDate,
         after: capturedNow
@@ -441,8 +433,8 @@ final class NotificationCoordinator {
     trigger: UNCalendarNotificationTrigger
   ) -> UNNotificationRequest {
     let content = UNMutableNotificationContent()
-    content.title = ReturnReminderPolicy.title
-    content.body = ReturnReminderPolicy.body
+    content.title = "Come back on this date"
+    content.body = "Open FORGE Today to check what you retained."
     content.interruptionLevel = .passive
     content.sound = nil
 
@@ -500,6 +492,43 @@ final class NotificationCoordinator {
       dateMatching: components,
       repeats: false
     )
+  }
+
+  private func eligibleReturnDate(
+    in delayedReturns: [UniversitySemesterDeskDelayedReturn],
+    now: Date
+  ) -> Date? {
+    guard now.timeIntervalSinceReferenceDate.isFinite else {
+      return nil
+    }
+
+    return delayedReturns
+      .filter { $0.status == .due }
+      .compactMap { delayedReturn -> (id: String, date: Date)? in
+        guard
+          let date = parseSemesterDeskTimestamp(delayedReturn.dueAt),
+          date > now
+        else {
+          return nil
+        }
+        return (delayedReturn.id, date)
+      }
+      .min { left, right in
+        if left.date == right.date {
+          return left.id < right.id
+        }
+        return left.date < right.date
+      }?
+      .date
+  }
+
+  private func parseSemesterDeskTimestamp(_ value: String) -> Date? {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [
+      .withInternetDateTime,
+      .withFractionalSeconds,
+    ]
+    return formatter.date(from: value)
   }
 
   private func enqueue<T>(

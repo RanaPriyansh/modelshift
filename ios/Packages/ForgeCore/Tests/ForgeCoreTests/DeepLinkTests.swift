@@ -8,10 +8,8 @@ struct DeepLinkTests {
     "Parses canonical Forge destinations",
     arguments: [
       ("forge://today", ForgeDestination.today),
-      ("forge://path", ForgeDestination.path),
-      ("forge://evidence", ForgeDestination.evidence),
-      ("forge://returns", ForgeDestination.returns),
-      ("forge://focus", ForgeDestination.focus),
+      ("forge://semester", ForgeDestination.semester),
+      ("forge://progress", ForgeDestination.progress),
       ("forge://settings", ForgeDestination.settings),
     ]
   )
@@ -36,6 +34,10 @@ struct DeepLinkTests {
       "HTTP://TODAY",
       "mailto:today@example.com",
       "forge://unknown",
+      "forge://path",
+      "forge://evidence",
+      "forge://returns",
+      "forge://focus",
       "forge://user@today",
       "forge://user:secret@today",
       "forge://@today",

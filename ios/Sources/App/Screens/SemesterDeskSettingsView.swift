@@ -1,10 +1,25 @@
 import ForgeCore
 import Foundation
 import SwiftUI
+import UIKit
+import UniformTypeIdentifiers
 
 struct SemesterDeskSettingsView: View {
+  private enum StatusFocus: Hashable {
+    case reminder
+    case export
+  }
+
   @Environment(AppModel.self) private var model
   @State private var clearConfirmationIsPresented = false
+  @State private var exportDocument: SemesterDeskExportDocument?
+  @State private var exportIsPresented = false
+  @State private var exportStatusMessage: String?
+  @State private var pendingReminderStatusMessage: String?
+  @State private var reminderOperationWasObserved = false
+  @State private var reminderAnnouncementGeneration = 0
+  @State private var exportAnnouncementGeneration = 0
+  @AccessibilityFocusState private var statusFocus: StatusFocus?
 
   var body: some View {
     List {
@@ -29,50 +44,124 @@ struct SemesterDeskSettingsView: View {
       }
     } message: {
       Text(
-        "FORGE cannot restore cleared Semester Desk data. It also removes managed local reminders and shared return state."
+        "FORGE cannot restore cleared Semester Desk data. This action removes local reminders and shared widget data."
       )
+    }
+    .fileExporter(
+      isPresented: $exportIsPresented,
+      document: exportDocument,
+      contentType: .json,
+      defaultFilename: exportDocument?.export.filename
+    ) { result in
+      switch result {
+      case .success:
+        setExportStatus("The local Semester Desk export is ready.")
+      case .failure:
+        setExportStatus("FORGE could not export the local Semester Desk.")
+      }
+      exportDocument = nil
+    }
+    .onChange(of: model.reminderStatusMessage, initial: false) { _, message in
+      updateReminderStatusAnnouncement(for: message)
+    }
+    .onChange(of: model.isReminderOperationRunning, initial: true) { _, isRunning in
+      updateReminderOperationState(isRunning)
     }
     .accessibilityIdentifier("semester-settings.screen")
   }
 
   private var reminderSection: some View {
     Section {
-      if let delayedReturn = earliestIncompleteReturn {
+      Toggle(
+        "Local return reminder",
+        isOn: Binding(
+          get: { model.remindersEnabled },
+          set: { model.setRemindersEnabled($0) }
+        )
+      )
+      .disabled(
+        model.isReminderOperationRunning
+          || (!model.remindersEnabled && !model.canEnableReminders)
+      )
+      .accessibilityIdentifier("semester-settings.reminder-toggle")
+
+      if let reminderDate = model.semesterDeskReminderDate {
         LabeledContent(
-          "Return date",
-          value: SemesterDeskDisplay.dateTime(delayedReturn.dueAt)
+          "Come back on this date",
+          value: reminderDate.formatted(date: .long, time: .shortened)
         )
-
-        LabeledContent("Permission", value: "Not checked for Semester Desk")
-        LabeledContent("Reminder status", value: "Not available in this build")
-
-        Text(
-          "FORGE does not schedule a Semester Desk reminder until native reminder integration is available."
-        )
-        .font(.subheadline)
-        .foregroundStyle(ForgeDesign.secondaryText)
-        .fixedSize(horizontal: false, vertical: true)
       } else {
-        LabeledContent("Permission", value: "Not checked for Semester Desk")
-        LabeledContent("Reminder status", value: "No return needs a reminder")
+        LabeledContent("Come back on this date", value: "No return date")
+      }
+
+      LabeledContent("Permission", value: model.reminderPermissionLabel)
+      LabeledContent(
+        "Reminder status",
+        value: model.remindersEnabled ? "Enabled" : "Disabled"
+      )
+
+      if model.isReminderOperationRunning {
+        ProgressView("Updating the local reminder")
+          .accessibilityIdentifier("semester-settings.reminder-progress")
+      }
+
+      if let message = model.reminderStatusMessage, !message.isEmpty {
+        Text(message)
+          .font(.subheadline)
+          .foregroundStyle(ForgeDesign.secondaryText)
+          .fixedSize(horizontal: false, vertical: true)
+          .accessibilityFocused($statusFocus, equals: .reminder)
+          .accessibilityIdentifier("semester-settings.reminder-status")
+      }
+
+      if model.reminderAuthorizationStatus == .denied,
+        let settingsURL = URL(string: UIApplication.openSettingsURLString)
+      {
+        Link("Open iOS Settings", destination: settingsURL)
+          .frame(minHeight: 44)
+          .accessibilityHint("Opens notification permission in iOS Settings.")
+          .accessibilityIdentifier("semester-settings.open-ios-settings")
       }
     } header: {
       Text("Return reminder")
     } footer: {
-      Text("iOS controls notification permission and delivery.")
+      Text("FORGE schedules one local reminder at the earliest return date. iOS controls delivery.")
     }
   }
 
   private var exportSection: some View {
     Section {
-      LabeledContent("Download or export", value: "Not available")
+      Button {
+        do {
+          let export = try model.makeSemesterDeskLocalExport()
+          exportDocument = SemesterDeskExportDocument(export: export)
+          exportAnnouncementGeneration += 1
+          exportStatusMessage = nil
+          exportIsPresented = true
+        } catch {
+          exportDocument = nil
+          setExportStatus("FORGE could not prepare the local Semester Desk export.")
+        }
+      } label: {
+        Label("Export Semester Desk", systemImage: "square.and.arrow.up")
+          .frame(minHeight: 44)
+      }
+      .accessibilityLabel("Export local Semester Desk JSON")
+      .accessibilityHint("Opens the iOS file export dialog.")
+      .accessibilityIdentifier("semester-settings.export")
 
-      Text("FORGE does not show an export action until a supported private export exists.")
-        .font(.subheadline)
-        .foregroundStyle(ForgeDesign.secondaryText)
-        .fixedSize(horizontal: false, vertical: true)
+      if let exportStatusMessage {
+        Text(exportStatusMessage)
+          .font(.subheadline)
+          .foregroundStyle(ForgeDesign.secondaryText)
+          .fixedSize(horizontal: false, vertical: true)
+          .accessibilityFocused($statusFocus, equals: .export)
+          .accessibilityIdentifier("semester-settings.export-status")
+      }
     } header: {
       Text("Export")
+    } footer: {
+      Text("The export contains the validated Semester Desk and local reminder preference.")
     }
   }
 
@@ -133,13 +222,6 @@ struct SemesterDeskSettingsView: View {
     }
   }
 
-  private var earliestIncompleteReturn: UniversitySemesterDeskDelayedReturn? {
-    model.semesterDesk?.delayedReturns
-      .filter { $0.status != .completed }
-      .sorted { $0.dueAt < $1.dueAt }
-      .first
-  }
-
   private var applicationVersion: String {
     let version =
       Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
@@ -148,6 +230,99 @@ struct SemesterDeskSettingsView: View {
       Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
       ?? "Unknown"
     return "\(version) (\(build))"
+  }
+
+  private func updateReminderStatusAnnouncement(for message: String?) {
+    guard let message, !message.isEmpty else {
+      pendingReminderStatusMessage = nil
+      reminderAnnouncementGeneration += 1
+      if statusFocus == .reminder {
+        statusFocus = nil
+      }
+      return
+    }
+
+    guard !model.isReminderOperationRunning, !reminderOperationWasObserved else {
+      pendingReminderStatusMessage = message
+      return
+    }
+
+    announceReminderStatus(message)
+  }
+
+  private func updateReminderOperationState(_ isRunning: Bool) {
+    guard !isRunning else {
+      reminderOperationWasObserved = true
+      pendingReminderStatusMessage = nil
+      reminderAnnouncementGeneration += 1
+      if statusFocus == .reminder {
+        statusFocus = nil
+      }
+      return
+    }
+
+    announcePendingReminderStatus()
+  }
+
+  private func announcePendingReminderStatus() {
+    guard reminderOperationWasObserved else {
+      return
+    }
+    reminderOperationWasObserved = false
+
+    guard
+      !model.isLocalDataResetRunning,
+      let message = pendingReminderStatusMessage ?? model.reminderStatusMessage,
+      !message.isEmpty,
+      model.reminderStatusMessage == message
+    else {
+      pendingReminderStatusMessage = nil
+      return
+    }
+
+    pendingReminderStatusMessage = nil
+    announceReminderStatus(message)
+  }
+
+  private func announceReminderStatus(_ message: String) {
+    reminderAnnouncementGeneration += 1
+    let generation = reminderAnnouncementGeneration
+    statusFocus = nil
+
+    Task { @MainActor in
+      await Task.yield()
+      guard
+        generation == reminderAnnouncementGeneration,
+        !model.isReminderOperationRunning,
+        !model.isLocalDataResetRunning,
+        model.reminderStatusMessage == message
+      else {
+        return
+      }
+
+      statusFocus = .reminder
+      AccessibilityNotification.Announcement(message).post()
+    }
+  }
+
+  private func setExportStatus(_ message: String) {
+    exportStatusMessage = message
+    exportAnnouncementGeneration += 1
+    let generation = exportAnnouncementGeneration
+    statusFocus = nil
+
+    Task { @MainActor in
+      await Task.yield()
+      guard
+        generation == exportAnnouncementGeneration,
+        exportStatusMessage == message
+      else {
+        return
+      }
+
+      statusFocus = .export
+      AccessibilityNotification.Announcement(message).post()
+    }
   }
 }
 

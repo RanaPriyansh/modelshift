@@ -92,9 +92,9 @@ struct AppRootView: View {
       model.route(url)
     }
     .onReceive(
-      NotificationCenter.default.publisher(for: .forgePendingFocusDidChange)
+      NotificationCenter.default.publisher(for: .forgePendingDestinationDidChange)
     ) { _ in
-      model.consumePendingFocus()
+      model.consumePendingSystemDestination()
     }
     .onChange(of: scenePhase) { _, phase in
       model.handleScenePhaseChange(phase)

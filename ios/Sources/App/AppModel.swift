@@ -170,7 +170,7 @@ enum AppLifecyclePolicy {
   }
 
   enum Action: Equatable, Sendable {
-    case consumePendingFocus
+    case consumePendingSystemDestination
     case reconcileReminders
     case persistCurrentState
   }
@@ -195,7 +195,7 @@ enum AppLifecyclePolicy {
   static func actions(for phase: Phase) -> [Action] {
     switch phase {
     case .active:
-      [.consumePendingFocus, .reconcileReminders]
+      [.consumePendingSystemDestination, .reconcileReminders]
     case .background:
       [.persistCurrentState]
     case .inactive, .unknown:
@@ -231,7 +231,7 @@ private actor AppSharedStateService: Sendable {
   }
 
   func updateProjectionIfChanged(
-    _ projection: ForgeReturnProjection?
+    _ projection: ForgeSemesterDeskProjection?
   ) -> AppSharedStateResult<AppSharedProjectionMutation> {
     guard let store else {
       return .unavailable
@@ -248,8 +248,7 @@ private actor AppSharedStateService: Sendable {
       }
 
       if let storedProjection,
-        storedProjection.lifecycle == projection.lifecycle,
-        storedProjection.opensAt == projection.opensAt,
+        storedProjection.status == projection.status,
         storedProjection.dueAt == projection.dueAt,
         storedProjection.generatedAt <= projection.generatedAt,
         storedProjection.validUntil
@@ -295,26 +294,13 @@ private actor AppSharedStateService: Sendable {
     }
   }
 
-  func consumePendingFocus() -> AppSharedStateResult<Bool> {
+  func consumePendingDestination() -> AppSharedStateResult<ForgeDestination?> {
     guard let store else {
       return .unavailable
     }
 
     do {
-      return .success(try store.consumePendingFocus())
-    } catch {
-      return .failure
-    }
-  }
-
-  func restorePendingFocus() -> AppSharedStateResult<Void> {
-    guard let store else {
-      return .unavailable
-    }
-
-    do {
-      try store.setPendingFocus()
-      return .success(())
+      return .success(try store.consumePendingDestination())
     } catch {
       return .failure
     }
@@ -332,7 +318,7 @@ final class AppModel {
     case sharedClearUnavailable
     case legacyPurge
     case legacyPurgeUnavailable
-    case focusRead
+    case pendingDestinationRead
 
     var message: String {
       switch self {
@@ -344,8 +330,8 @@ final class AppModel {
         "Shared return data is unavailable on this device."
       case .legacyPurge:
         "FORGE could not remove legacy shared data."
-      case .focusRead:
-        "FORGE could not read shared focus data."
+      case .pendingDestinationRead:
+        "FORGE could not read the pending system route."
       }
     }
   }
@@ -366,16 +352,6 @@ final class AppModel {
     let stateRevision: UInt64
     let resetEpoch: UInt64
     let deadline: Date
-  }
-
-  private struct FocusOperationResult: Sendable {
-    static let empty = FocusOperationResult(
-      didConsume: false,
-      shouldPresent: false
-    )
-
-    let didConsume: Bool
-    let shouldPresent: Bool
   }
 
   private enum ResetCleanupStage: String, CaseIterable, Hashable {
@@ -454,8 +430,6 @@ final class AppModel {
   @ObservationIgnored private var backgroundPersistenceOperation: Task<Void, Never>?
   @ObservationIgnored private var sharedProjectionOperation: Task<Void, Never>?
   @ObservationIgnored private var sharedProjectionGeneration: UInt64 = 0
-  @ObservationIgnored private var focusOperation: Task<FocusOperationResult, Never>?
-  @ObservationIgnored private var focusOperationGeneration: UInt64 = 0
   @ObservationIgnored private var timeBoundaryTask: Task<Void, Never>?
   @ObservationIgnored private var timeBoundaryGeneration: UInt64 = 0
   @ObservationIgnored private var timeBoundaryDeadline: Date?
@@ -483,6 +457,7 @@ final class AppModel {
   var remindersEnabled: Bool
   var isReminderOperationRunning: Bool
   var reminderStatusMessage: String?
+  var reminderAuthorizationStatus: LocalNotificationAuthorizationStatus
   var isLocalDataResetRunning: Bool
   var localDataResetStatusMessage: String?
   var recoveryState: AppModelRecoveryState? {
@@ -582,6 +557,7 @@ final class AppModel {
     self.remindersEnabled = false
     self.isReminderOperationRunning = false
     self.reminderStatusMessage = nil
+    self.reminderAuthorizationStatus = .notDetermined
     self.isLocalDataResetRunning = false
     self.localDataResetStatusMessage = nil
     self.recoveryState = nil
@@ -612,7 +588,6 @@ final class AppModel {
     recoveryOperation?.cancel()
     localDataResetOperation?.cancel()
     sharedProjectionOperation?.cancel()
-    focusOperation?.cancel()
     timeBoundaryTask?.cancel()
   }
 
@@ -694,8 +669,9 @@ final class AppModel {
       return
     }
     launchState = .ready
-    await consumePendingLaunchDestination()
     if didLoad {
+      await consumePendingSystemDestinationNow()
+      await consumePendingLaunchDestination()
       await replayInitialActiveLifecycle()
     }
   }
@@ -790,34 +766,50 @@ final class AppModel {
 
   var canEnableReminders: Bool {
     guard
-      isCourseStarted,
+      semesterDesk != nil,
       launchState == .ready,
       !isLocalDataResetRunning,
       recoveryState == nil,
-      let delayedReturn = currentDelayedReturn
+      let reminderDate = semesterDeskReminderDate
     else {
       return false
     }
 
-    return delayedReturn.status == .scheduled
+    return reminderDate > now()
   }
 
   var reminderBoundaryText: String {
-    guard let delayedReturn = currentDelayedReturn else {
-      return "No delayed return is available."
+    guard let reminderDate = semesterDeskReminderDate else {
+      return "No delayed return needs a reminder."
     }
+    return "Come back on this date: \(reminderDate.formatted(date: .long, time: .shortened))."
+  }
 
-    switch delayedReturn.status {
-    case .scheduled:
-      let opensAt = delayedReturn.opensAt.formatted(date: .long, time: .shortened)
-      return "The return opens at \(opensAt). Enable one local reminder for that opening time."
-    case .open, .due:
-      return "This return is already open. FORGE does not schedule a new reminder."
-    case .expired:
-      return "This return has expired. FORGE does not schedule a reminder."
-    case .completed:
-      return "This return is complete. FORGE does not schedule a reminder."
+  var reminderPermissionLabel: String {
+    switch reminderAuthorizationStatus {
+    case .notDetermined:
+      "Not requested"
+    case .denied:
+      "Denied in iOS Settings"
+    case .authorized, .provisional, .ephemeral:
+      "Allowed"
+    case .unknown:
+      "Unavailable"
     }
+  }
+
+  var semesterDeskReminderDate: Date? {
+    guard let semesterDesk else {
+      return nil
+    }
+    let currentDate = now()
+    return semesterDesk.delayedReturns
+      .filter { $0.status == .due }
+      .compactMap { delayedReturn in
+        Self.semesterDeskDate(from: delayedReturn.dueAt)
+      }
+      .filter { $0 > currentDate }
+      .min()
   }
 
   var localDataRecoveryMessage: String {
@@ -866,6 +858,10 @@ final class AppModel {
 
   var semesterDeskCurrentDate: Date {
     now()
+  }
+
+  var semesterDeskCalendar: Calendar {
+    calendar
   }
 
   func semesterDeskTodayAction(at date: Date) -> SemesterDeskTodayAction? {
@@ -1166,6 +1162,27 @@ final class AppModel {
     Date.ISO8601FormatStyle(includingFractionalSeconds: true).format(date)
   }
 
+  static func semesterDeskDate(from timestamp: String) -> Date? {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [
+      .withInternetDateTime,
+      .withFractionalSeconds,
+    ]
+    return formatter.date(from: timestamp)
+  }
+
+  func makeSemesterDeskLocalExport() throws -> SemesterDeskLocalExport {
+    guard let semesterDesk else {
+      throw SemesterDeskLocalExportError.invalidState
+    }
+    return try SemesterDeskLocalExport.make(
+      semesterDesk: semesterDesk,
+      profileID: localProfileID,
+      remindersEnabled: remindersEnabled,
+      exportedAt: now()
+    )
+  }
+
   func choiceLabel(for choice: String) -> String {
     UniversityStarterCourse.choiceLabel(for: choice)
   }
@@ -1228,6 +1245,12 @@ final class AppModel {
     }
 
     apply(candidate)
+    scheduleNextTimeBoundary(after: capturedNow)
+    await syncSharedProjection(at: capturedNow)
+    guard ownsStateMutation(mutationToken) else {
+      return false
+    }
+    reconcileReminders()
     semesterNameDraft = ""
     localDataResetStatusMessage = nil
     semesterDeskStatusMessage = "Your Semester Desk is ready."
@@ -1309,6 +1332,12 @@ final class AppModel {
     }
 
     apply(candidate)
+    scheduleNextTimeBoundary(after: actionNow)
+    await syncSharedProjection(at: actionNow)
+    guard ownsStateMutation(mutationToken) else {
+      return false
+    }
+    reconcileReminders()
     semesterDeskStatusMessage = "Your Semester Desk is updated."
     return true
   }
@@ -1406,7 +1435,6 @@ final class AppModel {
     }
 
     cancelReminderOperationWithoutWaiting()
-    discardPendingFocus()
     let didRequestReminderRemoval =
       notificationCoordinator.removeKnownReminderImmediately()
     discardAllActivityDrafts()
@@ -1642,7 +1670,6 @@ final class AppModel {
     dismissProtectedStudy()
     resetNavigation()
     let priorSharedProjectionOperation = cancelSharedProjectionOperation()
-    let priorFocusOperation = cancelFocusOperation()
 
     let notificationCoordinator = notificationCoordinator
     let sharedStateService = sharedStateService
@@ -1666,9 +1693,6 @@ final class AppModel {
         if let priorSharedProjectionOperation {
           await priorSharedProjectionOperation.value
         }
-        await self.restorePendingFocusIfNeeded(
-          after: priorFocusOperation
-        )
         self.finishLocalDataReset(
           Self.resetResult(
             privateResult: privateResult,
@@ -1681,9 +1705,6 @@ final class AppModel {
       self.cancelReminderOperationWithoutWaiting()
       if let priorSharedProjectionOperation {
         await priorSharedProjectionOperation.value
-      }
-      if let priorFocusOperation {
-        _ = await priorFocusOperation.value
       }
       guard
         !Task.isCancelled,
@@ -1753,6 +1774,7 @@ final class AppModel {
         return
       }
       if didLoad {
+        await self.consumePendingSystemDestinationNow()
         await self.consumePendingLaunchDestination()
         await self.replayInitialActiveLifecycle()
       }
@@ -1786,10 +1808,6 @@ final class AppModel {
       await sharedProjectionOperation?.value
     }
 
-    func waitForFocusOperationForTesting() async {
-      _ = await focusOperation?.value
-    }
-
     func waitForTimeBoundaryTaskForTesting() async {
       await timeBoundaryTask?.value
     }
@@ -1813,20 +1831,12 @@ final class AppModel {
     switch destination {
     case .today:
       handleRootRoute(tab: .today, route: nil)
-    case .path:
+    case .semester:
       handleRootRoute(tab: .semester, route: nil)
-    case .evidence:
+    case .progress:
       handleRootRoute(tab: .progress, route: nil)
     case .settings:
       handleRootRoute(tab: .today, route: .settings)
-    case .returns:
-      handleRootRoute(tab: .today, route: nil)
-    case .focus:
-      if semesterDesk != nil {
-        handleRootRoute(tab: .today, route: nil)
-      } else {
-        presentActivityAfterRefreshingEligibility()
-      }
     }
   }
 
@@ -1836,8 +1846,49 @@ final class AppModel {
     }
     pendingLaunchDestination = nil
     route(to: destination)
-    _ = await focusOperation?.value
   }
+
+  func consumePendingSystemDestination() {
+    guard
+      launchState == .ready,
+      !isLocalDataResetRunning,
+      recoveryState == nil
+    else {
+      return
+    }
+    Task { @MainActor [weak self] in
+      await self?.consumePendingSystemDestinationNow()
+    }
+  }
+
+  private func consumePendingSystemDestinationNow() async {
+    let expectedResetEpoch = privateStateResetEpoch
+    let result = await sharedStateService.consumePendingDestination()
+    guard
+      !Task.isCancelled,
+      expectedResetEpoch == privateStateResetEpoch,
+      !isLocalDataResetRunning,
+      recoveryState == nil
+    else {
+      return
+    }
+
+    switch result {
+    case .success(let destination):
+      clearSharedIntegrationIssue(.pendingDestinationRead)
+      if let destination {
+        route(to: destination)
+      }
+    case .unavailable, .failure:
+      setSharedIntegrationIssue(.pendingDestinationRead)
+    }
+  }
+
+  #if DEBUG
+    func consumePendingSystemDestinationForTesting() async {
+      await consumePendingSystemDestinationNow()
+    }
+  #endif
 
   private func replayInitialActiveLifecycle() async {
     guard latestScenePhase == .active else {
@@ -1846,21 +1897,14 @@ final class AppModel {
     }
     guard routesAreEligible else {
       cancelTimeBoundaryTask()
-      if !isProtectedDataRecoveryActive, !isLocalDataResetRunning {
-        _ = await beginFocusOperation(presentsActivity: false).value
-      }
       return
     }
     guard let capturedNow = captureNow() else {
       cancelTimeBoundaryTask()
-      if !isProtectedDataRecoveryActive, !isLocalDataResetRunning {
-        _ = await beginFocusOperation(presentsActivity: false).value
-      }
       return
     }
     refreshExperience(at: capturedNow)
     await syncSharedProjection(at: capturedNow)
-    _ = await beginFocusOperation(presentsActivity: true).value
     reconcileReminders()
     scheduleNextTimeBoundary(after: capturedNow)
   }
@@ -1878,28 +1922,35 @@ final class AppModel {
     case .active:
       guard routesAreEligible else {
         cancelTimeBoundaryTask()
-        if !isProtectedDataRecoveryActive, !isLocalDataResetRunning {
-          discardPendingFocus()
-        }
         return
       }
       guard let capturedNow = captureNow() else {
         cancelTimeBoundaryTask()
-        discardPendingFocus()
         return
       }
 
       refreshExperience(at: capturedNow)
       scheduleSharedProjection(at: capturedNow)
       scheduleNextTimeBoundary(after: capturedNow)
-      for action in AppLifecyclePolicy.actions(for: phase) {
-        switch action {
-        case .consumePendingFocus:
-          consumePendingFocus()
-        case .reconcileReminders:
-          reconcileReminders()
-        case .persistCurrentState:
-          break
+      let actions = AppLifecyclePolicy.actions(for: phase)
+      Task { @MainActor [weak self] in
+        guard let self else {
+          return
+        }
+
+        for action in actions {
+          guard self.latestScenePhase == .active, self.routesAreEligible else {
+            return
+          }
+
+          switch action {
+          case .consumePendingSystemDestination:
+            await self.consumePendingSystemDestinationNow()
+          case .reconcileReminders:
+            self.reconcileReminders()
+          case .persistCurrentState:
+            break
+          }
         }
       }
     case .background:
@@ -1957,17 +2008,6 @@ final class AppModel {
     beginReminderReconciliation(isEnabled: remindersEnabled)
   }
 
-  func consumePendingFocus() {
-    guard
-      launchState == .ready,
-      !isLocalDataResetRunning,
-      !isProtectedDataRecoveryActive
-    else {
-      return
-    }
-    _ = beginFocusOperation(presentsActivity: routesAreEligible)
-  }
-
   static func preview() -> AppModel {
     do {
       let catalog = try UniversityStarterCourse.catalog()
@@ -2002,7 +2042,7 @@ final class AppModel {
 
   private var routesAreEligible: Bool {
     launchState == .ready
-      && (semesterDesk != nil || isCourseStarted)
+      && semesterDesk != nil
       && !isLocalDataResetRunning
       && recoveryState == nil
   }
@@ -2097,7 +2137,7 @@ final class AppModel {
       localDataResetStatusMessage = nil
       refreshExperience(at: capturedNow)
       _ = await purgeLegacySharedState()
-      await syncSharedProjection(at: isCourseStarted ? capturedNow : nil)
+      await syncSharedProjection(at: semesterDesk != nil ? capturedNow : nil)
       return true
     } catch {
       guard
@@ -2217,12 +2257,8 @@ final class AppModel {
       isActivityPresented = false
       recoveryOrigin = .saveFailure(baseline: currentEnvelope)
       if Self.isProtectedDataError(error) {
-        let priorFocusOperation = cancelFocusOperation()
         recoveryState = .protectedDataUnavailable(
           message: "Local data is unavailable. Unlock the device, then retry."
-        )
-        await restorePendingFocusIfNeeded(
-          after: priorFocusOperation
         )
       } else {
         recoveryState = .saveFailed(message: "FORGE could not save local course data.")
@@ -2329,13 +2365,15 @@ final class AppModel {
       }
     }
 
-    for delayedReturn in learnerState.delayedReturns
-    where delayedReturn.completedAt == nil {
-      include(delayedReturn.opensAt)
-      include(delayedReturn.dueAt)
-      if delayedReturn.dueAt == capturedNow {
+    for delayedReturn in semesterDesk?.delayedReturns ?? []
+    where delayedReturn.status == .due {
+      guard let dueAt = Self.semesterDeskDate(from: delayedReturn.dueAt) else {
+        continue
+      }
+      include(dueAt)
+      if dueAt == capturedNow {
         include(
-          delayedReturn.dueAt.addingTimeInterval(
+          dueAt.addingTimeInterval(
             Self.postDueRefreshEpsilon
           )
         )
@@ -2492,7 +2530,7 @@ final class AppModel {
       return
     }
 
-    let delayedReturns = learnerState.delayedReturns
+    let delayedReturns = semesterDesk?.delayedReturns ?? []
     let (token, previousOperation) = beginReminderOperation()
     let coordinator = notificationCoordinator
     reminderOperation = Task { @MainActor [weak self, coordinator] in
@@ -2510,6 +2548,10 @@ final class AppModel {
       let result = await coordinator.requestAndSchedule(
         delayedReturns: delayedReturns
       )
+      let authorizationStatus = await coordinator.authorizationStatus()
+      if self?.ownsReminderOperation(token) == true {
+        self?.reminderAuthorizationStatus = authorizationStatus
+      }
       let completionNow = self?.captureNow()
       let requiresCleanup =
         await self?.completeExplicitReminderEnable(
@@ -2534,7 +2576,7 @@ final class AppModel {
     }
 
     let priorPreference = remindersEnabled
-    let delayedReturns = learnerState.delayedReturns
+    let delayedReturns = semesterDesk?.delayedReturns ?? []
     let candidate = envelope(
       learnerState: learnerState,
       isCourseStarted: isCourseStarted,
@@ -2566,6 +2608,10 @@ final class AppModel {
         isEnabled: false,
         delayedReturns: delayedReturns
       )
+      let authorizationStatus = await coordinator.authorizationStatus()
+      if self.isReminderStateCurrent(token) {
+        self.reminderAuthorizationStatus = authorizationStatus
+      }
       await self.completeExplicitReminderDisable(
         result,
         priorPreference: priorPreference,
@@ -2582,7 +2628,7 @@ final class AppModel {
       return
     }
 
-    let delayedReturns = learnerState.delayedReturns
+    let delayedReturns = semesterDesk?.delayedReturns ?? []
     let (token, previousOperation) = beginReminderOperation()
     let coordinator = notificationCoordinator
     reminderOperation = Task { @MainActor [weak self, coordinator] in
@@ -2601,6 +2647,10 @@ final class AppModel {
         isEnabled: isEnabled,
         delayedReturns: delayedReturns
       )
+      let authorizationStatus = await coordinator.authorizationStatus()
+      if self?.ownsReminderOperation(token) == true {
+        self?.reminderAuthorizationStatus = authorizationStatus
+      }
       let completionNow = self?.captureNow()
       let requiresCleanup =
         await self?.completeReminderReconciliation(
@@ -2642,10 +2692,14 @@ final class AppModel {
     let didSchedule: Bool
     switch result {
     case .scheduled:
-      statusMessage = "A local reminder is enabled for the return opening time."
+      statusMessage = "A local reminder is enabled for the return date."
       didSchedule = true
     case .notScheduled:
-      statusMessage = "No eligible return is available for a local reminder."
+      if semesterDeskReminderDate == nil {
+        statusMessage = "No delayed return needs a reminder."
+      } else {
+        statusMessage = reminderPermissionFailureMessage
+      }
       didSchedule = false
     case .cleanupFailed:
       statusMessage = "FORGE could not update the local reminder."
@@ -2670,10 +2724,17 @@ final class AppModel {
     let didSchedule: Bool
     switch result {
     case .scheduled:
-      statusMessage = "A local reminder is enabled for the return opening time."
+      statusMessage = "A local reminder is enabled for the return date."
       didSchedule = true
-    case .removed:
-      statusMessage = "The local reminder is removed."
+    case .removed(let reason):
+      switch reason {
+      case .authorizationNotPermitted:
+        statusMessage = reminderPermissionFailureMessage
+      case .noScheduledReturn, .invalidReturnDate:
+        statusMessage = "No delayed return needs a reminder."
+      case .preferenceDisabled, .cancelled:
+        statusMessage = "The local reminder is removed."
+      }
       didSchedule = false
     case .cleanupFailed, .schedulingFailed:
       statusMessage = "FORGE could not update the local reminder."
@@ -2687,6 +2748,19 @@ final class AppModel {
       token: token,
       now: capturedNow
     )
+  }
+
+  private var reminderPermissionFailureMessage: String {
+    switch reminderAuthorizationStatus {
+    case .denied:
+      "Notifications are denied. Change permission in iOS Settings."
+    case .notDetermined:
+      "FORGE could not request notification permission."
+    case .authorized, .provisional, .ephemeral:
+      "FORGE could not schedule the local reminder."
+    case .unknown:
+      "Notification permission is unavailable."
+    }
   }
 
   private func completeExplicitReminderDisable(
@@ -2827,7 +2901,7 @@ final class AppModel {
   private func scheduleSharedProjection(
     at generatedAt: Date?
   ) -> Task<Void, Never> {
-    let projection: ForgeReturnProjection?
+    let projection: ForgeSemesterDeskProjection?
     do {
       projection = try makeSharedProjection(at: generatedAt)
     } catch {
@@ -2861,50 +2935,68 @@ final class AppModel {
 
   private func makeSharedProjection(
     at generatedAt: Date?
-  ) throws -> ForgeReturnProjection? {
+  ) throws -> ForgeSemesterDeskProjection? {
     guard
-      isCourseStarted,
       let generatedAt,
-      let delayedReturn = currentDelayedReturn
+      let semesterDesk
     else {
       return nil
     }
 
-    switch delayedReturn.status {
-    case .expired, .completed:
-      return nil
-    case .scheduled, .open, .due:
-      break
+    let validUntil = generatedAt.addingTimeInterval(
+      WidgetProjectionPolicy.maximumRefreshInterval
+    )
+    if semesterDesk.courses.contains(where: { course in
+      course.facts.contains { $0.status != .checked }
+        || course.factConflicts.contains { $0.status == .open }
+    }) {
+      return try ForgeSemesterDeskProjection(
+        status: .needsReview,
+        dueAt: nil,
+        generatedAt: generatedAt,
+        validUntil: validUntil
+      )
     }
 
-    let lifecycle: ForgeReturnProjectionLifecycle
-    let validUntil: Date
-    if generatedAt < delayedReturn.opensAt {
-      lifecycle = .scheduled
-      validUntil = min(
-        delayedReturn.dueAt.addingTimeInterval(3_600),
-        generatedAt.addingTimeInterval(8 * 86_400)
+    let incompleteReturn =
+      semesterDesk.delayedReturns
+      .filter { $0.status != .completed }
+      .compactMap { delayedReturn -> (UniversitySemesterDeskDelayedReturn, Date)? in
+        guard let dueAt = Self.semesterDeskDate(from: delayedReturn.dueAt) else {
+          return nil
+        }
+        return (delayedReturn, dueAt)
+      }
+      .min { left, right in
+        if left.1 == right.1 {
+          return left.0.id < right.0.id
+        }
+        return left.1 < right.1
+      }
+    if let (_, dueAt) = incompleteReturn {
+      return try ForgeSemesterDeskProjection(
+        status: dueAt > generatedAt ? .comeBack : .readyToWork,
+        dueAt: dueAt > generatedAt ? dueAt : nil,
+        generatedAt: generatedAt,
+        validUntil: validUntil
       )
-    } else if generatedAt < delayedReturn.dueAt {
-      lifecycle = .open
-      validUntil = min(
-        delayedReturn.dueAt.addingTimeInterval(3_600),
-        generatedAt.addingTimeInterval(48 * 3_600)
-      )
-    } else if generatedAt == delayedReturn.dueAt {
-      lifecycle = .due
-      validUntil = min(
-        delayedReturn.dueAt.addingTimeInterval(3_600),
-        generatedAt.addingTimeInterval(48 * 3_600)
-      )
-    } else {
-      return nil
     }
 
-    return try ForgeReturnProjection(
-      lifecycle: lifecycle,
-      opensAt: delayedReturn.opensAt,
-      dueAt: delayedReturn.dueAt,
+    let nextPlanItem =
+      semesterDesk.selectedNextActionID.flatMap { selectedID in
+        semesterDesk.planItems.first {
+          $0.id == selectedID
+            && $0.status != .deferred
+            && $0.status != .returnComplete
+        }
+      }
+      ?? semesterDesk.planItems.first { $0.status == .planned }
+    guard nextPlanItem != nil else {
+      return nil
+    }
+    return try ForgeSemesterDeskProjection(
+      status: .readyToWork,
+      dueAt: nil,
       generatedAt: generatedAt,
       validUntil: validUntil
     )
@@ -2939,12 +3031,8 @@ final class AppModel {
 
   private func clearSharedStateAfterPrivateLoadFailure() async {
     let priorProjectionOperation = cancelSharedProjectionOperation()
-    let priorFocusOperation = cancelFocusOperation()
     if let priorProjectionOperation {
       await priorProjectionOperation.value
-    }
-    if let priorFocusOperation {
-      _ = await priorFocusOperation.value
     }
 
     let result = await sharedStateService.clearAll()
@@ -2983,131 +3071,11 @@ final class AppModel {
   }
 
   private func handleRootRoute(tab: AppTab, route: AppRoute?) {
-    discardPendingFocus()
     dismissActivity()
     resetNavigation()
     selectedTab = tab
     if let route {
       todayPath = [route]
-    }
-  }
-
-  private func discardPendingFocus() {
-    _ = beginFocusOperation(presentsActivity: false)
-  }
-
-  private func beginFocusOperation(
-    presentsActivity: Bool
-  ) -> Task<FocusOperationResult, Never> {
-    focusOperationGeneration &+= 1
-    let generation = focusOperationGeneration
-    let previousOperation = focusOperation
-    let service = sharedStateService
-    let operation = Task { @concurrent [weak self, service] in
-      var previousResult = FocusOperationResult.empty
-      if let previousOperation {
-        previousResult = await previousOperation.value
-      }
-      if !presentsActivity {
-        previousResult = FocusOperationResult(
-          didConsume: previousResult.didConsume,
-          shouldPresent: false
-        )
-      }
-      guard !Task.isCancelled else {
-        return previousResult
-      }
-      let result = await service.consumePendingFocus()
-      let currentOperationDidConsume =
-        if case .success(true) = result {
-          true
-        } else {
-          false
-        }
-      let operationResult = FocusOperationResult(
-        didConsume:
-          previousResult.didConsume || currentOperationDidConsume,
-        shouldPresent:
-          presentsActivity
-          && (previousResult.shouldPresent || currentOperationDidConsume)
-      )
-      guard !Task.isCancelled else {
-        return operationResult
-      }
-      let accumulatedResult: AppSharedStateResult<Bool> =
-        switch result {
-        case .success:
-          .success(operationResult.shouldPresent)
-        case .unavailable:
-          .unavailable
-        case .failure:
-          .failure
-        }
-      await self?.finishFocusOperation(
-        accumulatedResult,
-        generation: generation,
-        presentsActivity: presentsActivity
-      )
-      switch result {
-      case .success:
-        return operationResult
-      case .unavailable, .failure:
-        return FocusOperationResult(
-          didConsume: operationResult.didConsume,
-          shouldPresent: false
-        )
-      }
-    }
-    focusOperation = operation
-    return operation
-  }
-
-  private func finishFocusOperation(
-    _ result: AppSharedStateResult<Bool>,
-    generation: UInt64,
-    presentsActivity: Bool
-  ) {
-    guard generation == focusOperationGeneration else {
-      return
-    }
-
-    focusOperation = nil
-    switch result {
-    case .success(let didConsume):
-      clearSharedIntegrationIssue(.focusRead)
-      guard presentsActivity, didConsume, routesAreEligible else {
-        return
-      }
-      if semesterDesk != nil {
-        handleRootRoute(tab: .today, route: nil)
-      } else {
-        presentActivityAfterRefreshingEligibility()
-      }
-    case .unavailable, .failure:
-      setSharedIntegrationIssue(.focusRead)
-    }
-  }
-
-  private func cancelFocusOperation() -> Task<FocusOperationResult, Never>? {
-    focusOperationGeneration &+= 1
-    let operation = focusOperation
-    operation?.cancel()
-    focusOperation = nil
-    return operation
-  }
-
-  private func restorePendingFocusIfNeeded(
-    after operation: Task<FocusOperationResult, Never>?
-  ) async {
-    guard let operation, await operation.value.didConsume else {
-      return
-    }
-
-    switch await sharedStateService.restorePendingFocus() {
-    case .success:
-      clearSharedIntegrationIssue(.focusRead)
-    case .unavailable, .failure:
-      setSharedIntegrationIssue(.focusRead)
     }
   }
 

@@ -18,39 +18,43 @@ struct ForgeSharedStateStoreTestHooks: Sendable {
 }
 
 public enum ForgeSharedStateStoreError: Error, Equatable, Sendable {
-  case appGroupUnavailable, coordinationUnavailable, corruptPendingFocus, corruptProjection
+  case appGroupUnavailable, coordinationUnavailable, corruptPendingDestination, corruptProjection
   case lockAcquisitionTimedOut
   case oversizedProjection, removalVerificationFailed, writeVerificationFailed
 }
 
-public enum ForgeReturnProjectionLifecycle: String, Codable, Equatable, Sendable {
-  case scheduled, open, due
+public enum ForgeSemesterDeskProjectionStatus: String, Codable, Equatable, Sendable {
+  case needsReview = "needs-review"
+  case readyToWork = "ready-to-work"
+  case comeBack = "come-back"
 }
 
-public struct ForgeReturnProjection: Codable, Equatable, Sendable {
-  public let lifecycle: ForgeReturnProjectionLifecycle
-  public let opensAt: Date
-  public let dueAt: Date
+public struct ForgeSemesterDeskProjection: Codable, Equatable, Sendable {
+  public let status: ForgeSemesterDeskProjectionStatus
+  public let dueAt: Date?
   public let generatedAt: Date
   public let validUntil: Date
 
   public init(
-    lifecycle: ForgeReturnProjectionLifecycle,
-    opensAt: Date,
-    dueAt: Date,
+    status: ForgeSemesterDeskProjectionStatus,
+    dueAt: Date?,
     generatedAt: Date,
     validUntil: Date
   ) throws {
-    try Self.validate(lifecycle, opensAt, dueAt, generatedAt, validUntil)
-    self.lifecycle = lifecycle
-    self.opensAt = opensAt
+    try Self.validate(
+      status: status,
+      dueAt: dueAt,
+      generatedAt: generatedAt,
+      validUntil: validUntil
+    )
+    self.status = status
     self.dueAt = dueAt
     self.generatedAt = generatedAt
     self.validUntil = validUntil
   }
 
   private enum CodingKeys: String, CodingKey, CaseIterable {
-    case lifecycle, opensAt, dueAt, generatedAt, validUntil
+    case status, dueAt, generatedAt, validUntil
   }
 
   private struct AnyCodingKey: CodingKey {
@@ -72,66 +76,75 @@ public struct ForgeReturnProjection: Codable, Equatable, Sendable {
     let container = try decoder.container(keyedBy: AnyCodingKey.self)
     guard Set(container.allKeys.map(\.stringValue)) == Set(CodingKeys.allCases.map(\.rawValue))
     else {
-      throw Self.corrupt(decoder, "The return projection contains unknown or missing values.")
+      throw Self.corrupt(decoder, "The Semester Desk projection has unknown or missing values.")
     }
     do {
       try self.init(
-        lifecycle: container.decode(
-          ForgeReturnProjectionLifecycle.self,
-          forKey: AnyCodingKey(CodingKeys.lifecycle.rawValue)
+        status: container.decode(
+          ForgeSemesterDeskProjectionStatus.self,
+          forKey: AnyCodingKey(CodingKeys.status.rawValue)
         ),
-        opensAt: container.decode(Date.self, forKey: AnyCodingKey(CodingKeys.opensAt.rawValue)),
-        dueAt: container.decode(Date.self, forKey: AnyCodingKey(CodingKeys.dueAt.rawValue)),
+        dueAt: container.decodeIfPresent(
+          Date.self, forKey: AnyCodingKey(CodingKeys.dueAt.rawValue)
+        ),
         generatedAt: container.decode(
           Date.self, forKey: AnyCodingKey(CodingKeys.generatedAt.rawValue)),
         validUntil: container.decode(
           Date.self, forKey: AnyCodingKey(CodingKeys.validUntil.rawValue))
       )
     } catch {
-      throw Self.corrupt(decoder, "The return projection values are invalid.")
+      throw Self.corrupt(decoder, "The Semester Desk projection values are invalid.")
     }
   }
 
   public func encode(to encoder: Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
-    try container.encode(lifecycle, forKey: .lifecycle)
-    try container.encode(opensAt, forKey: .opensAt)
+    try container.encode(status, forKey: .status)
     try container.encode(dueAt, forKey: .dueAt)
     try container.encode(generatedAt, forKey: .generatedAt)
     try container.encode(validUntil, forKey: .validUntil)
   }
 
-  func validate() throws { try Self.validate(lifecycle, opensAt, dueAt, generatedAt, validUntil) }
+  func validate() throws {
+    try Self.validate(
+      status: status,
+      dueAt: dueAt,
+      generatedAt: generatedAt,
+      validUntil: validUntil
+    )
+  }
 
   private static func corrupt(_ decoder: Decoder, _ description: String) -> DecodingError {
     .dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: description))
   }
 
   private static func validate(
-    _ lifecycle: ForgeReturnProjectionLifecycle,
-    _ opensAt: Date,
-    _ dueAt: Date,
-    _ generatedAt: Date,
-    _ validUntil: Date
+    status: ForgeSemesterDeskProjectionStatus,
+    dueAt: Date?,
+    generatedAt: Date,
+    validUntil: Date
   ) throws {
     guard
-      [opensAt, dueAt, generatedAt, validUntil].allSatisfy({
+      [generatedAt, validUntil].allSatisfy({
         $0.timeIntervalSinceReferenceDate.isFinite
-      }), opensAt < dueAt, generatedAt <= validUntil
+      }),
+      generatedAt < validUntil,
+      validUntil.timeIntervalSince(generatedAt) <= 24 * 60 * 60,
+      dueAt?.timeIntervalSinceReferenceDate.isFinite ?? true
     else {
       throw ForgeSharedStateStoreError.corruptProjection
     }
-    let expected: ForgeReturnProjectionLifecycle
-    if generatedAt < opensAt {
-      expected = .scheduled
-    } else if generatedAt < dueAt {
-      expected = .open
-    } else if generatedAt == dueAt {
-      expected = .due
-    } else {
-      throw ForgeSharedStateStoreError.corruptProjection
+
+    switch status {
+    case .needsReview, .readyToWork:
+      guard dueAt == nil else {
+        throw ForgeSharedStateStoreError.corruptProjection
+      }
+    case .comeBack:
+      guard let dueAt, dueAt > generatedAt else {
+        throw ForgeSharedStateStoreError.corruptProjection
+      }
     }
-    guard lifecycle == expected else { throw ForgeSharedStateStoreError.corruptProjection }
   }
 }
 
@@ -255,12 +268,12 @@ private struct ProjectionJSONKeyScanner {
   private func invalid() -> ForgeSharedStateStoreError { .corruptProjection }
 }
 
-private enum ForgeReturnProjectionDecoder {
-  static func decode(_ data: Data) throws -> ForgeReturnProjection {
+private enum ForgeSemesterDeskProjectionDecoder {
+  static func decode(_ data: Data) throws -> ForgeSemesterDeskProjection {
     do {
       var scanner = ProjectionJSONKeyScanner(data)
       try scanner.rejectDuplicateTopLevelKeys()
-      return try JSONDecoder().decode(ForgeReturnProjection.self, from: data)
+      return try JSONDecoder().decode(ForgeSemesterDeskProjection.self, from: data)
     } catch {
       throw ForgeSharedStateStoreError.corruptProjection
     }
@@ -279,12 +292,13 @@ public struct ForgeSharedStateStore {
   }
 
   private enum StateFile: CaseIterable {
-    case projection, pendingFocus
+    case pendingDestination
+    case projection
 
     var name: String {
       switch self {
-      case .projection: "forge.return-projection.v3.json"
-      case .pendingFocus: "forge.pending-focus.v3"
+      case .pendingDestination: "forge.pending-destination.v2"
+      case .projection: "forge.semester-desk-projection.v2.json"
       }
     }
 
@@ -313,13 +327,44 @@ public struct ForgeSharedStateStore {
     let lock: FileIdentity
   }
 
+  private final class InProcessLockRegistry: @unchecked Sendable {
+    private let accessLock = NSLock()
+    private var locks: [String: NSLock] = [:]
+
+    func lock(for directory: URL) -> NSLock {
+      accessLock.lock()
+      defer { accessLock.unlock() }
+      let key = directory.path
+      if let lock = locks[key] {
+        return lock
+      }
+      let lock = NSLock()
+      locks[key] = lock
+      return lock
+    }
+  }
+
   private static let appGroupIdentifier = "group.com.forgelearning.shared"
-  private static let lockFileName = "forge-shared-state-v3.lock"
+  private static let inProcessLockRegistry = InProcessLockRegistry()
+  private static let lockFileName = "forge-shared-state-v4.lock"
+  private static let maximumPendingDestinationByteCount = 32
   private static let maximumProjectionByteCount = 4_096
-  private static let maximumPendingFocusByteCount = 64
   private static let ioBufferByteCount = 1_024
+  private static let obsoleteStateFileNames = [
+    "forge.return-projection.v3.json",
+    "forge.return-projection.v3.json.staging",
+    "forge.pending-destination.v1",
+    "forge.pending-destination.v1.staging",
+    "forge.pending-focus.v3",
+    "forge.pending-focus.v3.staging",
+    "forge.due-return-projection.v2",
+    "forge.due-return-projection.v2.staging",
+    "forge.pending-focus.v2",
+    "forge.pending-focus.v2.staging",
+  ]
 
   private let sharedRootDirectory: URL
+  private let inProcessLock: NSLock
   private let legacyDefaults: UserDefaults?
   private let testHooks: ForgeSharedStateStoreTestHooks
 
@@ -339,11 +384,12 @@ public struct ForgeSharedStateStore {
     testHooks: ForgeSharedStateStoreTestHooks = .init()
   ) {
     self.sharedRootDirectory = sharedRootDirectory.standardizedFileURL
+    inProcessLock = Self.inProcessLockRegistry.lock(for: self.sharedRootDirectory)
     self.legacyDefaults = legacyDefaults
     self.testHooks = testHooks
   }
 
-  public func saveProjection(_ projection: ForgeReturnProjection) throws {
+  public func saveProjection(_ projection: ForgeSemesterDeskProjection) throws {
     try projection.validate()
     let data: Data
     do { data = try JSONEncoder().encode(projection) } catch {
@@ -355,7 +401,7 @@ public struct ForgeSharedStateStore {
     try withExclusiveLock { try replace(data, for: .projection, in: $0) }
   }
 
-  public func loadProjection() throws -> ForgeReturnProjection? {
+  public func loadProjection() throws -> ForgeSemesterDeskProjection? {
     try withExclusiveLock { directory in
       switch try read(.projection, maximumByteCount: Self.maximumProjectionByteCount, in: directory)
       {
@@ -366,7 +412,7 @@ public struct ForgeSharedStateStore {
         throw ForgeSharedStateStoreError.oversizedProjection
       case .data(let data):
         do {
-          return try ForgeReturnProjectionDecoder.decode(data)
+          return try ForgeSemesterDeskProjectionDecoder.decode(data)
         } catch {
           try removeStateFiles(for: .projection, in: directory)
           throw ForgeSharedStateStoreError.corruptProjection
@@ -379,43 +425,56 @@ public struct ForgeSharedStateStore {
     try withExclusiveLock { try removeStateFiles(for: .projection, in: $0) }
   }
 
-  public func setPendingFocus() throws {
-    let data = Data(ForgeDestination.focus.rawValue.utf8)
-    guard data.count <= Self.maximumPendingFocusByteCount else {
-      throw ForgeSharedStateStoreError.corruptPendingFocus
+  public func setPendingDestination(_ destination: ForgeDestination) throws {
+    let data = Data(destination.rawValue.utf8)
+    guard data.count <= Self.maximumPendingDestinationByteCount else {
+      throw ForgeSharedStateStoreError.corruptPendingDestination
     }
-    try withExclusiveLock { try replace(data, for: .pendingFocus, in: $0) }
+    try withExclusiveLock {
+      try replace(data, for: .pendingDestination, in: $0)
+    }
   }
 
-  public func consumePendingFocus() throws -> Bool {
+  public func consumePendingDestination() throws -> ForgeDestination? {
     try withExclusiveLock { directory in
       switch try read(
-        .pendingFocus, maximumByteCount: Self.maximumPendingFocusByteCount, in: directory)
-      {
+        .pendingDestination,
+        maximumByteCount: Self.maximumPendingDestinationByteCount,
+        in: directory
+      ) {
       case .absent:
-        return false
+        return nil
       case .oversized:
-        try removeStateFiles(for: .pendingFocus, in: directory)
-        throw ForgeSharedStateStoreError.corruptPendingFocus
+        try removeStateFiles(for: .pendingDestination, in: directory)
+        throw ForgeSharedStateStoreError.corruptPendingDestination
       case .data(let data):
-        guard data == Data(ForgeDestination.focus.rawValue.utf8) else {
-          try removeStateFiles(for: .pendingFocus, in: directory)
-          throw ForgeSharedStateStoreError.corruptPendingFocus
+        guard
+          let value = String(data: data, encoding: .utf8),
+          let destination = ForgeDestination(rawValue: value)
+        else {
+          try removeStateFiles(for: .pendingDestination, in: directory)
+          throw ForgeSharedStateStoreError.corruptPendingDestination
         }
-        try removeStateFiles(for: .pendingFocus, in: directory)
-        return true
+        try removeStateFiles(for: .pendingDestination, in: directory)
+        return destination
       }
     }
   }
 
   @discardableResult
   public func purgeLegacyState() throws -> Bool {
-    try withExclusiveLock { _ in removeLegacyValues() }
+    try withExclusiveLock { directory in
+      removeFiles(Self.obsoleteStateFileNames, in: directory)
+        && removeLegacyValues()
+    }
   }
 
   public func clearAll() throws {
     try withExclusiveLock { directory in
-      let stateFilesRemoved = removeFiles(allStateFileNames, in: directory)
+      let stateFilesRemoved = removeFiles(
+        allStateFileNames + Self.obsoleteStateFileNames,
+        in: directory
+      )
       let legacyValuesRemoved = removeLegacyValues()
       guard stateFilesRemoved && legacyValuesRemoved else {
         throw ForgeSharedStateStoreError.removalVerificationFailed
@@ -543,6 +602,8 @@ public struct ForgeSharedStateStore {
   }
 
   private func withExclusiveLock<T>(_ operation: (LockedDirectory) throws -> T) throws -> T {
+    try acquireInProcessLock()
+    defer { inProcessLock.unlock() }
     let descriptor = try openVerifiedRootDirectory()
     defer { _ = close(descriptor) }
     guard
@@ -562,6 +623,29 @@ public struct ForgeSharedStateStore {
     let result = try operation(directory)
     try requireBoundLock(directory)
     return result
+  }
+
+  private func acquireInProcessLock() throws {
+    let timeout = testHooks.lockAcquisitionTimeoutNanoseconds
+    let retryInterval = testHooks.lockRetryIntervalNanoseconds
+    guard retryInterval > 0 else {
+      throw ForgeSharedStateStoreError.coordinationUnavailable
+    }
+    var lastObservedTime = testHooks.monotonicTimeNanoseconds()
+    let (calculatedDeadline, overflowed) = lastObservedTime.addingReportingOverflow(timeout)
+    let deadline = overflowed ? UInt64.max : calculatedDeadline
+
+    while !inProcessLock.try() {
+      let now = testHooks.monotonicTimeNanoseconds()
+      guard now >= lastObservedTime else {
+        throw ForgeSharedStateStoreError.coordinationUnavailable
+      }
+      lastObservedTime = now
+      guard now < deadline else {
+        throw ForgeSharedStateStoreError.lockAcquisitionTimedOut
+      }
+      testHooks.waitForLockRetry(min(retryInterval, deadline - now))
+    }
   }
 
   private func openVerifiedRootDirectory() throws -> Int32 {
@@ -821,8 +905,8 @@ public struct ForgeSharedProjectionReader: Sendable {
   }
 
   private static let appGroupIdentifier = "group.com.forgelearning.shared"
-  private static let lockFileName = "forge-shared-state-v3.lock"
-  private static let projectionFileName = "forge.return-projection.v3.json"
+  private static let lockFileName = "forge-shared-state-v4.lock"
+  private static let projectionFileName = "forge.semester-desk-projection.v2.json"
   private static let maximumProjectionByteCount = 4_096
   private static let maximumReadByteCount = maximumProjectionByteCount + 1
   private static let ioBufferByteCount = 1_024
@@ -847,7 +931,7 @@ public struct ForgeSharedProjectionReader: Sendable {
     self.testHooks = testHooks
   }
 
-  public func readProjection() throws -> ForgeReturnProjection? {
+  public func readProjection() throws -> ForgeSemesterDeskProjection? {
     let root = try openVerifiedRootDirectory()
     defer { _ = close(root.descriptor) }
     try requireBoundRoot(root)
@@ -923,7 +1007,7 @@ public struct ForgeSharedProjectionReader: Sendable {
     try requireBoundRoot(root)
     try requireBoundLock(lock.snapshot.identity, in: root)
     try requireBoundProjection(projection, in: root)
-    return try ForgeReturnProjectionDecoder.decode(data)
+    return try ForgeSemesterDeskProjectionDecoder.decode(data)
   }
 
   private func openVerifiedRootDirectory() throws -> RootDirectory {

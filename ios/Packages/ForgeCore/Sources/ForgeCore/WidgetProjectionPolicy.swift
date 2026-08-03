@@ -9,23 +9,24 @@ public enum WidgetProjectionPolicy: Sendable {
     case transientlyUnavailableStore
     case noData
     case corruptData
-    case projection(ForgeReturnProjection)
+    case projection(ForgeSemesterDeskProjection)
   }
 
   public enum State: Sendable, Equatable {
     case unavailableStore
     case noData
     case corruptData
-    case scheduled
-    case open
-    case due
-    case expired
+    case needsReview
+    case readyToWork
+    case comeBack
     case stale
   }
 
   public enum Route: String, Sendable, Equatable {
     case today = "forge://today"
-    case focus = "forge://focus"
+    case semester = "forge://semester"
+    case progress = "forge://progress"
+    case settings = "forge://settings"
 
     public var url: URL {
       URL(string: rawValue)!
@@ -59,6 +60,7 @@ public enum WidgetProjectionPolicy: Sendable {
     public let copy: Copy
     public let symbol: String
     public let route: Route
+    public let dueAt: Date?
     public let nextRefreshDate: Date
 
     public init(
@@ -66,12 +68,14 @@ public enum WidgetProjectionPolicy: Sendable {
       copy: Copy,
       symbol: String,
       route: Route,
+      dueAt: Date?,
       nextRefreshDate: Date
     ) {
       self.state = state
       self.copy = copy
       self.symbol = symbol
       self.route = route
+      self.dueAt = dueAt
       self.nextRefreshDate = nextRefreshDate
     }
   }
@@ -85,83 +89,100 @@ public enum WidgetProjectionPolicy: Sendable {
 
     switch input {
     case .unavailableStore:
-      return makePresentation(
+      return makeFallback(
         state: .unavailableStore,
         nextRefreshDate: refreshCap
       )
     case .transientlyUnavailableStore:
-      return makePresentation(
+      return makeFallback(
         state: .unavailableStore,
         nextRefreshDate: now.addingTimeInterval(transientRetryInterval)
       )
     case .noData:
-      return makePresentation(state: .noData, nextRefreshDate: refreshCap)
+      return makeFallback(state: .noData, nextRefreshDate: refreshCap)
     case .corruptData:
-      return makePresentation(state: .corruptData, nextRefreshDate: refreshCap)
+      return makeFallback(state: .corruptData, nextRefreshDate: refreshCap)
     case .projection(let projection):
-      return returnPresentation(
-        for: projection,
-        now: now,
-        calendar: calendar,
-        refreshCap: refreshCap
-      )
-    }
-  }
-
-  private static func returnPresentation(
-    for projection: ForgeReturnProjection,
-    now: Date,
-    calendar: Calendar,
-    refreshCap: Date
-  ) -> Presentation {
-    if now >= projection.validUntil {
-      return makePresentation(state: .stale, nextRefreshDate: refreshCap)
-    }
-
-    let state: State
-    let boundaries: [Date]
-
-    if now < projection.opensAt {
-      state = .scheduled
-      boundaries = [projection.opensAt, projection.validUntil]
-    } else if now > projection.dueAt {
-      state = .expired
-      boundaries = [projection.validUntil]
-    } else if calendar.isDate(projection.dueAt, inSameDayAs: now) {
-      state = .due
-      boundaries = [projection.dueAt, projection.validUntil]
-    } else {
-      state = .open
-      boundaries = [
-        calendar.startOfDay(for: projection.dueAt),
-        projection.validUntil,
-      ]
-    }
-
-    return makePresentation(
-      state: state,
-      nextRefreshDate: nextRefreshDate(
-        now: now,
-        refreshCap: refreshCap,
-        boundaries: boundaries
-      )
-    )
-  }
-
-  private static func nextRefreshDate(
-    now: Date,
-    refreshCap: Date,
-    boundaries: [Date]
-  ) -> Date {
-    boundaries.reduce(refreshCap) { nextRefreshDate, boundary in
-      guard boundary > now else {
-        return nextRefreshDate
+      guard now < projection.validUntil else {
+        return makeFallback(state: .stale, nextRefreshDate: refreshCap)
       }
-      return min(nextRefreshDate, boundary)
+      let nextRefreshDate = [
+        projection.validUntil,
+        projection.dueAt,
+      ]
+      .compactMap { $0 }
+      .filter { $0 > now }
+      .reduce(refreshCap, min)
+      return makeProjectionPresentation(
+        projection,
+        calendar: calendar,
+        nextRefreshDate: nextRefreshDate
+      )
     }
   }
 
-  private static func makePresentation(
+  private static func makeProjectionPresentation(
+    _ projection: ForgeSemesterDeskProjection,
+    calendar: Calendar,
+    nextRefreshDate: Date
+  ) -> Presentation {
+    switch projection.status {
+    case .needsReview:
+      return Presentation(
+        state: .needsReview,
+        copy: Copy(
+          status: "Needs review",
+          title: "Check your semester",
+          detail: "See what changed in Semester",
+          accessibilityLabel:
+            "FORGE. Your semester needs review. See what changed in Semester.",
+          accessibilityHint: "Opens Semester."
+        ),
+        symbol: "exclamationmark.bubble",
+        route: .semester,
+        dueAt: nil,
+        nextRefreshDate: nextRefreshDate
+      )
+    case .readyToWork:
+      return Presentation(
+        state: .readyToWork,
+        copy: Copy(
+          status: "Ready to work on",
+          title: "Your next action is ready",
+          detail: "Open Today to begin",
+          accessibilityLabel:
+            "FORGE. Your next action is ready.",
+          accessibilityHint: "Opens Today."
+        ),
+        symbol: "arrow.right.circle",
+        route: .today,
+        dueAt: nil,
+        nextRefreshDate: nextRefreshDate
+      )
+    case .comeBack:
+      let dueText =
+        projection.dueAt.map {
+          displayDate($0, calendar: calendar)
+        } ?? "the saved date"
+      return Presentation(
+        state: .comeBack,
+        copy: Copy(
+          status: "Come back on this date",
+          title: "Return to your work",
+          detail: dueText,
+          accessibilityLabel:
+            "FORGE. Return to your work on \(dueText).",
+          accessibilityHint: "Opens Today."
+        ),
+        symbol: "calendar",
+        route: .today,
+        dueAt: projection.dueAt,
+        nextRefreshDate: nextRefreshDate
+      )
+    }
+  }
+
+  private static func makeFallback(
     state: State,
     nextRefreshDate: Date
   ) -> Presentation {
@@ -171,113 +192,73 @@ public enum WidgetProjectionPolicy: Sendable {
         state: state,
         copy: Copy(
           status: "Unavailable",
-          title: "Widget data unavailable",
+          title: "Widget data is unavailable",
           detail: "Open FORGE to view Today",
-          accessibilityLabel: "FORGE. Widget data is unavailable. Open FORGE.",
-          accessibilityHint: "Opens the local FORGE Today view."
+          accessibilityLabel: "FORGE. Widget data is unavailable.",
+          accessibilityHint: "Opens Today."
         ),
         symbol: "xmark.circle",
         route: .today,
+        dueAt: nil,
         nextRefreshDate: nextRefreshDate
       )
     case .noData:
       return Presentation(
         state: state,
         copy: Copy(
-          status: "No data",
-          title: "No delayed return",
-          detail: "Open FORGE to view Today",
-          accessibilityLabel: "FORGE. No delayed return is shown. Open FORGE.",
-          accessibilityHint: "Opens the local FORGE Today view."
+          status: "Today",
+          title: "Open your Semester Desk",
+          detail: "See the next honest action",
+          accessibilityLabel: "FORGE. Open your Semester Desk.",
+          accessibilityHint: "Opens Today."
         ),
-        symbol: "minus.circle",
+        symbol: "sun.max",
         route: .today,
+        dueAt: nil,
         nextRefreshDate: nextRefreshDate
       )
     case .corruptData:
       return Presentation(
         state: state,
         copy: Copy(
-          status: "Corrupt data",
-          title: "Return data unreadable",
-          detail: "Open FORGE to view Today",
-          accessibilityLabel: "FORGE. Return data cannot be read. Open FORGE.",
-          accessibilityHint: "Opens the local FORGE Today view."
+          status: "Needs review",
+          title: "Widget data cannot be read",
+          detail: "Open FORGE to check local data",
+          accessibilityLabel: "FORGE. Widget data cannot be read.",
+          accessibilityHint: "Opens Today."
         ),
         symbol: "exclamationmark.octagon",
         route: .today,
-        nextRefreshDate: nextRefreshDate
-      )
-    case .scheduled:
-      return Presentation(
-        state: state,
-        copy: Copy(
-          status: "Scheduled",
-          title: "Return activity scheduled",
-          detail: "Open FORGE to view Today",
-          accessibilityLabel: "FORGE. Return activity is scheduled. Open FORGE.",
-          accessibilityHint: "Opens the local FORGE Today view."
-        ),
-        symbol: "calendar",
-        route: .today,
-        nextRefreshDate: nextRefreshDate
-      )
-    case .open:
-      return Presentation(
-        state: state,
-        copy: Copy(
-          status: "Open",
-          title: "Return activity open",
-          detail: "Open FORGE to continue",
-          accessibilityLabel: "FORGE. Return activity is open. Open FORGE.",
-          accessibilityHint: "Opens the local FORGE focus view."
-        ),
-        symbol: "arrow.right.circle",
-        route: .focus,
-        nextRefreshDate: nextRefreshDate
-      )
-    case .due:
-      return Presentation(
-        state: state,
-        copy: Copy(
-          status: "Due today",
-          title: "Return activity due today",
-          detail: "Open FORGE to continue",
-          accessibilityLabel: "FORGE. Return activity is due today. Open FORGE.",
-          accessibilityHint: "Opens the local FORGE focus view."
-        ),
-        symbol: "exclamationmark.circle",
-        route: .focus,
-        nextRefreshDate: nextRefreshDate
-      )
-    case .expired:
-      return Presentation(
-        state: state,
-        copy: Copy(
-          status: "Window closed",
-          title: "Return window closed",
-          detail: "Open FORGE to view Today",
-          accessibilityLabel: "FORGE. Return window is closed. Open FORGE.",
-          accessibilityHint: "Opens the local FORGE Today view."
-        ),
-        symbol: "xmark.circle",
-        route: .today,
+        dueAt: nil,
         nextRefreshDate: nextRefreshDate
       )
     case .stale:
       return Presentation(
         state: state,
         copy: Copy(
-          status: "Refresh needed",
-          title: "Widget data expired",
-          detail: "Open FORGE to refresh",
-          accessibilityLabel: "FORGE. Widget data is stale. Open FORGE to refresh.",
-          accessibilityHint: "Opens the local FORGE Today view."
+          status: "Needs review",
+          title: "Open FORGE to refresh",
+          detail: "Widget data is no longer current",
+          accessibilityLabel: "FORGE. Widget data needs a refresh.",
+          accessibilityHint: "Opens Today."
         ),
         symbol: "arrow.clockwise.circle",
         route: .today,
+        dueAt: nil,
         nextRefreshDate: nextRefreshDate
       )
+    case .needsReview, .readyToWork, .comeBack:
+      preconditionFailure("Projection states need projection metadata.")
     }
+  }
+
+  private static func displayDate(_ date: Date, calendar: Calendar) -> String {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.calendar = calendar
+    formatter.timeZone = calendar.timeZone
+    formatter.dateStyle = .medium
+    formatter.timeStyle = .short
+    return formatter.string(from: date)
   }
 }
