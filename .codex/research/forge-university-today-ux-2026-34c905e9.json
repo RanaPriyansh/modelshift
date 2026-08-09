@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "topic": "forge-university-today-ux-2026",
+  "created_at": "2026-07-30T16:31:27.275Z",
+  "questions": [
+    {
+      "question": "How can Karpathy's autoresearch loop be adapted into a measurable UX iteration method without treating synthetic or agent feedback as student evidence?",
+      "status": "resolved"
+    },
+    {
+      "question": "Which interface patterns best help university students resolve scattered deadlines, source coverage, conflicts, and overload into one sound next action?",
+      "status": "resolved"
+    },
+    {
+      "question": "How should a course-source review surface communicate copied facts, unknown completeness, staleness, and conflicts without implying university authority?",
+      "status": "resolved"
+    },
+    {
+      "question": "Which patterns from current student tools should FORGE adopt or avoid for an accessible university-first Today experience?",
+      "status": "resolved"
+    },
+    {
+      "question": "What failure, privacy, accessibility, and no-AI fallback states must the bounded university-first slice support?",
+      "status": "resolved"
+    }
+  ],
+  "sources": [
+    {
+      "claim": "Karpathy autoresearch holds the evaluation harness and time budget fixed, establishes a baseline, changes one bounded surface, logs every experiment, and keeps only measured improvements while valuing simplification.",
+      "url": "https://github.com/karpathy/autoresearch",
+      "confidence": "High",
+      "note": "Adapt as a UX loop with a fixed task rubric, one variable per iteration, baseline snapshots, keep-discard logs, and a hard boundary that synthetic checks are not student evidence.",
+      "accessed_at": "2026-07-30T16:34:12.070Z"
+    },
+    {
+      "claim": "GOV.UK task-list research moved statuses to sentence case, de-emphasized completed states, and made the whole task row actionable; it recommends task lists only when people need multi-session or self-ordered work.",
+      "url": "https://design-system.service.gov.uk/components/task-list/",
+      "confidence": "High",
+      "note": "Use plain sentence-case source states, highlight unresolved work rather than completion, and keep each review action short and row-sized.",
+      "accessed_at": "2026-07-30T16:34:12.148Z"
+    },
+    {
+      "claim": "Linear Triage keeps integration-created items outside the normal workflow until review and supports accept, duplicate, decline, and snooze actions while surfacing rule conflicts.",
+      "url": "https://linear.app/docs/triage",
+      "confidence": "High",
+      "note": "Directly supports a learner-reviewed course-source candidate inbox before facts become planning inputs.",
+      "accessed_at": "2026-07-30T16:34:12.226Z"
+    },
+    {
+      "claim": "Sunsama frames daily planning around a realistic workload, placing tasks and meetings together, timeboxing focus, and adjusting the plan without taking on too much.",
+      "url": "https://www.sunsama.com/",
+      "confidence": "High",
+      "note": "Supports one realistic action plus capacity context, but FORGE should avoid activity analytics becoming a learning outcome.",
+      "accessed_at": "2026-07-30T16:34:12.301Z"
+    },
+    {
+      "claim": "MyStudyLife markets a student-specific all-in-one calendar, tasks, reminders, focus timer, subtasks, grade tracking, and AI schedule scan.",
+      "url": "https://mystudylife.com/",
+      "confidence": "High",
+      "note": "Confirms the conventional student-planner bundle; FORGE must differentiate through source authority, conflicts, protected learning, and less setup, not another dashboard.",
+      "accessed_at": "2026-07-30T16:34:12.372Z"
+    },
+    {
+      "claim": "Astra AI leads with exam urgency, a personalized next lesson, photo-based math help, mock and oral exams, broad grade-improvement claims, and a visible topic-mastery percentage.",
+      "url": "https://astra-ai.co/",
+      "confidence": "High",
+      "note": "Adopt immediate exam relevance and fast entry; reject opaque mastery percentages, unsupported broad claims, and answer-first course authority.",
+      "accessed_at": "2026-07-30T16:34:12.443Z"
+    },
+    {
+      "claim": "Things emphasizes what matters today, crisp hierarchy, keyboard efficiency, and a task surface that stays calm even as the underlying system remains deep.",
+      "url": "https://culturedcode.com/things/",
+      "confidence": "High",
+      "note": "Supports a quiet primary action with details progressively disclosed rather than showing the whole degree system at once.",
+      "accessed_at": "2026-07-30T16:34:12.513Z"
+    },
+    {
+      "claim": "Prior FORGE community research found the candidate student job is reconciliation across LMS, syllabus, email, calendar, notes and documents, with source coverage, freshness, conflicts, capacity, and initiation kept distinct.",
+      "url": "https://www.reddit.com/r/college/comments/qzv18q",
+      "confidence": "Medium",
+      "note": "Forum-led hypothesis already synthesized in the repository research report; it informs failure states but does not establish prevalence.",
+      "accessed_at": "2026-07-30T16:34:12.585Z"
+    }
+  ]
+}

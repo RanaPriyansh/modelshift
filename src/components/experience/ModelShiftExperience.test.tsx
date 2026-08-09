@@ -1,10 +1,14 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY } from "@/src/lib/forge-evidence";
 import type { WorldSessionCheckpointIdentity } from "@/src/lib/forge-continuity";
+import {
+  createForgeDeviceProfile,
+  forgeProfileBoundStorageKey,
+} from "@/src/lib/forge-profile/device-profile";
 
 import { ModelShiftExperience } from "./ModelShiftExperience";
 
@@ -14,12 +18,27 @@ const CHECKPOINT_IDENTITY: WorldSessionCheckpointIdentity = {
   worldVersion: "1.0.0",
 };
 
-const CHECKPOINT_STORAGE_KEY = [
+const PROFILE_ID = "9be711de-d7a6-4911-b903-f2d829da83d5";
+const CHECKPOINT_STORAGE_KEY = forgeProfileBoundStorageKey([
   "forge.world-session-checkpoint:v1",
   CHECKPOINT_IDENTITY.sessionId,
   CHECKPOINT_IDENTITY.worldId,
   CHECKPOINT_IDENTITY.worldVersion,
-].join(":");
+].join(":"), PROFILE_ID);
+const EVIDENCE_STORAGE_KEY = forgeProfileBoundStorageKey(
+  DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY,
+  PROFILE_ID,
+);
+
+beforeEach(() => {
+  createForgeDeviceProfile(
+    window.localStorage,
+    "adult",
+    false,
+    new Date("2026-08-02T00:00:00.000Z"),
+    PROFILE_ID,
+  );
+});
 
 afterEach(() => {
   cleanup();
@@ -127,7 +146,7 @@ describe("ModelShiftExperience runtime migration", () => {
       sourceProvenanceStatus: "incomplete",
     });
     expect(JSON.stringify(receipt)).not.toContain("The velocity becomes flat");
-    const ledger = JSON.parse(localStorage.getItem(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY) ?? "{}");
+    const ledger = JSON.parse(localStorage.getItem(EVIDENCE_STORAGE_KEY) ?? "{}");
     expect(ledger.entries).toHaveLength(1);
     expect(ledger.entries[0].id).toBe(`proof.${receipt.attemptId}`);
     expect(ledger.entries[0].assistance).toEqual([{
@@ -165,7 +184,7 @@ describe("ModelShiftExperience runtime migration", () => {
       fallbackReason: "ambiguous_input",
     }]);
 
-    let ledger = JSON.parse(localStorage.getItem(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY) ?? "{}");
+    let ledger = JSON.parse(localStorage.getItem(EVIDENCE_STORAGE_KEY) ?? "{}");
     expect(ledger.entries).toHaveLength(1);
     expect(ledger.entries[0].assistance).toEqual([
       { kind: "authored_representation", sourceId: "action.force-and-motion.interpretation.fallback.ambiguous-input" },
@@ -178,7 +197,7 @@ describe("ModelShiftExperience runtime migration", () => {
     await waitFor(() => expect(onRuntimeReceipt).toHaveBeenCalledTimes(2));
     const secondReceipt = onRuntimeReceipt.mock.calls[1]?.[0];
     expect(secondReceipt.attemptId).not.toBe(firstReceipt.attemptId);
-    ledger = JSON.parse(localStorage.getItem(DEFAULT_EVIDENCE_LEDGER_STORAGE_KEY) ?? "{}");
+    ledger = JSON.parse(localStorage.getItem(EVIDENCE_STORAGE_KEY) ?? "{}");
     expect(ledger.entries).toHaveLength(2);
   });
 

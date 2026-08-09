@@ -1,6 +1,57 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveLocalPlaywrightServer } from "../../playwright.config";
+import {
+  resolveLocalPlaywrightServer,
+  resolvePlaywrightJsonOutputFile,
+  resolvePlaywrightOutputDirectory,
+} from "../../playwright.config";
+
+describe("Playwright result isolation", () => {
+  it("uses a bounded default directory", () => {
+    expect(resolvePlaywrightOutputDirectory({})).toBe(
+      "test-results/semester-desk-v2-local",
+    );
+  });
+
+  it("accepts one direct child under test-results", () => {
+    expect(
+      resolvePlaywrightOutputDirectory({
+        FORGE_PLAYWRIGHT_OUTPUT_DIR: "test-results/semester-desk-v2-local",
+      }),
+    ).toBe("test-results/semester-desk-v2-local");
+  });
+
+  it("writes the established JSON report inside the bounded output directory", () => {
+    expect(
+      resolvePlaywrightJsonOutputFile({
+        FORGE_PLAYWRIGHT_OUTPUT_DIR: "test-results/semester-desk-v2-local",
+      }),
+    ).toBe("test-results/semester-desk-v2-local/playwright-report.json");
+  });
+
+  it.each([
+    "",
+    ".",
+    "/",
+    "/tmp/playwright",
+    "\\tmp\\playwright",
+    "test-results",
+    "test-results/",
+    "test-results/.",
+    "test-results/..",
+    "test-results/../outside",
+    "test-results/nested/output",
+    "test-results\\semester-desk-v2-local",
+  ])("rejects unbounded output directory %j", (outputDirectory) => {
+    expect(() =>
+      resolvePlaywrightOutputDirectory({
+        FORGE_PLAYWRIGHT_OUTPUT_DIR: outputDirectory,
+      }),
+    ).toThrow(
+      "FORGE_PLAYWRIGHT_OUTPUT_DIR must be one bounded directory under test-results.",
+    );
+  });
+});
 
 describe("Playwright checkout isolation", () => {
   it("uses a dedicated non-3000 port and never reuses an existing process", () => {

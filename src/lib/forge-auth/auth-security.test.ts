@@ -12,6 +12,7 @@ import {
 } from "./config";
 import { refreshForgeAuth } from "./proxy";
 import { forgeContentSecurityPolicy } from "./security-headers";
+import { projectForgeCloudIdentitySubject } from "./session.server";
 
 function configureRetiredCloudEnvironment(key = "sb_publishable_test_key_1234567890") {
   vi.stubEnv("FORGE_CLOUD_ACCOUNTS_ENABLED", "true");
@@ -55,6 +56,17 @@ describe("FORGE auth security boundary", () => {
       sameSite: "lax",
       httpOnly: true,
       secure: true,
+    });
+  });
+
+  it("projects correlation-only identity without contact data", () => {
+    expect(projectForgeCloudIdentitySubject({
+      id: "11111111-1111-4111-8111-111111111111",
+      email: "learner@example.test",
+      accountKind: "cloud_identity",
+    })).toEqual({
+      id: "11111111-1111-4111-8111-111111111111",
+      accountKind: "cloud_identity",
     });
   });
 

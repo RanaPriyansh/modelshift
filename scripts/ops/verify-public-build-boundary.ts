@@ -5,9 +5,57 @@ import {
   assertNoAdultPilotPublicArtifactLeaks,
   scanAdultPilotProductionPublicAssets,
 } from "../../src/components/forge/pilot/adult-pilot-public-artifact-boundary";
+import {
+  assertNoUniversitySourceReviewProductionArtifactLeaks,
+  scanUniversitySourceReviewProductionArtifacts,
+} from "../../src/components/forge/university/university-source-review-public-artifact-boundary";
+import {
+  assertNoUniversityRecoveryProductionArtifactLeaks,
+  scanUniversityRecoveryProductionArtifacts,
+} from "../../src/components/forge/university/university-recovery-public-artifact-boundary";
+import {
+  assertNoUniversityResearchReadinessProductionArtifactLeaks,
+  scanUniversityResearchReadinessProductionArtifacts,
+} from "../../src/components/forge/university/university-research-readiness-public-artifact-boundary";
+import {
+  assertNoUniversityResearchSubstituteProductionArtifactLeaks,
+  scanUniversityResearchSubstituteProductionArtifacts,
+} from "../../src/components/forge/university/university-research-substitute-public-artifact-boundary";
+import {
+  assertNoUniversityProtectedStudyProductionArtifactLeaks,
+  scanUniversityProtectedStudyProductionArtifacts,
+} from "../../src/components/forge/university/university-protected-study-public-artifact-boundary";
+import {
+  assertNoUniversityPostAttemptRepairProductionArtifactLeaks,
+  scanUniversityPostAttemptRepairProductionArtifacts,
+} from "../../src/components/forge/university/university-post-attempt-repair-public-artifact-boundary";
+import {
+  assertNoUniversitySemesterLoopProductionArtifactLeaks,
+  scanUniversitySemesterLoopProductionArtifacts,
+} from "../../src/components/forge/university/university-semester-loop-public-artifact-boundary";
+import {
+  assertNoUniversitySemesterDeskProductionArtifactLeaks,
+  scanUniversitySemesterDeskProductionArtifacts,
+} from "../../src/components/forge/university/university-semester-desk-public-artifact-boundary";
+import {
+  assertNoUniversitySemesterOverviewProductionArtifactLeaks,
+  scanUniversitySemesterOverviewProductionArtifacts,
+} from "../../src/components/forge/university/university-semester-overview-public-artifact-boundary";
+import {
+  assertNoUniversityTodayProductionArtifactLeaks,
+  scanUniversityTodayProductionArtifacts,
+} from "../../src/components/forge/university/university-today-public-artifact-boundary";
+import {
+  assertNoUniversityFoundationPublicArtifactLeaks,
+  scanUniversityFoundationProductionArtifacts,
+} from "../../src/components/forge/university/university-foundation-public-artifact-boundary";
 
-import { readPublicAssetDigest } from "./release-digests";
+import { readPublicAssetIdentity } from "./release-digests";
 import { publicBuildBoundaryReceiptLine } from "./public-build-boundary-receipt";
+import {
+  clearProductionRuntimeCache,
+  writeProductionBuildReceipt,
+} from "./production-build-receipt";
 
 const RETAINED_ARGUMENT_EVIDENCE_MARKERS = [
   "argument-evidence",
@@ -48,11 +96,75 @@ export function verifyPublicBuildBoundary(root = process.cwd()): void {
     }
   }
   const adultPilotLeaks = scanAdultPilotProductionPublicAssets(root);
+  const universitySourceReviewLeaks =
+    scanUniversitySourceReviewProductionArtifacts(root);
+  const universityRecoveryLeaks = scanUniversityRecoveryProductionArtifacts(root);
+  const universityResearchReadinessLeaks =
+    scanUniversityResearchReadinessProductionArtifacts(root);
+  const universityResearchSubstituteLeaks =
+    scanUniversityResearchSubstituteProductionArtifacts(root);
+  const universityProtectedStudyLeaks =
+    scanUniversityProtectedStudyProductionArtifacts(root);
+  const universityPostAttemptRepairLeaks =
+    scanUniversityPostAttemptRepairProductionArtifacts(root);
+  const universitySemesterLoopAndResearchCandidateLeaks =
+    scanUniversitySemesterLoopProductionArtifacts(root);
+  const universitySemesterDeskLeaks =
+    scanUniversitySemesterDeskProductionArtifacts(root);
+  const universitySemesterOverviewLeaks =
+    scanUniversitySemesterOverviewProductionArtifacts(root);
+  const universityTodayLeaks = scanUniversityTodayProductionArtifacts(root);
+  const universityFoundationLeaks =
+    scanUniversityFoundationProductionArtifacts(root);
   if (leaks.length > 0) {
     throw new Error(`Retained unavailable Argument & Evidence data reached public build assets:\n${leaks.join("\n")}`);
   }
   assertNoAdultPilotPublicArtifactLeaks(adultPilotLeaks);
-  process.stdout.write(publicBuildBoundaryReceiptLine(files.length, readPublicAssetDigest(root)));
+  assertNoUniversitySourceReviewProductionArtifactLeaks(
+    universitySourceReviewLeaks,
+  );
+  assertNoUniversityRecoveryProductionArtifactLeaks(universityRecoveryLeaks);
+  assertNoUniversityResearchReadinessProductionArtifactLeaks(
+    universityResearchReadinessLeaks,
+  );
+  assertNoUniversityResearchSubstituteProductionArtifactLeaks(
+    universityResearchSubstituteLeaks,
+  );
+  assertNoUniversityProtectedStudyProductionArtifactLeaks(
+    universityProtectedStudyLeaks,
+  );
+  assertNoUniversityPostAttemptRepairProductionArtifactLeaks(
+    universityPostAttemptRepairLeaks,
+  );
+  assertNoUniversitySemesterLoopProductionArtifactLeaks(
+    universitySemesterLoopAndResearchCandidateLeaks,
+  );
+  assertNoUniversitySemesterDeskProductionArtifactLeaks(
+    universitySemesterDeskLeaks,
+  );
+  assertNoUniversitySemesterOverviewProductionArtifactLeaks(
+    universitySemesterOverviewLeaks,
+  );
+  assertNoUniversityTodayProductionArtifactLeaks(universityTodayLeaks);
+  assertNoUniversityFoundationPublicArtifactLeaks(universityFoundationLeaks);
+  clearProductionRuntimeCache(root);
+  const buildReceipt = writeProductionBuildReceipt(root);
+  const publicAssetIdentity = readPublicAssetIdentity(root);
+  if (
+    buildReceipt.publicAssetDigest
+    !== `sha256:${publicAssetIdentity.publicAssetDigest}`
+  ) {
+    throw new Error(
+      "Public build artifact marker rejected a changed public asset tree.",
+    );
+  }
+  process.stdout.write(publicBuildBoundaryReceiptLine(
+    buildReceipt,
+    publicAssetIdentity.publicAssetFileCount,
+  ));
+  process.stdout.write(
+    `Production build receipt: ${buildReceipt.sourceState} source ${buildReceipt.sourceCommit}; ${buildReceipt.artifactFileCount} files; artifact ${buildReceipt.artifactDigest}.\n`,
+  );
 }
 
 verifyPublicBuildBoundary();

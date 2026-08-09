@@ -6,23 +6,30 @@ import {
   matchesImmutableDeploymentTarget,
   type DeploymentTarget,
 } from "../../src/operations/deployment-target-policy";
+import { productionBuildId } from "./build-source-identity";
+import {
+  PUBLIC_BUILD_ARTIFACT_MARKER_PREFIX,
+  isPublicBuildArtifactMarker,
+  parsePublicBuildArtifactMarkerLine,
+  type PublicBuildArtifactMarker,
+} from "./public-build-boundary-receipt";
 
 const SHA = /^[0-9a-f]{40}$/i;
-const DIGEST = /^[0-9a-f]{64}$/i;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const MAX_PROVIDER_RESPONSE_BYTES = 4_000_000;
-// Emitted by scripts/ops/verify-public-build-boundary.ts after Vercel has
-// produced .next/static. The collector reads this provider-owned build-log
-// observation; it never asks health to attest the deployment-specific digest.
-const BUILD_DIGEST_MARKER = /^Public build boundary verified across [1-9][0-9]* static assets; public asset digest ([0-9a-f]{64})\.$/gim;
+const PUBLIC_BUILD_ARTIFACT_MARKER_FAMILY =
+  "FORGE_PUBLIC_BUILD_ARTIFACT_MARKER";
+const RETIRED_PUBLIC_ASSET_MARKER =
+  /^Public build boundary verified across [1-9][0-9]* static assets; public asset digest [0-9a-f]{64}\.$/im;
 type RecordValue = Record<string, unknown>;
 
-export const VERCEL_PROVIDER_RECEIPT_VERSION = "1.0";
-export const VERCEL_PROVIDER_RECEIPT_KIND = "vercel_authenticated_build_log";
+export const VERCEL_PROVIDER_RECEIPT_VERSION = "2.0";
+export const VERCEL_PROVIDER_RECEIPT_KIND =
+  "vercel_authenticated_complete_artifact_build_log";
 
 export type VercelProviderReceipt = {
-  schema_version: "1.0";
-  receipt_kind: "vercel_authenticated_build_log";
+  schema_version: "2.0";
+  receipt_kind: "vercel_authenticated_complete_artifact_build_log";
   provider: "vercel";
   collected_at: string;
   deployment: {
@@ -33,12 +40,11 @@ export type VercelProviderReceipt = {
     ready_state: "READY";
     created_at: string;
   };
-  public_asset: {
-    algorithm: "sha256";
-    digest: string;
-    source: "vercel_build_log_marker";
+  artifact: {
+    source: "vercel_complete_artifact_build_log_marker";
     event_id: string;
     observed_at: string;
+    marker: PublicBuildArtifactMarker;
   };
 };
 
@@ -68,10 +74,6 @@ function hasExactKeys(value: unknown, keys: readonly string[]): value is RecordV
 
 function canonicalSha(value: unknown): string | null {
   return typeof value === "string" && SHA.test(value) ? value.toLowerCase() : null;
-}
-
-function canonicalDigest(value: unknown): string | null {
-  return typeof value === "string" && DIGEST.test(value) ? value.toLowerCase() : null;
 }
 
 function canonicalTimestamp(value: unknown): string | null {
@@ -113,9 +115,9 @@ function canonicalRepositoryId(value: unknown): number | null {
 
 /** Strictly validate the portable, sanitized receipt schema before use. */
 export function validateVercelProviderReceipt(value: unknown): string[] {
-  if (!hasExactKeys(value, ["schema_version", "receipt_kind", "provider", "collected_at", "deployment", "public_asset"])) return ["schema"];
+  if (!hasExactKeys(value, ["schema_version", "receipt_kind", "provider", "collected_at", "deployment", "artifact"])) return ["schema"];
   const deployment = value.deployment;
-  const publicAsset = value.public_asset;
+  const artifact = value.artifact;
   const failures: string[] = [];
   if (value.schema_version !== VERCEL_PROVIDER_RECEIPT_VERSION || value.receipt_kind !== VERCEL_PROVIDER_RECEIPT_KIND || value.provider !== "vercel") failures.push("schema");
   if (!canonicalTimestamp(value.collected_at)) failures.push("collected_at");
@@ -126,17 +128,31 @@ export function validateVercelProviderReceipt(value: unknown): string[] {
     || !isCanonicalImmutableUrl(deployment.immutable_url)
     || deployment.ready_state !== "READY"
     || !canonicalTimestamp(deployment.created_at)) failures.push("deployment");
-  if (!hasExactKeys(publicAsset, ["algorithm", "digest", "source", "event_id", "observed_at"])
-    || publicAsset.algorithm !== "sha256"
-    || !canonicalDigest(publicAsset.digest)
-    || publicAsset.source !== "vercel_build_log_marker"
-    || !canonicalTextId(publicAsset.event_id)
-    || !canonicalTimestamp(publicAsset.observed_at)) failures.push("public_asset");
+  if (!hasExactKeys(artifact, ["source", "event_id", "observed_at", "marker"])
+    || artifact.source !== "vercel_complete_artifact_build_log_marker"
+    || !canonicalTextId(artifact.event_id)
+    || !canonicalTimestamp(artifact.observed_at)
+    || !isPublicBuildArtifactMarker(artifact.marker)) failures.push("artifact");
   const collectedAt = typeof value.collected_at === "string" ? value.collected_at : "";
   const createdAt = isRecord(deployment) && typeof deployment.created_at === "string" ? deployment.created_at : "";
-  const observedAt = isRecord(publicAsset) && typeof publicAsset.observed_at === "string" ? publicAsset.observed_at : "";
+  const observedAt = isRecord(artifact) && typeof artifact.observed_at === "string" ? artifact.observed_at : "";
   if (failures.length === 0 && new Date(createdAt).getTime() > new Date(observedAt).getTime()) failures.push("deployment_after_observation");
   if (failures.length === 0 && new Date(collectedAt).getTime() < new Date(observedAt).getTime()) failures.push("collected_before_observation");
+  if (
+    failures.length === 0
+    && isRecord(deployment)
+    && isRecord(artifact)
+    && isPublicBuildArtifactMarker(artifact.marker)
+    && (
+      artifact.marker.sourceCommit !== deployment.source_sha
+      || artifact.marker.buildId
+        !== productionBuildId(deployment.source_sha as string)
+      || artifact.marker.sourceState !== "clean"
+      || artifact.marker.sourceTree === "unknown"
+    )
+  ) {
+    failures.push("artifact_source_binding");
+  }
   return failures;
 }
 
@@ -187,11 +203,37 @@ function readEvents(value: unknown): VercelApiEvent[] | null {
   return isRecord(value) && Array.isArray(value.events) && value.events.every(isRecord) ? value.events : null;
 }
 
-type ProviderDigestEvent = Readonly<{ event_id: string; observed_at: string; digest: string }>;
+type ProviderArtifactEvent = Readonly<{
+  event_id: string;
+  observed_at: string;
+  marker: PublicBuildArtifactMarker;
+}>;
 const TOP_LEVEL_MARKER_FIELDS = ["text", "id", "deploymentId", "date"] as const;
 
-function canonicalDigestMarkers(value: unknown): RegExpMatchArray[] {
-  return typeof value === "string" ? [...value.matchAll(BUILD_DIGEST_MARKER)] : [];
+function canonicalArtifactMarkers(
+  value: unknown,
+): PublicBuildArtifactMarker[] {
+  if (typeof value !== "string") return [];
+  if (RETIRED_PUBLIC_ASSET_MARKER.test(value)) {
+    throw new Error(
+      "Vercel deployment build log contains the retired public-asset-only marker.",
+    );
+  }
+  const markerLines = value.split("\n").filter((line) =>
+    line.includes(PUBLIC_BUILD_ARTIFACT_MARKER_FAMILY)
+  );
+  return markerLines.map((line) => {
+    if (
+      !line.startsWith(PUBLIC_BUILD_ARTIFACT_MARKER_PREFIX)
+      || line.indexOf(PUBLIC_BUILD_ARTIFACT_MARKER_FAMILY)
+        !== line.lastIndexOf(PUBLIC_BUILD_ARTIFACT_MARKER_FAMILY)
+    ) {
+      throw new Error(
+        "Vercel deployment build log contains a malformed or retired artifact marker.",
+      );
+    }
+    return parsePublicBuildArtifactMarkerLine(line);
+  });
 }
 
 /**
@@ -202,32 +244,36 @@ function canonicalDigestMarkers(value: unknown): RegExpMatchArray[] {
  * those two shapes: a nested marker with parallel top-level marker fields is
  * ambiguous and fails closed rather than silently choosing one source.
  */
-function readProviderDigestEvent(event: VercelApiEvent, deploymentId: string): ProviderDigestEvent | null {
+function readProviderArtifactEvent(
+  event: VercelApiEvent,
+  deploymentId: string,
+): ProviderArtifactEvent | null {
   const payload = event.payload;
   const nested = Object.hasOwn(event, "payload");
   const values = !nested ? event : isRecord(payload) ? payload : null;
-  const topLevelMatches = nested ? canonicalDigestMarkers(event.text) : [];
+  const topLevelMarkers = nested
+    ? canonicalArtifactMarkers(event.text)
+    : [];
   if (!values) {
-    if (topLevelMatches.length > 0) throw new Error("Vercel deployment build-log event mixes malformed nested and top-level marker shapes");
+    if (topLevelMarkers.length > 0) throw new Error("Vercel deployment build-log event mixes malformed nested and top-level marker shapes");
     return null;
   }
-  const matches = canonicalDigestMarkers(values.text);
+  const markers = canonicalArtifactMarkers(values.text);
   const hasTopLevelMarkerFields = nested && TOP_LEVEL_MARKER_FIELDS.some((field) => Object.hasOwn(event, field));
-  if (nested && ((matches.length > 0 && hasTopLevelMarkerFields) || (matches.length === 0 && topLevelMatches.length > 0))) {
+  if (nested && ((markers.length > 0 && hasTopLevelMarkerFields) || (markers.length === 0 && topLevelMarkers.length > 0))) {
     throw new Error("Vercel deployment build-log event mixes nested and top-level marker shapes");
   }
-  if (matches.length === 0) return null;
-  if (matches.length !== 1) throw new Error("Vercel deployment build-log event contains ambiguous canonical public-asset digest markers");
-  const match = matches[0]!;
+  if (markers.length === 0) return null;
+  if (markers.length !== 1) throw new Error("Vercel deployment build-log event contains ambiguous complete artifact markers");
+  const marker = markers[0]!;
 
   const eventId = canonicalTextId(values.id);
   const observedAt = canonicalTimestampFromProvider(nested ? values.date : event.created);
   const reportedDeploymentId = values.deploymentId;
-  const digest = canonicalDigest(match[1]);
-  if (!eventId || !observedAt || !digest || !isPlausibleVercelDeploymentId(reportedDeploymentId) || reportedDeploymentId !== deploymentId) {
+  if (!eventId || !observedAt || !isPlausibleVercelDeploymentId(reportedDeploymentId) || reportedDeploymentId !== deploymentId) {
     throw new Error("Vercel deployment build-log marker has missing, malformed, or mismatched deployment identity");
   }
-  return { event_id: eventId, observed_at: observedAt, digest };
+  return { event_id: eventId, observed_at: observedAt, marker };
 }
 
 /**
@@ -256,19 +302,24 @@ export function normalizeVercelProviderReceipt(
   }
   const events = readEvents(eventsPayload);
   if (!events) throw new Error("Vercel deployment events response is malformed");
-  const digestEvents = events.flatMap((event) => {
-    const marker = readProviderDigestEvent(event, id);
+  const artifactEvents = events.flatMap((event) => {
+    const marker = readProviderArtifactEvent(event, id);
     return marker ? [marker] : [];
   });
-  if (digestEvents.length !== 1) throw new Error("Vercel deployment build logs must contain exactly one canonical public-asset digest marker");
-  const event = digestEvents[0]!;
+  if (artifactEvents.length !== 1) throw new Error("Vercel deployment build logs must contain exactly one canonical complete artifact marker");
+  const event = artifactEvents[0]!;
   const receipt: VercelProviderReceipt = {
-    schema_version: "1.0",
-    receipt_kind: "vercel_authenticated_build_log",
+    schema_version: "2.0",
+    receipt_kind: "vercel_authenticated_complete_artifact_build_log",
     provider: "vercel",
     collected_at: collectedAt,
     deployment: { id, project_id: projectId, source_sha: sourceSha, immutable_url: immutableUrl, ready_state: "READY", created_at: createdAt },
-    public_asset: { algorithm: "sha256", digest: event.digest, source: "vercel_build_log_marker", event_id: event.event_id, observed_at: event.observed_at },
+    artifact: {
+      source: "vercel_complete_artifact_build_log_marker",
+      event_id: event.event_id,
+      observed_at: event.observed_at,
+      marker: event.marker,
+    },
   };
   const failures = validateVercelProviderReceipt(receipt);
   if (failures.length > 0) throw new Error(`normalized Vercel receipt is malformed: ${failures.join(", ")}`);

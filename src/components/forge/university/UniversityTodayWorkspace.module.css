@@ -1,0 +1,470 @@
+.surface {
+  width: min(1240px, calc(100% - 64px));
+  min-height: calc(100svh - 168px);
+  margin: 0 auto;
+  padding: clamp(34px, 5vw, 72px) 0 112px;
+  color: var(--forge-ink);
+}
+
+.masthead {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 36px;
+  padding-bottom: 22px;
+}
+
+.kicker {
+  margin: 0 0 10px;
+  color: var(--forge-cyan-deep);
+  font-family: var(--forge-mono);
+  font-size: 11px;
+  font-weight: 760;
+  letter-spacing: 0.09em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.course,
+.term {
+  margin: 0;
+  color: var(--forge-ink);
+  font-size: 15px;
+  font-weight: 720;
+  line-height: 1.4;
+}
+
+.term {
+  color: var(--forge-muted);
+  font-family: var(--forge-mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.boundary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  border-top: 1px solid var(--forge-line-strong);
+  border-bottom: 1px solid var(--forge-line);
+  padding: 13px 0;
+  color: var(--forge-dim);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.boundary strong {
+  color: var(--forge-cyan-deep);
+}
+
+.boundary span::before {
+  content: "/";
+  margin-right: 24px;
+  color: var(--forge-line-strong);
+}
+
+.scenarioPicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--forge-line);
+  padding: 18px 0;
+}
+
+.scenarioPicker legend {
+  float: left;
+  color: var(--forge-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.scenarioPicker > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.scenarioPicker label {
+  position: relative;
+  display: inline-grid;
+  min-height: 40px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.scenarioPicker input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.scenarioPicker span {
+  display: grid;
+  min-height: 40px;
+  place-items: center;
+  border: 1px solid var(--forge-line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--forge-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.scenarioPicker input:hover + span {
+  border-color: var(--forge-cyan-deep);
+  color: var(--forge-ink);
+}
+
+.scenarioPicker input:focus-visible + span {
+  outline: 2px solid var(--forge-cyan);
+  outline-offset: 3px;
+}
+
+.scenarioPicker input:checked + span {
+  border-color: var(--forge-cyan-deep);
+  background: var(--forge-cyan-deep);
+  color: var(--forge-paper);
+}
+
+.scenarioPicker input:active + span {
+  transform: translateY(1px);
+}
+
+.decisionPlane {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: clamp(48px, 8vw, 112px);
+  align-items: start;
+  padding: clamp(48px, 7vw, 88px) 0 80px;
+}
+
+.action {
+  min-width: 0;
+}
+
+.stateLabel {
+  max-width: 620px;
+  margin: 0 0 18px;
+  color: var(--forge-cyan-deep);
+  font-size: 13px;
+  font-weight: 760;
+  line-height: 1.4;
+}
+
+.action h1,
+.unavailable h1 {
+  max-width: 830px;
+  margin: 0;
+  font-size: clamp(44px, 6.4vw, 82px);
+  font-weight: 760;
+  letter-spacing: -0.055em;
+  line-height: 0.96;
+  text-wrap: balance;
+}
+
+.objective,
+.unavailable > p:last-child {
+  max-width: 680px;
+  margin: 24px 0 0;
+  color: var(--forge-muted);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+.actionControl {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 32px;
+}
+
+.actionControl a {
+  display: inline-grid;
+  min-height: 48px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--forge-cyan-deep);
+  border-radius: 6px;
+  padding: 11px 17px;
+  background: var(--forge-cyan-deep);
+  color: var(--forge-paper);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+  transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.actionControl a:hover {
+  background: transparent;
+  color: var(--forge-cyan-deep);
+}
+
+.actionControl a:focus-visible {
+  outline: 2px solid var(--forge-ink);
+  outline-offset: 3px;
+}
+
+.actionControl a:active {
+  transform: translateY(1px);
+}
+
+.actionControl p,
+.noAction {
+  max-width: 420px;
+  margin: 0;
+  color: var(--forge-dim);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.noAction {
+  margin-top: 32px;
+  border-left: 2px solid var(--forge-line-strong);
+  padding-left: 12px;
+}
+
+.reasoning {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 40px;
+  max-width: 780px;
+  margin: 54px 0 0;
+  border-top: 1px solid var(--forge-line-strong);
+  padding-top: 22px;
+}
+
+.reasoning div,
+.contextFacts div,
+.authority dl div {
+  min-width: 0;
+}
+
+.reasoning dt,
+.contextFacts dt,
+.authority dt {
+  margin-bottom: 7px;
+  color: var(--forge-dim);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.reasoning dd,
+.contextFacts dd,
+.authority dd {
+  margin: 0;
+  color: var(--forge-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.context {
+  position: sticky;
+  top: 96px;
+  border-left: 1px solid var(--forge-line-strong);
+  padding-left: 26px;
+}
+
+.context h2 {
+  margin: 0;
+  font-family: var(--forge-serif);
+  font-size: 29px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+}
+
+.contextFacts {
+  display: grid;
+  gap: 19px;
+  margin: 30px 0 0;
+}
+
+.contextFacts dd {
+  color: var(--forge-ink);
+  font-weight: 650;
+}
+
+.sourceNote {
+  margin-top: 32px;
+  border-top: 1px solid var(--forge-line);
+  padding-top: 22px;
+}
+
+.sourceNote h3 {
+  margin: 0 0 9px;
+  color: var(--forge-ink);
+  font-size: 13px;
+}
+
+.sourceNote p {
+  margin: 0;
+  color: var(--forge-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.sourceNote small {
+  display: block;
+  margin-top: 12px;
+  color: var(--forge-dim);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.authority {
+  border-top: 1px solid var(--forge-line-strong);
+  padding-top: 20px;
+}
+
+.authority > p {
+  margin: 0 0 18px;
+  color: var(--forge-cyan-deep);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.authority dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 22px;
+  margin: 0;
+}
+
+.authority dd {
+  overflow-wrap: anywhere;
+}
+
+.unavailable {
+  display: grid;
+  min-height: 62svh;
+  align-content: center;
+}
+
+.unavailable h1 {
+  max-width: 760px;
+}
+
+@media (max-width: 800px) {
+  .surface {
+    width: min(100% - 36px, 660px);
+    padding-top: 30px;
+  }
+
+  .masthead,
+  .scenarioPicker {
+    align-items: start;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .boundary span::before {
+    margin-right: 12px;
+  }
+
+  .boundary {
+    gap: 8px 12px;
+  }
+
+  .scenarioPicker legend {
+    float: none;
+  }
+
+  .scenarioPicker > div {
+    width: 100%;
+  }
+
+  .scenarioPicker label {
+    flex: 1 1 calc(50% - 6px);
+  }
+
+  .scenarioPicker span {
+    width: 100%;
+  }
+
+  .decisionPlane {
+    grid-template-columns: 1fr;
+    gap: 56px;
+    padding-top: 54px;
+  }
+
+  .context {
+    position: static;
+    border-top: 1px solid var(--forge-line-strong);
+    border-left: 0;
+    padding-top: 28px;
+    padding-left: 0;
+  }
+
+  .authority dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 430px) {
+  .surface {
+    width: calc(100% - 28px);
+    padding-bottom: 72px;
+  }
+
+  .action h1,
+  .unavailable h1 {
+    font-size: clamp(38px, 12.5vw, 54px);
+    line-height: 0.98;
+  }
+
+  .objective {
+    font-size: 15px;
+  }
+
+  .actionControl {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actionControl a {
+    width: 100%;
+  }
+
+  .reasoning,
+  .authority dl {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scenarioPicker span,
+  .actionControl a {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .scenarioPicker input:checked + span,
+  .actionControl a {
+    border-color: ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+  }
+
+  .scenarioPicker input:focus-visible + span,
+  .actionControl a:focus-visible {
+    outline-color: Highlight;
+  }
+}

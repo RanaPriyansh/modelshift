@@ -29,6 +29,7 @@ import {
   type WorldSessionCheckpointIdentity,
   type WorldSessionCheckpointV1,
 } from "@/src/lib/forge-continuity";
+import { createActiveForgeProfileBoundStorage } from "@/src/lib/forge-profile/device-profile";
 import type {
   LearningStage,
   PredictionId,
@@ -42,6 +43,15 @@ import {
 } from "@/src/types/modelshift";
 
 type ActiveStage = Exclude<LearningStage, "HOOK">;
+
+function activeCheckpointStorage() {
+  if (typeof window === "undefined") return null;
+  try {
+    return createActiveForgeProfileBoundStorage(window.localStorage);
+  } catch {
+    return null;
+  }
+}
 
 const STAGE_STEPS: Array<{ id: ActiveStage; label: string }> = [
   { id: "PREDICT", label: "Predict" },
@@ -556,8 +566,14 @@ export function ModelShiftExperience({
         setCheckpointState("ready");
         return;
       }
+      const storage = activeCheckpointStorage();
+      if (!storage) {
+        setCheckpointState("restore_failed");
+        onCheckpointError?.("unavailable");
+        return;
+      }
       const read = readWorldSessionCheckpoint(
-        window.localStorage,
+        storage,
         checkpointIdentity,
       );
       if (!read.ok) {
@@ -633,33 +649,45 @@ export function ModelShiftExperience({
   }, [checkpointIdentityKey]);
 
   useEffect(() => {
-    if (!checkpointIdentity || checkpointState !== "ready") return;
-    const written = writeWorldSessionCheckpoint(
-      window.localStorage,
-      checkpointIdentity,
-      {
-        attemptId: runtime.attemptId,
-        events: checkpointEventsRef.current,
-        ui: {
-          confidence,
-          explanation,
-          experimentRevealed,
-          frictionStrength,
-          prediction,
-          probePrediction,
-          reconstruction,
-          reflection,
-          transferChoice,
-          transferExplanation,
-        } satisfies ModelShiftUiCheckpoint,
-      },
-    );
-    if (!written.ok) {
-      setCheckpointWriteFailed(true);
-      onCheckpointError?.(written.reason);
-    } else {
-      setCheckpointWriteFailed(false);
-    }
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled || !checkpointIdentity || checkpointState !== "ready") return;
+      const storage = activeCheckpointStorage();
+      if (!storage) {
+        setCheckpointWriteFailed(true);
+        onCheckpointError?.("unavailable");
+        return;
+      }
+      const written = writeWorldSessionCheckpoint(
+        storage,
+        checkpointIdentity,
+        {
+          attemptId: runtime.attemptId,
+          events: checkpointEventsRef.current,
+          ui: {
+            confidence,
+            explanation,
+            experimentRevealed,
+            frictionStrength,
+            prediction,
+            probePrediction,
+            reconstruction,
+            reflection,
+            transferChoice,
+            transferExplanation,
+          } satisfies ModelShiftUiCheckpoint,
+        },
+      );
+      if (!written.ok) {
+        setCheckpointWriteFailed(true);
+        onCheckpointError?.(written.reason);
+      } else {
+        setCheckpointWriteFailed(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [
     checkpointIdentity,
     checkpointState,
@@ -735,13 +763,19 @@ export function ModelShiftExperience({
     runtimeRef.current = freshRuntime;
     setRuntime(freshRuntime);
     if (checkpointIdentity) {
-      const cleared = clearWorldSessionCheckpoint(
-        window.localStorage,
-        checkpointIdentity,
-      );
-      if (!cleared.ok) {
+      const storage = activeCheckpointStorage();
+      if (!storage) {
         setCheckpointWriteFailed(true);
-        onCheckpointError?.(cleared.reason);
+        onCheckpointError?.("unavailable");
+      } else {
+        const cleared = clearWorldSessionCheckpoint(
+          storage,
+          checkpointIdentity,
+        );
+        if (!cleared.ok) {
+          setCheckpointWriteFailed(true);
+          onCheckpointError?.(cleared.reason);
+        }
       }
     }
     setPrediction(null); setConfidence(70); setExplanation(""); setInterpreting(false);
@@ -755,8 +789,14 @@ export function ModelShiftExperience({
       setCheckpointState("ready");
       return;
     }
+    const storage = activeCheckpointStorage();
+    if (!storage) {
+      setCheckpointWriteFailed(true);
+      onCheckpointError?.("unavailable");
+      return;
+    }
     const cleared = clearWorldSessionCheckpoint(
-      window.localStorage,
+      storage,
       checkpointIdentity,
     );
     if (!cleared.ok) {

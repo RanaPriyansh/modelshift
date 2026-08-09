@@ -1,0 +1,944 @@
+{
+  "schema_version": 1,
+  "topic": "forge-student-forums-astra-ai-future-2026",
+  "created_at": "2026-07-30T12:11:06.942Z",
+  "questions": [
+    {
+      "question": "What exact company and website does Astra AI refer to, and can the claimed 25 million annual revenue and bootstrapped status be independently verified?",
+      "status": "resolved"
+    },
+    {
+      "question": "What product, pricing, distribution, acquisition, retention, and operating playbook does Astra AI use?",
+      "status": "resolved"
+    },
+    {
+      "question": "What do customers and communities praise, dislike, distrust, or say is missing from Astra AI and its closest substitutes?",
+      "status": "resolved"
+    },
+    {
+      "question": "What recurring pains and desired outcomes do students report across forums about university, studying, planning, assessment, AI use, careers, wellbeing, belonging, and administration?",
+      "status": "resolved"
+    },
+    {
+      "question": "What do students, educators, and communities say colleges and universities structurally fail to provide?",
+      "status": "resolved"
+    },
+    {
+      "question": "How do needs and protection boundaries differ across primary school, middle school, high school, university, and adult learning?",
+      "status": "resolved"
+    },
+    {
+      "question": "Which AI and education shifts are plausible over the next five to ten years, and which human capabilities become more valuable?",
+      "status": "resolved"
+    },
+    {
+      "question": "What should FORGE adopt, reject, validate, and sequence to serve the university wedge while preserving the universal learning mission?",
+      "status": "resolved"
+    }
+  ],
+  "sources": [
+    {
+      "claim": "Astra AI official site claims all-school-level tutoring, 11M+ students, exam preparation, multiple subjects, and grade improvement guarantees.",
+      "url": "https://astra-ai.co/",
+      "confidence": "Medium",
+      "note": "Official product and marketing source; adoption and outcome claims are vendor-reported.",
+      "accessed_at": "2026-07-30T13:04:33.110Z"
+    },
+    {
+      "claim": "Astra AI subscription terms define monthly cost-based usage limits, broad accuracy disclaimers, narrow grade guarantees, auto-renewal, and legacy mathematics wording.",
+      "url": "https://app.astra-ai.co/terms-conditions",
+      "confidence": "High",
+      "note": "Primary legal source, last modified 2026-04-29.",
+      "accessed_at": "2026-07-30T13:04:33.161Z"
+    },
+    {
+      "claim": "Astra AI privacy policy covers grades and educational data, analytics providers, under-15 parental consent, and claims no profiling while the product markets personalization.",
+      "url": "https://app.astra-ai.co/privacy-policy",
+      "confidence": "High",
+      "note": "Primary policy source; product-policy reconciliation is a trust requirement, not a legal conclusion.",
+      "accessed_at": "2026-07-30T13:04:33.204Z"
+    },
+    {
+      "claim": "Astra AI Google Play listing shows substantial distribution and recurring praise and complaints, but store reviews do not verify active users or revenue.",
+      "url": "https://play.google.com/store/apps/details?id=co.astra_ai.app.twa&hl=en_US",
+      "confidence": "Medium",
+      "note": "Verified store metadata and qualitative reviews; sample is locale and ranking dependent.",
+      "accessed_at": "2026-07-30T13:04:33.243Z"
+    },
+    {
+      "claim": "Astra AI Apple reviews include praise for study help and complaints about support and subscription experience.",
+      "url": "https://apps.apple.com/ua/app/6751030141?platform=iphone&see-all=reviews",
+      "confidence": "Low",
+      "note": "Qualitative locale-specific user evidence, not prevalence.",
+      "accessed_at": "2026-07-30T13:04:33.281Z"
+    },
+    {
+      "claim": "Verified German Astra AI reviews praise understandable explanations and confidence while reporting errors, wrong calculations, instruction failures, high price, and upload limitations.",
+      "url": "https://www.trustedshops.de/bewertung/info_XBE763F0B4E1B0C23CC5B9DB7E57DF10D.html",
+      "confidence": "Medium",
+      "note": "Trusted Shops labels reviews verified; still self-selected and region specific.",
+      "accessed_at": "2026-07-30T13:04:33.315Z"
+    },
+    {
+      "claim": "An Astra AI founder reported 25 million dollars ARR and 25x annual growth in 2026.",
+      "url": "https://www.linkedin.com/posts/andrejskraba_astra-ai-just-crossed-25000000-in-arr-activity-7474703211740979204-LKDe",
+      "confidence": "Medium",
+      "note": "Direct named founder statement; unaudited run-rate, not recognized annual revenue.",
+      "accessed_at": "2026-07-30T13:04:33.349Z"
+    },
+    {
+      "claim": "AJPES-derived company data identify Astra AI d.o.o. in Ljubljana with two employees and March 2024 registration.",
+      "url": "https://www.bizi.si/ASTRA-AI-D-O-O/maticno-podjetje/",
+      "confidence": "Medium",
+      "note": "Registry-derived commercial profile; useful for identity, not a substitute for audited statements.",
+      "accessed_at": "2026-07-30T13:04:33.383Z"
+    },
+    {
+      "claim": "An AJPES- and GURS-sourced commercial record reports 2,029,476 euros total revenue, 7,501 euros EBIT, and two employees for Astra AI d.o.o. in 2025.",
+      "url": "https://www.ebonitete.si/astra-ai-doo/",
+      "confidence": "Medium",
+      "note": "Secondary presentation of public records; creates an ARR-versus-reporting-period revenue distinction.",
+      "accessed_at": "2026-07-30T13:04:33.419Z"
+    },
+    {
+      "claim": "Astra AI publicly disclosed Slovenian and EU co-financing through the P2 call.",
+      "url": "https://www.linkedin.com/posts/astra-si_evropskasredstva-eusredstva-activity-7223968057579192320-u8e-",
+      "confidence": "Medium",
+      "note": "Company disclosure; public grant does not negate no-equity-investor status but makes strict bootstrapped wording imprecise.",
+      "accessed_at": "2026-07-30T13:04:33.454Z"
+    },
+    {
+      "claim": "Astra AI's creator program recruits new-account creators and pays per video and performance.",
+      "url": "https://ugc.astra-ai.co/sl/apply",
+      "confidence": "High",
+      "note": "Primary acquisition-channel source.",
+      "accessed_at": "2026-07-30T13:04:33.490Z"
+    },
+    {
+      "claim": "Astra AI growth staff describe micro StudyTok creator accounts, 3,334 videos, and 82M views as the main growth engine in a 70-day period.",
+      "url": "https://www.linkedin.com/posts/lukarautar_iz-201453-uporabnikov-astra-ai-na-653180-activity-7393540836317278208-sSll",
+      "confidence": "Medium",
+      "note": "Named staff statement with company-reported metrics; establishes paid creator playbook.",
+      "accessed_at": "2026-07-30T13:04:33.524Z"
+    },
+    {
+      "claim": "Astra AI recruited AU and NZ UGC creators to post daily from fresh accounts, providing hooks, examples, and briefs while claiming 2,000 creators and 2B views.",
+      "url": "https://www.reddit.com/r/UGCForBrands/comments/1u93fin/hiring_aunz_only_ugc_creators_for_astra_ai/",
+      "confidence": "Medium",
+      "note": "Public recruitment post; company or agency claims are not independently audited.",
+      "accessed_at": "2026-07-30T13:04:33.559Z"
+    },
+    {
+      "claim": "Astra AI creator terms impose broad content licenses, competitor exclusivity, confidentiality, and non-disparagement obligations.",
+      "url": "https://astra-ai.co/cs/creator-program-legal-terms-conditions/",
+      "confidence": "High",
+      "note": "Primary legal source; disclosure governance should be reviewed separately.",
+      "accessed_at": "2026-07-30T13:04:33.595Z"
+    },
+    {
+      "claim": "TrustMRR verifies listed revenue through read-only payment-provider integrations, but Astra AI was not found as a verified listing during this research.",
+      "url": "https://trustmrr.com/faq",
+      "confidence": "Medium",
+      "note": "Primary TrustMRR methodology; absence is a negative search result, not proof against Astra's claim.",
+      "accessed_at": "2026-07-30T13:04:33.630Z"
+    },
+    {
+      "claim": "TrustMRR's education category contains small and materially different businesses rather than a validated full-degree student companion.",
+      "url": "https://trustmrr.com/",
+      "confidence": "Low",
+      "note": "Discovery source only; marketplace listings cannot establish market size or product-market fit.",
+      "accessed_at": "2026-07-30T13:04:33.666Z"
+    },
+    {
+      "claim": "StudyFetch app reviews praise exam support and feature breadth but report expensive surprise paywalls, crashes, slow processing, and failure on long videos or notes.",
+      "url": "https://apps.apple.com/au/app/studyfetch-make-learning-easy/id6663574866?platform=iphone&see-all=reviews",
+      "confidence": "Medium",
+      "note": "Qualitative app-store evidence; self-selected and locale-specific.",
+      "accessed_at": "2026-07-30T13:25:31.877Z"
+    },
+    {
+      "claim": "StudyFetch Google Play reviews report lag, broken chat, failed handwritten-note processing, frozen screens, and unreliable live lecture capture.",
+      "url": "https://play.google.com/store/apps/details?hl=en_US&id=com.studyfetch.mobile.v2",
+      "confidence": "Medium",
+      "note": "Direct store evidence; useful for failure modes, not complaint prevalence.",
+      "accessed_at": "2026-07-30T13:25:31.920Z"
+    },
+    {
+      "claim": "StudyFetch Trustpilot reviews pair strong study-value praise with complaints about bugs, lost access, feature lockout, and price.",
+      "url": "https://www.trustpilot.com/review/studyfetch.com",
+      "confidence": "Low",
+      "note": "Open review platform with moderation and selection limitations.",
+      "accessed_at": "2026-07-30T13:25:31.963Z"
+    },
+    {
+      "claim": "AskSia App Store reviews praise clean design but report wrong answers, latency, cross-device subscription sync, renewal, cancellation, and refund failures.",
+      "url": "https://apps.apple.com/au/app/asksia-ai-study-homework/id6746232496",
+      "confidence": "Medium",
+      "note": "Direct review and developer response; locale-specific qualitative signal.",
+      "accessed_at": "2026-07-30T13:25:32.021Z"
+    },
+    {
+      "claim": "Quizlet community users report ads, lag, shallow AI questions, and formerly useful modes moving behind paywalls.",
+      "url": "https://www.reddit.com/r/quizlet/comments/1uqav65/i_hope_quizlet_shuts_down/",
+      "confidence": "Low",
+      "note": "Anecdotal community sentiment; useful for failure discovery, not prevalence.",
+      "accessed_at": "2026-07-30T13:25:32.069Z"
+    },
+    {
+      "claim": "A Quizlet teacher reported that even a paid teacher plan no longer gave students unrestricted study access.",
+      "url": "https://www.reddit.com/r/quizlet/comments/1sbbzjz/quizlet_plus_unlimited/",
+      "confidence": "Low",
+      "note": "Single current teacher report; indicates packaging trust question.",
+      "accessed_at": "2026-07-30T13:25:32.110Z"
+    },
+    {
+      "claim": "NotebookLM users report strong value when grounded in high-quality course sources, but also errors, shallow summaries, setup burden, and subject-dependent reliability.",
+      "url": "https://www.reddit.com/r/notebooklm/comments/1r6ndqd/why_most_people_dont_use_notebooklm_for_studying/",
+      "confidence": "Low",
+      "note": "Large contradictory discussion; user sentiment rather than efficacy.",
+      "accessed_at": "2026-07-30T13:25:32.150Z"
+    },
+    {
+      "claim": "A student reported that NotebookLM's shallow chemistry preparation produced false confidence and poor quiz performance, while others in the thread described strong results.",
+      "url": "https://www.reddit.com/r/notebooklm/comments/1o1dhc9/beware_of_relying_on_notebooklm_for_schoolwork/",
+      "confidence": "Low",
+      "note": "Anecdotal and confounded, but useful false-confidence failure mode.",
+      "accessed_at": "2026-07-30T13:25:32.188Z"
+    },
+    {
+      "claim": "Students using Notion describe excessive template choice, setup time, and maintenance that competes with actual study.",
+      "url": "https://www.reddit.com/r/Notion/comments/18c0fgv/im_trying_to_use_notion_to_organize_my_student/",
+      "confidence": "Low",
+      "note": "Qualitative forum evidence; recurring pattern across threads.",
+      "accessed_at": "2026-07-30T13:25:32.227Z"
+    },
+    {
+      "claim": "An ADHD student described over-investing in aesthetic Notion setup and needing a simple low-overload system.",
+      "url": "https://www.reddit.com/r/Notion/comments/p1pdab/i_have_adhd_any_tips_for_simple_efficient_but/",
+      "confidence": "Low",
+      "note": "Individual account; identifies accessibility and executive-function friction.",
+      "accessed_at": "2026-07-30T13:25:32.266Z"
+    },
+    {
+      "claim": "Motion reviews praise automatic scheduling and reduced decision fatigue but criticize opaque scheduling decisions, mobile limitations, auto-renewal, cancellation, and refund experience.",
+      "url": "https://www.trustpilot.com/review/www.usemotion.com",
+      "confidence": "Low",
+      "note": "Open review platform; good for failure-mode discovery, not prevalence.",
+      "accessed_at": "2026-07-30T13:25:32.305Z"
+    },
+    {
+      "claim": "Product Hunt education launches cluster around note transformation, quizzes, flashcards, voice tutoring, and personalization, often with very small review counts.",
+      "url": "https://www.producthunt.com/products/easelearn-ai/reviews",
+      "confidence": "Low",
+      "note": "Launch-community evidence is founder- and early-adopter-biased; category map only.",
+      "accessed_at": "2026-07-30T13:25:32.341Z"
+    },
+    {
+      "claim": "Product Hunt users value AI-generated flashcards as a time saver but report duplicate, incomplete, simplistic, and unreliable outputs.",
+      "url": "https://www.producthunt.com/products/pdf2anki/reviews",
+      "confidence": "Low",
+      "note": "Small self-selected launch sample; useful feature-level signal only.",
+      "accessed_at": "2026-07-30T13:25:32.389Z"
+    },
+    {
+      "claim": "A Product Hunt AI tutor discussion asked for onboarding, stronger mobile operation, topic breadth, and meaningful learning ROI measures.",
+      "url": "https://www.producthunt.com/products/nfactorial-ai-2",
+      "confidence": "Low",
+      "note": "Small maker community; useful open questions, not demand validation.",
+      "accessed_at": "2026-07-30T13:25:32.439Z"
+    },
+    {
+      "claim": "Astra AI's imprint identifies the relevant operator as Astra AI d.o.o. in Ljubljana, Slovenia.",
+      "url": "https://astra-ai.co/imprint/",
+      "confidence": "High",
+      "note": "Official entity-identification source; distinguishes the education product from unrelated Astra-branded companies.",
+      "accessed_at": "2026-07-30T13:30:02.484Z"
+    },
+    {
+      "claim": "Vercel's Ship 2026 recap repeats Astra's claim of 10 million users and 25 million dollars ARR.",
+      "url": "https://vercel.com/blog/vercel-ship-2026-recap",
+      "confidence": "Medium",
+      "note": "Reputable event recap, but the operating figures are still company-supplied rather than audited.",
+      "accessed_at": "2026-07-30T13:30:02.583Z"
+    },
+    {
+      "claim": "The Slovenian Enterprise Fund's official P2 2024 awards list includes Astra AI for a 72,000 euro public grant.",
+      "url": "https://www.podjetniskisklad.si/wp-content/uploads/2024/06/P2-2024_Seznam-odobrenih-vlog_splet.pdf",
+      "confidence": "High",
+      "note": "Primary grant record; qualifies the company's fully bootstrapped wording without implying equity financing.",
+      "accessed_at": "2026-07-30T13:30:02.682Z"
+    },
+    {
+      "claim": "Startup Slovenia reports Astra's inherited mathematics audience, early subscription focus, localization, and P2 subsidy participation.",
+      "url": "https://www.startup.si/sl-si/novica/klemen-selakovic-in-andrej-p-skraba-o-astra-ai-milijon-uporabnikov-ni-bil-cilj-bil-je-posledica-",
+      "confidence": "Medium",
+      "note": "Founder interview published by the national startup ecosystem; useful for playbook evidence but self-reported.",
+      "accessed_at": "2026-07-30T13:30:02.771Z"
+    },
+    {
+      "claim": "A 2022 N1 interview documents Andrej Skraba's pre-Astra reputation, free mathematics platform, student word-of-mouth, teacher referrals, and pandemic-era demand.",
+      "url": "https://n1info.si/novice/intervjuji/andrej-p-skraba-junak-slovenskih-maturantov/",
+      "confidence": "Medium",
+      "note": "Independent historical profile; supports inherited trust and audience rather than current product efficacy.",
+      "accessed_at": "2026-07-30T13:30:02.858Z"
+    },
+    {
+      "claim": "Astra's early MVP was built with an external product team before later in-house technical leadership.",
+      "url": "https://www.zerodays.dev/en/projects/case-study--from-mvp-to-40k+users-in-1-year",
+      "confidence": "Low",
+      "note": "Vendor case study; useful as corroborating operating history, not independent performance evidence.",
+      "accessed_at": "2026-07-30T13:30:02.951Z"
+    },
+    {
+      "claim": "Astra AI was selected as Slovenian Startup of the Year 2025.",
+      "url": "https://www.startup.si/en-us/news/astra-ai-wins-slovenian-startup-of-the-year-2025",
+      "confidence": "High",
+      "note": "Official award announcement; recognition is not evidence of efficacy, retention, or revenue.",
+      "accessed_at": "2026-07-30T13:30:03.044Z"
+    },
+    {
+      "claim": "Astra's US App Store listing exposes weekly, monthly, annual, Sigma, and credit-pack prices plus platform privacy and accessibility disclosures.",
+      "url": "https://apps.apple.com/us/app/astra-ai-study-exam-prep/id6751030141",
+      "confidence": "High",
+      "note": "Current storefront evidence; regional prices and ratings vary.",
+      "accessed_at": "2026-07-30T13:30:03.139Z"
+    },
+    {
+      "claim": "Astra's creator-led growth post reports 3,334 videos and 82.3 million views in 70 days using many small StudyTok accounts and repeated winning formats.",
+      "url": "https://www.linkedin.com/posts/klemenselakovic_kako-smo-pri-astra-ai-dosegli-82m-ogledov-activity-7393541411255500800-eNSQ",
+      "confidence": "Medium",
+      "note": "Founder-reported funnel data; verifies the stated playbook, not independent causal acquisition or retention.",
+      "accessed_at": "2026-07-30T13:30:03.273Z"
+    },
+    {
+      "claim": "Astra recruitment posts ask students to publish supplied content repeatedly from new social accounts and pay based on views and bonuses.",
+      "url": "https://www.reddit.com/r/studentjobs/comments/1szrix0/hiring_looking_for_people_interested_in_managing/",
+      "confidence": "Medium",
+      "note": "Independent recruitment surface corroborating the paid micro-account distribution mechanism.",
+      "accessed_at": "2026-07-30T13:30:03.370Z"
+    },
+    {
+      "claim": "Telemach distributed Astra AI through a discounted 12-month telecommunications bundle.",
+      "url": "https://telemach.si/download/terms/posebna-ponudba-storitev-astra-ai-12-mesecev-7-00-na-mesec-za-nove-in-obstojece-narocnike-paketov-vec-1-10-2024-do-preklica/12311",
+      "confidence": "High",
+      "note": "Official partner terms; demonstrates channel distribution, not active use or learning outcomes.",
+      "accessed_at": "2026-07-30T13:30:03.457Z"
+    },
+    {
+      "claim": "A reflective student diary reports immediate explanations and personalized practice from Astra alongside formula, integral, and consistency errors requiring external verification.",
+      "url": "https://www.zrss.si/wp-content/uploads/2025/07/08_LivijaSmrkolj.pdf",
+      "confidence": "Medium",
+      "note": "Single longitudinal reflective case in an education publication; richer than a store review but not a controlled study.",
+      "accessed_at": "2026-07-30T13:30:03.545Z"
+    },
+    {
+      "claim": "University of Ljubljana Senate minutes document an Astra campaign soliciting notes, slides, video, and audio; after a faculty removal demand, Astra removed disputed invitations and added a copyright warning.",
+      "url": "https://www.uni-lj.si/assets/Sluzba-za-informatiko/Senat/Mandat-2021-2025/34-seja-Senata-UL/Izvlecek-zapisnika-34.-seje-Senata-UL.pdf",
+      "confidence": "High",
+      "note": "Primary institutional minutes; establishes a past course-material governance incident and the need for provenance, consent, and takedown controls.",
+      "accessed_at": "2026-07-30T13:30:03.632Z"
+    },
+    {
+      "claim": "A university advising thread describes delayed responses and use of degree plans, transfer tools, and spreadsheets, while replies also explain why human advisers remain useful for course sequencing.",
+      "url": "https://www.reddit.com/r/college/comments/hr3h0p",
+      "confidence": "Low",
+      "note": "Self-selected community discussion; useful for discovering workflow failure modes, not estimating prevalence.",
+      "accessed_at": "2026-07-30T13:30:03.723Z"
+    },
+    {
+      "claim": "Students report receiving incorrect or inconsistent academic advising, especially around transfer, graduation requirements, and course selection.",
+      "url": "https://www.reddit.com/r/college/comments/1bztnof",
+      "confidence": "Low",
+      "note": "Anecdotal thread; supports an authority and escalation hypothesis that requires campus-specific validation.",
+      "accessed_at": "2026-07-30T13:30:03.809Z"
+    },
+    {
+      "claim": "A workload discussion contains both personal time-management explanations and structural constraints such as work, caregiving, disability, and variable course intensity.",
+      "url": "https://www.reddit.com/r/college/comments/1bdtqnf",
+      "confidence": "Low",
+      "note": "Contradictory community evidence retained deliberately; FORGE should diagnose capacity rather than moralize productivity.",
+      "accessed_at": "2026-07-30T13:30:03.893Z"
+    },
+    {
+      "claim": "Working students describe difficulty combining full-time coursework with paid work and the need to reduce course load to protect learning and health.",
+      "url": "https://www.reddit.com/r/CollegeRant/comments/1fodrh4",
+      "confidence": "Low",
+      "note": "Self-selected account; informs capacity-aware planning and route-to-support hypotheses.",
+      "accessed_at": "2026-07-30T13:30:03.981Z"
+    },
+    {
+      "claim": "Adult returners with caregiving and work obligations describe fragmented time, hidden administrative complexity, and need for flexible low-overhead support.",
+      "url": "https://np.reddit.com/r/BackToCollege/comments/1p41pch",
+      "confidence": "Low",
+      "note": "Anecdotal but distinct nontraditional-student perspective; not prevalence evidence.",
+      "accessed_at": "2026-07-30T13:30:04.071Z"
+    },
+    {
+      "claim": "Students disagree sharply about career services: some find them generic or ineffective, while others report high-value coaching and opportunities.",
+      "url": "https://www.reddit.com/r/college/comments/tbre03",
+      "confidence": "Low",
+      "note": "Contradictory thread supports preparation, discoverability, and routing rather than replacing campus services.",
+      "accessed_at": "2026-07-30T13:30:04.158Z"
+    },
+    {
+      "claim": "Students report that late discovery and weak specificity can make career support feel disconnected from course choices and job-search execution.",
+      "url": "https://www.reddit.com/r/college/comments/1faneut",
+      "confidence": "Low",
+      "note": "Anecdotal journey-stage signal; should be tested in interviews and institutional pilots.",
+      "accessed_at": "2026-07-30T13:30:04.248Z"
+    },
+    {
+      "claim": "My Study Life reviews praise reminders and calendar visibility but report manual setup, timezone errors, navigation regressions, crashes, and a very early task paywall.",
+      "url": "https://apps.apple.com/us/app/my-study-life-school-planner/id910639339?platform=iphone&see-all=reviews",
+      "confidence": "Medium",
+      "note": "Self-selected App Store reviews; useful failure modes, not prevalence evidence.",
+      "accessed_at": "2026-07-30T13:30:57.226Z"
+    },
+    {
+      "claim": "An ADHD first-year student repeatedly abandoned planners; replies favored a simple visual weekly funnel, reminders, physical context, and body doubling.",
+      "url": "https://www.reddit.com/r/planners/comments/1qd0w8r/suggestions_for_adhd_college_student/",
+      "confidence": "Medium",
+      "note": "Small self-selected planner community; distinct initiation requirements rather than generic planning.",
+      "accessed_at": "2026-07-30T13:30:57.320Z"
+    },
+    {
+      "claim": "Canvas tasks can disappear from the to-do list when instructors omit due dates or use external tools, forcing syllabus and course-page checks.",
+      "url": "https://www.reddit.com/r/canvas/comments/1u81ihu/assignments_not_showing_up_in_the_to_do_list/",
+      "confidence": "Medium",
+      "note": "Platform-specific support discussion; demonstrates incompleteness risk, not system-wide frequency.",
+      "accessed_at": "2026-07-30T13:30:57.412Z"
+    },
+    {
+      "claim": "Canvas notification overload can force students to choose between missing important changes and receiving every trivial course update.",
+      "url": "https://www.reddit.com/r/college/comments/1f7sodt/",
+      "confidence": "Medium",
+      "note": "Single student complaint retained as a consequence-ranking design signal.",
+      "accessed_at": "2026-07-30T13:30:57.495Z"
+    },
+    {
+      "claim": "Inconsistent Canvas course organization can leave dashboards and calendars incomplete and require a different navigation model for each class.",
+      "url": "https://www.reddit.com/r/college/comments/qzv18q",
+      "confidence": "Medium",
+      "note": "Older detailed journey; supports source reconciliation and freshness checks.",
+      "accessed_at": "2026-07-30T13:30:57.584Z"
+    },
+    {
+      "claim": "A Canvas reauthentication event erased an hour of typed work, leading students to recommend authoring elsewhere before submission.",
+      "url": "https://www.reddit.com/r/CollegeRant/comments/16ncdug/i_had_just_completed_a_long_text_assignment_and/",
+      "confidence": "Medium",
+      "note": "Single high-consequence incident; supports local drafts and recovery receipts.",
+      "accessed_at": "2026-07-30T13:30:57.677Z"
+    },
+    {
+      "claim": "A student juggling paper, Canvas, Docs, Calendar, GoodNotes, and research tools rejects turning university life into a complex Notion setup project.",
+      "url": "https://www.reddit.com/r/Notion/comments/1qb18ze/completely_new_to_notion_overwhelmed_and_looking/",
+      "confidence": "Medium",
+      "note": "Small thread with contradictory praise and promotional replies; demonstrates the maintenance-tax tradeoff.",
+      "accessed_at": "2026-07-30T13:30:57.762Z"
+    },
+    {
+      "claim": "A multilingual Study Mode user values source-book grounding, translation, and guided correction but manually pastes questions and verifies answers to avoid hallucination.",
+      "url": "https://www.reddit.com/r/ChatGPT/comments/1ozknc5/my_positive_experience_with_chatgpt_study_mode/",
+      "confidence": "Medium",
+      "note": "One detailed mixed experience; comments also show replacement-style use that prevents learning.",
+      "accessed_at": "2026-07-30T13:30:57.849Z"
+    },
+    {
+      "claim": "A parent says a human tutor's local curriculum, teacher, motivation, and weekly context remain hard for an automated tutor to reproduce.",
+      "url": "https://news.ycombinator.com/item?id=40981844",
+      "confidence": "Medium",
+      "note": "Specific parent account on Hacker News; not representative but valuable boundary evidence.",
+      "accessed_at": "2026-07-30T13:30:57.932Z"
+    },
+    {
+      "claim": "Teachers report AI helps with low-stakes paperwork and variants but weak generated questions and correction overhead require expert review.",
+      "url": "https://www.reddit.com/r/Teachers/comments/1qer8sb/are_you_using_ai_as_a_teacher/",
+      "confidence": "Medium",
+      "note": "Broad self-selected educator discussion containing both positive and negative uses.",
+      "accessed_at": "2026-07-30T13:30:58.017Z"
+    },
+    {
+      "claim": "Teachers report students often use AI to finish rather than learn, supporting an attempt-first rather than answer-first product contract.",
+      "url": "https://www.reddit.com/r/Teachers/comments/1s47zuy/ai_will_revolutionize_education/",
+      "confidence": "Low",
+      "note": "Educator-community perspective with selection and framing bias.",
+      "accessed_at": "2026-07-30T13:30:58.161Z"
+    },
+    {
+      "claim": "Anki users praise durable recall but report fragmented understanding and difficulty seeing the conceptual big picture.",
+      "url": "https://www.reddit.com/r/Anki/comments/1tt9fac/struggling_to_see_the_big_picture_with_anki_how/",
+      "confidence": "Medium",
+      "note": "Enthusiast community; useful for recall-versus-understanding tension.",
+      "accessed_at": "2026-07-30T13:30:58.248Z"
+    },
+    {
+      "claim": "Anki users describe overdue-review debt as overwhelm, avoidance, sprinting, burnout, resetting, and quitting.",
+      "url": "https://www.reddit.com/r/Anki/comments/1t38f7a/i_have_a_4000_card_backlog_and_i_need_help/",
+      "confidence": "Medium",
+      "note": "Specific severe backlog with community coping strategies; not a prevalence estimate.",
+      "accessed_at": "2026-07-30T13:30:58.332Z"
+    },
+    {
+      "claim": "A long-term Anki user says making good cards is a separate hard skill and oversized cards create burnout.",
+      "url": "https://www.reddit.com/r/Anki/comments/1b45obl",
+      "confidence": "Medium",
+      "note": "Experienced-user account supporting assisted card authoring with learner review.",
+      "accessed_at": "2026-07-30T13:30:58.424Z"
+    },
+    {
+      "claim": "Quizlet users describe a trust fracture when Learn limits appear only after weeks invested creating decks.",
+      "url": "https://www.reddit.com/r/quizlet/comments/w1uv9b",
+      "confidence": "Medium",
+      "note": "Older policy complaint; still relevant to paywall timing and academic-memory lock-in.",
+      "accessed_at": "2026-07-30T13:30:58.509Z"
+    },
+    {
+      "claim": "Current Quizlet reviews report interruptive ads, lag, feature paywalls, renewal and support friction, and inaccurate material.",
+      "url": "https://www.trustpilot.com/review/www.quizlet.com",
+      "confidence": "Medium",
+      "note": "Large but negatively selected review corpus; failure modes are specific, prevalence is unknown.",
+      "accessed_at": "2026-07-30T13:30:58.598Z"
+    },
+    {
+      "claim": "Chegg reviews contrast useful step-by-step human explanations with complaints about AI replacing experts, repeated questioning, renewals, and support friction.",
+      "url": "https://www.trustpilot.com/review/www.chegg.com",
+      "confidence": "Medium",
+      "note": "Large but self-selected review corpus; supports human-quality and commercial-trust requirements.",
+      "accessed_at": "2026-07-30T13:30:58.683Z"
+    },
+    {
+      "claim": "A commuting working senior reports that distance, cost, transport, and event timing make campus participation and study groups hard, while replies show commuter experience is not universal.",
+      "url": "https://www.reddit.com/r/college/comments/12bzo7j",
+      "confidence": "Medium",
+      "note": "Contradictory self-reports retained; informs time-and-place-aware connection design.",
+      "accessed_at": "2026-07-30T13:30:58.767Z"
+    },
+    {
+      "claim": "A full-time working student says accelerated assignment completion crowds out actual studying and learning.",
+      "url": "https://www.reddit.com/r/college/comments/1bckpss",
+      "confidence": "Medium",
+      "note": "Single constrained-life journey supporting capacity-aware planning.",
+      "accessed_at": "2026-07-30T13:30:58.857Z"
+    },
+    {
+      "claim": "A first-generation student reports not understanding credit hours and university terminology while family cannot supply institutional guidance.",
+      "url": "https://www.reddit.com/r/college/comments/11g9xsm",
+      "confidence": "Medium",
+      "note": "Direct first-generation journey; supports plain-language institutional navigation.",
+      "accessed_at": "2026-07-30T13:30:58.940Z"
+    },
+    {
+      "claim": "A first-generation student with limited-English parents reports wrong advice and missing notification leading to financial-aid loss and dropped classes.",
+      "url": "https://talk.collegeconfidential.com/t/did-my-academic-advisor-screw-me-over-and-make-me-lost-my-financial-aid/1970744",
+      "confidence": "Medium",
+      "note": "Older high-consequence anecdote; institution facts unverified, so use as a failure-mode hypothesis only.",
+      "accessed_at": "2026-07-30T13:30:59.025Z"
+    },
+    {
+      "claim": "International students describe language barriers, housing uncertainty, unanswered small questions, and difficulty forming groups.",
+      "url": "https://www.reddit.com/r/StudyInTheNetherlands/comments/1lrn0a8/feeling_lonely_as_an_incoming_international/",
+      "confidence": "Low",
+      "note": "Prospective student self-report; supports multilingual, local-context, and belonging research.",
+      "accessed_at": "2026-07-30T13:30:59.116Z"
+    },
+    {
+      "claim": "An ADHD student says accommodation processes require repeated disclosure and negotiation, while extra time alone does not solve memory, interpretation, or study targeting.",
+      "url": "https://www.reddit.com/r/CollegeRant/comments/1gj0o03",
+      "confidence": "Medium",
+      "note": "Single vulnerable journey; policies vary by institution and jurisdiction.",
+      "accessed_at": "2026-07-30T13:30:59.234Z"
+    },
+    {
+      "claim": "ADHD students report that flexible deadlines can worsen procrastination and that approved accommodations may be forgotten or unused.",
+      "url": "https://www.reddit.com/r/adhd_college/comments/1io4j7o/what_college_accommodations_have_you_received_for/",
+      "confidence": "Medium",
+      "note": "Self-selected thread with varied experiences; explicitly preserves a contradictory accessibility effect.",
+      "accessed_at": "2026-07-30T13:30:59.324Z"
+    },
+    {
+      "claim": "A nontraditional student deliberately varies course load and rejects a fixed completion timeline, illustrating the need for interruption-safe degree planning.",
+      "url": "https://www.reddit.com/r/college/comments/1eselk3",
+      "confidence": "Medium",
+      "note": "Single nontraditional-student account supporting flexible pacing.",
+      "accessed_at": "2026-07-30T13:30:59.411Z"
+    },
+    {
+      "claim": "A disappearing Canvas submission leads students to preserve files and timestamps, supporting receipts and provenance around high-stakes actions.",
+      "url": "https://www.reddit.com/r/college/comments/lyozvq",
+      "confidence": "Medium",
+      "note": "Older single incident with concrete recovery behavior.",
+      "accessed_at": "2026-07-30T13:30:59.497Z"
+    },
+    {
+      "claim": "Study-buddy builders find generic interest matching insufficient; course, timezone, language, experience, and the actual collaboration workflow matter.",
+      "url": "https://news.ycombinator.com/item?id=41024964",
+      "confidence": "Low",
+      "note": "Creator and commenter observations; not measured student demand.",
+      "accessed_at": "2026-07-30T13:30:59.583Z"
+    },
+    {
+      "claim": "An edtech discussion argues the scarce value is detecting when a learner is bluffing and routing the right student to human attention rather than merely supplying answers.",
+      "url": "https://www.reddit.com/r/edtech/comments/1ukvl08/is_ai_tutoring_actually_an_equity_tool_or_does_it/",
+      "confidence": "Low",
+      "note": "Recent professional-community discussion; participant roles unverified.",
+      "accessed_at": "2026-07-30T13:30:59.669Z"
+    },
+    {
+      "claim": "Viral X claims that AI compresses entire semesters are difficult to verify and exemplify the hype environment an evidence-led learning product must resist.",
+      "url": "https://x.com/ihtesham2005/status/2041576806810370553",
+      "confidence": "Low",
+      "note": "Unverified creator-style viral claim; included as discourse evidence, not an outcome.",
+      "accessed_at": "2026-07-30T13:30:59.750Z"
+    },
+    {
+      "claim": "Product Hunt feedback asks for visual cards, trials that do not require card details, student-accessible pricing, and printable offline study materials.",
+      "url": "https://www.producthunt.com/products/flash-7",
+      "confidence": "Low",
+      "note": "Small maker-heavy launch discussion; useful feature requests but not PMF or outcome evidence.",
+      "accessed_at": "2026-07-30T13:30:59.842Z"
+    },
+    {
+      "claim": "HEPI's 2026 UK undergraduate survey reports near-universal generative-AI use alongside inconsistent institutional encouragement and provision.",
+      "url": "https://www.hepi.ac.uk/reports/student-generative-ai-survey-2026/",
+      "confidence": "Medium",
+      "note": "Representative adoption survey sponsored by Kortext; useful for adoption and support gaps, not causal learning effects.",
+      "accessed_at": "2026-07-30T13:31:49.474Z"
+    },
+    {
+      "claim": "Gallup and Lumina's 2026 higher-education study reports the lived barriers, perceived value, and stop-out risks of current and prospective US students.",
+      "url": "https://www.gallup.com/file/analytics/709325/Lumina_Foundation-Gallup-State_of_Higher_of_Higher_Education_2026_Report.pdf",
+      "confidence": "High",
+      "note": "Large survey report; self-report and US sampling limit causal and global interpretation.",
+      "accessed_at": "2026-07-30T13:31:49.585Z"
+    },
+    {
+      "claim": "The Hope Center documents food, housing, transportation, childcare, and financial insecurity as material higher-education persistence constraints.",
+      "url": "https://hope.temple.edu/research/hope-center-basic-needs-survey",
+      "confidence": "High",
+      "note": "Research-center program page and survey series; structural capacity evidence rather than product demand.",
+      "accessed_at": "2026-07-30T13:31:49.676Z"
+    },
+    {
+      "claim": "The 2025 National Student Survey provides large-scale UK student evidence across teaching, assessment, support, organization, resources, community, and student voice.",
+      "url": "https://www.officeforstudents.org.uk/publications/national-student-survey-2025/",
+      "confidence": "High",
+      "note": "Official national survey; aggregate UK evidence and not a direct FORGE feature survey.",
+      "accessed_at": "2026-07-30T13:31:49.761Z"
+    },
+    {
+      "claim": "EDUCAUSE's 2025 student survey examines higher-education technology experience, modality, support, and AI use.",
+      "url": "https://www.educause.edu/research-and-publications/research/analytics-services/surveys/2025/educause-student-survey",
+      "confidence": "High",
+      "note": "Higher-education association survey; institutional members and self-report shape generalizability.",
+      "accessed_at": "2026-07-30T13:31:49.849Z"
+    },
+    {
+      "claim": "A University of California undergraduate AI study finds broad use alongside disparities in access, training, and concern about cheating.",
+      "url": "https://www.universityofcalifornia.edu/news/largest-study-ai-use-undergrads-revealing-disparities-access-and-cheating",
+      "confidence": "High",
+      "note": "Official university-system summary of a large survey; adoption and attitudes, not product efficacy.",
+      "accessed_at": "2026-07-30T13:31:49.940Z"
+    },
+    {
+      "claim": "Pew's 2026 US teen survey finds schoolwork chatbot use is common while many teens perceive routine AI-assisted cheating.",
+      "url": "https://www.pewresearch.org/internet/2026/02/24/how-teens-use-and-view-ai/",
+      "confidence": "High",
+      "note": "Representative US teen survey; self-report and US context.",
+      "accessed_at": "2026-07-30T13:31:50.034Z"
+    },
+    {
+      "claim": "Instructure's 2026 education survey reports formal AI training and support lagging behind use.",
+      "url": "https://www.instructure.com/press-release/new-instructure-research-shows-current-state-ai-education-formal-training-and-support",
+      "confidence": "Medium",
+      "note": "Vendor-sponsored survey and press release; use directionally and not as neutral causal evidence.",
+      "accessed_at": "2026-07-30T13:31:50.121Z"
+    },
+    {
+      "claim": "A crossover randomized trial with 194 eligible Harvard physics students found a highly structured expert-authored AI tutor improved immediate post-test performance and reduced time for two lessons.",
+      "url": "https://www.nature.com/articles/s41598-025-97652-6",
+      "confidence": "High",
+      "note": "Peer-reviewed narrow RCT; immediate outcomes, two topics, and intensive tutor design limit generalization.",
+      "accessed_at": "2026-07-30T13:31:50.208Z"
+    },
+    {
+      "claim": "A preregistered field experiment with nearly 1,000 high-school mathematics students found generic GPT improved assisted work but reduced later unaided performance, while pedagogical guardrails removed the harm without proving an unaided advantage.",
+      "url": "https://doi.org/10.1073/pnas.2422633122",
+      "confidence": "High",
+      "note": "Peer-reviewed RCT; crucial assisted-performance versus learning distinction in one population and subject.",
+      "accessed_at": "2026-07-30T13:31:50.293Z"
+    },
+    {
+      "claim": "A 2025 review of 28 K-12 intelligent-tutoring studies found generally positive but heterogeneous effects and limited long-duration evidence.",
+      "url": "https://www.nature.com/articles/s41539-025-00320-7",
+      "confidence": "High",
+      "note": "Peer-reviewed systematic review; many interventions were short and designs varied.",
+      "accessed_at": "2026-07-30T13:31:50.440Z"
+    },
+    {
+      "claim": "The ILO's task-level global exposure index finds transformation is more likely than whole-job elimination, with one in four workers in occupations with some GenAI exposure and 3.3 percent in the highest category.",
+      "url": "https://www.ilo.org/publications/generative-ai-and-jobs-refined-global-index-occupational-exposure",
+      "confidence": "High",
+      "note": "Official task-level analysis; exposure is not realized automation or job loss.",
+      "accessed_at": "2026-07-30T13:31:50.527Z"
+    },
+    {
+      "claim": "The World Economic Forum employer survey expects AI and data skills to rise while analytical thinking, resilience, leadership, collaboration, curiosity, and lifelong learning remain important.",
+      "url": "https://www.weforum.org/press/2025/01/future-of-jobs-report-2025-78-million-new-job-opportunities-by-2030-but-urgent-upskilling-needed-to-prepare-workforces/",
+      "confidence": "Medium",
+      "note": "Directional employer expectations, not a deterministic labor-market forecast.",
+      "accessed_at": "2026-07-30T13:31:50.612Z"
+    },
+    {
+      "claim": "OECD adult-skills data show adaptive problem-solving proficiency is scarce and associated with stronger labor-market outcomes.",
+      "url": "https://www.oecd.org/en/topics/adult-problem-solving-skills.html",
+      "confidence": "High",
+      "note": "Official cross-national skills evidence; association does not alone establish causal wage effects.",
+      "accessed_at": "2026-07-30T13:31:50.702Z"
+    },
+    {
+      "claim": "The OECD Learning Compass emphasizes foundations, student agency, co-agency, creating value, reconciling tensions, and responsibility.",
+      "url": "https://www.oecd.org/en/data/tools/oecd-learning-compass-2030.html",
+      "confidence": "Medium",
+      "note": "Normative education framework rather than a causal product study.",
+      "accessed_at": "2026-07-30T13:31:50.815Z"
+    },
+    {
+      "claim": "The National Academies' mentoring synthesis treats identity, belonging, psychosocial support, career support, and networks as important relational functions.",
+      "url": "https://nap.nationalacademies.org/initiative/committee-on-effective-mentoring-in-stemm",
+      "confidence": "High",
+      "note": "Consensus-study program; mentoring evidence argues for human routes rather than AI equivalence.",
+      "accessed_at": "2026-07-30T13:31:50.897Z"
+    },
+    {
+      "claim": "UNESCO recommends age-appropriate, human-centered school AI use and an age threshold of 13 in its global guidance.",
+      "url": "https://www.unesco.org/en/articles/unesco-governments-must-quickly-regulate-generative-ai-schools?hub=66927",
+      "confidence": "High",
+      "note": "Official guidance, not a universal statute; jurisdictional rules still govern.",
+      "accessed_at": "2026-07-30T13:31:50.980Z"
+    },
+    {
+      "claim": "UNICEF's AI-and-children framework prioritizes safety, privacy, fairness, transparency, accountability, inclusion, participation, and the child's best interests.",
+      "url": "https://www.unicef.org/innocenti/reports/policy-guidance-ai-children",
+      "confidence": "High",
+      "note": "Official child-rights guidance supporting a distinct minors architecture.",
+      "accessed_at": "2026-07-30T13:31:51.064Z"
+    },
+    {
+      "claim": "UNICEF identifies relational AI companions as a distinct child-rights risk class.",
+      "url": "https://www.unicef.org/documents/when-ai-becomes-friend-child-rights-risks",
+      "confidence": "High",
+      "note": "Official policy brief; supports a no-companion boundary for minors.",
+      "accessed_at": "2026-07-30T13:31:51.146Z"
+    },
+    {
+      "claim": "The UK Information Commissioner's Children's Code requires best interests, high privacy defaults, minimization, profiling restrictions, and no privacy-weakening nudges for child-accessible services.",
+      "url": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/childrens-information/childrens-code-guidance-and-resources/age-appropriate-design-a-code-of-practice-for-online-services/",
+      "confidence": "High",
+      "note": "Official UK regulator guidance; jurisdiction-specific but valuable design baseline.",
+      "accessed_at": "2026-07-30T13:31:51.229Z"
+    },
+    {
+      "claim": "The FTC's 2025 COPPA rule changes strengthen consent for third-party advertising and data-retention limits for covered children under 13.",
+      "url": "https://www.ftc.gov/news-events/news/press-releases/2025/01/ftc-finalizes-changes-childrens-privacy-rule-limiting-companies-ability-monetize-kids-data",
+      "confidence": "High",
+      "note": "Official US regulator source; applicability depends on service design and jurisdiction.",
+      "accessed_at": "2026-07-30T13:31:51.313Z"
+    },
+    {
+      "claim": "The European Commission explains that some AI uses in education are prohibited or high-risk, including emotion recognition and certain evaluation, steering, and cheating-monitoring systems.",
+      "url": "https://digital-strategy.ec.europa.eu/en/faqs/navigating-ai-act",
+      "confidence": "High",
+      "note": "Official EU guidance; product counsel must map exact use cases and rollout dates.",
+      "accessed_at": "2026-07-30T13:31:51.454Z"
+    },
+    {
+      "claim": "TEQSA's 2026 assessment-reform guidance advocates program-level assurance, multiple contextualized assessments, and explicit responses to generative AI.",
+      "url": "https://www.teqsa.gov.au/sites/default/files/2026-06/enacting-assessment-reform-in-a-time-of-artificial-intelligence-web.pdf",
+      "confidence": "High",
+      "note": "Official Australian regulator guidance; supports proof and assessment-policy architecture.",
+      "accessed_at": "2026-07-30T13:31:51.540Z"
+    },
+    {
+      "claim": "UNESCO's AI competency frameworks center human agency, ethics, foundations and applications, and system design for students and teachers.",
+      "url": "https://www.unesco.org/en/articles/what-you-need-know-about-unescos-new-ai-competency-frameworks-students-and-teachers?hub=66966",
+      "confidence": "High",
+      "note": "Official competency framework; normative curriculum input rather than product efficacy.",
+      "accessed_at": "2026-07-30T13:31:51.629Z"
+    },
+    {
+      "claim": "A NeurIPS 2025 paper finds rapidly increasing frontier-agent task horizons on narrow low-context software and research tasks while warning about external validity.",
+      "url": "https://proceedings.neurips.cc/paper_files/paper/2025/hash/85069585133c4c168c865e65d72e9775-Abstract-Conference.html",
+      "confidence": "High",
+      "note": "Peer-reviewed benchmark analysis; not evidence that all knowledge work will automate on the same schedule.",
+      "accessed_at": "2026-07-30T13:31:51.722Z"
+    },
+    {
+      "claim": "OECD Skills Outlook 2025 identifies time, cost, and employer support as major adult-learning barriers and recommends flexible coherent learner-centered pathways.",
+      "url": "https://www.oecd.org/en/publications/2025/12/oecd-skills-outlook-2025_ac37c7d4/full-report/widening-opportunities-by-investing-in-21st-century-skills_762bbcca.html",
+      "confidence": "High",
+      "note": "Official cross-national synthesis; adult-learning implications are relevant after the university wedge.",
+      "accessed_at": "2026-07-30T13:31:51.806Z"
+    },
+    {
+      "claim": "Astra AI's official web application exposes the current learner onboarding and study workspace used to inspect product and paywall mechanics.",
+      "url": "https://app.astra-ai.co/",
+      "confidence": "High",
+      "note": "First-party product surface; supports visible mechanics at access time, not quality, retention, or learning efficacy.",
+      "accessed_at": "2026-07-30T13:56:46.543Z"
+    },
+    {
+      "claim": "The gstack repository documents Office Hours, CEO review, engineering review, and related planning methods adapted in this dossier.",
+      "url": "https://github.com/garrytan/gstack",
+      "confidence": "High",
+      "note": "Method source only; does not constitute completion of gstack's interactive runtime or user approval checkpoints.",
+      "accessed_at": "2026-07-30T13:56:46.586Z"
+    },
+    {
+      "claim": "A commercial Slovenian registry presentation identifies Astra AI d.o.o.'s registration details and reported current ownership.",
+      "url": "https://www.companywall.si/podjetje/astra-ai-doo/MMCJvcEq",
+      "confidence": "Medium",
+      "note": "Secondary presentation of registry data; supports accessed entity and ownership fields, not an independent audit.",
+      "accessed_at": "2026-07-30T13:56:46.627Z"
+    },
+    {
+      "claim": "A college-advising discussion contains both a complaint about delayed or generic advising and counterarguments that good advisors add sequencing and cadence value.",
+      "url": "https://www.reddit.com/r/CollegeRant/comments/1sl8d7k/college_advisors/",
+      "confidence": "Medium",
+      "note": "Single qualitative thread with internal contradiction; supports a workflow hypothesis, not prevalence.",
+      "accessed_at": "2026-07-30T13:56:46.670Z"
+    },
+    {
+      "claim": "Stellic markets an institution-integrated, student-facing platform spanning degree audit, planning, advising, and transfer management.",
+      "url": "https://www.stellic.com/resources/higher-ed-buyers-guide-to-student-success-software",
+      "confidence": "Medium",
+      "note": "First-party category and product marketing; supports comparator scope, not independent adoption or outcome claims.",
+      "accessed_at": "2026-07-30T13:56:46.713Z"
+    },
+    {
+      "claim": "Pathify markets a consolidated higher-education portal with tasks, alerts, search, groups, and SIS/LMS/productivity integrations.",
+      "url": "https://pathify.com/portal/",
+      "confidence": "Medium",
+      "note": "First-party product marketing; supports comparator scope, not completeness, authority, retention, or outcome claims.",
+      "accessed_at": "2026-07-30T13:56:46.753Z"
+    },
+    {
+      "claim": "EAB Navigate360 markets institution-facing student engagement, advising, degree planning, alerts, staff coordination, and an AI navigator.",
+      "url": "https://eab.com/solutions/navigate360/",
+      "confidence": "Medium",
+      "note": "First-party product marketing; supports comparator scope only. Vendor scale and outcome claims were not adopted as independent evidence.",
+      "accessed_at": "2026-07-30T13:56:46.790Z"
+    },
+    {
+      "claim": "A Pathify-sponsored College Pulse survey of 1,010 US students reports stress and missed deadlines associated with fragmented campus digital systems.",
+      "url": "https://www.educause.edu/about/corporate-participation/member-press-releases/new-survey-finds-fragmented-digital-systems-are-eroding-student-success",
+      "confidence": "Medium",
+      "note": "Vendor-sponsored self-report press release; directional discovery evidence, not an independent prevalence estimate.",
+      "accessed_at": "2026-07-30T14:07:04.330Z"
+    },
+    {
+      "claim": "The 2026 Student Academic Experience Survey reports current UK undergraduate study, paid-work, and total-commitment context.",
+      "url": "https://www.hepi.ac.uk/reports/the-student-academic-experience-survey-2026/",
+      "confidence": "High",
+      "note": "Large UK full-time-undergraduate self-report survey; supports bounded workload context, not global or individual capacity.",
+      "accessed_at": "2026-07-30T14:07:04.378Z"
+    },
+    {
+      "claim": "An Office for Students study of recent graduates in England reports preparedness, experience, finance, and network barriers after higher education.",
+      "url": "https://www.officeforstudents.org.uk/publications/preparing-for-the-next-steps-after-higher-education-student-insight-report/",
+      "confidence": "High",
+      "note": "Official England study; supports bounded preparedness and network questions, not causality or universal longitudinal-product demand.",
+      "accessed_at": "2026-07-30T14:07:04.424Z"
+    },
+    {
+      "claim": "A student discussion about an adaptive planner surfaces demand for workload-aware scheduling while also showing that the idea is easy to describe before demand is validated.",
+      "url": "https://www.reddit.com/r/UniAdelaide/comments/1sacgfl/building_an_adaptive_study_planner_for_student/",
+      "confidence": "Low",
+      "note": "Single low-confidence product-discussion thread; discovery language only.",
+      "accessed_at": "2026-07-30T14:09:21.906Z"
+    },
+    {
+      "claim": "AskSia's public privacy policy contains the service's published content-use and model-improvement terms.",
+      "url": "https://www.asksia.ai/policies/privacy",
+      "confidence": "High",
+      "note": "Primary policy source; supports policy wording at access time, not operational compliance.",
+      "accessed_at": "2026-07-30T14:09:21.948Z"
+    },
+    {
+      "claim": "Khan Academy's official support page documents current Khanmigo learner, parent, and teacher subscription features.",
+      "url": "https://support.khanacademy.org/hc/en-us/articles/25921448458893-What-features-are-available-in-the-Learner-Parent-and-Teacher-Khanmigo-subscription-plans",
+      "confidence": "High",
+      "note": "First-party product and pricing source; supports current benchmark only.",
+      "accessed_at": "2026-07-30T14:09:21.989Z"
+    },
+    {
+      "claim": "Anki's official site documents its learner-controlled spaced-repetition product.",
+      "url": "https://apps.ankiweb.net/",
+      "confidence": "High",
+      "note": "First-party product source; supports category benchmark, not retention or efficacy.",
+      "accessed_at": "2026-07-30T14:09:22.032Z"
+    },
+    {
+      "claim": "RemNote's official pricing page documents notes, flashcards, exam scheduling, and AI packaging.",
+      "url": "https://www.remnote.com/pricing",
+      "confidence": "High",
+      "note": "First-party dynamic pricing/product source; revalidate before commercial decisions.",
+      "accessed_at": "2026-07-30T14:09:22.082Z"
+    },
+    {
+      "claim": "StudyFetch's official product page documents a broad bundle of AI study formats.",
+      "url": "https://www.studyfetch.com/?dontredirect=true",
+      "confidence": "Medium",
+      "note": "First-party marketing; supports product scope, not independent quality, retention, or outcomes.",
+      "accessed_at": "2026-07-30T14:09:22.125Z"
+    },
+    {
+      "claim": "Quizlet's official upgrade page documents current paid study packaging.",
+      "url": "https://quizlet.com/upgrade?source=footer",
+      "confidence": "High",
+      "note": "First-party dynamic pricing/product source; revalidate before pricing decisions.",
+      "accessed_at": "2026-07-30T14:09:22.168Z"
+    },
+    {
+      "claim": "MyStudyLife's official site documents student timetable, task, exam, reminder, and grade workflows.",
+      "url": "https://mystudylife.com/",
+      "confidence": "Medium",
+      "note": "First-party marketing; supports comparator scope only.",
+      "accessed_at": "2026-07-30T14:09:22.205Z"
+    },
+    {
+      "claim": "Motion's official pricing page documents adaptive planning product packaging.",
+      "url": "https://www.usemotion.com/pricing",
+      "confidence": "High",
+      "note": "First-party dynamic pricing/product source; revalidate before commercial decisions.",
+      "accessed_at": "2026-07-30T14:09:22.246Z"
+    },
+    {
+      "claim": "Notion's official education page documents its student workspace offering.",
+      "url": "https://www.notion.com/help/notion-for-education",
+      "confidence": "High",
+      "note": "First-party product source; supports category benchmark, not student outcome claims.",
+      "accessed_at": "2026-07-30T14:09:22.289Z"
+    },
+    {
+      "claim": "Perplexity's official help page documents Education Pro research and learning packaging.",
+      "url": "https://www.perplexity.ai/help-center/en/articles/12590157-what-is-education-pro",
+      "confidence": "High",
+      "note": "First-party product source; supports category benchmark only.",
+      "accessed_at": "2026-07-30T14:09:22.328Z"
+    },
+    {
+      "claim": "The pinned gstack engineering-review skill documents architecture, data-flow, error, security, test, observability, rollout, and maintainability review prompts.",
+      "url": "https://github.com/garrytan/gstack/blob/a3259400a366593e0c909dd9ac3e59752efd2488/plan-eng-review/SKILL.md",
+      "confidence": "High",
+      "note": "Method source only; adaptation does not mean the interactive gstack workflow was completed.",
+      "accessed_at": "2026-07-30T14:09:22.371Z"
+    },
+    {
+      "claim": "The pinned gstack design-review skill documents design-stage review prompts referenced by the master plan.",
+      "url": "https://github.com/garrytan/gstack/blob/a3259400a366593e0c909dd9ac3e59752efd2488/plan-design-review/SKILL.md",
+      "confidence": "High",
+      "note": "Method source only; future design review remains unexecuted.",
+      "accessed_at": "2026-07-30T14:09:22.410Z"
+    }
+  ]
+}

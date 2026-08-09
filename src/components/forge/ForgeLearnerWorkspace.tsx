@@ -297,7 +297,7 @@ export function ForgeToday() {
           ) : (
             <>
               <h2>No reviewed delayed task is scheduled.</h2>
-              <p>Force &amp; motion can schedule one only after an exact protected proof. FORGE will not generate a fake retention claim.</p>
+              <p>A delayed task can be scheduled only for a World with a reviewed task family and after an exact protected proof. FORGE will not generate a retention claim without both.</p>
             </>
           )}
           <Link href="/app/returns">Inspect return tasks and boundaries</Link>

@@ -1,0 +1,313 @@
+{
+  "schema_version": 1,
+  "topic": "forge-university-second-brain-2026",
+  "created_at": "2026-07-30T09:05:16.621Z",
+  "questions": [
+    {
+      "question": "What does the current FORGE product and codebase actually support, and what remains local, mocked, disabled, or unvalidated?",
+      "status": "resolved"
+    },
+    {
+      "question": "What are university students' highest-frequency and highest-severity problems across planning, studying, assessment, administration, wellbeing, and career preparation?",
+      "status": "resolved"
+    },
+    {
+      "question": "Which existing products address these jobs, how are they positioned and monetized, and what unmet gaps appear in student reviews and forums?",
+      "status": "resolved"
+    },
+    {
+      "question": "What evidence supports or challenges AI tutoring, retrieval practice, spaced practice, metacognition, and AI study assistants?",
+      "status": "resolved"
+    },
+    {
+      "question": "What product thesis, initial segment, requirements, business model, metrics, safety boundaries, and phased execution plan best fit FORGE?",
+      "status": "resolved"
+    },
+    {
+      "question": "Which gstack skills and principles are relevant, and how should they change the plan?",
+      "status": "resolved"
+    }
+  ],
+  "sources": [
+    {
+      "claim": "HEPI's 2026 survey of 1,054 UK full-time undergraduates reported near-universal student use of generative AI, mixed experience gains, and continuing concern about fairness, skill erosion, isolation, and unequal institutional guidance.",
+      "url": "https://www.hepi.ac.uk/reports/student-generative-ai-survey-2026/",
+      "confidence": "High",
+      "note": "Primary student survey; supports treating AI use as normal while preserving learning and trust boundaries.",
+      "accessed_at": "2026-07-30T10:14:31.089Z"
+    },
+    {
+      "claim": "The 2026 Student Academic Experience Survey covers 10,065 UK full-time undergraduates and reports persistent academic, financial, and work-pressure context.",
+      "url": "https://www.hepi.ac.uk/reports/the-student-academic-experience-survey-2026/",
+      "confidence": "High",
+      "note": "Large current primary survey; informs workload and affordability requirements.",
+      "accessed_at": "2026-07-30T10:14:31.209Z"
+    },
+    {
+      "claim": "Gallup and Lumina's 2026 higher-education study reports that one in three enrolled adults considered stopping in the prior six months and identifies emotional stress, mental health, and cost as leading pressures.",
+      "url": "https://www.gallup.com/file/analytics/709325/Lumina_Foundation-Gallup-State_of_Higher_of_Higher_Education_2026_Report.pdf",
+      "confidence": "High",
+      "note": "Primary large-sample report; supports low-friction support and human escalation without clinical claims.",
+      "accessed_at": "2026-07-30T10:14:31.302Z"
+    },
+    {
+      "claim": "Ellucian's 2025 Student Voice report identifies financial uncertainty and unclear academic pathways as recurring barriers and says stop-outs value clearer completion paths and simpler advising.",
+      "url": "https://www.ellucian.com/assets/en/industry-reports/student-voice-report-2025.pdf",
+      "confidence": "Medium",
+      "note": "Vendor-sponsored primary survey; useful directional evidence for degree-path truth and advising escalation.",
+      "accessed_at": "2026-07-30T10:14:31.426Z"
+    },
+    {
+      "claim": "The Healthy Minds 2024-2025 national student report documents substantial depression and mental-health burden among surveyed college students.",
+      "url": "https://healthymindsnetwork.org/wp-content/uploads/2025/09/2024-2025_HMS-National-Data-Report_Student.pdf",
+      "confidence": "High",
+      "note": "Primary national survey; supports crisis-aware boundaries and referral, not diagnosis.",
+      "accessed_at": "2026-07-30T10:14:31.515Z"
+    },
+    {
+      "claim": "AskSia currently markets LMS connections, course-grounded tutoring, knowledge graphs, weak-spot detection, cross-course connections, and proactive planning.",
+      "url": "https://www.asksia.ai/",
+      "confidence": "High",
+      "note": "Official product page; removes generic LMS-connected AI study companion as uncontested whitespace.",
+      "accessed_at": "2026-07-30T10:14:31.600Z"
+    },
+    {
+      "claim": "AskSia's self-published 2026 research reports favorable self-reported outcomes but discloses compensated respondents and perception-based measures while objective institutional grade pilots remain pending.",
+      "url": "https://www.asksia.ai/research",
+      "confidence": "Medium",
+      "note": "Vendor study; shows market narrative but not causal efficacy.",
+      "accessed_at": "2026-07-30T10:14:31.687Z"
+    },
+    {
+      "claim": "AskSia's current help statement that it does not train on student materials is in tension with its still-live 2023 privacy policy allowing content use to improve services including model training.",
+      "url": "https://www.asksia.ai/help/what-data-does-asksia-store",
+      "confidence": "High",
+      "note": "Direct policy inconsistency; supports a versioned and technically enforced FORGE data promise.",
+      "accessed_at": "2026-07-30T10:14:31.772Z"
+    },
+    {
+      "claim": "ChatGPT Study Mode provides scaffolded questioning, knowledge checks, uploaded-material support, and study planning, but OpenAI explicitly warns it can make mistakes and sometimes give direct answers.",
+      "url": "https://help.openai.com/en/articles/11780217-study-mode",
+      "confidence": "High",
+      "note": "Official product documentation; generic tutoring is table stakes and needs protected proof boundaries.",
+      "accessed_at": "2026-07-30T10:14:31.865Z"
+    },
+    {
+      "claim": "NotebookLM provides source-grounded study guides, flashcards, quizzes, citations, and other document-centered study features.",
+      "url": "https://blog.google/innovation-and-ai/models-and-research/google-labs/notebooklm-student-features/",
+      "confidence": "High",
+      "note": "Official product source; source-grounded content transformation is not sufficient differentiation.",
+      "accessed_at": "2026-07-30T10:14:31.950Z"
+    },
+    {
+      "claim": "Khan Academy reports that many AI product changes produced neutral or incremental results and that richer structured learning history improved next-item correctness, while student initiation remained a key adoption constraint.",
+      "url": "https://blog.khanacademy.org/how-khan-academy-is-building-a-better-ai-tutor-our-most-recent-learnings/",
+      "confidence": "Medium",
+      "note": "Vendor experimentation report; supports proactive next actions and structured state over blank chat.",
+      "accessed_at": "2026-07-30T10:14:32.034Z"
+    },
+    {
+      "claim": "Product Hunt launches show a saturated market of AI note, summary, quiz, flashcard, notebook, and planner tools.",
+      "url": "https://www.producthunt.com/search?q=ai%20study%20assistant",
+      "confidence": "Medium",
+      "note": "Discovery surface, not PMF evidence; supports category saturation.",
+      "accessed_at": "2026-07-30T10:14:32.124Z"
+    },
+    {
+      "claim": "TrustMRR's available education startup listings are too small or dissimilar to validate the university degree-companion thesis or its pricing.",
+      "url": "https://trustmrr.com/",
+      "confidence": "Low",
+      "note": "Negative discovery result; absence is not proof of market absence.",
+      "accessed_at": "2026-07-30T10:14:32.212Z"
+    },
+    {
+      "claim": "A randomized controlled trial with 194 eligible undergraduate physics students found a pedagogy-informed AI tutor produced higher immediate post-test performance in less time than an active-learning class session.",
+      "url": "https://www.nature.com/articles/s41598-025-97652-6",
+      "confidence": "High",
+      "note": "Primary RCT; narrow and short-term, so it supports designed tutoring but not broad efficacy claims.",
+      "accessed_at": "2026-07-30T10:14:32.299Z"
+    },
+    {
+      "claim": "A randomized study of nearly 1,000 high-school mathematics students found unrestricted GPT assistance improved practice performance but harmed later unassisted performance, whereas guardrails removed that harm without creating a positive exam effect.",
+      "url": "https://doi.org/10.1073/pnas.2422633122",
+      "confidence": "High",
+      "note": "Primary RCT in a younger population; strong rationale for protected assistance withdrawal and independent proof.",
+      "accessed_at": "2026-07-30T10:14:32.389Z"
+    },
+    {
+      "claim": "A 2026 medical-education meta-analysis reports a positive spaced-practice effect across 14 studies and 21,415 learners while noting heterogeneity and longer-term evidence limits.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41601436/",
+      "confidence": "High",
+      "note": "Current meta-analysis; supports spaced return with conservative claims.",
+      "accessed_at": "2026-07-30T10:14:32.476Z"
+    },
+    {
+      "claim": "A classroom meta-analysis reports a moderate benefit from distributed practice across more than 3,000 learners, with generally larger effects in higher education but limited moderator evidence.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/40564553/",
+      "confidence": "High",
+      "note": "Meta-analysis; supports scheduled returns.",
+      "accessed_at": "2026-07-30T10:14:32.564Z"
+    },
+    {
+      "claim": "A systematic review in health professions education found retrieval or distributed practice benefits in a majority of eligible experiments.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/37615780/",
+      "confidence": "High",
+      "note": "Systematic review; supports active retrieval over passive generation.",
+      "accessed_at": "2026-07-30T10:14:32.649Z"
+    },
+    {
+      "claim": "FERPA applies to covered postsecondary institutions and constrains disclosure and vendor use of education-record data; third-party providers need controlled, purpose-limited access.",
+      "url": "https://studentprivacy.ed.gov/ferpa",
+      "confidence": "High",
+      "note": "Official US Department of Education source; mandates legal review and least-privilege integration for institution-sponsored use.",
+      "accessed_at": "2026-07-30T10:14:32.737Z"
+    },
+    {
+      "claim": "The EU AI Act can classify educational AI that evaluates learning outcomes or materially steers education as high-risk depending on intended purpose and conditions.",
+      "url": "https://digital-strategy.ec.europa.eu/en/faqs/navigating-ai-act",
+      "confidence": "High",
+      "note": "Official current EU guidance; avoid AI-issued authoritative progression decisions without classification and counsel review.",
+      "accessed_at": "2026-07-30T10:14:32.869Z"
+    },
+    {
+      "claim": "WCAG 2.2 is the current W3C Recommendation and advises broad accessibility across disability types while acknowledging that conformance does not address every cognitive and learning need.",
+      "url": "https://www.w3.org/TR/WCAG22/",
+      "confidence": "High",
+      "note": "Primary standard; target AA plus participatory cognitive-accessibility testing.",
+      "accessed_at": "2026-07-30T10:14:32.961Z"
+    },
+    {
+      "claim": "NIST's AI RMF and Generative AI Profile provide voluntary risk-management and evaluation guidance for generative AI systems.",
+      "url": "https://www.nist.gov/itl/ai-risk-management-framework",
+      "confidence": "High",
+      "note": "Primary risk framework; informs the product AI risk register and evaluation gates.",
+      "accessed_at": "2026-07-30T10:14:33.046Z"
+    },
+    {
+      "claim": "LTI 1.3 and LTI Advantage are the current 1EdTech path for secure LMS tool integration using OAuth 2.0, JWT, and OpenID Connect patterns.",
+      "url": "https://www.1edtech.org/standards/lti/lti-advantage-adoption",
+      "confidence": "High",
+      "note": "Primary interoperability standard; prefer read-only standards-based integration rather than one-off scraping.",
+      "accessed_at": "2026-07-30T10:14:33.134Z"
+    },
+    {
+      "claim": "OneRoster 1.2 standardizes exchange of people, courses, enrollments, resources, and grades, though its primary use case is K-12 rather than higher education.",
+      "url": "https://www.1edtech.org/standards/oneroster",
+      "confidence": "High",
+      "note": "Primary standard; useful model but not the main university integration strategy.",
+      "accessed_at": "2026-07-30T10:14:33.223Z"
+    },
+    {
+      "claim": "India notified the Digital Personal Data Protection Rules 2025 with a phased compliance timeline.",
+      "url": "https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa",
+      "confidence": "High",
+      "note": "Official current source; India launch requires counsel-reviewed data mapping, notices, rights, retention, and child rules.",
+      "accessed_at": "2026-07-30T10:14:33.310Z"
+    },
+    {
+      "claim": "gstack defines a Think, Plan, Build, Review, Test, Ship, Reflect operating sequence and provides Office Hours, CEO, engineering, design, QA, and shipping review skills.",
+      "url": "https://github.com/garrytan/gstack/blob/a3259400a366593e0c909dd9ac3e59752efd2488/README.md",
+      "confidence": "High",
+      "note": "Pinned source; governs scope challenge, multiple approaches, and evidence-gated delivery.",
+      "accessed_at": "2026-07-30T10:14:33.400Z"
+    },
+    {
+      "claim": "gstack Office Hours requires explicit demand reality, status quo, desperate specificity, narrow wedge, observation, and future-fit reasoning before building.",
+      "url": "https://github.com/garrytan/gstack/blob/a3259400a366593e0c909dd9ac3e59752efd2488/office-hours/SKILL.md",
+      "confidence": "High",
+      "note": "Pinned planning method; shapes discovery and wedge selection.",
+      "accessed_at": "2026-07-30T10:14:33.491Z"
+    },
+    {
+      "claim": "gstack CEO review requires a deliberate scope posture, multiple approaches, a 10x check, temporal interrogation, and independent specification review.",
+      "url": "https://github.com/garrytan/gstack/blob/a3259400a366593e0c909dd9ac3e59752efd2488/plan-ceo-review/SKILL.md",
+      "confidence": "High",
+      "note": "Pinned planning method; supports scope reduction in promise and selective infrastructure expansion.",
+      "accessed_at": "2026-07-30T10:14:33.579Z"
+    },
+    {
+      "claim": "A qualitative study of 78 community-college students and 33 advisors found that viable academic choices depend on students' goals and life constraints, and that students and advisors can differ on whether direct answers or guided choice are most helpful.",
+      "url": "https://eric.ed.gov/?id=EJ1435729",
+      "confidence": "Medium",
+      "note": "Supports constraint-aware recommendation, alternatives, rationale, and advisor confirmation.",
+      "accessed_at": "2026-07-30T10:17:41.840Z"
+    },
+    {
+      "claim": "A 2025 vendor survey of 1,010 US students reports fragmented campus systems create stress, missed deadlines, and demand for a centralized surface.",
+      "url": "https://www.educause.edu/about/corporate-participation/member-press-releases/new-survey-finds-fragmented-digital-systems-are-eroding-student-success",
+      "confidence": "Medium",
+      "note": "Sponsored directional evidence; supports aggregation with authority-preserving provenance.",
+      "accessed_at": "2026-07-30T10:17:41.960Z"
+    },
+    {
+      "claim": "A meta-analysis of 29 studies found a substantial advantage for spaced retrieval over massed practice, without a clear advantage for expanding over uniform spacing.",
+      "url": "https://eric.ed.gov/?id=EJ1310148",
+      "confidence": "High",
+      "note": "Supports spaced retrieval as core infrastructure.",
+      "accessed_at": "2026-07-30T10:17:42.056Z"
+    },
+    {
+      "claim": "A 2025 university experiment found that encouraging students to distribute practice across distinct days increased practice days and improved exam performance in one course.",
+      "url": "https://www.nature.com/articles/s41539-025-00322-5",
+      "confidence": "High",
+      "note": "Supports meaningful practice-day scheduling rather than engagement streaks.",
+      "accessed_at": "2026-07-30T10:17:42.191Z"
+    },
+    {
+      "claim": "A randomized university study found that active-learning students learned more while feeling they learned less than students in fluent lecture conditions.",
+      "url": "https://doi.org/10.1073/pnas.1821936116",
+      "confidence": "High",
+      "note": "Supports measuring delayed learning rather than perceived ease or immediate satisfaction alone.",
+      "accessed_at": "2026-07-30T10:17:42.295Z"
+    },
+    {
+      "claim": "A 2025 university study found metacognitive chatbot feedback improved retention, transfer, and confidence-correctness sensitivity in a small single-university sample.",
+      "url": "https://www.nature.com/articles/s41539-025-00311-8",
+      "confidence": "Medium",
+      "note": "Supports confidence calibration before feedback, with replication still needed.",
+      "accessed_at": "2026-07-30T10:17:42.389Z"
+    },
+    {
+      "claim": "EDUCAUSE research reports lower technology and instructor-technology satisfaction for several disability groups and differing modality preferences.",
+      "url": "https://www.educause.edu/ecar/research-publications/2023/students-and-technology-report-flexibility-choice-and-equity-in-the-student-experience/accessibility-in-teaching-and-learning",
+      "confidence": "Medium",
+      "note": "Supports accessible multimodal defaults without requiring disability disclosure.",
+      "accessed_at": "2026-07-30T10:17:42.483Z"
+    },
+    {
+      "claim": "A US GAO report identifies barriers for students with disabilities in awareness, self-advocacy, accommodations, and faculty response.",
+      "url": "https://www.gao.gov/products/gao-24-105614",
+      "confidence": "High",
+      "note": "Official evidence; supports a private accommodations navigator and human routing.",
+      "accessed_at": "2026-07-30T10:17:42.578Z"
+    },
+    {
+      "claim": "A 2026 Office for Students study of 1,671 recent graduates found only half felt prepared for their next step and identified finances, relevant experience, and professional networks as prominent barriers.",
+      "url": "https://www.officeforstudents.org.uk/publications/preparing-for-the-next-steps-after-higher-education-student-insight-report/",
+      "confidence": "High",
+      "note": "Official student insight; supports career development and proof portfolios throughout the degree.",
+      "accessed_at": "2026-07-30T10:17:42.680Z"
+    },
+    {
+      "claim": "Current student forum discussions surface precise failure modes around manual replanning, assignment initiation, unclear AI rules, overloaded note workflows, and discovering legitimate human support too late.",
+      "url": "https://www.reddit.com/r/UniUK/comments/1tdxg15/any_assignment_planning_apps/",
+      "confidence": "Low",
+      "note": "Qualitative journey signal only; not prevalence evidence.",
+      "accessed_at": "2026-07-30T10:17:42.775Z"
+    },
+    {
+      "claim": "A CHI 2026 co-design study with 20 diagnosed ADHD university students and five experts identifies task fragmentation, time calibration, decomposition, reflective execution, emotion regulation, and dependency risk.",
+      "url": "https://arxiv.org/abs/2602.09381",
+      "confidence": "Medium",
+      "note": "Qualitative preprint; informs executive-function support without diagnosis or cognitive outsourcing.",
+      "accessed_at": "2026-07-30T10:17:42.870Z"
+    },
+    {
+      "claim": "A multi-university 2026 study covering 95,513 students reports widespread generative-AI use with substantial disciplinary variation.",
+      "url": "https://cshe.berkeley.edu/news/study-finds-widespread-generative-ai-use-among-college-students-signaling-urgent-need",
+      "confidence": "Medium",
+      "note": "Large current study summary; supports assignment- and discipline-specific integrity policies.",
+      "accessed_at": "2026-07-30T10:17:42.965Z"
+    }
+  ]
+}

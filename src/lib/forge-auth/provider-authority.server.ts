@@ -9,7 +9,7 @@ import {
   type PilotOperation,
 } from "../../forge/pilot-authority/contracts";
 import { isForgeCloudAuthAuthorityEnabled } from "./cloud-authority";
-import { readForgeCloudIdentity } from "./session.server";
+import { readForgeCloudIdentitySubject } from "./session.server";
 
 /**
  * These are server policy purposes, not values accepted from a browser. New
@@ -431,7 +431,7 @@ const DEFAULT_PROVIDER_AUTHORITY_READER: ProviderAuthorityReader = {
 
     // Future accepted infrastructure must derive all remaining snapshot fields
     // from server-owned stores. A cookie/session alone remains insufficient.
-    const identity = await readForgeCloudIdentity();
+    const identity = await readForgeCloudIdentitySubject();
     if (!identity) return null;
     return null;
   },

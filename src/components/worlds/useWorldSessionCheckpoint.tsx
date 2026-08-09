@@ -24,8 +24,10 @@ import {
   writeWorldSessionCheckpoint,
   type WorldSessionCheckpointIdentity,
   type WorldSessionCheckpointReadResult,
+  type WorldSessionCheckpointStorage,
   type WorldSessionCheckpointWriteResult,
 } from "../../lib/forge-continuity/world-session-checkpoint";
+import { createActiveForgeProfileBoundStorage } from "../../lib/forge-profile/device-profile";
 
 export type WorldCheckpointErrorReason =
   | Extract<WorldSessionCheckpointReadResult, { ok: false }>["reason"]
@@ -38,12 +40,10 @@ type CheckpointPhase =
   | Readonly<{ status: "disabled" | "loading" | "ready"; reason: null }>
   | Readonly<{ status: "failed"; reason: WorldCheckpointErrorReason }>;
 
-type BrowserCheckpointStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
-
-function browserCheckpointStorage(): BrowserCheckpointStorage | null {
+function browserCheckpointStorage(): WorldSessionCheckpointStorage | null {
   if (typeof window === "undefined") return null;
   try {
-    return window.localStorage;
+    return createActiveForgeProfileBoundStorage(window.localStorage);
   } catch {
     return null;
   }

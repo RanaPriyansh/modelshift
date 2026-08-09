@@ -19,6 +19,8 @@ import {
 
 type FetchLike = typeof fetch;
 
+export const MAX_LESSON_STUDIO_PROVIDER_RESPONSE_BYTES = 256 * 1024;
+
 export type LessonStudioOpenAIClient = {
   responses: {
     parse: (
@@ -96,10 +98,56 @@ function errorForHttpStatus(status: number): LessonStudioError {
   return new LessonStudioError("provider_error");
 }
 
+async function readBoundedProviderText(response: Response): Promise<string> {
+  const declaredLength = Number(response.headers.get("content-length"));
+  if (
+    Number.isFinite(declaredLength)
+    && (
+      declaredLength < 0
+      || declaredLength > MAX_LESSON_STUDIO_PROVIDER_RESPONSE_BYTES
+    )
+  ) {
+    throw new LessonStudioError("malformed_provider_output");
+  }
+  if (!response.body) {
+    throw new LessonStudioError("malformed_provider_output");
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > MAX_LESSON_STUDIO_PROVIDER_RESPONSE_BYTES) {
+      try {
+        await reader.cancel();
+      } catch {
+        // The response is already rejected. Cancellation is best effort only.
+      }
+      throw new LessonStudioError("malformed_provider_output");
+    }
+    chunks.push(value);
+  }
+
+  const body = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(body);
+  } catch {
+    throw new LessonStudioError("malformed_provider_output");
+  }
+}
+
 async function readProviderJson(response: Response): Promise<unknown> {
   if (!response.ok) throw errorForHttpStatus(response.status);
   try {
-    return await response.json();
+    return JSON.parse(await readBoundedProviderText(response));
   } catch {
     throw new LessonStudioError("malformed_provider_output");
   }

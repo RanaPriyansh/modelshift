@@ -3,14 +3,30 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MAX_WORLD_SESSION_CHECKPOINT_BYTES } from "../../../lib/forge-continuity/world-session-checkpoint";
+import {
+  createForgeDeviceProfile,
+  forgeProfileBoundStorageKey,
+} from "../../../lib/forge-profile/device-profile";
 import {
   TRANSFER_STATEMENTS,
   WORKED_STATEMENTS,
 } from "../../../worlds/primary-source-reasoning";
 import { PrimarySourceReasoningWorld } from "./PrimarySourceReasoningWorld";
+
+const PROFILE_ID = "9be711de-d7a6-4911-b903-f2d829da83d5";
+
+beforeEach(() => {
+  createForgeDeviceProfile(
+    window.localStorage,
+    "adult",
+    false,
+    new Date("2026-08-02T00:00:00.000Z"),
+    PROFILE_ID,
+  );
+});
 
 afterEach(() => {
   cleanup();
@@ -24,8 +40,10 @@ const CHECKPOINT_IDENTITY = {
   worldVersion: "1.0.2",
 } as const;
 
-const CHECKPOINT_KEY =
-  "forge.world-session-checkpoint:v1:study-session.primary-source-checkpoint:world.primary-source-reasoning:1.0.2";
+const CHECKPOINT_KEY = forgeProfileBoundStorageKey(
+  "forge.world-session-checkpoint:v1:study-session.primary-source-checkpoint:world.primary-source-reasoning:1.0.2",
+  PROFILE_ID,
+);
 
 function chooseRadio(name: string) {
   fireEvent.click(screen.getByRole("radio", { name }));

@@ -16,7 +16,7 @@ export const RELEASE_MANIFEST_ERROR_CODES = [
   "source_sha",
   "source_drift",
   "dependency_lock_digest",
-  "public_asset_digest",
+  "artifact_receipt",
   "immutable_deployment",
   "deployment_project",
   "public_alias",
@@ -24,13 +24,13 @@ export const RELEASE_MANIFEST_ERROR_CODES = [
 
 export type ReleaseManifestErrorCode = (typeof RELEASE_MANIFEST_ERROR_CODES)[number];
 
-type ProviderReceiptRequiredPublicAsset = {
+type ProviderReceiptRequiredArtifact = {
   status: "provider_receipt_required";
-  gate: "provider_observed_asset_digest_required_before_promotion";
+  gate: "provider_observed_complete_artifact_required_before_promotion";
 };
 
 export type BoundReleaseManifest = {
-  schema_version: "1.0";
+  schema_version: "2.0";
   binding_status: "bound";
   candidate_state: "DEPLOYED_CANDIDATE";
   source_sha: string;
@@ -38,20 +38,20 @@ export type BoundReleaseManifest = {
   /**
    * A deployment cannot know Vercel's emitted static asset tree until after
    * its build has run. Health therefore declares the required post-build
-   * receipt rather than self-reporting a build-time digest.
+   * receipt rather than self-reporting build-time artifact identity.
    */
-  public_asset: ProviderReceiptRequiredPublicAsset;
+  artifact: ProviderReceiptRequiredArtifact;
   immutable_deployment: { id: string; url: string; project_id: string };
   public_alias: { url: string };
 };
 
 export type UnboundReleaseManifest = {
-  schema_version: "1.0";
+  schema_version: "2.0";
   binding_status: "unbound";
   candidate_state: "unknown";
   source_sha: "unknown";
   dependency_lock_digest: "unknown";
-  public_asset: { status: "unknown" };
+  artifact: { status: "unknown" };
   immutable_deployment: { status: "unknown" };
   public_alias: { status: "unknown" };
   reason_codes: readonly ReleaseManifestErrorCode[];
@@ -106,12 +106,12 @@ function validProjectId(value: unknown): value is string {
 
 function unbound(reasonCodes: readonly ReleaseManifestErrorCode[]): UnboundReleaseManifest {
   return {
-    schema_version: "1.0",
+    schema_version: "2.0",
     binding_status: "unbound",
     candidate_state: "unknown",
     source_sha: "unknown",
     dependency_lock_digest: "unknown",
-    public_asset: { status: "unknown" },
+    artifact: { status: "unknown" },
     immutable_deployment: { status: "unknown" },
     public_alias: { status: "unknown" },
     reason_codes: [...new Set(reasonCodes)].sort() as ReleaseManifestErrorCode[],
@@ -160,7 +160,7 @@ export function buildReleaseManifest(environment: ReleaseEnvironment = process.e
   // digest or a pre-deployment absence receipt into health.
   if (environment.FORGE_PUBLIC_ASSET_DIGEST !== undefined
     || environment.FORGE_PUBLIC_ASSET_DIGEST_STATUS !== undefined
-    || environment.FORGE_PUBLIC_ASSET_DIGEST_GATE !== undefined) failures.push("public_asset_digest");
+    || environment.FORGE_PUBLIC_ASSET_DIGEST_GATE !== undefined) failures.push("artifact_receipt");
 
   const deploymentId = environment.VERCEL_DEPLOYMENT_ID;
   const deploymentUrl = canonicalVercelDeploymentOrigin(environment.VERCEL_URL);
@@ -185,14 +185,14 @@ export function buildReleaseManifest(environment: ReleaseEnvironment = process.e
   }
 
   return {
-    schema_version: "1.0",
+    schema_version: "2.0",
     binding_status: "bound",
     candidate_state: "DEPLOYED_CANDIDATE",
     source_sha: sourceSha,
     dependency_lock_digest: lockDigest,
-    public_asset: {
+    artifact: {
       status: "provider_receipt_required",
-      gate: "provider_observed_asset_digest_required_before_promotion",
+      gate: "provider_observed_complete_artifact_required_before_promotion",
     },
     immutable_deployment: platformDeployment,
     public_alias: { url: aliasUrl },
@@ -200,27 +200,27 @@ export function buildReleaseManifest(environment: ReleaseEnvironment = process.e
 }
 
 export function validateReleaseManifest(value: unknown): ReleaseManifestErrorCode[] {
-  if (!isRecord(value) || value.schema_version !== "1.0") return ["candidate_state"];
+  if (!isRecord(value) || value.schema_version !== "2.0") return ["candidate_state"];
   if (value.binding_status === "bound") {
-    const keys = ["schema_version", "binding_status", "candidate_state", "source_sha", "dependency_lock_digest", "public_asset", "immutable_deployment", "public_alias"];
-    const publicAsset = isRecord(value.public_asset) ? value.public_asset : null;
-    const validAsset = Boolean(publicAsset
-      && hasExactKeys(publicAsset, ["status", "gate"])
-      && publicAsset.status === "provider_receipt_required"
-      && publicAsset.gate === "provider_observed_asset_digest_required_before_promotion");
+    const keys = ["schema_version", "binding_status", "candidate_state", "source_sha", "dependency_lock_digest", "artifact", "immutable_deployment", "public_alias"];
+    const artifact = isRecord(value.artifact) ? value.artifact : null;
+    const validArtifact = Boolean(artifact
+      && hasExactKeys(artifact, ["status", "gate"])
+      && artifact.status === "provider_receipt_required"
+      && artifact.gate === "provider_observed_complete_artifact_required_before_promotion");
     const deployment = isRecord(value.immutable_deployment) ? value.immutable_deployment : null;
     const alias = isRecord(value.public_alias) ? value.public_alias : null;
     const failures: ReleaseManifestErrorCode[] = [];
     if (!hasExactKeys(value, keys) || value.candidate_state !== "DEPLOYED_CANDIDATE") failures.push("candidate_state");
     if (!canonicalSha(value.source_sha)) failures.push("source_sha");
     if (!canonicalDigest(value.dependency_lock_digest)) failures.push("dependency_lock_digest");
-    if (!validAsset) failures.push("public_asset_digest");
+    if (!validArtifact) failures.push("artifact_receipt");
     if (!deployment || !hasExactKeys(deployment, ["id", "url", "project_id"]) || !validDeploymentId(deployment.id) || !isCanonicalHttpsOrigin(deployment.url) || !validProjectId(deployment.project_id)) failures.push("immutable_deployment");
     if (!alias || !hasExactKeys(alias, ["url"]) || !isCanonicalHttpsOrigin(alias.url)) failures.push("public_alias");
     return [...new Set(failures)];
   }
 
-  const keys = ["schema_version", "binding_status", "candidate_state", "source_sha", "dependency_lock_digest", "public_asset", "immutable_deployment", "public_alias", "reason_codes"];
+  const keys = ["schema_version", "binding_status", "candidate_state", "source_sha", "dependency_lock_digest", "artifact", "immutable_deployment", "public_alias", "reason_codes"];
   const reasonCodes = Array.isArray(value.reason_codes) ? value.reason_codes : [];
   const validReasons = reasonCodes.every((code) => typeof code === "string" && RELEASE_MANIFEST_ERROR_CODES.includes(code as ReleaseManifestErrorCode))
     && new Set(reasonCodes).size === reasonCodes.length
@@ -230,7 +230,7 @@ export function validateReleaseManifest(value: unknown): ReleaseManifestErrorCod
     && value.candidate_state === "unknown"
     && value.source_sha === "unknown"
     && value.dependency_lock_digest === "unknown"
-    && hasExactKeys(value.public_asset, ["status"]) && value.public_asset.status === "unknown"
+    && hasExactKeys(value.artifact, ["status"]) && value.artifact.status === "unknown"
     && hasExactKeys(value.immutable_deployment, ["status"]) && value.immutable_deployment.status === "unknown"
     && hasExactKeys(value.public_alias, ["status"]) && value.public_alias.status === "unknown"
     && validReasons

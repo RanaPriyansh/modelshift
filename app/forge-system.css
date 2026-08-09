@@ -16,7 +16,7 @@
   --forge-line-strong: #aaa59b;
   --forge-ink: #111714;
   --forge-muted: #5e635f;
-  --forge-dim: #6d726b;
+  --forge-dim: #6b7069;
   --forge-amber: #e8b94e;
   --forge-amber-deep: #7b561a;
   --forge-violet: #7458bb;
@@ -151,7 +151,7 @@
 .forge-primary-nav a:hover,
 .forge-primary-nav a[aria-current="page"] { color: var(--forge-ink); }
 
-.forge-topbar-disclosure { color: var(--forge-dim); }
+.forge-topbar-disclosure { color: var(--forge-muted); }
 
 .forge-worldbar-title,
 .forge-exit-world { color: var(--forge-muted) !important; }

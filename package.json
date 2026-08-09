@@ -2,15 +2,15 @@
   "name": "forge-learning-os",
   "version": "0.1.0",
   "private": true,
-  "description": "FORGE — a learner-owned system of reviewed learning Worlds, bounded AI support, and proof after help.",
+  "description": "FORGE is a private Semester Desk for university students to rebuild a difficult week from today.",
   "license": "MIT",
   "packageManager": "pnpm@11.9.0",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build && tsx scripts/ops/verify-public-build-boundary.ts",
+    "build": "next build && tsx scripts/ops/verify-semester-desk-v2-release-artifact.ts && tsx scripts/ops/verify-semester-desk-v2-release-budgets.ts && tsx scripts/ops/verify-public-build-boundary.ts",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
@@ -20,8 +20,8 @@
     "eval:live": "tsx evals/run-live-evals.ts",
     "eval:lesson-studio:live": "tsx evals/run-lesson-studio-live-evals.ts",
     "test:eval-runner": "vitest run --config evals/vitest.config.ts",
-    "test:e2e": "playwright test",
-    "test:e2e:prod": "PLAYWRIGHT_BASE_URL=${PLAYWRIGHT_BASE_URL:?Set PLAYWRIGHT_BASE_URL} playwright test tests/e2e/production.spec.ts"
+    "test:e2e": "playwright test tests/e2e/semester-desk-v2-canonical.spec.ts",
+    "test:e2e:prod": "FORGE_EXPECTED_RELEASE_SHA=${FORGE_EXPECTED_RELEASE_SHA:?Set FORGE_EXPECTED_RELEASE_SHA} tsx scripts/ops/run-production-browser-verification.ts --expected-sha \"$FORGE_EXPECTED_RELEASE_SHA\""
   },
   "dependencies": {
     "@supabase/ssr": "0.12.3",

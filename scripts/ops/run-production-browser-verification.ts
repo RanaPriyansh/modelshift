@@ -5,17 +5,71 @@ import { resolve } from "node:path";
 import type { Readable } from "node:stream";
 import { pathToFileURL } from "node:url";
 
+import {
+  assertExactProductionBuild,
+  readProductionBuildSource,
+} from "./production-build-receipt";
+import {
+  createProductionRuntimeSnapshot,
+  removeProductionRuntimeSnapshot,
+  verifyCompletedProductionRuntimeSnapshot,
+} from "./production-runtime-snapshot";
+import {
+  playwrightCliInvocation,
+  runPlaywrightWithReportDigest,
+} from "./run-playwright-with-report-digest";
+import {
+  SEMESTER_DESK_V2_CANONICAL_BROWSER_SPEC,
+  SEMESTER_DESK_V2_PRODUCTION_REPORT_DIRECTORY,
+} from "./semester-desk-v2-browser-contract";
+
 type ServerProcess = ChildProcessByStdio<null, Readable, Readable>;
 const STARTUP_TIMEOUT_MS = 90_000;
 export const MAX_SERVER_LOG_BYTES = 16_000;
+export const PRODUCTION_BROWSER_SPECS = Object.freeze([
+  SEMESTER_DESK_V2_CANONICAL_BROWSER_SPEC,
+] as const);
 const arg = (name: string): string | undefined => { const index = process.argv.indexOf(name); return index >= 0 ? process.argv[index + 1] : undefined; };
 const require = createRequire(import.meta.url);
 
+export function productionBrowserInvocation(
+  platform: NodeJS.Platform = process.platform,
+): { command: string; args: string[] } {
+  const command = platform === "win32" ? "pnpm.cmd" : "pnpm";
+  return {
+    command,
+    args: ["exec", "playwright", "test", ...PRODUCTION_BROWSER_SPECS],
+  };
+}
+
+export function assertCanonicalProductionBrowserArguments(
+  argumentsToCheck: readonly string[],
+): void {
+  if (argumentsToCheck.some((argument) => (
+    argument === "--spec" || argument.startsWith("--spec=")
+  ))) {
+    throw new Error(
+      "Production browser verification always runs the Semester Desk v2 canonical spec.",
+    );
+  }
+}
+
 /** Start the actual Next CLI process so shutdown cannot orphan a pnpm child. */
-export function productionServerInvocation(port: number): { command: string; args: string[] } {
+export function productionServerInvocation(
+  port: number,
+  projectDirectory?: string,
+): { command: string; args: string[] } {
   return {
     command: process.execPath,
-    args: [require.resolve("next/dist/bin/next"), "start", "--hostname", "127.0.0.1", "--port", String(port)],
+    args: [
+      require.resolve("next/dist/bin/next"),
+      "start",
+      ...(projectDirectory ? [projectDirectory] : []),
+      "--hostname",
+      "127.0.0.1",
+      "--port",
+      String(port),
+    ],
   };
 }
 
@@ -33,6 +87,62 @@ async function availablePort(): Promise<number> {
   });
 }
 async function waitForServer(baseUrl: string, child: ServerProcess): Promise<void> { const deadline = Date.now() + STARTUP_TIMEOUT_MS; while (Date.now() < deadline) { if (child.exitCode !== null) throw new Error(`production server exited during startup with code ${child.exitCode}`); try { const response = await fetch(new URL("/api/health", baseUrl), { signal: AbortSignal.timeout(1_000), redirect: "manual" }); if (response.status === 200) return; } catch { /* bounded startup poll */ } await new Promise((done) => setTimeout(done, 250)); } throw new Error("production browser server did not become ready within 90 seconds"); }
+export async function assertProductionServerIdentity(
+  baseUrl: string,
+  expectedSha: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const normalizedExpected = expectedSha.toLowerCase();
+  if (!/^[a-f0-9]{40}$/.test(normalizedExpected)) {
+    throw new Error(
+      "Production server identity requires a full expected Git SHA.",
+    );
+  }
+  const response = await fetchImpl(new URL("/api/health", baseUrl), {
+    headers: { "Cache-Control": "no-cache" },
+    redirect: "manual",
+    signal: AbortSignal.timeout(5_000),
+  });
+  const contentLength = Number(response.headers.get("content-length") ?? "0");
+  if (
+    response.status !== 200
+    || !response.headers.get("cache-control")?.includes("no-store")
+    || response.headers.get("x-forge-release-sha") !== normalizedExpected
+    || response.headers.get("x-forge-build-source-sha")
+      !== normalizedExpected
+    || (
+      Number.isFinite(contentLength)
+      && contentLength > 0
+      && contentLength > 64_000
+    )
+  ) {
+    throw new Error(
+      "Production server health did not bind runtime and build source identity.",
+    );
+  }
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length > 64_000) {
+    throw new Error("Production server health exceeded its response limit.");
+  }
+  let health: unknown;
+  try {
+    health = JSON.parse(bytes.toString("utf8"));
+  } catch {
+    throw new Error("Production server health was not valid JSON.");
+  }
+  if (
+    health === null
+    || typeof health !== "object"
+    || Array.isArray(health)
+    || (health as Record<string, unknown>).release_sha !== normalizedExpected
+    || (health as Record<string, unknown>).build_source_sha
+      !== normalizedExpected
+  ) {
+    throw new Error(
+      "Production server health body did not bind runtime and build source identity.",
+    );
+  }
+}
 function hasExited(child: ServerProcess): boolean { return child.exitCode !== null || child.signalCode !== null; }
 async function waitForExit(child: ServerProcess, timeoutMs: number): Promise<boolean> {
   if (hasExited(child)) return true;
@@ -50,11 +160,18 @@ export async function stopProductionServer(child: ServerProcess): Promise<void> 
   child.kill("SIGKILL");
   if (!(await waitForExit(child, 5_000))) throw new Error("production browser server did not exit after SIGKILL");
 }
-function browserEnvironment(baseUrl: string): NodeJS.ProcessEnv {
+function browserEnvironment(
+  baseUrl: string,
+  expectedSha: string,
+): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     CI: "true",
     NODE_ENV: "production",
     PLAYWRIGHT_BASE_URL: baseUrl,
+    FORGE_EXPECTED_RELEASE_SHA: expectedSha.toLowerCase(),
+    FORGE_PLAYWRIGHT_PRODUCTION_BROWSER: "1",
+    FORGE_PLAYWRIGHT_OUTPUT_DIR:
+      `test-results/${SEMESTER_DESK_V2_PRODUCTION_REPORT_DIRECTORY}`,
     OPENAI_API_KEY: "",
     OPENAI_INTERPRETATION_ENABLED: "false",
     OPENAI_INTERPRETATION_DISABLED: "true",
@@ -70,19 +187,107 @@ function browserEnvironment(baseUrl: string): NodeJS.ProcessEnv {
   for (const key of ["PATH", "HOME", "TMPDIR", "PNPM_HOME", "COREPACK_HOME"]) if (process.env[key]) env[key] = process.env[key];
   return env;
 }
+
+export function productionServerEnvironment(
+  expectedSha: string,
+  sourceEnvironment: NodeJS.ProcessEnv = process.env,
+): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {
+    NODE_ENV: "production",
+    NEXT_TELEMETRY_DISABLED: "1",
+    NODE_PATH: resolve(process.cwd(), "node_modules"),
+    OPENAI_API_KEY: "",
+    OPENAI_INTERPRETATION_ENABLED: "false",
+    OPENAI_FORGE_PLANNER_ENABLED: "false",
+    FORGE_CLOUD_ACCOUNTS_ENABLED: "false",
+    FORGE_RELEASE_SHA: expectedSha.toLowerCase(),
+    FORGE_BUILD_TIME: sourceEnvironment.FORGE_BUILD_TIME ?? "unknown",
+    FORGE_LOCKFILE_DIGEST: sourceEnvironment.FORGE_LOCKFILE_DIGEST,
+    FORGE_CONTENT_MANIFEST_DIGEST:
+      sourceEnvironment.FORGE_CONTENT_MANIFEST_DIGEST,
+    FORGE_EVALUATOR_BASELINE_DIGEST:
+      sourceEnvironment.FORGE_EVALUATOR_BASELINE_DIGEST,
+    FORGE_DATABASE_MIGRATION_IDENTITY:
+      sourceEnvironment.FORGE_DATABASE_MIGRATION_IDENTITY ?? "not_configured",
+  };
+  for (const key of [
+    "PATH",
+    "HOME",
+    "TMPDIR",
+    "PNPM_HOME",
+    "COREPACK_HOME",
+    "CI",
+  ]) {
+    if (sourceEnvironment[key]) env[key] = sourceEnvironment[key];
+  }
+  return env;
+}
+
 async function main() {
-  const expectedSha = arg("--expected-sha"); if (!expectedSha || !/^[0-9a-f]{40}$/i.test(expectedSha)) throw new Error("--expected-sha must be a full 40-character Git SHA");
-  const port = await availablePort(); const baseUrl = `http://127.0.0.1:${port}`; const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-  const serverEnv: NodeJS.ProcessEnv = { NODE_ENV: "production", NEXT_TELEMETRY_DISABLED: "1", OPENAI_API_KEY: "", OPENAI_INTERPRETATION_ENABLED: "false", OPENAI_FORGE_PLANNER_ENABLED: "false", FORGE_CLOUD_ACCOUNTS_ENABLED: "false", FORGE_RELEASE_SHA: expectedSha.toLowerCase(), FORGE_BUILD_TIME: process.env.FORGE_BUILD_TIME ?? "unknown", FORGE_LOCKFILE_DIGEST: process.env.FORGE_LOCKFILE_DIGEST, FORGE_CONTENT_MANIFEST_DIGEST: process.env.FORGE_CONTENT_MANIFEST_DIGEST, FORGE_EVALUATOR_BASELINE_DIGEST: process.env.FORGE_EVALUATOR_BASELINE_DIGEST, FORGE_DATABASE_MIGRATION_IDENTITY: process.env.FORGE_DATABASE_MIGRATION_IDENTITY ?? "not_configured" };
-  for (const key of ["PATH", "HOME", "TMPDIR", "PNPM_HOME", "COREPACK_HOME", "CI"]) if (process.env[key]) serverEnv[key] = process.env[key];
-  const server = productionServerInvocation(port);
-  const child = spawn(server.command, server.args, { cwd: process.cwd(), env: serverEnv, stdio: ["ignore", "pipe", "pipe"] });
-  let logs: Buffer<ArrayBufferLike> = Buffer.alloc(0);
-  const appendLog = (chunk: Buffer) => { logs = appendBoundedServerLog(logs, chunk); };
-  child.stdout.on("data", appendLog); child.stderr.on("data", appendLog);
-  try { await waitForServer(baseUrl, child); const result = await new Promise<number>((resolveExit) => { const browser = spawn(command, ["exec", "playwright", "test"], { cwd: process.cwd(), env: browserEnvironment(baseUrl), stdio: "inherit" }); browser.once("exit", (code) => resolveExit(code ?? 1)); }); if (result !== 0) process.exitCode = result; }
-  catch (error) { const bounded = logs.toString("utf8").replace(/\bsk-[A-Za-z0-9_-]{12,}\b/g, "[REDACTED_TOKEN]"); if (bounded) console.error(`bounded production server log:\n${bounded}`); throw error; }
-  finally { await stopProductionServer(child); }
+  assertCanonicalProductionBrowserArguments(process.argv.slice(2));
+  const requestedSha = arg("--expected-sha");
+  const currentSource = readProductionBuildSource();
+  const expectedSha = requestedSha ?? (
+    currentSource.sourceCommit === "unknown"
+      ? undefined
+      : currentSource.sourceCommit
+  );
+  if (!expectedSha || !/^[0-9a-f]{40}$/i.test(expectedSha)) {
+    throw new Error(
+      "--expected-sha must be a full 40-character Git SHA when the current checkout identity is unavailable",
+    );
+  }
+  const buildReceipt = assertExactProductionBuild(expectedSha);
+  const runtimeSnapshot = createProductionRuntimeSnapshot(expectedSha);
+  process.stdout.write(
+    `Exact production build verified for ${buildReceipt.sourceCommit}; artifact ${buildReceipt.artifactDigest}.\n`,
+  );
+  try {
+    const port = await availablePort();
+    const baseUrl = `http://127.0.0.1:${port}`;
+    const serverEnv = productionServerEnvironment(expectedSha);
+    const server = productionServerInvocation(port, runtimeSnapshot.root);
+    const child = spawn(server.command, server.args, {
+      cwd: process.cwd(),
+      env: serverEnv,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let logs: Buffer<ArrayBufferLike> = Buffer.alloc(0);
+    const appendLog = (chunk: Buffer) => {
+      logs = appendBoundedServerLog(logs, chunk);
+    };
+    child.stdout.on("data", appendLog);
+    child.stderr.on("data", appendLog);
+    try {
+      await waitForServer(baseUrl, child);
+      await assertProductionServerIdentity(baseUrl, expectedSha);
+      const invocation = playwrightCliInvocation(PRODUCTION_BROWSER_SPECS);
+      const result = await runPlaywrightWithReportDigest({
+        rootDirectory: process.cwd(),
+        reportFile:
+          `test-results/${SEMESTER_DESK_V2_PRODUCTION_REPORT_DIRECTORY}/playwright-report.json`,
+        command: invocation.command,
+        args: invocation.args,
+        environment: browserEnvironment(baseUrl, expectedSha),
+        githubOutput: process.env.GITHUB_OUTPUT,
+      });
+      await assertProductionServerIdentity(baseUrl, expectedSha);
+      if (result !== 0) process.exitCode = result;
+    } catch (error) {
+      const bounded = logs.toString("utf8").replace(
+        /\bsk-[A-Za-z0-9_-]{12,}\b/g,
+        "[REDACTED_TOKEN]",
+      );
+      if (bounded) console.error(`bounded production server log:\n${bounded}`);
+      throw error;
+    } finally {
+      await stopProductionServer(child);
+      verifyCompletedProductionRuntimeSnapshot(runtimeSnapshot);
+      assertExactProductionBuild(expectedSha);
+    }
+  } finally {
+    removeProductionRuntimeSnapshot(runtimeSnapshot);
+  }
 }
 const entryUrl = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : "";
 if (import.meta.url === entryUrl) void main().catch((error: unknown) => { console.error(`production browser verification failed: ${error instanceof Error ? error.message : "unknown error"}`); process.exitCode = 1; });

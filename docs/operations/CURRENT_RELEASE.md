@@ -2,6 +2,8 @@
 
 **Canonical current-state locator:** this is the only normative current public-release record. Historical Wave 2–4 records remain evidence for their named source only.
 
+The public alias still serves the retired ModelShift product. It does not serve the current Semester Desk v2 candidate.
+
 ## Recorded tuple
 
 | Field | Recorded value | Verification boundary |

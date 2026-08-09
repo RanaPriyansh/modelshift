@@ -70,9 +70,20 @@ function ForgeMark() {
   );
 }
 
-function Brand({ href = "/" }: { href?: string }) {
+function Brand({
+  href = "/",
+  prefetch,
+}: {
+  href?: string;
+  prefetch?: boolean;
+}) {
   return (
-    <Link className="forge-brand" href={href} aria-label="FORGE Learning OS home">
+    <Link
+      className="forge-brand"
+      href={href}
+      aria-label="FORGE Learning OS home"
+      prefetch={prefetch}
+    >
       <ForgeMark />
       <span>
         <strong>FORGE</strong>
@@ -157,9 +168,11 @@ function NavIcon({ section }: { section: ForgeSection }) {
 function PrimaryNavigation({
   active,
   items,
+  prefetch,
 }: {
-  active: ForgeSection;
+  active: ForgeSection | null;
   items: ReadonlyArray<{ href: string; label: string; section: ForgeSection }>;
+  prefetch?: boolean;
 }) {
   return (
     <nav className="forge-primary-nav" aria-label="Primary navigation">
@@ -168,6 +181,7 @@ function PrimaryNavigation({
           key={item.label}
           href={item.href}
           aria-current={active === item.section ? "page" : undefined}
+          prefetch={prefetch}
         >
           {item.label}
         </Link>
@@ -179,9 +193,11 @@ function PrimaryNavigation({
 function MobileNavigation({
   active,
   items,
+  prefetch,
 }: {
-  active: ForgeSection;
+  active: ForgeSection | null;
   items: ReadonlyArray<{ href: string; label: string; section: ForgeSection }>;
+  prefetch?: boolean;
 }) {
   return (
     <nav className="forge-mobile-nav" aria-label="Mobile navigation">
@@ -190,6 +206,7 @@ function MobileNavigation({
           key={item.label}
           href={item.href}
           aria-current={active === item.section ? "page" : undefined}
+          prefetch={prefetch}
         >
           <NavIcon section={item.section} />
           <span>{item.label}</span>
@@ -202,10 +219,14 @@ function MobileNavigation({
 export function ForgeShell({
   active,
   children,
+  mobileNavigation = true,
+  navigationPrefetch,
   surface = "legacy",
 }: {
-  active: ForgeSection;
+  active: ForgeSection | null;
   children: ReactNode;
+  mobileNavigation?: boolean;
+  navigationPrefetch?: boolean;
   surface?: ForgeSurface;
 }) {
   const items = navItemsFor(surface);
@@ -219,15 +240,27 @@ export function ForgeShell({
         Skip to main content
       </a>
       <header className="forge-topbar">
-        <Brand href={homeHref} />
-        <PrimaryNavigation active={active} items={items} />
+        <Brand href={homeHref} prefetch={navigationPrefetch} />
+        <PrimaryNavigation
+          active={active}
+          items={items}
+          prefetch={navigationPrefetch}
+        />
         <div className="forge-topbar-actions">
           {surface === "app" ? <ForgePathCommand /> : null}
           <ForgeTrustLine className="forge-topbar-disclosure" />
         </div>
       </header>
       {children}
-      <MobileNavigation active={active} items={mobileItems} />
+      {mobileNavigation
+        ? (
+            <MobileNavigation
+              active={active}
+              items={mobileItems}
+              prefetch={navigationPrefetch}
+            />
+          )
+        : null}
     </div>
   );
 }

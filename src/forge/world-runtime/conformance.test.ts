@@ -40,6 +40,7 @@ import {
   dispatchPublicWorldRuntimeCommandCore,
 } from "./runtime-core.public";
 import { retainedRuntimeIdentityForInternal } from "./retained-runtime-binding.internal";
+import { FORGE_DEVICE_PROFILE_KEY } from "../../lib/forge-profile/device-profile";
 import { sourceCorroborationWorldRuntimeAdapter } from "./source-corroboration";
 import * as publicForgeBarrel from "../index";
 import * as internalRuntimeCore from "./runtime-core.internal";
@@ -597,6 +598,19 @@ class MemoryStorage {
   }
 }
 
+const PROFILE_ID = "81000000-0000-4000-8000-000000000001";
+
+function stubWindowWithProfile(storage: MemoryStorage): void {
+  storage.setItem(FORGE_DEVICE_PROFILE_KEY, JSON.stringify({
+    schemaVersion: 1,
+    profileId: PROFILE_ID,
+    ageMode: "adult",
+    guardianPresent: false,
+    createdAt: "2026-07-22T00:00:00.000Z",
+  }));
+  vi.stubGlobal("window", { localStorage: storage });
+}
+
 afterEach(() => vi.unstubAllGlobals());
 
 describe.each(FIXTURES)("$name shared-runtime conformance", (fixture) => {
@@ -758,7 +772,7 @@ describe("all released runtime World receipt projection and release identity", (
 
   it("rejects direct-core and manual forged passes before either can reach the local ledger", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
     const forgedAdapter = {
       ...proportionalReasoningWorldRuntimeAdapter,
       validatorInput: () => ({ forged: true }),
@@ -834,7 +848,7 @@ describe("all released runtime World receipt projection and release identity", (
 
   it("projects only public canonical receipts and rejects the retained unavailable receipt", () => {
     const storage = new MemoryStorage();
-    vi.stubGlobal("window", { localStorage: storage });
+    stubWindowWithProfile(storage);
 
     for (const [index, fixture] of FIXTURES.entries()) {
       const terminal = fixture.runTerminal("pass", `attempt.conformance-${index}-${fixture.worldId.replaceAll(".", "-")}`);

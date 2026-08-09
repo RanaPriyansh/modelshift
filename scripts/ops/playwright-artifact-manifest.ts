@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { lstat, mkdir, open, readdir, realpath, writeFile } from "node:fs/promises";
 import { constants, type Stats } from "node:fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
@@ -9,13 +10,13 @@ const ALLOWED = new Set([".png"]);
 const FAILURE_SCREENSHOT = /^test-failed-\d+\.png$/;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
-type Artifact = { path: string; bytes: number };
+type Artifact = { path: string; bytes: number; sha256: string };
 type ArtifactStagingHooks = {
   /** Test-only seam: verifies a pathname replacement after open cannot alter staged bytes. */
   afterCandidateOpened?: (path: string) => Promise<void> | void;
 };
 export type PlaywrightArtifactManifest = {
-  schema_version: "1.0";
+  schema_version: "2.0";
   report_kind: "bounded_playwright_failure_artifacts";
   tested_sha: string;
   retained_artifact_ids: string[];
@@ -155,13 +156,17 @@ export async function writePlaywrightArtifactManifest(rootDirectory: string, tes
       } finally {
         await destination.close();
       }
-      artifacts.push({ path: relativePath, bytes });
+      artifacts.push({
+        path: relativePath,
+        bytes,
+        sha256: createHash("sha256").update(contents).digest("hex"),
+      });
       total += bytes;
     } finally {
       await source.close();
     }
   }
-  const manifest: PlaywrightArtifactManifest = { schema_version: "1.0", report_kind: "bounded_playwright_failure_artifacts", tested_sha: testedSha, retained_artifact_ids: [retainedArtifactId], artifacts, excluded_count: excludedCount, truncated };
+  const manifest: PlaywrightArtifactManifest = { schema_version: "2.0", report_kind: "bounded_playwright_failure_artifacts", tested_sha: testedSha, retained_artifact_ids: [retainedArtifactId], artifacts, excluded_count: excludedCount, truncated };
   await writeFile(output, `${JSON.stringify(manifest, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
   return manifest;
 }

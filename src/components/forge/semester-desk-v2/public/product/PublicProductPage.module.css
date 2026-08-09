@@ -1,0 +1,596 @@
+.page {
+  --product-paper: #edf0e8;
+  --product-raised: #f8faf5;
+  --product-ink: #14241a;
+  --product-muted: #52645a;
+  --product-dim: #62736a;
+  --product-line: #adbaad;
+  --product-forest: #173c29;
+  --product-cobalt: #123eae;
+  --product-cobalt-dark: #0b2f88;
+  --product-orange: #a94026;
+  --product-orange-pressed: #8e331e;
+  --product-on-orange: #fff;
+  --product-sky: #c9d9ec;
+  min-width: 320px;
+  min-height: 100dvh;
+  overflow-x: clip;
+  background: var(--product-paper);
+  color: var(--product-ink);
+  color-scheme: light;
+  font-family: var(--forge-sans, ui-sans-serif, system-ui, sans-serif);
+}
+
+.page * {
+  box-sizing: border-box;
+}
+
+.page :focus-visible {
+  outline: 3px solid var(--product-cobalt);
+  outline-offset: 4px;
+}
+
+.skipLink {
+  position: fixed;
+  z-index: 5;
+  top: 12px;
+  left: 16px;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 10px 16px;
+  transform: translateY(-180%);
+  background: var(--product-forest);
+  color: var(--product-raised);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.skipLink:focus {
+  transform: translateY(0);
+}
+
+.header,
+.main,
+.footer {
+  width: min(1080px, calc(100% - 48px));
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--product-line);
+}
+
+.wordmark {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--product-forest);
+  font-size: 1.05rem;
+  font-weight: 850;
+  letter-spacing: -0.06em;
+  text-decoration: none;
+}
+
+.navigation,
+.footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+}
+
+.navigation a,
+.footer a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--product-ink);
+  font-size: 0.95rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.navigation a:hover,
+.footer a:hover,
+.secondaryAction:hover,
+.localLimit a:hover {
+  color: var(--product-cobalt);
+  text-decoration: underline;
+  text-underline-offset: 0.22em;
+}
+
+.navigation a[aria-current="page"] {
+  color: var(--product-cobalt-dark);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.28em;
+}
+
+.openLink {
+  padding: 0 14px;
+  border: 1px solid var(--product-forest);
+  color: var(--product-forest) !important;
+}
+
+.main {
+  padding-bottom: clamp(56px, 8vw, 112px);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.04fr) minmax(280px, 0.96fr);
+  gap: clamp(32px, 7vw, 100px);
+  align-items: center;
+  min-height: min(520px, calc(100dvh - 72px));
+  padding: clamp(44px, 6vw, 76px) 0 clamp(48px, 6vw, 72px);
+}
+
+.heroCopy {
+  min-width: 0;
+}
+
+.context {
+  margin: 0 0 14px;
+  color: var(--product-forest);
+  font-size: 0.76rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+
+.hero h1,
+.sectionCopy h2,
+.localLimit h2 {
+  margin: 0;
+  color: var(--product-forest);
+  font-family: var(--forge-sans, ui-sans-serif, system-ui, sans-serif);
+  font-weight: 760;
+  letter-spacing: -0.06em;
+  text-wrap: balance;
+}
+
+.hero h1 {
+  max-width: 10.5ch;
+  font-size: clamp(2.95rem, 5.2vw, 4.8rem);
+  line-height: 0.91;
+}
+
+.lead {
+  max-width: 36rem;
+  margin: 20px 0 0;
+  color: var(--product-muted);
+  font-size: clamp(1.06rem, 1.7vw, 1.25rem);
+  line-height: 1.58;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  margin-top: 26px;
+}
+
+.primaryAction,
+.secondaryAction {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  font-size: 1rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.primaryAction {
+  border: 1px solid var(--product-cobalt);
+  background: var(--product-cobalt);
+  color: var(--product-on-orange);
+}
+
+.primaryAction:hover {
+  background: var(--product-cobalt-dark);
+}
+
+.secondaryAction {
+  color: var(--product-forest);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+}
+
+.thresholdTerrain {
+  position: relative;
+  min-height: 340px;
+  overflow: hidden;
+  border: 1px solid var(--product-forest);
+  background: var(--product-cobalt);
+}
+
+.thresholdTerrain span {
+  position: absolute;
+  display: block;
+}
+
+.terrainSky {
+  inset: 0;
+  background: var(--product-sky);
+}
+
+.terrainHorizon {
+  right: -8%;
+  bottom: 22%;
+  width: 96%;
+  height: 51%;
+  background: var(--product-cobalt);
+  clip-path: polygon(0 84%, 18% 43%, 35% 67%, 52% 10%, 72% 36%, 100% 0, 100% 100%, 0 100%);
+}
+
+.terrainField {
+  bottom: -9%;
+  left: -8%;
+  width: 118%;
+  height: 61%;
+  background: var(--product-forest);
+  clip-path: polygon(0 58%, 18% 24%, 31% 45%, 47% 8%, 67% 34%, 83% 16%, 100% 46%, 100% 100%, 0 100%);
+}
+
+.terrainPath {
+  z-index: 1;
+  bottom: -7%;
+  left: 45%;
+  width: 17%;
+  height: 60%;
+  background: var(--product-paper);
+  clip-path: polygon(43% 0, 61% 0, 100% 100%, 0 100%);
+}
+
+.terrainMarker {
+  z-index: 2;
+  bottom: 34%;
+  left: 50%;
+  width: 12px;
+  height: 28px;
+  border: 4px solid var(--product-raised);
+  border-bottom: 0;
+}
+
+.truthSection,
+.recoverySection,
+.learningSection {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.38fr) minmax(0, 0.62fr);
+  gap: clamp(28px, 6vw, 88px);
+  padding: clamp(52px, 8vw, 88px) 0;
+  border-top: 1px solid var(--product-line);
+}
+
+.sectionCopy h2,
+.localLimit h2 {
+  font-size: clamp(1.85rem, 3.6vw, 3rem);
+  line-height: 0.98;
+}
+
+.sectionCopy > p:last-child,
+.localLimit > div,
+.conditionList dd,
+.workflow figcaption,
+.workflow p,
+.learningSteps p {
+  color: var(--product-muted);
+  font-size: 1.03rem;
+  line-height: 1.65;
+}
+
+.sectionCopy > p:last-child {
+  margin: 20px 0 0;
+}
+
+.conditionList {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  border-top: 3px solid var(--product-forest);
+}
+
+.conditionList > div {
+  display: grid;
+  grid-template-columns: minmax(145px, 0.36fr) minmax(0, 0.64fr);
+  gap: 18px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--product-line);
+}
+
+.conditionList dt {
+  color: var(--product-forest);
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.conditionList dd {
+  margin: 0;
+}
+
+.recoverySection {
+  background: var(--product-raised);
+  box-shadow: 0 0 0 100vmax var(--product-raised);
+  clip-path: inset(0 -100vmax);
+}
+
+.workflow {
+  margin: 0;
+  border-top: 3px solid var(--product-cobalt-dark);
+}
+
+.workflow figcaption {
+  padding: 16px 0 22px;
+}
+
+.workflow ol,
+.learningSteps {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workflow li {
+  display: grid;
+  grid-template-columns: 54px minmax(150px, 0.34fr) minmax(0, 0.66fr);
+  gap: 16px;
+  align-items: start;
+  padding: 22px 0;
+  border-top: 1px solid var(--product-line);
+}
+
+.workflow li:first-child {
+  border-top: 0;
+}
+
+.workflow li > span,
+.learningSteps li > span {
+  color: var(--product-cobalt-dark);
+  font-size: 0.93rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+}
+
+.workflow h3,
+.learningSteps h3 {
+  margin: 0;
+  color: var(--product-forest);
+  font-size: 1.1rem;
+  line-height: 1.28;
+}
+
+.workflow p,
+.learningSteps p {
+  margin: 0;
+}
+
+.learningSteps {
+  gap: 0;
+  border-top: 3px solid var(--product-forest);
+}
+
+.learningSteps li {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 16px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--product-line);
+}
+
+.learningSteps p {
+  margin: 8px 0 0;
+}
+
+.localLimit {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.38fr) minmax(0, 0.62fr);
+  gap: clamp(28px, 6vw, 88px);
+  padding: clamp(48px, 8vw, 84px) 0 0;
+  border-top: 3px solid var(--product-forest);
+}
+
+.localLimit .context {
+  grid-column: 1 / -1;
+  margin-bottom: -10px;
+  color: var(--product-forest);
+}
+
+.localLimit > div > p {
+  margin: 0;
+}
+
+.localLimit > div > p + p {
+  margin-top: 18px;
+}
+
+.localLimit a {
+  color: var(--product-cobalt-dark);
+  font-weight: 800;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+}
+
+.footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 22px 40px;
+  padding: 32px 0 46px;
+  border-top: 1px solid var(--product-line);
+}
+
+.footer > p {
+  max-width: 40rem;
+  margin: 0;
+  color: var(--product-muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 760px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    padding: 14px 0;
+  }
+
+  .navigation {
+    width: 100%;
+    gap: 0 16px;
+  }
+
+  .openLink {
+    margin-left: auto;
+  }
+
+  .hero,
+  .truthSection,
+  .recoverySection,
+  .learningSection,
+  .localLimit {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    min-height: 0;
+    padding-top: 50px;
+  }
+
+  .thresholdTerrain {
+    min-height: 260px;
+  }
+
+  .conditionList > div,
+  .workflow li {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .workflow li {
+    padding-left: 0;
+  }
+
+  .workflow li > span,
+  .learningSteps li > span {
+    display: block;
+  }
+
+  .localLimit .context {
+    margin-bottom: -4px;
+  }
+
+  .footer {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .header,
+  .main,
+  .footer {
+    width: calc(100% - 32px);
+  }
+
+  .navigation {
+    gap: 0 12px;
+  }
+
+  .navigation a,
+  .footer a {
+    font-size: 0.9rem;
+  }
+
+  .openLink {
+    width: 100%;
+    justify-content: center;
+    margin-top: 4px;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.85rem, 15.5vw, 4rem);
+  }
+
+  .primaryAction,
+  .secondaryAction {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before,
+  .page *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .page {
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .header,
+  .truthSection,
+  .recoverySection,
+  .learningSection,
+  .localLimit,
+  .footer,
+  .conditionList,
+  .conditionList > div,
+  .workflow,
+  .workflow li,
+  .learningSteps,
+  .learningSteps li,
+  .thresholdTerrain,
+  .openLink {
+    border-color: CanvasText;
+  }
+
+  .wordmark,
+  .navigation a,
+  .footer a,
+  .hero h1,
+  .sectionCopy h2,
+  .localLimit h2,
+  .conditionList dt,
+  .workflow h3,
+  .learningSteps h3,
+  .sectionCopy > p:last-child,
+  .localLimit > div,
+  .conditionList dd,
+  .workflow figcaption,
+  .workflow p,
+  .learningSteps p {
+    color: CanvasText !important;
+  }
+
+  .primaryAction,
+  .skipLink,
+  .localLimit a {
+    color: LinkText !important;
+  }
+
+  .primaryAction {
+    border-color: LinkText;
+    background: Canvas;
+  }
+
+  .thresholdTerrain,
+  .thresholdTerrain span,
+  .recoverySection {
+    background: Canvas !important;
+  }
+}

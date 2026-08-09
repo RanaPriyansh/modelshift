@@ -22,6 +22,7 @@ import {
   FORGE_DEVICE_PROFILE_EVENT,
   FORGE_DEVICE_PROFILE_KEY,
   readForgeDeviceProfile,
+  createActiveForgeProfileBoundStorage,
 } from "@/src/lib/forge-profile/device-profile";
 import type { BoundedLocalWorldRuntimeReceipt } from "@/src/forge/world-runtime";
 
@@ -165,11 +166,25 @@ export function StudySessionRuntime({
       });
       return;
     }
-    clearWorldSessionCheckpoint(window.localStorage, {
+    const storage = createActiveForgeProfileBoundStorage(window.localStorage);
+    if (!storage) {
+      setReceiptState({
+        phase: "failed",
+        message: "FORGE could not safely clear this device-local session checkpoint.",
+      });
+      return;
+    }
+    const cleared = clearWorldSessionCheckpoint(storage, {
       sessionId,
       worldId: receipt.world.id,
       worldVersion: receipt.world.version,
     });
+    if (!cleared.ok) {
+      setReceiptState({
+        phase: "failed",
+        message: "FORGE could not safely clear this device-local session checkpoint.",
+      });
+    }
   }, [sessionId]);
 
   if (!studySessionIdSchema.safeParse(sessionId).success) {
@@ -384,13 +399,30 @@ export function StudySessionRuntime({
 
   return (
     <div data-testid="study-session-runtime">
-      <header className="forge-world-entry-disclosure">
-        <strong>Exact local path session</strong>
-        <span>
-          {session.worldRef.worldId} · v{session.worldRef.worldVersion} ·{" "}
-          {session.activityId}
-        </span>
-        <Link href="/app/study">Return without claiming completion</Link>
+      <header
+        aria-label="Exact local path session"
+        className="forge-world-entry-disclosure forge-world-entry-disclosure--session"
+      >
+        <strong className="forge-world-entry-disclosure-title">
+          Exact local path session
+        </strong>
+        <dl className="forge-world-entry-metadata">
+          <div>
+            <dt>World</dt>
+            <dd>{session.worldRef.worldId}</dd>
+          </div>
+          <div>
+            <dt>Version</dt>
+            <dd>v{session.worldRef.worldVersion}</dd>
+          </div>
+          <div>
+            <dt>Activity</dt>
+            <dd>{session.activityId}</dd>
+          </div>
+        </dl>
+        <Link className="forge-world-entry-return" href="/app/study">
+          Return without claiming completion
+        </Link>
       </header>
       {receiptState.phase === "recording" ? (
         <p className="forge-app-message" role="status">

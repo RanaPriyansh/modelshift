@@ -1,0 +1,415 @@
+import Foundation
+import Synchronization
+import Testing
+
+@testable import ForgeCore
+
+struct SharedProjectionStoreTests {
+  @Test("The store saves one redacted Semester Desk projection")
+  func savesAndLoadsProjection() throws {
+    let fixture = try SharedStoreTestSupport.fixture()
+    defer { SharedStoreTestSupport.clean(fixture) }
+    let projection = try SharedStoreTestSupport.projection()
+
+    try fixture.store.saveProjection(projection)
+
+    #expect(try fixture.store.loadProjection() == projection)
+    let data = try Data(contentsOf: fixture.projectionURL)
+    let object = try #require(
+      JSONSerialization.jsonObject(with: data) as? [String: Any]
+    )
+    #expect(
+      Set(object.keys)
+        == [
+          "status",
+          "dueAt",
+          "generatedAt",
+          "validUntil",
+        ]
+    )
+    let text = try #require(String(data: data, encoding: .utf8))
+    for forbidden in [
+      "courseLabel",
+      "planItemLabel",
+      "activityLabel",
+      "selectedChoiceLabel",
+      "practiceText",
+      "independentCheckText",
+      "delayedReturnText",
+      "answer",
+      "sourceLabel",
+      "factConflicts",
+      "semesterDesk",
+      "learnerState",
+    ] {
+      #expect(!text.contains(forbidden))
+    }
+  }
+
+  @Test(
+    "A projection save reports a confirmed mutation when namespace synchronization is uncertain")
+  func projectionSaveReportsNamespaceUncertainty() throws {
+    let fixture = try SharedStoreTestSupport.fixture()
+    defer { SharedStoreTestSupport.clean(fixture) }
+    let projection = try SharedStoreTestSupport.projection()
+    let store = SharedStoreTestSupport.storeWithDirectorySyncFailure(
+      at: fixture.root
+    )
+
+    let receipt = try store.saveProjection(projection)
+
+    #expect(receipt.mutation == .changed)
+    #expect(receipt.namespace == .synchronizationUncertain)
+    #expect(try fixture.store.loadProjection() == projection)
+    #expect(
+      !FileManager.default.fileExists(
+        atPath: fixture.projectionStagingURL.path
+      )
+    )
+  }
+
+  @Test("Projection clear reports a confirmed mutation when namespace synchronization is uncertain")
+  func projectionClearReportsNamespaceUncertainty() throws {
+    let fixture = try SharedStoreTestSupport.fixture()
+    defer { SharedStoreTestSupport.clean(fixture) }
+    try fixture.store.saveProjection(
+      SharedStoreTestSupport.projection()
+    )
+    let store = SharedStoreTestSupport.storeWithDirectorySyncFailure(
+      at: fixture.root
+    )
+
+    let receipt = try store.clearProjection()
+
+    #expect(receipt.mutation == .changed)
+    #expect(receipt.namespace == .synchronizationUncertain)
+    #expect(try fixture.store.loadProjection() == nil)
+    #expect(
+      try store.clearProjection()
+        == ForgeSharedStateMutationReceipt(
+          mutation: .unchanged,
+          namespace: .notRequired
+        )
+    )
+  }
+
+  @Test("Projection states enforce action-safe fields")
+  func projectionValidationFailsClosed() {
+    let generatedAt = Date(timeIntervalSinceReferenceDate: 100)
+    let validUntil = generatedAt.addingTimeInterval(3_600)
+
+    #expect(throws: ForgeSharedStateStoreError.corruptProjection) {
+      _ = try ForgeSemesterDeskProjection(
+        status: .needsReview,
+        dueAt: generatedAt.addingTimeInterval(1),
+        generatedAt: generatedAt,
+        validUntil: validUntil
+      )
+    }
+    #expect(throws: ForgeSharedStateStoreError.corruptProjection) {
+      _ = try ForgeSemesterDeskProjection(
+        status: .comeBack,
+        dueAt: generatedAt,
+        generatedAt: generatedAt,
+        validUntil: validUntil
+      )
+    }
+    #expect(throws: ForgeSharedStateStoreError.corruptProjection) {
+      _ = try ForgeSemesterDeskProjection(
+        status: .readyToWork,
+        dueAt: generatedAt.addingTimeInterval(1),
+        generatedAt: generatedAt,
+        validUntil: validUntil
+      )
+    }
+    #expect(throws: ForgeSharedStateStoreError.corruptProjection) {
+      _ = try ForgeSemesterDeskProjection(
+        status: .comeBack,
+        dueAt: nil,
+        generatedAt: generatedAt,
+        validUntil: validUntil
+      )
+    }
+  }
+
+  @Test("A pending v2 destination is consumed once")
+  func pendingDestinationIsConsumedOnce() throws {
+    let fixture = try SharedStoreTestSupport.fixture()
+    defer { SharedStoreTestSupport.clean(fixture) }
+
+    try fixture.store.setPendingDestination(.today)
+
+    #expect(try fixture.store.consumePendingDestination().destination == .today)
+    #expect(try fixture.store.consumePendingDestination().destination == nil)
+    #expect(
+      !FileManager.default.fileExists(
+        atPath: fixture.pendingDestinationURL.path
+      )
+    )
+  }
+
+  @Test(
+    "A pending destination is returned after an unlink with uncertain namespace synchronization")
+  func pendingDestinationReturnsAfterUncertainUnlink() throws {
+    let fixture = try SharedStoreTestSupport.fixture()
+    defer { SharedStoreTestSupport.clean(fixture) }
+    try fixture.store.setPendingDestination(.settings)
+    let store = SharedStoreTestSupport.storeWithDirectorySyncFailure(
+      at: fixture.root
+    )
+
+    let consumption = try store.consumePendingDestination()
+
+    #expect(consumption.destination == .settings)
+    #expect(consumption.namespace == .synchronizationUncertain)
+    #expect(
+      !FileManager.default.fileExists(
+        atPath: fixture.pendingDestinationURL.path
+      )
+    )
+    #expect(
+      try fixture.store.consumePendingDestination()
+        == ForgePendingDestinationConsumption(
+          destination: nil,
+          namespace: .notRequired
+        )
+    )
+  }
+
+  @Test("A corrupt pending destination is removed")
+  func corruptPendingDestinationFailsClosed() throws {
+    let fixture = try SharedStoreTestSupport.fixture()
+    defer { SharedStoreTestSupport.clean(fixture) }
+    try Data("focus".utf8).write(to: fixture.pendingDestinationURL)
+
+    #expect(throws: ForgeSharedStateStoreError.corruptPendingDestination) {
+      _ = try fixture.store.consumePendingDestination()
+    }
+    #expect(
+      !FileManager.default.fileExists(
+        atPath: fixture.pendingDestinationURL.path
+      )
+    )
+  }
+
+  @Test("Unknown, missing, and duplicate JSON keys are rejected")
+  func rejectsNoncanonicalJSON() throws {
+    for rawJSON in [
+      #"{"status":"ready-to-work","dueAt":null,"generatedAt":100,"validUntil":200,"private":"text"}"#,
+      #"{"status":"ready-to-work","generatedAt":100,"validUntil":200}"#,
+      #"{"status":"ready-to-work","status":"come-back","dueAt":null,"generatedAt":100,"validUntil":200}"#,
+    ] {
+      let fixture = try SharedStoreTestSupport.fixture()
+      defer { SharedStoreTestSupport.clean(fixture) }
+      try Data(rawJSON.utf8).write(to: fixture.projectionURL)
+
+      #expect(throws: ForgeSharedStateStoreError.corruptProjection) {
+        _ = try fixture.store.loadProjection()
+      }
+      #expect(!FileManager.default.fileExists(atPath: fixture.projectionURL.path))
+    }
+  }
+
+  @Test("An oversized projection is removed")
+  func rejectsOversizedProjection() throws {
+    let fixture = try SharedStoreTestSupport.fixture()
+    defer { SharedStoreTestSupport.clean(fixture) }
+    try Data(repeating: 0x61, count: 4_097).write(to: fixture.projectionURL)
+
+    #expect(throws: ForgeSharedStateStoreError.oversizedProjection) {
+      _ = try fixture.store.loadProjection()
+    }
+    #expect(!FileManager.default.fileExists(atPath: fixture.projectionURL.path))
+  }
+
+  @Test("A staging symlink is never followed")
+  func rejectsStagingSymlink() throws {
+    let fixture = try SharedStoreTestSupport.fixture()
+    defer { SharedStoreTestSupport.clean(fixture) }
+    let outsideURL = fixture.root.deletingLastPathComponent()
+      .appendingPathComponent("outside-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: outsideURL) }
+    try Data("preserve".utf8).write(to: outsideURL)
+    try FileManager.default.createSymbolicLink(
+      at: fixture.projectionStagingURL,
+      withDestinationURL: outsideURL
+    )
+
+    #expect(throws: ForgeSharedStateStoreError.writeVerificationFailed) {
+      try fixture.store.saveProjection(
+        SharedStoreTestSupport.projection()
+      )
+    }
+    #expect(try Data(contentsOf: outsideURL) == Data("preserve".utf8))
+  }
+
+  @Test("Legacy integration files are purged without changing current shared state")
+  func purgesLegacyState() throws {
+    let fixture = try SharedStoreTestSupport.fixture()
+    defer { SharedStoreTestSupport.clean(fixture) }
+    let projection = try SharedStoreTestSupport.projection()
+    try fixture.store.saveProjection(projection)
+    for fileName in SharedStoreTestSupport.obsoleteFileNames {
+      try Data("legacy".utf8).write(
+        to: fixture.root.appendingPathComponent(fileName)
+      )
+    }
+
+    #expect(try fixture.store.purgeLegacyState())
+    #expect(try fixture.store.loadProjection() == projection)
+    for fileName in SharedStoreTestSupport.obsoleteFileNames {
+      #expect(
+        !FileManager.default.fileExists(
+          atPath: fixture.root.appendingPathComponent(fileName).path
+        )
+      )
+    }
+  }
+
+  @Test("Concurrent projection writes stay decodable")
+  func serializesConcurrentWrites() throws {
+    let fixture = try SharedStoreTestSupport.fixture()
+    defer { SharedStoreTestSupport.clean(fixture) }
+    let first = try SharedStoreTestSupport.projection(
+      status: .readyToWork,
+      dueAt: nil
+    )
+    let second = try SharedStoreTestSupport.projection(
+      status: .comeBack,
+      dueAt: Date(timeIntervalSinceReferenceDate: 7_200)
+    )
+    let errors = Mutex<[String]>([])
+    let stores = [
+      SharedStoreFixture(
+        root: fixture.root,
+        store: ForgeSharedStateStore(
+          sharedRootDirectory: fixture.root
+        )
+      ),
+      SharedStoreFixture(
+        root: fixture.root,
+        store: ForgeSharedStateStore(
+          sharedRootDirectory: fixture.root
+        )
+      ),
+    ]
+
+    for iteration in 0..<100 {
+      let queue = DispatchQueue(
+        label: "forge.shared-store-tests.\(iteration)",
+        attributes: .concurrent
+      )
+      let ready = DispatchGroup()
+      let completed = DispatchGroup()
+      let start = DispatchSemaphore(value: 0)
+
+      for (index, projection) in [first, second].enumerated() {
+        ready.enter()
+        completed.enter()
+        queue.async {
+          ready.leave()
+          start.wait()
+          defer { completed.leave() }
+          do {
+            try stores[index].store.saveProjection(projection)
+          } catch {
+            errors.withLock {
+              $0.append("\(iteration):\(String(describing: error))")
+            }
+          }
+        }
+      }
+      #expect(ready.wait(timeout: .now() + 5) == .success)
+      start.signal()
+      start.signal()
+      #expect(completed.wait(timeout: .now() + 5) == .success)
+    }
+
+    let capturedErrors = errors.withLock { $0 }
+    #expect(capturedErrors.isEmpty)
+    let loadedProjection = try fixture.store.loadProjection()
+    let loaded = try #require(loadedProjection)
+    #expect(loaded == first || loaded == second)
+    #expect(!FileManager.default.fileExists(atPath: fixture.projectionStagingURL.path))
+  }
+}
+
+struct SharedStoreFixture: @unchecked Sendable {
+  let root: URL
+  let store: ForgeSharedStateStore
+
+  var projectionURL: URL {
+    root.appendingPathComponent("forge.semester-desk-projection.v2.json")
+  }
+
+  var pendingDestinationURL: URL {
+    root.appendingPathComponent("forge.pending-destination.v2")
+  }
+
+  var projectionStagingURL: URL {
+    root.appendingPathComponent("forge.semester-desk-projection.v2.json.staging")
+  }
+
+  var lockURL: URL {
+    root.appendingPathComponent("forge-shared-state-v4.lock")
+  }
+}
+
+enum SharedStoreTestSupport {
+  static let obsoleteFileNames = [
+    "forge.return-projection.v3.json",
+    "forge.return-projection.v3.json.staging",
+    "forge.pending-destination.v1",
+    "forge.pending-destination.v1.staging",
+    "forge.pending-focus.v3",
+    "forge.pending-focus.v3.staging",
+    "forge.due-return-projection.v2",
+    "forge.due-return-projection.v2.staging",
+    "forge.pending-focus.v2",
+    "forge.pending-focus.v2.staging",
+  ]
+
+  static func fixture() throws -> SharedStoreFixture {
+    let root = FileManager.default.temporaryDirectory
+      .appendingPathComponent("forge-shared-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(
+      at: root,
+      withIntermediateDirectories: true
+    )
+    return SharedStoreFixture(
+      root: root,
+      store: ForgeSharedStateStore(
+        sharedRootDirectory: root
+      )
+    )
+  }
+
+  static func storeWithDirectorySyncFailure(
+    at root: URL
+  ) -> ForgeSharedStateStore {
+    var hooks = ForgeSharedStateStoreTestHooks()
+    hooks.failDirectorySync = true
+    return ForgeSharedStateStore(
+      sharedRootDirectory: root,
+      testHooks: hooks
+    )
+  }
+
+  static func clean(_ fixture: SharedStoreFixture) {
+    try? FileManager.default.removeItem(at: fixture.root)
+  }
+
+  static func projection(
+    status: ForgeSemesterDeskProjectionStatus = .comeBack,
+    dueAt: Date? = Date(timeIntervalSinceReferenceDate: 3_600),
+    generatedAt: Date = Date(timeIntervalSinceReferenceDate: 0),
+    validUntil: Date = Date(timeIntervalSinceReferenceDate: 6 * 60 * 60)
+  ) throws -> ForgeSemesterDeskProjection {
+    try ForgeSemesterDeskProjection(
+      status: status,
+      dueAt: dueAt,
+      generatedAt: generatedAt,
+      validUntil: validUntil
+    )
+  }
+}

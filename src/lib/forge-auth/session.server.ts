@@ -10,6 +10,20 @@ export interface ForgeCloudIdentity {
   readonly accountKind: "cloud_identity";
 }
 
+export type ForgeCloudIdentitySubject = Pick<
+  ForgeCloudIdentity,
+  "id" | "accountKind"
+>;
+
+export function projectForgeCloudIdentitySubject(
+  identity: ForgeCloudIdentity,
+): ForgeCloudIdentitySubject {
+  return {
+    id: identity.id,
+    accountKind: identity.accountKind,
+  };
+}
+
 export const readForgeCloudIdentity = cache(async (): Promise<ForgeCloudIdentity | null> => {
   const supabase = await createForgeSupabaseServerClient();
   if (!supabase) return null;
@@ -41,3 +55,15 @@ export const readForgeCloudIdentity = cache(async (): Promise<ForgeCloudIdentity
     accountKind: "cloud_identity",
   };
 });
+
+/**
+ * Returns the minimum active-adult identity projection for server boundaries
+ * that need account correlation but do not need contact data.
+ */
+export const readForgeCloudIdentitySubject = cache(
+  async (): Promise<ForgeCloudIdentitySubject | null> => {
+    const identity = await readForgeCloudIdentity();
+    if (!identity) return null;
+    return projectForgeCloudIdentitySubject(identity);
+  },
+);

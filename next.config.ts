@@ -1,8 +1,21 @@
 import type { NextConfig } from "next";
 
+import {
+  productionBuildId,
+  readBuildSourceCommit,
+} from "./scripts/ops/build-source-identity";
+
+const buildSourceCommit = readBuildSourceCommit();
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  allowedDevOrigins: ["127.0.0.1"],
+  pageExtensions: ["release.tsx", "release.ts"],
+  env: {
+    FORGE_COMPILED_SOURCE_SHA: buildSourceCommit,
+  },
+  generateBuildId: async () => productionBuildId(buildSourceCommit),
   async headers() {
     return [
       {
@@ -10,6 +23,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Strict-Transport-Security", value: "max-age=31536000" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
             key: "Permissions-Policy",

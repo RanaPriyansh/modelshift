@@ -1,0 +1,1098 @@
+.surface {
+  width: min(1240px, calc(100% - 64px));
+  min-height: calc(100svh - 168px);
+  margin: 0 auto;
+  padding: clamp(32px, 5vw, 64px) 0 112px;
+  color: var(--forge-ink);
+}
+
+.masthead {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 32px;
+  padding-bottom: 20px;
+}
+
+.kicker,
+.stateLabel,
+.currentLead > p,
+.artifactHeader > div > p,
+.artifactResult > div:first-child > p,
+.openGates > div > p,
+.identityLedger > header > p,
+.checkLedger > header > p,
+.scenarioLedger > header > p,
+.guardrails > div > p,
+.authority > div > p {
+  margin: 0;
+  color: var(--forge-cyan-deep);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: 0.09em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.kicker {
+  margin-bottom: 10px;
+  font-size: 11px;
+}
+
+.workspaceName,
+.fixtureScope p,
+.fixtureScope span {
+  margin: 0;
+}
+
+.workspaceName {
+  font-size: 15px;
+  font-weight: 740;
+  line-height: 1.4;
+}
+
+.fixtureScope {
+  text-align: right;
+}
+
+.fixtureScope p {
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.fixtureScope span {
+  display: block;
+  margin-top: 4px;
+  color: var(--forge-muted);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+}
+
+.boundary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 22px;
+  border-top: 1px solid var(--forge-line-strong);
+  border-bottom: 1px solid var(--forge-line);
+  padding: 13px 0;
+  color: var(--forge-muted);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.boundary strong {
+  color: var(--forge-cyan-deep);
+}
+
+.boundary span::before {
+  content: "/";
+  margin-right: 22px;
+  color: var(--forge-line-strong);
+}
+
+.scenarioPicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--forge-line);
+  padding: 17px 0;
+}
+
+.scenarioPicker legend {
+  float: left;
+  color: var(--forge-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.scenarioPicker > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.scenarioPicker label {
+  position: relative;
+  display: inline-grid;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.scenarioPicker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.scenarioPicker span {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--forge-dim);
+  padding: 9px 13px;
+  color: var(--forge-muted);
+  font-size: 11px;
+  font-weight: 740;
+  line-height: 1.2;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.scenarioPicker label:hover span {
+  border-color: var(--forge-ink);
+  color: var(--forge-ink);
+}
+
+.scenarioPicker input:focus-visible + span {
+  outline: 3px solid var(--forge-cyan-deep);
+  outline-offset: 3px;
+}
+
+.scenarioPicker input:checked + span {
+  border-color: var(--forge-cyan-deep);
+  background: var(--forge-cyan);
+  color: var(--forge-surface);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(64px, 0.18fr) minmax(0, 1fr);
+  gap: clamp(44px, 8vw, 120px);
+  align-items: start;
+  padding: clamp(58px, 8vw, 104px) 0 clamp(48px, 6vw, 76px);
+}
+
+.heroIndex {
+  margin: 8px 0 0;
+  color: var(--forge-cyan-deep);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.stateLabel {
+  margin-bottom: 18px;
+}
+
+.hero h1 {
+  max-width: 940px;
+  margin: 0;
+  font-size: clamp(52px, 7vw, 96px);
+  font-weight: 780;
+  letter-spacing: -0.07em;
+  line-height: 0.9;
+  text-wrap: balance;
+}
+
+.readiness {
+  border-top: 1px solid var(--forge-line-strong);
+  border-bottom: 1px solid var(--forge-line-strong);
+}
+
+.readiness ol {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.readiness li {
+  position: relative;
+  display: grid;
+  min-height: 116px;
+  align-content: space-between;
+  gap: 18px;
+  border-right: 1px solid var(--forge-line);
+  padding: 18px 16px;
+}
+
+.readiness li:last-child {
+  border-right: 0;
+}
+
+.readiness li[aria-current="step"]::before {
+  position: absolute;
+  top: -1px;
+  right: 0;
+  left: 0;
+  height: 3px;
+  content: "";
+  background: var(--forge-cyan-deep);
+}
+
+.readiness li[data-tone="stopped"]::before {
+  background: var(--forge-amber-deep);
+}
+
+.stageIndex,
+.stageState {
+  color: var(--forge-muted);
+  font-family: var(--forge-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stageName {
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.readiness li[data-tone="waiting"] .stageName,
+.readiness li[data-tone="waiting"] .stageState {
+  color: var(--forge-muted);
+}
+
+.readiness li[data-tone="bound"] .stageState {
+  color: var(--forge-cyan-deep);
+}
+
+.readiness li[data-tone="attention"] .stageState,
+.readiness li[data-tone="stopped"] .stageState {
+  color: var(--forge-amber-deep);
+}
+
+.currentState {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.7fr) minmax(0, 1.3fr);
+  gap: clamp(44px, 8vw, 118px);
+  border-bottom: 1px solid var(--forge-line);
+  padding: clamp(50px, 8vw, 86px) 0;
+}
+
+.currentLead h2 {
+  max-width: 430px;
+  margin: 18px 0 0;
+  font-family: var(--forge-serif);
+  font-size: clamp(34px, 4.5vw, 58px);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.currentBody > p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--forge-muted);
+  font-size: clamp(16px, 1.5vw, 20px);
+  line-height: 1.65;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 26px 34px;
+  margin: 42px 0 0;
+}
+
+.detailGrid div {
+  border-top: 1px solid var(--forge-line);
+  padding-top: 14px;
+}
+
+.detailGrid dt,
+.authority dt {
+  margin-bottom: 7px;
+  color: var(--forge-muted);
+  font-family: var(--forge-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.detailGrid dd,
+.authority dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  font-weight: 680;
+  line-height: 1.55;
+}
+
+.artifactEvidence {
+  min-width: 0;
+  border-bottom: 1px solid var(--forge-line-strong);
+  padding: clamp(58px, 8vw, 94px) 0;
+}
+
+.artifactHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.36fr);
+  gap: clamp(36px, 7vw, 96px);
+  align-items: end;
+}
+
+.artifactHeader > div,
+.artifactResult > div,
+.openGates > div,
+.identityLedger section,
+.packLedger,
+.supportingLedger,
+.checkLedger,
+.scenarioLedger,
+.scenarioLedger li,
+.scenarioLedger dl,
+.scenarioLedger dl > div {
+  min-width: 0;
+}
+
+.artifactHeader h2 {
+  max-width: 760px;
+  margin: 16px 0 0;
+  font-family: var(--forge-serif);
+  font-size: clamp(38px, 5vw, 64px);
+  font-weight: 500;
+  letter-spacing: -0.052em;
+  line-height: 0.96;
+  text-wrap: balance;
+}
+
+.artifactScope {
+  margin: 0;
+  border-top: 1px solid var(--forge-line-strong);
+  padding-top: 13px;
+  color: var(--forge-muted);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  font-weight: 720;
+  letter-spacing: 0.07em;
+  line-height: 1.55;
+  text-transform: uppercase;
+}
+
+.artifactIntro {
+  max-width: 820px;
+  margin: 34px 0 0;
+  color: var(--forge-muted);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.evidenceLadder {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 48px 0 0;
+  border-top: 1px solid var(--forge-line-strong);
+  border-bottom: 1px solid var(--forge-line-strong);
+  padding: 0;
+  list-style: none;
+}
+
+.evidenceLadder li {
+  display: grid;
+  min-width: 0;
+  min-height: 136px;
+  align-content: space-between;
+  gap: 14px;
+  border-right: 1px solid var(--forge-line);
+  padding: 17px 16px;
+}
+
+.evidenceLadder li:last-child {
+  border-right: 0;
+}
+
+.evidenceLadder li > span,
+.evidenceLadder li > p {
+  margin: 0;
+  color: var(--forge-muted);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.evidenceLadder li > strong {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.evidenceLadder li[data-tone="bound"] > p {
+  color: var(--forge-cyan-deep);
+}
+
+.evidenceLadder li[data-tone="attention"] > p {
+  color: var(--forge-amber-deep);
+}
+
+.artifactResult {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr);
+  gap: clamp(42px, 7vw, 96px);
+  border-bottom: 1px solid var(--forge-line);
+  padding: clamp(42px, 6vw, 68px) 0;
+}
+
+.artifactResult h3,
+.openGates h3,
+.identityLedger h3,
+.checkLedger h3,
+.scenarioLedger h3 {
+  margin: 13px 0 0;
+  font-size: clamp(28px, 3.4vw, 44px);
+  font-weight: 760;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  text-wrap: balance;
+}
+
+.artifactResult > div:last-child > p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--forge-muted);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.artifactResult > div:last-child > strong {
+  display: block;
+  margin-top: 22px;
+  color: var(--forge-amber-deep);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.openGates {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.58fr) minmax(0, 1.42fr);
+  gap: clamp(42px, 7vw, 96px);
+  border-bottom: 1px solid var(--forge-line-strong);
+  padding: clamp(50px, 7vw, 78px) 0;
+}
+
+.openGates > div > span,
+.checkLedger > header > span {
+  display: block;
+  max-width: 470px;
+  margin-top: 18px;
+  color: var(--forge-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.openGates ol,
+.checkLedger ol,
+.scenarioLedger ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.openGates li,
+.checkLedger > ol > li {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  border-top: 1px solid var(--forge-line);
+  padding: 15px 0 17px;
+}
+
+.openGates li > span,
+.checkLedger > ol > li > span,
+.scenarioLedger li > div > span {
+  color: var(--forge-muted);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.openGates li strong,
+.checkLedger > ol > li strong {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.openGates li p {
+  margin: 4px 0 0;
+  color: var(--forge-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.openGates li em,
+.checkLedger > ol > li em {
+  color: var(--forge-amber-deep);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 760;
+  letter-spacing: 0.05em;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.identityLedger,
+.checkLedger,
+.scenarioLedger {
+  border-bottom: 1px solid var(--forge-line-strong);
+  padding: clamp(52px, 7vw, 82px) 0;
+}
+
+.identityLedger > header,
+.checkLedger > header,
+.scenarioLedger > header {
+  margin-bottom: 32px;
+}
+
+.packLedger,
+.supportingLedger {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--forge-line-strong);
+}
+
+.supportingLedger {
+  margin-top: 40px;
+}
+
+.packLedger > section,
+.supportingLedger > section {
+  min-width: 0;
+  border-right: 1px solid var(--forge-line);
+  padding: 24px clamp(18px, 3vw, 34px) 0 0;
+}
+
+.packLedger > section + section,
+.supportingLedger > section + section {
+  border-right: 0;
+  padding-right: 0;
+  padding-left: clamp(18px, 3vw, 34px);
+}
+
+.identityLedger h4 {
+  margin: 0 0 24px;
+  font-size: 14px;
+}
+
+.identityLedger dl {
+  margin: 0;
+}
+
+.identityLedger dl > div {
+  display: grid;
+  grid-template-columns: minmax(116px, 0.36fr) minmax(0, 0.64fr);
+  gap: 16px;
+  border-top: 1px solid var(--forge-line);
+  padding: 12px 0;
+}
+
+.identityLedger dt,
+.scenarioLedger dt {
+  color: var(--forge-muted);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.identityLedger dd,
+.scenarioLedger dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  font-weight: 660;
+  line-height: 1.55;
+}
+
+.digest {
+  display: block;
+  min-width: 0;
+  direction: ltr;
+  overflow-wrap: anywhere;
+  unicode-bidi: isolate;
+  word-break: break-all;
+}
+
+.digest code {
+  font-size: 10px;
+  white-space: normal;
+}
+
+.checkLedger {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.58fr) minmax(0, 1.42fr);
+  gap: clamp(42px, 7vw, 96px);
+}
+
+.checkLedger > header {
+  margin: 0;
+}
+
+.checkLedger > ol > li[data-tone="bound"] em {
+  color: var(--forge-cyan-deep);
+}
+
+.checkLedger > ol > li[data-tone="waiting"] em {
+  color: var(--forge-muted);
+}
+
+.artifactIssues {
+  grid-column: 2;
+  margin: 0 0 22px;
+  padding: 0;
+  list-style: none;
+}
+
+.artifactIssues li {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) minmax(120px, auto) minmax(0, 1fr);
+  gap: 12px;
+  border-top: 1px solid var(--forge-amber-deep);
+  padding: 12px 0;
+}
+
+.artifactIssues code,
+.artifactIssues span {
+  color: var(--forge-amber-deep);
+  font-size: 10px;
+}
+
+.artifactIssues p {
+  margin: 0;
+  color: var(--forge-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.scenarioLedger > ol > li {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.34fr) minmax(0, 0.66fr);
+  gap: clamp(26px, 5vw, 66px);
+  border-top: 1px solid var(--forge-line);
+  padding: 22px 0;
+}
+
+.scenarioLedger li > div {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 6px 12px;
+  align-content: start;
+  min-width: 0;
+}
+
+.scenarioLedger li > div > strong {
+  font-size: 13px;
+  text-transform: capitalize;
+}
+
+.scenarioLedger li > div > code {
+  grid-column: 2;
+  color: var(--forge-muted);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.scenarioLedger dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 28px;
+  margin: 0;
+}
+
+.scenarioLedger dl > div {
+  border-top: 1px solid var(--forge-line);
+  padding-top: 9px;
+}
+
+.scenarioLedger dt {
+  margin-bottom: 7px;
+}
+
+.artifactUnavailable {
+  margin: 38px 0 0;
+  border-top: 1px solid var(--forge-line);
+  padding-top: 18px;
+  color: var(--forge-muted);
+  font-size: 13px;
+}
+
+.guardrails {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.62fr) minmax(0, 1.38fr);
+  gap: clamp(44px, 8vw, 118px);
+  margin-top: clamp(58px, 8vw, 92px);
+  border-top: 1px solid var(--forge-line-strong);
+  border-bottom: 1px solid var(--forge-line-strong);
+  padding: clamp(42px, 6vw, 64px) 0;
+}
+
+.guardrails h2 {
+  max-width: 440px;
+  margin: 14px 0 0;
+  font-size: clamp(30px, 3.8vw, 48px);
+  font-weight: 760;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  text-wrap: balance;
+}
+
+.guardrails ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 34px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guardrails li {
+  border-top: 1px solid var(--forge-line);
+  padding: 14px 0 18px;
+  color: var(--forge-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.guardrails strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--forge-ink);
+  font-size: 12px;
+}
+
+.authority {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.42fr) minmax(0, 1.08fr) minmax(220px, 0.5fr);
+  gap: clamp(30px, 5vw, 70px);
+  margin-top: clamp(60px, 8vw, 96px);
+  border-top: 1px solid var(--forge-line-strong);
+  padding-top: 20px;
+}
+
+.authority > div > strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.authority dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0;
+}
+
+.claimCeiling {
+  margin: 0;
+  color: var(--forge-muted);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.unavailable {
+  display: grid;
+  min-height: calc(100svh - 168px);
+  align-content: center;
+}
+
+.unavailable h1 {
+  max-width: 880px;
+  margin: 18px 0 0;
+  font-size: clamp(46px, 7vw, 86px);
+  letter-spacing: -0.06em;
+  line-height: 0.94;
+}
+
+.unavailable > p:last-child {
+  max-width: 650px;
+  margin: 26px 0 0;
+  color: var(--forge-muted);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+@media (max-width: 900px) {
+  .scenarioPicker,
+  .currentState,
+  .artifactHeader,
+  .artifactResult,
+  .openGates,
+  .checkLedger,
+  .guardrails {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .scenarioPicker > div {
+    justify-content: flex-start;
+  }
+
+  .readiness ol {
+    grid-template-columns: 1fr;
+  }
+
+  .readiness li {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    min-height: 0;
+    align-items: center;
+    gap: 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--forge-line);
+    padding: 14px 0;
+  }
+
+  .readiness li:last-child {
+    border-bottom: 0;
+  }
+
+  .readiness li[aria-current="step"]::before {
+    inset: 0 auto 0 -1px;
+    width: 3px;
+    height: auto;
+  }
+
+  .evidenceLadder {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .evidenceLadder li:nth-child(2) {
+    border-right: 0;
+  }
+
+  .evidenceLadder li:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--forge-line);
+  }
+
+  .artifactIssues {
+    grid-column: auto;
+  }
+
+  .authority {
+    grid-template-columns: 1fr 1.4fr;
+  }
+
+  .claimCeiling {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 620px) {
+  .surface {
+    width: min(100% - 28px, 1240px);
+    padding-top: 24px;
+  }
+
+  .masthead {
+    display: grid;
+    gap: 12px;
+  }
+
+  .fixtureScope {
+    text-align: left;
+  }
+
+  .boundary {
+    display: grid;
+    gap: 6px;
+  }
+
+  .boundary span::before {
+    content: none;
+  }
+
+  .scenarioPicker > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .scenarioPicker label,
+  .scenarioPicker span {
+    width: 100%;
+  }
+
+  .scenarioPicker label:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 56px 0 48px;
+  }
+
+  .hero h1,
+  .unavailable h1 {
+    font-size: clamp(44px, 15vw, 62px);
+  }
+
+  .currentState {
+    gap: 30px;
+    padding: 48px 0;
+  }
+
+  .artifactHeader,
+  .artifactResult,
+  .openGates,
+  .checkLedger {
+    gap: 30px;
+  }
+
+  .evidenceLadder,
+  .packLedger,
+  .supportingLedger,
+  .scenarioLedger dl {
+    grid-template-columns: 1fr;
+  }
+
+  .evidenceLadder li {
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--forge-line);
+  }
+
+  .evidenceLadder li:last-child {
+    border-bottom: 0;
+  }
+
+  .packLedger > section,
+  .supportingLedger > section,
+  .packLedger > section + section,
+  .supportingLedger > section + section {
+    border-right: 0;
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .packLedger > section + section,
+  .supportingLedger > section + section {
+    margin-top: 34px;
+    border-top: 1px solid var(--forge-line-strong);
+    padding-top: 24px;
+  }
+
+  .identityLedger dl > div,
+  .scenarioLedger > ol > li,
+  .scenarioLedger dl {
+    grid-template-columns: 1fr;
+  }
+
+  .scenarioLedger > ol > li {
+    gap: 22px;
+  }
+
+  .artifactIssues li {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .openGates li,
+  .checkLedger > ol > li {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+
+  .openGates li strong,
+  .checkLedger > ol > li strong {
+    overflow-wrap: anywhere;
+  }
+
+  .openGates li em,
+  .checkLedger > ol > li em {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .evidenceLadder li > span,
+  .evidenceLadder li > p,
+  .openGates li > span,
+  .openGates li em,
+  .checkLedger > ol > li > span,
+  .checkLedger > ol > li em,
+  .identityLedger dt,
+  .scenarioLedger dt {
+    font-size: 10px;
+  }
+
+  .digest code {
+    font-size: 11px;
+  }
+
+  .detailGrid,
+  .guardrails ul,
+  .authority,
+  .authority dl {
+    grid-template-columns: 1fr;
+  }
+
+  .claimCeiling {
+    grid-column: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scenarioPicker span {
+    transition-duration: 0.00001ms;
+  }
+}
+
+@media (forced-colors: active) {
+  .scenarioPicker span {
+    border-color: ButtonText;
+    color: ButtonText;
+  }
+
+  .scenarioPicker input:focus-visible + span {
+    outline-color: Highlight;
+  }
+
+  .scenarioPicker input:checked + span {
+    border: 2px solid Highlight;
+    background: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+
+  .readiness li[aria-current="step"]::before {
+    background: Highlight;
+  }
+
+  .artifactEvidence,
+  .evidenceLadder,
+  .evidenceLadder li,
+  .artifactResult,
+  .openGates,
+  .openGates li,
+  .identityLedger,
+  .identityLedger dl > div,
+  .checkLedger,
+  .checkLedger > ol > li,
+  .scenarioLedger,
+  .scenarioLedger > ol > li,
+  .scenarioLedger dl > div {
+    border-color: CanvasText;
+  }
+
+  .artifactResult > div:last-child > strong,
+  .evidenceLadder li[data-tone="attention"] > p,
+  .openGates li em,
+  .checkLedger > ol > li[data-tone="attention"] em {
+    color: Highlight;
+  }
+
+  .evidenceLadder li[data-tone="bound"] > p,
+  .checkLedger > ol > li[data-tone="bound"] em {
+    color: CanvasText;
+  }
+}

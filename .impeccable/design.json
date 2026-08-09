@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-03T02:10:00.000+05:30",
+  "title": "Design System: FORGE Semester Desk v2",
+  "extensions": {
+    "colorMeta": {
+      "warm-ivory": {
+        "role": "neutral",
+        "displayName": "Warm Ivory",
+        "canonical": "#F4F7F1",
+        "tonalRamp": ["#FBFDF8", "#F4F7F1", "#EEF3ED", "#E4EBE4"]
+      },
+      "forest": {
+        "role": "neutral",
+        "displayName": "Forest",
+        "canonical": "#173C29",
+        "tonalRamp": ["#102019", "#173C29", "#56645D", "#98AA9E"]
+      },
+      "cobalt": {
+        "role": "primary",
+        "displayName": "Cobalt",
+        "canonical": "#123EAE",
+        "tonalRamp": ["#2A61D8", "#123EAE", "#0D2F88"]
+      },
+      "learner-orange": {
+        "role": "secondary",
+        "displayName": "Learner Orange",
+        "canonical": "#F0643B",
+        "tonalRamp": ["#FF8059", "#F0643B", "#B73F22"]
+      },
+      "midnight": {
+        "role": "neutral",
+        "displayName": "Midnight",
+        "canonical": "#071722",
+        "tonalRamp": ["#0D202B", "#071722", "#06131D"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Terrain Display",
+        "purpose": "Use Geist only at a public entry or a major transition."
+      },
+      "body": {
+        "displayName": "Working Body",
+        "purpose": "Use Geist for course facts, recovery choices, learning work, and controls."
+      },
+      "reflection": {
+        "displayName": "Learner Reflection",
+        "purpose": "Use Libre Baskerville only for a short learner question or reflection."
+      },
+      "native": {
+        "displayName": "Native Text",
+        "purpose": "Use Dynamic Type and the system font in the iOS application."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "state-change",
+        "value": "160ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Show one confirmed state change."
+      },
+      {
+        "name": "threshold-entry",
+        "value": "260ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Support one entry or return transition."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "stress",
+        "value": "320px"
+      },
+      {
+        "name": "mobile",
+        "value": "430px"
+      },
+      {
+        "name": "wide",
+        "value": "1120px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Navigation Action",
+      "kind": "button",
+      "refersTo": "navigation-action",
+      "description": "A cobalt action that opens another product surface.",
+      "html": "<a class=\"ds-navigation-action\" href=\"/app\">Open Semester Desk</a>",
+      "css": ".ds-navigation-action { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #123EAE; border-radius: 6px; background: #123EAE; color: #FFFFFF; padding: 12px 18px; font: 800 16px/1.2 Geist, ui-sans-serif, system-ui, sans-serif; text-decoration: none; } .ds-navigation-action:focus-visible { outline: 3px solid #2A61D8; outline-offset: 3px; }"
+    },
+    {
+      "name": "Learner Commitment",
+      "kind": "button",
+      "refersTo": "learner-commitment",
+      "description": "The one orange action that records a deliberate student choice.",
+      "html": "<button class=\"ds-learner-commitment\">Confirm these changes</button>",
+      "css": ".ds-learner-commitment { min-height: 48px; border: 1px solid #B73F22; border-radius: 6px; background: #F0643B; color: #102019; padding: 12px 18px; font: 800 16px/1.2 Geist, ui-sans-serif, system-ui, sans-serif; } .ds-learner-commitment:focus-visible { outline: 3px solid #2A61D8; outline-offset: 3px; }"
+    },
+    {
+      "name": "Course Status",
+      "kind": "custom",
+      "refersTo": "course-status",
+      "description": "A plain sentence with a reason and an available action.",
+      "html": "<p class=\"ds-status\"><strong>Needs review.</strong> Two copied sources give different dates.</p>",
+      "css": ".ds-status { border-left: 3px solid #F0643B; color: #102019; margin: 0; padding-left: 12px; font: 600 16px/1.5 Geist, ui-sans-serif, system-ui, sans-serif; }"
+    },
+    {
+      "name": "Ledger Section",
+      "kind": "custom",
+      "refersTo": "ledger-section",
+      "description": "A flat work group that uses spacing and one divider.",
+      "html": "<section class=\"ds-ledger\"><h2>Your semester</h2><p>See every course and every visible change.</p></section>",
+      "css": ".ds-ledger { border-top: 1px solid #CDD9D0; background: transparent; padding: 24px 0; } .ds-ledger h2 { margin: 0; color: #102019; font: 800 28px/1.1 Geist, ui-sans-serif, system-ui, sans-serif; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Editorial Terrain Recovery",
+    "overview": "A private and calm university operating system. It is vivid at thresholds and quiet during work.",
+    "keyCharacteristics": [
+      "One honest action at a time",
+      "Exact hierarchy with flat work surfaces",
+      "Warm ivory, forest, cobalt, and scarce learner orange",
+      "Scenery only at a real entry, return, or major transition",
+      "Human course-state language with visible reasons"
+    ],
+    "rules": [
+      {
+        "name": "Vivid at thresholds",
+        "body": "Use compact terrain art only for onboarding, recovery confirmation, and delayed return.",
+        "section": "composition"
+      },
+      {
+        "name": "Quiet during work",
+        "body": "Use clean Field and Ledger surfaces for courses, capacity, study, proof, and progress.",
+        "section": "composition"
+      },
+      {
+        "name": "One color, one meaning",
+        "body": "Use cobalt for navigation, orange for student commitment, and green for checked evidence.",
+        "section": "colors"
+      },
+      {
+        "name": "No card soup",
+        "body": "Use spacing and dividers before containers. Use a card only for one bounded decision.",
+        "section": "layout"
+      }
+    ],
+    "dos": [
+      "Show the whole semester before one selected action.",
+      "Show each changed item before confirmation.",
+      "Keep learner text private and preserve context.",
+      "Use native iOS navigation, alerts, controls, and Dynamic Type.",
+      "Use Checked, Needs review, Your choice, Changed since last check, Not yet confirmed, Ready to work on, and Come back on this date."
+    ],
+    "donts": [
+      "Do not use a chatbot-first layout.",
+      "Do not use purple-blue AI gradients or unnecessary glass.",
+      "Do not use cards as the default container.",
+      "Do not use learner orange for navigation.",
+      "Do not show internal evidence or protocol terms to a student.",
+      "Do not infer mastery, urgency, or institutional truth."
+    ]
+  }
+}

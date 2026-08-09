@@ -1,161 +1,196 @@
-# ModelShift Deployment Runbook
+# FORGE Semester Desk v2 deployment
 
-## FORGE expansion candidate
+This document describes the current production path for the FORGE web release.
 
-The current local FORGE candidate adds four registered Worlds, `/studio`, `/login`, `/account`, a typed event spine, and staged Supabase auth/data adapters. Until a new immutable deployment and production matrix are recorded below, the existing public alias remains historical ModelShift/FORGE-source state rather than evidence that this worktree is deployed.
+It does not authorize a deployment, alias change, Vercel account change, secret change, or release decision.
 
-Additional server variables:
+## Current state
 
-| Name | Required | Scope | Purpose |
-| --- | --- | --- | --- |
-| `OPENAI_FORGE_PLANNER_ENABLED` | Optional; default `false` | Server only | Allows the planner's bounded rephrase governor |
-| `FORGE_CLOUD_ACCOUNTS_ENABLED` | Required for cloud auth | Server only | Explicit cloud-identity enable switch |
-| `FORGE_SUPABASE_URL` | Required for cloud auth | Server only | HTTPS project URL |
-| `FORGE_SUPABASE_PUBLISHABLE_KEY` | Required for cloud auth | Server only | Publishable/anon user-scoped key; secret/service-role keys fail closed |
+The Semester Desk v2 candidate is not deployed.
 
-Do not enable cloud auth until the intended Supabase organization/project is approved and production abuse controls, email policy, redirects, RLS migrations, privacy operations, and smoke tests are in place. Device access remains operational without it. Public managed and BYOK Lesson Studio provider calls are locked: there is no managed Studio environment switch, and a request-only key cannot authorize the route. They remain unavailable until active adult server-owned authority and separate quota, abuse, privacy, and review controls are approved.
+The public alias at `https://modelshift.vercel.app` still serves the retired product. The alias and repository retain legacy infrastructure names. Those names do not define the current product.
 
-Release health always reports managed Lesson Studio as `false` and request-only, regardless of any unrelated OpenAI key or retired Studio configuration. Managed interpretation and planner flags remain separate controls.
+The [Current Public Release Record](operations/CURRENT_RELEASE.md) is the canonical deployed-state record. A local build, documentation update, Git push, or Vercel preview does not change that record.
 
-## Current release
+## Production artifact
 
-As of 2026-07-22 01:56 IST, the fallback-only release is public and the source repository is public.
+The production build is a Next.js server artifact. Vercel is the checked-in deployment target.
 
-| Field | Verified value |
+The release contains these canonical routes:
+
+- `/`
+- `/app`
+- `/how-forge-works`
+- `/university`
+- `/privacy`
+- `/terms`
+- `/support`
+- `/api/health`
+
+Metadata routes and required `/_next/` assets are also allowed. All other application routes return `404` in the release artifact.
+
+The browser application keeps student data in local browser storage. The deployment does not require a database, online identity, university connection, model provider, or cloud-sync service.
+
+## Checked-in Vercel target
+
+The source of truth is `src/operations/deployment-target-policy.ts`.
+
+| Item | Required value |
 | --- | --- |
-| Public app | [https://modelshift.vercel.app](https://modelshift.vercel.app) |
-| Immutable deployment | [https://modelshift-pjs4krelq-ranapriyanshs-projects.vercel.app](https://modelshift-pjs4krelq-ranapriyanshs-projects.vercel.app) |
-| Vercel deployment | `dpl_6dP9Mr2yqs4XXjU2mqPvyH9wSaqx` |
-| Vercel project | `modelshift` / `prj_SnTYtzLicYKYlHvXCNwq9J7ehQZB` |
-| Vercel team | `ranapriyanshs-projects` / `team_lr0E9GlEDc3XYJP7xrx8po2W` |
-| Public source | [https://github.com/RanaPriyansh/modelshift](https://github.com/RanaPriyansh/modelshift) |
-| Tested source release | `350ed2ca44cc4c9565def562842f19373f637968` (the subsequent release-record commit is documentation-only) |
-| Runtime mode | missing-key authored fallback; live GPT not run or claimed |
-| Production E2E | 6 passed, 4 intentional duplicate-project skips, 0 failed |
-| Deployment protection | off; canonical URL returns the app without login |
+| Target ID | `forge_learning_os_project` |
+| Public alias | `https://modelshift.vercel.app` |
+| Vercel project | `forge-learning-os` |
+| Vercel project ID | `prj_SnTYtzLicYKYlHvXCNwq9J7ehQZB` |
+| Vercel team ID | `team_lr0E9GlEDc3XYJP7xrx8po2W` |
+| GitHub repository | `RanaPriyansh/modelshift` |
+| GitHub repository ID | `1308085427` |
+| Release branch | `main` |
+| Immutable host rule | `forge-learning-*-ranapriyanshs-projects.vercel.app` |
 
-The project was deployed through authenticated Vercel connector authority. The local folder is intentionally not linked through `.vercel/project.json`; that absence does not describe the remote project state.
-
-No `OPENAI_API_KEY` was available locally or configured for this release. The public deployment therefore uses the authored neutral fallback and must not be presented as a verified live GPT-5.6 deployment.
-
-## Release prerequisites
-
-- Node.js 22 or newer;
-- pnpm 11.9.0 or compatible;
-- a public GitHub repository or another Vercel-accessible source;
-- authenticated Vercel project authority;
-- an eligible OpenAI API project and server-side key for live interpretation;
-- a configured spending limit in the OpenAI project; and
-- one frozen release commit with passing local validation.
-
-## Environment variables
-
-| Name | Required | Scope | Purpose |
-| --- | --- | --- | --- |
-| `OPENAI_API_KEY` | Required for live interpretation; optional for fallback-only operation | Server only | OpenAI Responses API authentication |
-| `OPENAI_MODEL` | Optional | Server only | Defaults to `gpt-5.6-sol` |
-| `OPENAI_INTERPRETATION_DISABLED` | Optional | Server only | Set to `true` to force authored neutral fallback |
-| `PLAYWRIGHT_BASE_URL` | Required only when running production E2E locally/CI | Test process | Targets the deployed origin |
-
-Never create `NEXT_PUBLIC_OPENAI_API_KEY` or any other client-exposed copy of the key. Use `OPENAI_INTERPRETATION_DISABLED` for the authored-fallback switch shown in `.env.example`.
-
-Vercel environment changes apply to new deployments, so redeploy after adding or changing variables.
+Do not change these values through a command argument. A target change requires a reviewed source change.
 
 ## Local release gate
 
-From the repository root:
+Use one clean commit for all release evidence.
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm lint
 pnpm typecheck
 pnpm test
-pnpm eval
-pnpm eval:live  # credentialed gate; exits 2 before network when the key is absent
 pnpm build
 pnpm test:e2e
+FORGE_EXPECTED_RELEASE_SHA=<full-40-character-clean-git-sha> pnpm test:e2e:prod
 ```
 
-Record the output and candidate SHA:
+The CI workflow also runs a retained ModelShift interpretation regression. That check is repository history. It does not validate Semester Desk behavior or efficacy.
+
+CI also verifies the locked dependency source, dependency advisories, dependency signatures, browser receipts, production identity, release budgets, and the local deployment report.
+
+Do not use a dirty checkout for release evidence. The build source identity becomes `unverified` when tracked or untracked source changes exist.
+
+## Application configuration
+
+No application variable is required for local use.
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_FORGE_SITE_ORIGIN` | No | Canonical HTTPS origin for metadata, robots, and sitemap output. |
+| `FORGE_SITE_ORIGIN` | No | Server-only alternative to the public site-origin setting. |
+| `FORGE_PUBLIC_INDEXING` | No | Set to `true` only for an approved non-Vercel public origin. |
+
+On Vercel production, `VERCEL_URL` supplies the origin fallback. `VERCEL_ENV=production` enables indexing. These are platform variables.
+
+## Release evidence variables
+
+The build and `/api/health` use these values for release evidence:
+
+| Variable | Owner | Rule |
+| --- | --- | --- |
+| `FORGE_RELEASE_CANDIDATE_STATE` | Release configuration | Use only `DEPLOYED_CANDIDATE` for the exact production candidate. |
+| `FORGE_LOCKFILE_DIGEST` | CI or release process | Use the exact lowercase SHA-256 digest from the immutable lockfile gate. |
+| `FORGE_CONTENT_MANIFEST_DIGEST` | CI or release process | Use the exact SHA-256 digest of `scripts/ops/content-package-manifest.json`. |
+| `FORGE_EVALUATOR_BASELINE_DIGEST` | CI or release process | Use the exact SHA-256 digest of `scripts/ops/evaluation-baseline.json`. |
+| `FORGE_DATABASE_MIGRATION_IDENTITY` | Release configuration | Use `not_configured` for this local-only release. |
+| `FORGE_BUILD_TIME` | Release process | Optional ISO timestamp. It is diagnostic only. |
+
+Local verification can use `FORGE_RELEASE_SHA` as a diagnostic source value. A deployed candidate must not use it as source authority.
+
+Do not set these retired or caller-owned identity variables:
+
+- `FORGE_PUBLIC_ASSET_DIGEST`
+- `FORGE_PUBLIC_ASSET_DIGEST_STATUS`
+- `FORGE_PUBLIC_ASSET_DIGEST_GATE`
+- `FORGE_RELEASE_ALIAS_URL`
+- `FORGE_RELEASE_ALIAS_RESOLVED_AT`
+- `FORGE_RELEASE_DEPLOYMENT_ID`
+- `FORGE_RELEASE_IMMUTABLE_URL`
+
+Any one of these values can make the public manifest fail closed.
+
+## Required Vercel system variables
+
+Vercel must inject these values from the production Git deployment:
+
+- `VERCEL=1`
+- `VERCEL_ENV=production`
+- `VERCEL_GIT_COMMIT_SHA`
+- `VERCEL_DEPLOYMENT_ID`
+- `VERCEL_URL`
+- `VERCEL_PROJECT_ID`
+
+Expose Vercel System Environment Variables to the build and runtime. Do not copy these values into `.env.local` or maintain them as user-defined project variables.
+
+The release manifest binds only when all platform values match the checked-in project, repository, branch, source SHA, and immutable-host policy.
+
+## Exact external Vercel gates
+
+Complete these external actions before production verification:
+
+1. Install or authorize the Vercel GitHub App for `RanaPriyansh/modelshift`.
+2. Connect that repository to Vercel project `forge-learning-os`.
+3. Configure `main` as the production branch.
+4. Expose Vercel System Environment Variables.
+5. Add the release evidence variables for the exact candidate.
+6. Create a new production deployment from Git source.
+7. Record its full Git SHA, `dpl_...` deployment ID, and immutable URL.
+8. Put a read-only `VERCEL_RECEIPT_TOKEN` in the protected GitHub environment `forge-production-read-only`.
+9. Require the approved reviewers for that GitHub environment.
+10. Run the read-only deployment verification workflow from the same `main` SHA.
+
+Do not use `vercel --prod` or another CLI upload. A CLI-source deployment has no provider-owned Git source and repository tuple. The verifier must reject it.
+
+## Read-only production verification
+
+The workflow `.github/workflows/deployment-verification.yml` requires:
+
+- target ID `forge_learning_os_project`;
+- the exact checked-out 40-character `main` SHA; and
+- the exact READY production Vercel deployment ID.
+
+The workflow supplies `VERCEL_RECEIPT_TOKEN` only to the read-only verifier process.
+
+The equivalent repository command is:
 
 ```bash
-git status --short
-git rev-parse HEAD
+pnpm exec tsx scripts/ops/deployment-verifier.ts \
+  --target-id forge_learning_os_project \
+  --expected-sha <full-40-character-main-sha> \
+  --vercel-deployment-id <exact-ready-production-deployment-id> \
+  --vercel-token-env VERCEL_RECEIPT_TOKEN \
+  --expected-lockfile-digest <lowercase-sha256> \
+  --expected-content-manifest-digest <lowercase-sha256> \
+  --expected-evaluator-baseline-digest <lowercase-sha256> \
+  --expected-database-migration-identity not_configured \
+  --output-dir test-results/release-ops
 ```
 
-The working tree should contain no unintended changes. Do not claim a live model pass from `pnpm eval`; that runner is offline. Only a successful, credentialed `pnpm eval:live` result can close the model-behavior gate.
+The verifier performs bounded, read-only Vercel API requests. It checks the provider-owned Git tuple, deployment state, build marker, release manifest, canonical routes, headers, CSP, initial scripts, and client secret patterns.
 
-## Publishing the source repository
+A saved JSON receipt cannot replace the same-process Vercel receipt. A green route check cannot replace provider Git provenance.
 
-The public repository was created without overwriting an existing remote. The reproducible GitHub CLI path is:
+## Promotion and rollback boundary
 
-```bash
-gh auth status
-gh repo view RanaPriyansh/modelshift
-gh repo create RanaPriyansh/modelshift --public --source=. --remote=origin --push
-```
+The verifier does not deploy, promote, change an alias, or roll back.
 
-If the repository already exists, inspect it and add the remote explicitly rather than recreating or force-pushing. Confirm that `LICENSE`, `README.md`, and the final commit are visible publicly.
+Before an authorized alias decision, retain:
 
-## Creating or updating the Vercel project
+- the exact candidate SHA and immutable deployment;
+- a complete passing verifier report;
+- the prior READY rollback deployment and its exact SHA;
+- a named release decision and time; and
+- a reviewed rollback procedure.
 
-Use either the authenticated Vercel connector or the Vercel CLI. For the CLI path:
+After any authorized alias change, run the same read-only verifier again against the alias. Keep the candidate blocked when any identity, route, header, digest, secret-scan, or provider-receipt check fails.
 
-```bash
-npx --no-install vercel link
-npx --no-install vercel env add OPENAI_API_KEY production
-npx --no-install vercel env add OPENAI_MODEL production
-npx --no-install vercel --prod
-```
+## Other public-launch gates
 
-Select the ModelShift project and the repository root. Next.js should be detected without a custom build command. Do not add deployment protection or a login requirement for the judging URL.
+Vercel deployment does not close these gates:
 
-If live credentials are unavailable, deploy the deterministic product only if the release notes and UI continue to identify fallback honestly. A public fallback deployment does not close the live GPT release gate.
+- legal approval for the draft terms and privacy text;
+- approval of a monitored support channel, if one is required;
+- final release authority;
+- rollback authority; and
+- any future credential, account, database, or student-data operation.
 
-## Production verification
-
-After deployment, record the immutable deployment URL, preferred public production URL, Vercel project, GitHub repository, and deployed SHA. Then verify in an incognito context:
-
-1. the landing mystery loads without authentication or deployment protection;
-2. no horizontal overflow or console error appears at 1440×900 and 390×844;
-3. the complete missing-key or forced-fallback journey reaches the evidence card;
-4. a live credentialed explanation returns `source: "model"` for at least one validated case;
-5. a forced timeout reaches the same neutral journey;
-6. proof mode contains no AI, hint, or replay controls;
-7. a transfer answer submits once;
-8. no client script or network response exposes the API key; and
-9. the footer and result retain the nonclaims and `Later: not tested yet` language.
-
-Run the production browser suite against the real origin:
-
-```bash
-PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
-```
-
-Test from a second network or device where available. Preserve screenshots and command output for the submission package.
-
-## Live-model smoke input
-
-Use a natural explanation that the authored corpus covers:
-
-```text
-It slows because the engine is no longer pushing it.
-```
-
-The expected safe behavior is either:
-
-- a validated model result with verbatim evidence and a compatible authored probe; or
-- a clearly labeled neutral fallback.
-
-Do not require one particular stochastic output, and do not record a fallback as if it were live personalization.
-
-## Rollback
-
-If production breaks, promote the last known-good immutable Vercel deployment rather than rewriting history. If the OpenAI path is unstable, set `OPENAI_INTERPRETATION_DISABLED=true`, redeploy, and label the fallback state honestly while the live-model issue is repaired. Never remove the proof lock, deterministic checking, or fallback journey to preserve a demo.
-
-## Remaining release gates
-
-- Add a server-only eligible `OPENAI_API_KEY`, redeploy, and run `pnpm eval:live` plus one real-model browser smoke before claiming live adaptation.
-- Record and publish the under-three-minute YouTube demo.
-- Invoke `/feedback` from the principal Codex task and record the returned session ID.
-- Complete the account-owned Devpost submission before the official deadline.
+Do not add those services or claims to this release without a separate product and security decision.

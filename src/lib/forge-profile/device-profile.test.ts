@@ -14,6 +14,10 @@ function memoryStorage() {
     getItem: (key: string) => values.get(key) ?? null,
     setItem: (key: string, value: string) => values.set(key, value),
     removeItem: (key: string) => values.delete(key),
+    get length() {
+      return values.size;
+    },
+    key: (index: number) => [...values.keys()][index] ?? null,
     values,
   };
 }
@@ -61,15 +65,25 @@ describe("FORGE device profile", () => {
   it("reports removal failures and verifies that the value is actually absent", () => {
     const retained = {
       getItem: () => "still-present",
+      setItem: () => undefined,
       removeItem: () => undefined,
+      get length() {
+        return 0;
+      },
+      key: () => null,
     };
     expect(clearForgeDeviceProfile(retained)).toEqual({ ok: false, reason: "value_remains" });
 
     const unavailable = {
       getItem: () => "still-present",
+      setItem: () => undefined,
       removeItem: () => {
         throw new Error("blocked");
       },
+      get length() {
+        return 0;
+      },
+      key: () => null,
     };
     expect(clearForgeDeviceProfile(unavailable)).toEqual({ ok: false, reason: "storage_error" });
   });

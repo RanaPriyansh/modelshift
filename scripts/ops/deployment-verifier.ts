@@ -2,6 +2,7 @@ import { isIP, type LookupFunction } from "node:net";
 import { lookup } from "node:dns/promises";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
+import { execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -30,33 +31,45 @@ import {
   validateVercelProviderReceipt,
   type AuthenticatedVercelReceiptHandle,
 } from "./vercel-provider-receipt";
+import { productionBuildId } from "./build-source-identity";
+import {
+  readProductionPublicDirectoryIdentity,
+  readProductionRuntimeConfigurationIdentity,
+} from "./production-build-receipt";
+import {
+  FORGE_CANONICAL_ROUTE_PATHNAMES,
+} from "../../src/operations/forge-release-route-policy";
 
-export const DEPLOYMENT_VERIFIER_VERSION = "2.5.0";
+export const DEPLOYMENT_VERIFIER_VERSION = "3.1.0";
 export const WORKER_CANDIDATE_STATES = ["BUILT_LOCAL", "PUSHED", "DEPLOYMENT_BLOCKED", "DEPLOYED_CANDIDATE"] as const;
 const SHA = /^[0-9a-f]{40}$/i;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 export const CANONICAL_DEPLOYMENT_ROUTES = [
-  { id: "home", path: "/", marker: /FORGE|What do you want to understand/i },
-  { id: "path_start", path: "/start", marker: /Turn a goal into a credible first path/i },
-  { id: "public_paths", path: "/paths", marker: /Learn toward something you want to do|No complete broad path is published yet/i },
-  { id: "how_forge_works", path: "/how-forge-works", marker: /A path is credible when every move earns its place|Goal(?: |&rarr;|→)path(?: |&rarr;|→)action/i },
-  { id: "learner_today", path: "/app", marker: /Reading learner-owned device continuity|Begin with something you want to do/i },
-  { id: "learner_paths", path: "/app/path", marker: /Reading path history|Inspect what you accepted/i },
-  { id: "learner_study", path: "/app/study", marker: /Preparing action brief|There is no reviewed next action to open/i },
-  { id: "learner_evidence", path: "/app/evidence", marker: /Proof should say exactly what happened/i },
-  { id: "trust", path: "/trust", marker: /FORGE should be inspectable before it is impressive/i },
-  { id: "world_force_motion", path: "/learn/force-and-motion", marker: /Force & motion|force-and-motion/i },
-  { id: "world_ai_learning", path: "/learn/ai-and-learning", marker: /AI & learning|ai-and-learning/i },
-  { id: "world_proportional_reasoning", path: "/learn/proportional-reasoning", marker: /Proportional|proportional-reasoning/i },
-  { id: "world_primary_source_reasoning", path: "/learn/primary-source-reasoning", marker: /Primary source|primary-source-reasoning/i },
-  { id: "source_corroboration_path", path: "/paths/source-corroboration", marker: /Verify before you trust|source-corroboration/i },
-  { id: "pathway_availability", path: "/coverage", marker: /What FORGE can(?:—|&mdash;|&#x2014;)and cannot(?:—|&mdash;|&#x2014;)offer today|Availability map only/i },
-  { id: "author_gate", path: "/author", marker: /author workspace is not available|Author role required/i },
-  { id: "device_profile_sign_in", path: "/sign-in", marker: /device profile|Cloud identity · structurally disabled|Pick where your learning trail lives/i },
-  { id: "device_profile_account", path: "/account", marker: /device evidence|No cloud account active|Your access/i },
-  { id: "internal_pilot_denial", path: "/internal/pilot", marker: /This route is not available in this deployment/i },
+  { id: "home", path: "/", marker: /Rebuild from today\./i },
+  { id: "semester_desk", path: "/app", marker: /Opening your Semester Desk/i },
+  { id: "how_forge_works", path: "/how-forge-works", marker: /Make the semester visible before you make a plan\./i },
+  { id: "university", path: "/university", marker: /A private desk for the work of a real degree\./i },
+  { id: "privacy", path: "/privacy", marker: /Your study plan is not a profile\./i },
+  { id: "terms", path: "/terms", marker: /Use FORGE to support your work\./i },
+  { id: "support", path: "/support", marker: /Return to the next honest action\./i },
 ] as const;
+export const RETIRED_DEPLOYMENT_ROUTES = [
+  { id: "retired_lesson_studio", path: "/lesson-studio", marker: /This page is not here\./i },
+  { id: "retired_university_semester_desk", path: "/university/semester-desk", marker: /This page is not here\./i },
+  { id: "retired_private_state_api", path: "/api/forge/private-state", marker: /This page is not here\./i },
+] as const;
+const expectedDeploymentPaths = FORGE_CANONICAL_ROUTE_PATHNAMES.filter(
+  (path) => path !== "/api/health",
+);
+if (
+  expectedDeploymentPaths.length !== CANONICAL_DEPLOYMENT_ROUTES.length
+  || expectedDeploymentPaths.some(
+    (path, index) => CANONICAL_DEPLOYMENT_ROUTES[index]?.path !== path,
+  )
+) {
+  throw new Error("deployment verifier routes differ from the release route policy");
+}
 const FORBIDDEN_CLIENT_PATTERNS = [
   { id: "openai_secret_name", pattern: /OPENAI_API_KEY/i },
   { id: "database_credential_name", pattern: /DATABASE_URL/i },
@@ -126,6 +139,17 @@ export type VerifyDeploymentOptions = {
   resolveHostname?: (hostname: string) => Promise<readonly string[]>;
   /** Supplied only by the checked-in target policy (or focused test fixtures). */
   deploymentTarget?: DeploymentTarget;
+  /** Focused tests may supply the tree for a synthetic SHA. The CLI derives it. */
+  expectedSourceTree?: string;
+  /** Focused tests may supply source-owned identities. The CLI derives them. */
+  expectedPublicDirectoryIdentity?: Readonly<{
+    publicDirectoryDigest: string;
+    publicDirectoryFileCount: number;
+  }>;
+  expectedRuntimeConfigurationIdentity?: Readonly<{
+    runtimeConfigurationDigest: string;
+    runtimeConfigurationFileCount: number;
+  }>;
 };
 
 // IANA IPv4/IPv6 Special-Purpose Address Registries, last updated 2025-10-09.
@@ -241,6 +265,39 @@ async function safeResolvedAddresses(hostname: string, resolver: (hostname: stri
 }
 
 function normalizeSha(value: string): string { if (!SHA.test(value)) throw new Error("expected release SHA must be a full 40-character Git SHA"); return value.toLowerCase(); }
+function readExpectedSourceTree(sourceSha: string): string | null {
+  try {
+    const sourceTree = execFileSync(
+      "git",
+      ["rev-parse", `${sourceSha}^{tree}`],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      },
+    ).trim().toLowerCase();
+    return SHA.test(sourceTree) ? sourceTree : null;
+  } catch {
+    return null;
+  }
+}
+function readExpectedSourceOwnedIdentities(): Readonly<{
+  publicDirectory: ReturnType<
+    typeof readProductionPublicDirectoryIdentity
+  >;
+  runtimeConfiguration: ReturnType<
+    typeof readProductionRuntimeConfigurationIdentity
+  >;
+}> | null {
+  try {
+    return Object.freeze({
+      publicDirectory: readProductionPublicDirectoryIdentity(),
+      runtimeConfiguration: readProductionRuntimeConfigurationIdentity(),
+    });
+  } catch {
+    return null;
+  }
+}
 export function validateTargetUrl(raw: string, allowedHosts: readonly string[] = [], allowLocalhost = false): URL {
   let url: URL;
   try { url = new URL(raw); } catch { throw new Error("base URL must be an absolute URL"); }
@@ -356,6 +413,14 @@ function headerChecks(checks: VerificationCheck[], response: Response, prefix: s
   record(checks, `${prefix}.csp.script_elements`, scriptElementsSafe, "every executable script element obeys the nonce or same-origin versioned-source policy");
   record(checks, `${prefix}.nosniff`, response.headers.get("x-content-type-options")?.toLowerCase() === "nosniff", "X-Content-Type-Options is nosniff");
   record(checks, `${prefix}.frame_protection`, response.headers.get("x-frame-options")?.toUpperCase() === "DENY", "X-Frame-Options is DENY");
+  const transportSecurity = response.headers.get("strict-transport-security") ?? "";
+  const transportMaxAge = transportSecurity.match(/(?:^|;)\s*max-age=(\d+)(?:;|$)/i)?.[1];
+  record(
+    checks,
+    `${prefix}.transport_security`,
+    transportMaxAge !== undefined && Number(transportMaxAge) >= 31_536_000,
+    "Strict-Transport-Security requires HTTPS for at least one year",
+  );
   record(checks, `${prefix}.referrer_policy`, response.headers.get("referrer-policy") === "strict-origin-when-cross-origin", "Referrer-Policy is strict-origin-when-cross-origin");
   const permissions = response.headers.get("permissions-policy") ?? "";
   record(checks, `${prefix}.permissions_policy`, ["camera=()", "microphone=()", "geolocation=()"].every((value) => permissions.includes(value)), "sensitive browser capabilities are disabled");
@@ -368,6 +433,18 @@ async function verifyDeploymentWithCapability(
   if (options.candidateState && !WORKER_CANDIDATE_STATES.includes(options.candidateState as (typeof WORKER_CANDIDATE_STATES)[number])) throw new Error("worker verifier cannot emit terminal ADR-006 states");
   if (options.liveEvaluationStatus && options.liveEvaluationStatus !== "not_evaluated") throw new Error("worker verifier cannot consume live evaluation proof; use the separately approved eval:live gate");
   const expected = normalizeSha(options.expectedSha); const target = validateTargetUrl(options.baseUrl, options.allowedHosts, options.allowLocalhost); const origin = target.origin; const targetOrigin = target.toString(); const fetchImpl = options.fetchImpl ?? fetch; const timeoutMs = options.timeoutMs ?? 10_000; const checks: VerificationCheck[] = []; let observed: string | "unknown" = "unknown"; let runtimeMode = "unknown"; let cloudProviderFlags: Record<string, boolean | string> = { cloud_accounts_enabled: "not_evaluated", cloud_auth_configured: "not_evaluated", provider_mode: "not_evaluated" }; const assets = new Map<string, URL>();
+  const expectedSourceTree = options.expectedSourceTree
+    ? normalizeSha(options.expectedSourceTree)
+    : readExpectedSourceTree(expected);
+  const sourceOwnedIdentities = (
+    options.expectedPublicDirectoryIdentity
+    && options.expectedRuntimeConfigurationIdentity
+  )
+    ? {
+        publicDirectory: options.expectedPublicDirectoryIdentity,
+        runtimeConfiguration: options.expectedRuntimeConfigurationIdentity,
+      }
+    : readExpectedSourceOwnedIdentities();
   const generatedAt = options.generatedAt ?? new Date().toISOString();
   const authenticatedProviderReceipt = receiptFromAuthenticatedHandle(authenticatedReceiptHandle);
   const externalProviderReceipt = options.externalProviderReceipt;
@@ -402,12 +479,19 @@ async function verifyDeploymentWithCapability(
     record(checks, "health.cache_control", response.headers.get("cache-control")?.toLowerCase().includes("no-store") === true, "health response is not cached");
     const text = await readBounded(response, MAX_HEALTH); let payload: unknown; try { payload = JSON.parse(text); } catch { payload = null; }
     if (!LOCAL_HOSTS.has(target.hostname)) aliasVerifiedAt = new Date().toISOString();
-    const expectedKeys = ["app_name", "build_time", "cloud_accounts_enabled", "cloud_auth_configured", "content_package_manifest_digest", "database_migration_identity", "dependency_lock_digest", "device_profiles", "evaluator_baseline_digest", "learner_evidence_sync", "managed_provider_flags", "managed_surface_flags", "provider_mode", "release_manifest", "release_sha", "runtime_mode", "schema_version", "service", "status"];
+    const expectedKeys = ["app_name", "build_source_sha", "build_time", "cloud_accounts_enabled", "cloud_auth_configured", "content_package_manifest_digest", "database_migration_identity", "dependency_lock_digest", "device_profiles", "evaluator_baseline_digest", "learner_evidence_sync", "managed_provider_flags", "managed_surface_flags", "provider_mode", "release_manifest", "release_sha", "runtime_mode", "schema_version", "service", "status"];
     const shape = isRecord(payload) && Object.keys(payload).sort().join(",") === expectedKeys.join(",") && payload.schema_version === "1.0" && payload.status === "ok" && payload.service === "forge-learning-os" && payload.app_name === "FORGE";
     record(checks, "health.schema", shape, "health payload uses the allowlisted release schema");
     if (shape && isRecord(payload)) {
       observed = typeof payload.release_sha === "string" && SHA.test(payload.release_sha) ? payload.release_sha.toLowerCase() : "unknown";
       runtimeMode = typeof payload.runtime_mode === "string" ? payload.runtime_mode : "unknown";
+      const buildSourceMatchesExpected = payload.build_source_sha === expected;
+      const buildSourceHeaderMatchesExpected =
+        response.headers.get("x-forge-build-source-sha")?.toLowerCase()
+          === expected;
+      const releaseHeaderMatchesObserved =
+        response.headers.get("x-forge-release-sha")?.toLowerCase()
+          === observed;
       const managedFlags = isRecord(payload.managed_provider_flags) ? payload.managed_provider_flags : {};
       const surfaceFlags = isRecord(payload.managed_surface_flags) ? payload.managed_surface_flags : {};
       cloudProviderFlags = {
@@ -422,6 +506,8 @@ async function verifyDeploymentWithCapability(
         managed_interpretation: surfaceFlags.interpretation === true,
         managed_planner: surfaceFlags.planner === true,
       };
+      record(checks, "health.build_source_identity", buildSourceMatchesExpected, "compiled build source SHA matches the expected immutable SHA");
+      record(checks, "health.build_source_header", buildSourceHeaderMatchesExpected, "compiled build source header matches the expected immutable SHA");
       record(checks, "health.build_time_diagnostic", typeof payload.build_time === "string" && (payload.build_time === "unknown" || ISO.test(payload.build_time)), "app build_time is well-formed diagnostic metadata, not provider provenance");
       record(checks, "health.disabled_cloud", payload.cloud_accounts_enabled === false && payload.cloud_auth_configured === false && payload.device_profiles === "device_only" && payload.learner_evidence_sync === "disabled", "cloud identity and learner evidence sync are disabled");
       const flags = payload.managed_provider_flags;
@@ -445,8 +531,8 @@ async function verifyDeploymentWithCapability(
           candidateManifest.public_alias.url,
           options.deploymentTarget,
         );
-        const requiresProviderReceipt = candidateManifest.public_asset.status === "provider_receipt_required"
-          && candidateManifest.public_asset.gate === "provider_observed_asset_digest_required_before_promotion";
+        const requiresProviderReceipt = candidateManifest.artifact.status === "provider_receipt_required"
+          && candidateManifest.artifact.gate === "provider_observed_complete_artifact_required_before_promotion";
         const receiptAuthorityIsProviderApi = authenticatedProviderReceipt !== null;
         const receiptMatchesCandidate = providerReceipt !== null
           && providerReceipt.deployment.id === candidateManifest.immutable_deployment.id
@@ -458,21 +544,43 @@ async function verifyDeploymentWithCapability(
             { id: providerReceipt.deployment.id, project_id: providerReceipt.deployment.project_id, url: providerReceipt.deployment.immutable_url },
             candidateManifest.public_alias.url,
             options.deploymentTarget,
-          );
+          )
+          && providerReceipt.artifact.marker.sourceCommit
+            === candidateManifest.source_sha
+          && providerReceipt.artifact.marker.sourceCommit === expected
+          && providerReceipt.artifact.marker.buildId
+            === productionBuildId(expected)
+          && providerReceipt.artifact.marker.sourceState === "clean"
+          && expectedSourceTree !== null
+          && providerReceipt.artifact.marker.sourceTree
+            === expectedSourceTree
+          && sourceOwnedIdentities !== null
+          && providerReceipt.artifact.marker.publicDirectoryDigest
+            === sourceOwnedIdentities.publicDirectory.publicDirectoryDigest
+          && providerReceipt.artifact.marker.publicDirectoryFileCount
+            === sourceOwnedIdentities.publicDirectory.publicDirectoryFileCount
+          && providerReceipt.artifact.marker.runtimeConfigurationDigest
+            === sourceOwnedIdentities.runtimeConfiguration
+              .runtimeConfigurationDigest
+          && providerReceipt.artifact.marker.runtimeConfigurationFileCount
+            === sourceOwnedIdentities.runtimeConfiguration
+              .runtimeConfigurationFileCount;
         const providerBuildOrdering = providerReceipt !== null
-          && new Date(providerReceipt.deployment.created_at).getTime() <= new Date(providerReceipt.public_asset.observed_at).getTime();
+          && new Date(providerReceipt.deployment.created_at).getTime() <= new Date(providerReceipt.artifact.observed_at).getTime();
         const providerObservationPrecedesAliasVerification = providerReceipt !== null
           && aliasVerifiedAt !== "not_verified"
-          && new Date(providerReceipt.public_asset.observed_at).getTime() <= new Date(aliasVerifiedAt).getTime();
+          && new Date(providerReceipt.artifact.observed_at).getTime() <= new Date(aliasVerifiedAt).getTime();
         record(checks, "health.release_manifest.alias_target", aliasMatchesTarget, "manifest public alias exactly matches the normalized verified target origin");
         record(checks, "health.release_manifest.immutable_target", immutableMatchesPolicy, "immutable deployment uses the checked-in FORGE Vercel hostname and non-placeholder deployment-ID policy");
         record(checks, "provider_receipt.schema", receiptFailures.length === 0, receiptFailures.length === 0 ? "provider receipt uses the exact versioned schema" : `provider receipt is missing or malformed: ${receiptFailures.join(", ")}`);
         record(checks, "provider_receipt.authority", receiptAuthorityIsProviderApi, receiptAuthorityIsProviderApi ? "receipt capability was issued in this process by the fixed-origin authenticated Vercel collector" : "plain JSON or an unregistered object is external evidence, not provider-authenticated proof");
-        record(checks, "provider_receipt.tuple", receiptMatchesCandidate, "provider receipt exactly matches health deployment ID, project ID, source SHA, immutable URL, and checked-in target policy");
-        record(checks, "provider_receipt.build_time_order", providerBuildOrdering, "provider deployment creation time is no later than its provider-observed public-asset build-log event");
-        record(checks, "provider_receipt.alias_time_order", providerObservationPrecedesAliasVerification, "provider-observed public-asset build-log event is no later than the verifier's alias fetch receipt");
-        record(checks, "provider_receipt.public_asset", requiresProviderReceipt && providerReceipt !== null, "health requires a post-build provider-observed public-asset digest; health never self-attests it");
-        const boundCandidate = matchesHealth && matchesExpectedSource && aliasMatchesTarget && immutableMatchesPolicy && requiresProviderReceipt && receiptAuthorityIsProviderApi && receiptFailures.length === 0 && receiptMatchesCandidate && providerBuildOrdering && providerObservationPrecedesAliasVerification;
+        record(checks, "provider_receipt.source_tree", providerReceipt !== null && expectedSourceTree !== null && providerReceipt.artifact.marker.sourceTree === expectedSourceTree, "complete artifact marker source tree exactly matches the expected Git commit tree");
+        record(checks, "provider_receipt.source_owned_artifact", providerReceipt !== null && sourceOwnedIdentities !== null && providerReceipt.artifact.marker.publicDirectoryDigest === sourceOwnedIdentities.publicDirectory.publicDirectoryDigest && providerReceipt.artifact.marker.publicDirectoryFileCount === sourceOwnedIdentities.publicDirectory.publicDirectoryFileCount && providerReceipt.artifact.marker.runtimeConfigurationDigest === sourceOwnedIdentities.runtimeConfiguration.runtimeConfigurationDigest && providerReceipt.artifact.marker.runtimeConfigurationFileCount === sourceOwnedIdentities.runtimeConfiguration.runtimeConfigurationFileCount, "complete artifact marker exactly matches the checked-out public directory and runtime configuration identities");
+        record(checks, "provider_receipt.tuple", receiptMatchesCandidate, "provider receipt exactly matches health deployment ID, project ID, source SHA, immutable URL, checked-in target policy, build ID, and source state");
+        record(checks, "provider_receipt.build_time_order", providerBuildOrdering, "provider deployment creation time is no later than its provider-observed complete artifact marker");
+        record(checks, "provider_receipt.alias_time_order", providerObservationPrecedesAliasVerification, "provider-observed complete artifact marker is no later than the verifier's alias fetch receipt");
+        record(checks, "provider_receipt.complete_artifact", requiresProviderReceipt && providerReceipt !== null, "provider receipt contains one strict marker with complete artifact, public asset, public directory, runtime configuration, build, and source identity");
+        const boundCandidate = matchesHealth && matchesExpectedSource && buildSourceMatchesExpected && buildSourceHeaderMatchesExpected && releaseHeaderMatchesObserved && aliasMatchesTarget && immutableMatchesPolicy && requiresProviderReceipt && receiptAuthorityIsProviderApi && receiptFailures.length === 0 && receiptMatchesCandidate && providerBuildOrdering && providerObservationPrecedesAliasVerification;
         if (boundCandidate) releaseManifest = candidateManifest;
         record(checks, "health.release_manifest.binding", boundCandidate, "bound candidate tuple matches health, verified alias, provider-authenticated exact deployment receipt, source SHA, immutable-target policy, and post-build asset observation");
       } else {
@@ -496,6 +604,23 @@ async function verifyDeploymentWithCapability(
       record(checks, `${route.id}.marker`, route.marker.test(html), `${route.path} contains its allowlisted application marker`);
       const leaks = forbidden(html); record(checks, `${route.id}.secret_scan`, leaks.length === 0, leaks.length === 0 ? "no forbidden secret pattern appears in HTML" : `forbidden pattern categories detected: ${leaks.join(", ")}`);
       const found = scripts(html, origin); record(checks, `${route.id}.script_origins`, found.rejected === 0, "client scripts are same-origin versioned Next.js assets"); for (const url of found.urls) assets.set(url.href, url);
+    } catch { record(checks, `${route.id}.request`, false, `${route.path} failed or exceeded a verification bound`); }
+  }
+  for (const route of RETIRED_DEPLOYMENT_ROUTES) {
+    try {
+      const response = await get(fetchImpl, new URL(route.path, origin), timeoutMs, targetAddresses, resolver, fetchImpl === fetch, MAX_HTML);
+      record(checks, `${route.id}.status`, response.status === 404, `${route.path} stays outside the release route boundary`);
+      record(checks, `${route.id}.content_type`, response.headers.get("content-type")?.toLowerCase().includes("text/html") === true, `${route.path} returns the bounded HTML recovery page`);
+      record(checks, `${route.id}.cache_control`, response.headers.get("cache-control")?.toLowerCase().includes("no-store") === true, `${route.path} cannot be stored as current product content`);
+      record(checks, `${route.id}.robots`, response.headers.get("x-robots-tag")?.toLowerCase().includes("noindex") === true, `${route.path} cannot be indexed`);
+      const html = await readBounded(response, MAX_HTML);
+      headerChecks(checks, response, route.id, html, origin);
+      record(checks, `${route.id}.marker`, route.marker.test(html), `${route.path} returns the FORGE recovery page`);
+      const leaks = forbidden(html);
+      record(checks, `${route.id}.secret_scan`, leaks.length === 0, leaks.length === 0 ? "no forbidden secret pattern appears in retired-route HTML" : `forbidden pattern categories detected: ${leaks.join(", ")}`);
+      const found = scripts(html, origin);
+      record(checks, `${route.id}.script_origins`, found.rejected === 0, "retired-route scripts are same-origin versioned Next.js assets");
+      for (const url of found.urls) assets.set(url.href, url);
     } catch { record(checks, `${route.id}.request`, false, `${route.path} failed or exceeded a verification bound`); }
   }
   record(checks, "client_assets.bounded_count", assets.size > 0 && assets.size <= INITIAL_HTML_CLIENT_ASSET_BUDGET, `initial HTML client asset set contains ${assets.size} distinct assets and is non-empty and no larger than ${INITIAL_HTML_CLIENT_ASSET_BUDGET}`);

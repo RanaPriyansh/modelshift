@@ -462,6 +462,8 @@
 
 .forge-start-primary-field > span,
 .forge-start-secondary-field > span,
+.forge-start-primary-field > label,
+.forge-start-secondary-field > label,
 .forge-start-choice legend,
 .forge-start-representations legend {
   color: var(--forge-muted);

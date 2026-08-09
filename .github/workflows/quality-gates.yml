@@ -38,13 +38,29 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "22"
+          node-version: "22.22.3"
           package-manager-cache: false
+      - name: Preflight receipt writer interpreter
+        run: test -x /usr/bin/python3 && /usr/bin/python3 --version
       - name: Capture immutable dependency identity before install
         run: node scripts/operations/immutable-lockfile.mjs capture --source-ref "$GITHUB_SHA" --github-env "$GITHUB_ENV"
-      - name: Install locked dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Reject post-install lockfile mutation
+      - name: Install locked dependencies without dependency scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Reject high or critical advisories in the locked dependency graph
+        run: pnpm audit --audit-level high
+      - name: Verify dependency registry signatures
+        run: pnpm audit signatures
+      - name: Run allowlisted dependency builds
+        run: pnpm rebuild esbuild sharp unrs-resolver
+      - name: Verify dependency-script source authority
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --exit-code "$GITHUB_SHA" -- scripts/operations/immutable-lockfile.mjs
+          git diff --exit-code "$GITHUB_SHA" -- .
+          test -z "$(git ls-files --others --exclude-standard)"
+          git ls-files --others --ignored --exclude-standard --directory -z | node -e 'const fs = require("node:fs"); const paths = fs.readFileSync(0).toString("utf8").split("\0").filter(Boolean); if (paths.some((path) => path !== "node_modules/" && !path.startsWith("node_modules/"))) process.exit(1)'
+          git ls-files -v -z | node -e 'const fs = require("node:fs"); const entries = fs.readFileSync(0).toString("utf8").split("\0").filter(Boolean); if (entries.some((entry) => entry[0] !== "H")) process.exit(1)'
+      - name: Verify lockfile and dependency install boundary
         run: node scripts/operations/immutable-lockfile.mjs verify --expected-digest "$FORGE_LOCKFILE_DIGEST"
       - name: Lint
         run: pnpm lint
@@ -54,6 +70,22 @@ jobs:
         run: pnpm test
       - name: Offline evaluation gate
         run: pnpm eval
+      - name: Install Chromium test runtime
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Semester Desk v2 local browser contract
+        id: semester_desk_v2_local_browser
+        continue-on-error: true
+        env:
+          FORGE_PLAYWRIGHT_OUTPUT_DIR: test-results/semester-desk-v2-local
+        run: pnpm exec tsx scripts/ops/run-playwright-with-report-digest.ts --report-file test-results/semester-desk-v2-local/playwright-report.json -- tests/e2e/semester-desk-v2-canonical.spec.ts
+      - name: Write Semester Desk v2 local browser receipt
+        id: semester_desk_v2_local_receipt
+        if: always()
+        continue-on-error: true
+        env:
+          FORGE_BROWSER_GATE_STATUS: ${{ steps.semester_desk_v2_local_browser.outcome == 'success' && 'pass' || 'fail' }}
+          FORGE_PLAYWRIGHT_REPORT_SHA256: ${{ steps.semester_desk_v2_local_browser.outputs.report_sha256 }}
+        run: pnpm exec tsx scripts/ops/playwright-evidence-receipt.ts --target semesterDeskV2Local --tested-sha "$GITHUB_SHA" --status "$FORGE_BROWSER_GATE_STATUS" --report-sha256 "$FORGE_PLAYWRIGHT_REPORT_SHA256"
       - name: Capture immutable build identity
         run: |
           printf 'FORGE_BUILD_TIME=%s\n' "$(date -u -d "$(git show -s --format=%cI "$GITHUB_SHA")" +%Y-%m-%dT%H:%M:%S.000Z)" >> "$GITHUB_ENV"
@@ -62,12 +94,18 @@ jobs:
           printf 'FORGE_DATABASE_MIGRATION_IDENTITY=not_configured\n' >> "$GITHUB_ENV"
       - name: Build production artifact
         run: pnpm build
-      - name: Install Chromium test runtime
-        run: pnpm exec playwright install --with-deps chromium
-      - name: Browser release contract
-        id: browser
+      - name: Semester Desk v2 production browser contract
+        id: semester_desk_v2_production_browser
         continue-on-error: true
         run: pnpm exec tsx scripts/ops/run-production-browser-verification.ts --expected-sha "$GITHUB_SHA"
+      - name: Write Semester Desk v2 production browser receipt
+        id: semester_desk_v2_production_receipt
+        if: always()
+        continue-on-error: true
+        env:
+          FORGE_BROWSER_GATE_STATUS: ${{ steps.semester_desk_v2_production_browser.outcome == 'success' && 'pass' || 'fail' }}
+          FORGE_PLAYWRIGHT_REPORT_SHA256: ${{ steps.semester_desk_v2_production_browser.outputs.report_sha256 }}
+        run: pnpm exec tsx scripts/ops/playwright-evidence-receipt.ts --target semesterDeskV2Production --tested-sha "$GITHUB_SHA" --status "$FORGE_BROWSER_GATE_STATUS" --report-sha256 "$FORGE_PLAYWRIGHT_REPORT_SHA256"
       - name: Write sanitized evaluation report
         id: evaluation_report
         if: always()
@@ -79,9 +117,22 @@ jobs:
         continue-on-error: true
         run: pnpm exec tsx scripts/ops/run-local-production-verification.ts --expected-sha "$GITHUB_SHA" --expected-lockfile-digest "$FORGE_LOCKFILE_DIGEST" --output-dir test-results/release-ops
       - name: Write bounded Playwright failure manifest
+        id: failure_manifest
         if: always()
         continue-on-error: true
         run: pnpm exec tsx scripts/ops/playwright-artifact-manifest.ts --root test-results --output test-results/release-ops/playwright-artifact-manifest.json --stage-dir test-results/release-ops/playwright-failure-artifacts --tested-sha "$GITHUB_SHA" --artifact-id "$FORGE_BROWSER_ARTIFACT_ID"
+      - name: Upload browser evidence receipts
+        if: always() && hashFiles('test-results/release-ops/forge-browser-*-receipt.json') != ''
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: forge-playwright-evidence-${{ github.run_id }}
+          path: |
+            test-results/release-ops/forge-browser-semester-desk-v2-local-receipt.json
+            test-results/release-ops/forge-browser-semester-desk-v2-local-writer-error-receipt.json
+            test-results/release-ops/forge-browser-semester-desk-v2-production-receipt.json
+            test-results/release-ops/forge-browser-semester-desk-v2-production-writer-error-receipt.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Upload sanitized operations reports
         if: always() && hashFiles('test-results/release-ops/*') != ''
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -91,18 +142,33 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Upload bounded Playwright failure evidence
-        if: always() && steps.browser.outcome == 'failure' && hashFiles('test-results/release-ops/playwright-artifact-manifest.json') != ''
+        if: always() && (steps.semester_desk_v2_local_browser.outcome == 'failure' || steps.semester_desk_v2_production_browser.outcome == 'failure') && steps.failure_manifest.outcome == 'success' && hashFiles('test-results/release-ops/playwright-artifact-manifest.json') != ''
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: forge-playwright-failure-${{ github.run_id }}
           path: |
             test-results/release-ops/playwright-failure-artifacts/
             test-results/release-ops/playwright-artifact-manifest.json
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14
       - name: Enforce release gate outcomes
         if: always()
+        env:
+          FORGE_EXPECTED_LOCAL_RECEIPT_STATUS: ${{ steps.semester_desk_v2_local_browser.outcome == 'success' && 'pass' || 'fail' }}
+          FORGE_EXPECTED_PRODUCTION_RECEIPT_STATUS: ${{ steps.semester_desk_v2_production_browser.outcome == 'success' && 'pass' || 'fail' }}
+          FORGE_EXPECTED_LOCAL_REPORT_SHA256: ${{ steps.semester_desk_v2_local_browser.outputs.report_sha256 }}
+          FORGE_EXPECTED_PRODUCTION_REPORT_SHA256: ${{ steps.semester_desk_v2_production_browser.outputs.report_sha256 }}
+          FORGE_EXPECTED_LOCAL_RECEIPT_SHA256: ${{ steps.semester_desk_v2_local_receipt.outputs.receipt_sha256 }}
+          FORGE_EXPECTED_PRODUCTION_RECEIPT_SHA256: ${{ steps.semester_desk_v2_production_receipt.outputs.receipt_sha256 }}
         run: |
-          test "${{ steps.browser.outcome }}" = success
+          if test "${{ steps.semester_desk_v2_local_browser.outcome }}" = failure || test "${{ steps.semester_desk_v2_production_browser.outcome }}" = failure; then
+            test "${{ steps.failure_manifest.outcome }}" = success
+            node -e 'const fs = require("node:fs"); const report = JSON.parse(fs.readFileSync("test-results/release-ops/playwright-artifact-manifest.json", "utf8")); if (report.schema_version !== "2.0" || !Array.isArray(report.artifacts) || report.artifacts.length === 0) process.exit(1)'
+          fi
+          test "${{ steps.semester_desk_v2_local_receipt.outcome }}" = success
+          test "${{ steps.semester_desk_v2_production_receipt.outcome }}" = success
+          pnpm exec tsx scripts/ops/validate-playwright-evidence-receipts.ts --tested-sha "$GITHUB_SHA" --local-status "$FORGE_EXPECTED_LOCAL_RECEIPT_STATUS" --production-status "$FORGE_EXPECTED_PRODUCTION_RECEIPT_STATUS" --local-report-sha256 "$FORGE_EXPECTED_LOCAL_REPORT_SHA256" --production-report-sha256 "$FORGE_EXPECTED_PRODUCTION_REPORT_SHA256" --local-receipt-sha256 "$FORGE_EXPECTED_LOCAL_RECEIPT_SHA256" --production-receipt-sha256 "$FORGE_EXPECTED_PRODUCTION_RECEIPT_SHA256"
+          test "${{ steps.semester_desk_v2_local_browser.outcome }}" = success
+          test "${{ steps.semester_desk_v2_production_browser.outcome }}" = success
           test "${{ steps.evaluation_report.outcome }}" = success
           test "${{ steps.local_verify.outcome }}" = success

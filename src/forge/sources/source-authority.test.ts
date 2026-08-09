@@ -225,6 +225,24 @@ function validDependentCandidate(replay: SourceAuthorityReplay) {
   }];
 }
 
+function trapCountingProxy<T extends object>(target: T): { readonly value: T; readonly trapCount: () => number } {
+  let count = 0;
+  const throwTrap = () => {
+    count += 1;
+    throw new Error("proxy trap invoked");
+  };
+  return {
+    value: new Proxy(target, {
+      get: throwTrap,
+      getOwnPropertyDescriptor: throwTrap,
+      getPrototypeOf: throwTrap,
+      has: throwTrap,
+      ownKeys: throwTrap,
+    }),
+    trapCount: () => count,
+  };
+}
+
 describe("ADR-007 source authority contract replay", () => {
   it("accepts a deterministic review candidate while retaining no publication, authenticity, durability, or human-identity claim", async () => {
     const replay = await completeReplay();
@@ -239,6 +257,29 @@ describe("ADR-007 source authority contract replay", () => {
       rightsClearance: "not-established",
       issues: [],
     });
+  });
+
+  it("rejects wrapper and nested proxies without invoking transparent proxy traps", async () => {
+    const replay = await completeReplay();
+    const dependentCandidates = validDependentCandidate(replay);
+    const wrapperProxy = trapCountingProxy({ replay, reviewPolicy: POLICY, asOf: AS_OF, dependentCandidates });
+    const replayProxy = trapCountingProxy(replay);
+    const policyProxy = trapCountingProxy(POLICY);
+    const candidatesProxy = trapCountingProxy(dependentCandidates);
+    const cases = [
+      { input: wrapperProxy.value, trapCount: wrapperProxy.trapCount },
+      { input: { replay: replayProxy.value, reviewPolicy: POLICY, asOf: AS_OF, dependentCandidates }, trapCount: replayProxy.trapCount },
+      { input: { replay, reviewPolicy: policyProxy.value, asOf: AS_OF, dependentCandidates }, trapCount: policyProxy.trapCount },
+      { input: { replay, reviewPolicy: POLICY, asOf: AS_OF, dependentCandidates: candidatesProxy.value }, trapCount: candidatesProxy.trapCount },
+    ];
+
+    for (const testCase of cases) {
+      const result = await replaySourceAuthority(testCase.input);
+      expect(testCase.trapCount()).toBe(0);
+      expect(result.status).toBe("review-candidate-incomplete");
+      expect(issueCodes(result)).toContain("schema.invalid");
+      expect(result.invalidatedCandidates).toEqual([]);
+    }
   });
 
   it("uses a known canonical policy digest and canonicalizes semantic policy/package sets", async () => {
@@ -603,6 +644,33 @@ describe("ADR-007 source authority contract replay", () => {
     expect(issueCodes(duplicateValid)).toContain("candidate.duplicate-id");
     expect(duplicateValid.invalidatedCandidates).toEqual([{
       candidateId: valid.id,
+      reasons: ["candidate-binding-invalid"],
+    }]);
+  });
+
+  it("fails closed on malformed wrappers and caps returned dependent-candidate schema issues", async () => {
+    const malformed = await replaySourceAuthority({
+      replay: {},
+      reviewPolicy: {},
+      asOf: 42,
+      dependentCandidates: { notAnArray: true },
+    });
+    expect(malformed.status).toBe("review-candidate-incomplete");
+    expect(issueCodes(malformed)).toContain("schema.invalid");
+
+    const replay = await completeReplay();
+    const issueCap = await replaySourceAuthority({
+      replay,
+      reviewPolicy: POLICY,
+      asOf: AS_OF,
+      dependentCandidates: [{
+        id: "review-candidate.issue-cap",
+        sourceBindings: Array.from({ length: 32 }, () => ({})),
+      }],
+    });
+    expect(issueCap.issues.filter((entry) => entry.code === "candidate.binding-invalid")).toHaveLength(64);
+    expect(issueCap.invalidatedCandidates).toEqual([{
+      candidateId: "review-candidate.issue-cap",
       reasons: ["candidate-binding-invalid"],
     }]);
   });

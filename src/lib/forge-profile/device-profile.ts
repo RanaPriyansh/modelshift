@@ -1,6 +1,14 @@
 import { z } from "zod";
 
 import { exceedsUtf8ByteLimit } from "../storage/raw-byte-limit";
+import {
+  clearForgeProfileBoundLocalData,
+  createForgeProfileBoundStorage,
+  type ForgeProfileBoundLocalDataStorage,
+  type ForgeProfileBoundStorageLike,
+} from "./profile-bound-data";
+
+export { forgeProfileBoundStorageKey } from "./profile-bound-data";
 
 z.config({ jitless: true });
 
@@ -70,9 +78,12 @@ export type ClearForgeDeviceProfileResult =
   | Readonly<{ ok: false; reason: "storage_error" | "value_remains" }>;
 
 export function clearForgeDeviceProfile(
-  storage: Pick<Storage, "getItem" | "removeItem">,
+  storage: ForgeProfileBoundLocalDataStorage,
 ): ClearForgeDeviceProfileResult {
   try {
+    const profile = readForgeDeviceProfile(storage);
+    const localData = clearForgeProfileBoundLocalData(storage, profile?.profileId);
+    if (!localData.ok) return localData;
     storage.removeItem(FORGE_DEVICE_PROFILE_KEY);
     return storage.getItem(FORGE_DEVICE_PROFILE_KEY) === null
       ? { ok: true }
@@ -80,4 +91,16 @@ export function clearForgeDeviceProfile(
   } catch {
     return { ok: false, reason: "storage_error" };
   }
+}
+
+export function createActiveForgeProfileBoundStorage(
+  storage: ForgeProfileBoundStorageLike,
+): ForgeProfileBoundStorageLike | null {
+  const profile = readForgeDeviceProfile(storage);
+  if (!profile) return null;
+  return createForgeProfileBoundStorage(
+    storage,
+    profile.profileId,
+    () => readForgeDeviceProfile(storage)?.profileId === profile.profileId,
+  );
 }

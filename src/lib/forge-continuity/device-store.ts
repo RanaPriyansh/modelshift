@@ -473,6 +473,16 @@ export function createDeviceContinuityStore(persistence: DeviceContinuityPersist
         reason: saved.reason === "unavailable" ? "storage_unavailable" as const : "storage_error" as const,
       });
     }
+    const verified = persistence.read();
+    if (!verified.ok || verified.value !== encoded) {
+      return deepFreeze({
+        ok: false as const,
+        ledger: before,
+        reason: !verified.ok && verified.reason === "unavailable"
+          ? "storage_unavailable" as const
+          : "storage_error" as const,
+      });
+    }
     return deepFreeze({ ok: true as const, ledger: parsed.data, operation });
   };
 
@@ -586,6 +596,16 @@ export function createDeviceContinuityStore(persistence: DeviceContinuityPersist
           ok: false as const,
           ledger: before.ledger,
           reason: removed.reason === "unavailable" ? "storage_unavailable" as const : "storage_error" as const,
+        });
+      }
+      const verified = persistence.read();
+      if (!verified.ok || verified.value !== null) {
+        return deepFreeze({
+          ok: false as const,
+          ledger: before.ledger,
+          reason: !verified.ok && verified.reason === "unavailable"
+            ? "storage_unavailable" as const
+            : "storage_error" as const,
         });
       }
       return deepFreeze({ ok: true as const, ledger: emptyDeviceContinuityLedger(), operation: "cleared" as const });

@@ -1,0 +1,55 @@
+.surface {
+  display: grid;
+  width: min(720px, calc(100% - 64px));
+  min-height: calc(100svh - 168px);
+  align-content: center;
+  margin: 0 auto;
+  padding: 48px 0 88px;
+  color: var(--forge-ink);
+}
+
+.kicker {
+  margin: 0;
+  color: var(--forge-cyan-deep);
+  font-family: var(--forge-mono);
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: 0.075em;
+  line-height: 1.45;
+  text-transform: uppercase;
+}
+
+.surface h1 {
+  margin: 14px 0;
+  font-family: var(--forge-display);
+  font-size: clamp(38px, 7vw, 72px);
+  font-weight: 430;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.surface > p:last-child {
+  max-width: 620px;
+  margin: 0;
+  color: var(--forge-muted);
+  line-height: 1.7;
+}
+
+@media (max-width: 420px) {
+  .surface {
+    width: calc(100% - 28px);
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .surface {
+    scroll-behavior: auto;
+  }
+}
+
+@media (forced-colors: active) {
+  .surface {
+    border-block: 1px solid CanvasText;
+  }
+}

@@ -1,6 +1,28 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { SEMESTER_DESK_V2_LOCAL_REPORT_DIRECTORY } from "./scripts/ops/semester-desk-v2-browser-contract";
+
 export type ForgePlaywrightEnvironment = Readonly<Record<string, string | undefined>>;
+
+export function resolvePlaywrightOutputDirectory(
+  environment: ForgePlaywrightEnvironment = process.env,
+): string {
+  const outputDirectory =
+    environment.FORGE_PLAYWRIGHT_OUTPUT_DIR
+    ?? `test-results/${SEMESTER_DESK_V2_LOCAL_REPORT_DIRECTORY}`;
+  if (!/^test-results\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(outputDirectory)) {
+    throw new Error(
+      "FORGE_PLAYWRIGHT_OUTPUT_DIR must be one bounded directory under test-results.",
+    );
+  }
+  return outputDirectory;
+}
+
+export function resolvePlaywrightJsonOutputFile(
+  environment: ForgePlaywrightEnvironment = process.env,
+): string {
+  return `${resolvePlaywrightOutputDirectory(environment)}/playwright-report.json`;
+}
 
 export function resolveLocalPlaywrightServer(
   environment: ForgePlaywrightEnvironment = process.env,
@@ -23,6 +45,7 @@ export function resolveLocalPlaywrightServer(
 }
 
 const localServer = resolveLocalPlaywrightServer();
+const outputDir = resolvePlaywrightOutputDirectory();
 if (process.env.PLAYWRIGHT_BASE_URL === "") {
   throw new Error("PLAYWRIGHT_BASE_URL must be omitted or set to a nonempty URL.");
 }
@@ -31,11 +54,11 @@ const executablePath = process.env.FORGE_PLAYWRIGHT_EXECUTABLE_PATH;
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  outputDir,
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   workers: 1,
-  reporter: [["list"]],
   use: {
     baseURL,
     trace: "retain-on-failure",
@@ -43,6 +66,10 @@ export default defineConfig({
     video: "retain-on-failure",
     launchOptions: executablePath ? { executablePath } : undefined,
   },
+  reporter: [
+    ["list"],
+    ["json", { outputFile: resolvePlaywrightJsonOutputFile() }],
+  ],
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {
