@@ -1,137 +1,71 @@
-# FORGE - learn broadly, prove specifically
+# FORGE Semester Desk
 
-FORGE is a learner-owned learning-system foundation for children learning with a grown-up, teenagers, and adults. Its long-term direction is broad: help someone enter with a question or capability goal, find a rigorous path across subjects, use AI without surrendering the thinking, and keep bounded evidence of what they could do independently.
+FORGE is a private, local-first Semester Desk for university students.
 
-This repository is currently a **C1 interactive foundation and DG1 candidate**, not the finished institution described by the product vision. `DG#` denotes a delivery/claim gate; `PG#` denotes a program goal. It demonstrates four authored learning Worlds, a deterministic planning boundary, a typed event spine, a privacy-minimal browser evidence trail, device-local access plus a structurally disabled cloud-auth explanation surface, and a provider-neutral AI lesson-draft compiler. It does not yet constitute a complete curriculum, a homeschool replacement, a child-safety operation, or evidence that FORGE improves learning.
+It helps a student rebuild a difficult week from today. It keeps course facts, real capacity, recovery choices, active study, and later return in one clear loop.
 
-## Current release locator
+## Current product
 
-The canonical public release record is [Current Public Release Record](docs/operations/CURRENT_RELEASE.md). It names the only current public tuple and its unresolved release-provenance gates; a local commit, build, or worker handoff never changes that record into a deployment.
+The web release supports this end-to-end flow:
 
-## Product direction
+1. Add a semester, one course, one course detail, and one work item.
+2. Add more courses and course facts.
+3. Mark facts as checked, changed, not confirmed, or needing review.
+4. Record and resolve conflicts without hiding them.
+5. State the time that is actually available.
+6. Keep, move, reduce, or defer work through a visible recovery review.
+7. Choose one next action.
+8. Complete practice and an independent check.
+9. Set a return time and check understanding again later.
+10. Review completed learning actions.
+11. Download or remove the local Semester Desk.
 
-FORGE's next product layer is a practical goal-to-capability system:
+The product does not connect to a university system. It does not provide an online account, cloud sync, cloud backup, automatic reminders, or a model provider.
 
-```text
-what I want to understand, do, or make
-  → editable map of concepts, prerequisites, capabilities, and gaps
-  → reviewed text, demonstrations, videos, simulations, sources, and people
-  → active practice and a real project
-  → AI and hints withdraw
-  → unfamiliar proof and later return
-```
+## Data boundary
 
-FORGE will federate excellent external material rather than pretend it can pre-author everything. External video, including YouTube, remains a reviewed, replaceable resource with an active checkpoint, current lifecycle record, provider/privacy disclosure, and a reviewed alternative whose construct effect is explicit. A construct-changing alternative cannot inherit the original capability claim. A video, generated explanation, or completed lesson never proves capability.
+The current application stores one device-local Semester Desk in browser `localStorage`.
 
-The strategic thesis is that AI makes provisional cognitive assistance abundant, while judgment, trust, sound pedagogy, practical experience, relationships, and independent proof remain scarce. FORGE aims to organize those complements so people become more capable and less dependent on the product. See the [AI-era learning thesis](docs/program/AI_ERA_LEARNING_THESIS.md), [founder idea log](docs/program/FOUNDER_IDEA_LOG.md), proposed [Wave 6 plan](docs/program/WAVE_6_PLAN.md), proposed [ADR-009](docs/adr/0009-practical-multimodal-learning-paths.md), and [independent production-audit mandate](docs/program/PRINCIPAL_PRODUCTION_AUDIT_MANDATE.md).
+It can store:
 
-The current local P0 implements the goal-to-reviewed-World spine, explicit path
-acceptance, one meaningful next action, resumable device-local study sessions,
-bounded evidence, and one Force delayed return. The broader resource, project,
-account, authoring, and curriculum architecture remains a governed target, not
-an implementation or release claim.
+- a random local profile identifier;
+- semester and course details;
+- course conflicts and review states;
+- available capacity and recovery decisions;
+- scheduled returns; and
+- answer-free completion evidence.
 
-## What is implemented
+It does not persist raw practice notes or independent answers. It does not send local data to a server. A second browser or the iOS application does not receive this data.
 
-### Four working learning Worlds
+Use **Download local JSON** before browser data is cleared. Use **Reset this device** to remove the local desk.
 
-| World | Route | What the slice demonstrates |
-| --- | --- | --- |
-| Force and motion | [`/learn/force-and-motion`](http://127.0.0.1:3000/learn/force-and-motion) | Prediction, learner model, deterministic comparison, bounded support, AI withdrawal, and unfamiliar graph transfer |
-| Proportional reasoning | [`/learn/proportional-reasoning`](http://127.0.0.1:3000/learn/proportional-reasoning) | Exact-rational proportional models, a separating test, reconstruction, and map-scale transfer; includes child-with-grown-up, teen, and adult presentation modes |
-| Learning with AI | [`/learn/ai-and-learning`](http://127.0.0.1:3000/learn/ai-and-learning) | Source-grounded research comparison, assistance guardrails, and an independent evidence-set transfer |
-| Primary-source reasoning | [`/learn/primary-source-reasoning`](http://127.0.0.1:3000/learn/primary-source-reasoning) | Authentic Library of Congress photographs, observation/inference separation, governed support, and unfamiliar-source transfer |
+## Release routes
 
-Each World is authored and versioned. Deterministic code owns state transitions, experiment or scoring logic, proof locks, and evidence conditions. AI is not allowed to manufacture correct answers, unlock proof, or turn one response into a mastery claim.
+The production build contains only these product routes:
 
-### A bounded path compiler
+| Route | Purpose |
+| --- | --- |
+| `/` | Public Semester Desk introduction |
+| `/how-forge-works` | Product method and learning loop |
+| `/university` | University-student product boundary |
+| `/privacy` | Current browser-local data behavior |
+| `/terms` | Draft product-use terms |
+| `/support` | Self-service product help |
+| `/app` | Device-local Semester Desk |
+| `/api/health` | Release identity and configuration status |
 
-The public home explains the product and hands a learner-owned goal draft to
-[`/start`](http://127.0.0.1:3000/start). Only the learner’s explicit action
-submits a typed request to `POST /api/forge/plan`.
+The build also emits `robots.txt`, `sitemap.xml`, `manifest.webmanifest`, Open Graph images, the icon, and required Next.js framework routes.
 
-- Known topics resolve to registered World and source IDs with authored milestones.
-- Unknown topics receive an explicitly unverified source-verification plan, not an invented course.
-- Age, guardian, source-access, unsafe-topic, adversarial-input, origin, content-type, schema, and request-size boundaries fail closed.
-- An optional model may only contribute a visibly unverified rephrase after the deterministic route and authored IDs are frozen.
+All other route source is excluded from the production artifact. The release route policy returns `404` for retired paths.
 
-The earlier physics-specific `POST /api/interpret` route remains for the historical ModelShift World. Its model path is optional and has a deterministic neutral fallback.
+## Local development
 
-### A fail-closed author boundary
+Requirements:
 
-[`/studio`](http://127.0.0.1:3000/studio) redirects to
-[`/author`](http://127.0.0.1:3000/author), which is a non-bypassable unavailable
-gate in this build. Neither a profile, query string, target-audience selection,
-page copy, nor request-only provider key establishes author authority. Managed
-and BYOK requests remain unavailable until active adult server-owned authority
-and separately approved quota, abuse, privacy, source-review, and publication
-controls exist. There is no managed Studio credential or environment switch.
+- Node.js 22.13.0 or newer. The repository uses Node.js 22.22.3.
+- pnpm 11.9.0.
 
-Any future authorized adapter must return the same strict schema: opening phenomenon, exactly two plausible readings, a separating test, reconstruction, unfamiliar cold transfer, source-review needs, safety notes, and explicit limitations. Its output is always an **unverified editable draft**. It cannot publish a World, verify its own claims, select a correct proof answer, grade cold transfer, or create mastery evidence. Adapter tests are mocked; no live provider call has been verified in this release because no provider credential is available in the workspace.
-
-### A privacy-minimal local evidence ledger
-
-Completed path-backed World outcomes can be written to browser `localStorage`
-and inspected at [`/app/evidence`](http://127.0.0.1:3000/app/evidence).
-`/evidence` redirects there; `/trail` remains a compatibility explanation, not
-primary navigation. The ledger supports schema validation, bounded assistance
-provenance, return dates, learner export, learner-selected educator export,
-per-record deletion, and full local deletion.
-
-The local ledger deliberately excludes identity, raw chat, learner explanations, confidence, personality or emotion inference, and mastery scores. It is browser-local only: there is no evidence sync, background sharing, or recovery across devices.
-
-[`/sign-in`](http://127.0.0.1:3000/sign-in) and
-[`/app/settings`](http://127.0.0.1:3000/app/settings) provide a working
-privacy-minimal device profile and an inert adult cloud-auth explanation
-surface. `/login` and `/account` remain compatibility entries. Device profiles
-store only a random ID, learner mode, guardian-present confirmation, schema
-version, and timestamp. Cloud auth is structurally disabled:
-`readForgeCloudAuthConfig` returns `null` for every environment input, so no
-current variable set can enable sign-in. A future authorized integration must
-replace that boundary and separately prove CAPTCHA, durable abuse controls,
-configured-project isolation, and rights operations. No live project is
-connected, and no cloud identity privilege exists in this release.
-
-### A typed event spine
-
-`src/forge/events.ts` and `src/forge/event-journal.ts` define the canonical, append-only event vocabulary and replay rules for journey, assistance, proof, access, and rights operations. `supabase/migrations/202607220002_forge_event_spine.sql` stages the durable counterpart with SQL contract tests. The browser UI does not yet replay every screen from this durable journal, so DG1 remains a candidate rather than a pass.
-
-### A staged database boundary
-
-[`supabase/migrations/202607220001_forge_learning_os.sql`](supabase/migrations/202607220001_forge_learning_os.sql) and [`supabase/tests/forge_schema_contract.sql`](supabase/tests/forge_schema_contract.sql) define a production-oriented Supabase/PostgreSQL foundation for identity, consent, reviewed curriculum, programs, grants, append-only assistance and evidence, scheduled proof, artifacts, reviews, and privacy requests. The migration uses forced row-level security, scoped adult grants, immutable publication/evidence rules, and no raw-chat or surveillance store.
-
-The migration and SQL contract have been exercised in disposable PostgreSQL. They have **not** been applied to a live Supabase project, and the Next.js application is not connected to them. See [FORGE Database Architecture](docs/FORGE_DATABASE.md) for the exact trust and deployment boundary.
-
-## Current architecture
-
-```mermaid
-flowchart LR
-    Q["Learner question or goal"] --> P["Deterministic path compiler"]
-    P -->|"registered topic"| W["Versioned authored World"]
-    P -->|"unknown topic"| X["Unverified source-verification plan"]
-    W --> R["Deterministic runtime and validator"]
-    R --> E["Typed event and bounded evidence spine"]
-    E --> L["Browser-local learner ledger"]
-    M["Optional bounded model"] -->|"rephrase or interpretation only"| P
-    S["Provider-neutral Lesson Studio"] -->|"unverified draft only"| D["Human source and lesson review"]
-    DB["Staged Supabase schema"] -.->|"not connected"| R
-```
-
-The implementation is a modular Next.js monolith with explicit internal boundaries:
-
-- `src/forge/` - contracts, policy invariants, world/source registries, and validators;
-- `src/lib/forge-planner/` - deterministic topic classification, planning contracts, safety policy, and optional model governor;
-- `src/worlds/` and `src/components/worlds/` - domain-owned content, reducers, models, validators, and interfaces;
-- `src/lib/forge-evidence/` - privacy-minimal local ledger, export, deletion, scheduling, and evidence-state derivation;
-- `src/lib/lesson-studio/` - provider adapters, strict lesson-draft schema, source/safety boundaries, and fail-closed parsing;
-- `src/lib/forge-auth/` and `src/lib/forge-profile/` - structurally disabled, non-env-enableable cloud-auth boundary plus privacy-minimal device profile;
-- `supabase/` - staged durable-data migration and SQL contract tests.
-
-The broader architecture deliberately remains a modular monolith with a typed event/evidence spine until measured scale or isolation needs justify a split. See [FORGE Architecture](docs/FORGE_ARCHITECTURE.md).
-
-## Run locally
-
-Requirements: Node.js 22 or newer and pnpm 11.9.0 or compatible.
+Install and start the application:
 
 ```bash
 pnpm install --frozen-lockfile
@@ -141,106 +75,55 @@ pnpm dev
 
 Open `http://127.0.0.1:3000`.
 
-No model credential is required for the authored and deterministic paths. External interpretation and planner calls are off by default even when an existing `OPENAI_API_KEY` is present; keep `OPENAI_INTERPRETATION_ENABLED=false` and `OPENAI_FORGE_PLANNER_ENABLED=false` for public operation unless their separate controls are approved. Public managed and BYOK Lesson Studio calls are locked: neither a request-only key, a page declaration, nor target-audience metadata authorizes a provider request. They require active adult server-owned authority plus separately approved quota, abuse, privacy, and review controls. Lesson Studio has no managed-provider environment switch, and must never use a `NEXT_PUBLIC_*` credential.
+No environment variable is required for local product use. The example file contains only metadata, indexing, and release-evidence settings.
 
-## Verify
+## Verification
+
+Run the repository gates:
 
 ```bash
 pnpm lint
 pnpm typecheck
 pnpm test
-pnpm eval
 pnpm build
 pnpm test:e2e
 ```
 
-`pnpm test` runs the application/unit suite and the legacy live-evaluator contract tests. `pnpm test:e2e` starts a local development server when `PLAYWRIGHT_BASE_URL` is absent and runs the desktop and mobile browser projects.
+`pnpm test:e2e` runs the canonical Semester Desk browser journey on desktop and mobile Chromium projects. The journey includes the `320` CSS-pixel stress case.
 
-To exercise the staged database contract against a disposable local Supabase stack:
+`pnpm eval` is a retained ModelShift interpretation regression. It does not validate Semester Desk behavior, learning quality, or efficacy.
 
-```bash
-supabase db reset
-psql "$LOCAL_DATABASE_URL" -v ON_ERROR_STOP=1 \
-  -f supabase/tests/forge_schema_contract.sql
-```
+Run release verification only from one clean, exact commit. A dirty checkout intentionally produces an unverified build identity.
 
-To check an already deployed origin with the production browser spec:
+After `pnpm build`, run the exact production browser artifact:
 
 ```bash
-PLAYWRIGHT_BASE_URL=https://your-production-domain pnpm test:e2e:prod
+FORGE_EXPECTED_RELEASE_SHA=<full-40-character-clean-git-sha> pnpm test:e2e:prod
 ```
 
-## Canonical routes
+These checks prove software behavior for the tested source. They do not prove learning efficacy, legal approval, production authority, or successful deployment.
 
-| Route | Boundary |
-| --- | --- |
-| `/` | Public product story and learner-owned goal draft |
-| `/start` | Progressive guest-first goal clarification and inspectable path candidate |
-| `/paths`, `/how-forge-works`, `/trust`, `/coverage` | Public path, method, evidence, and current-availability chapters |
-| `/sign-in` | Device-local continuity entry; cloud identity remains unavailable |
-| `/app` | Today view with one next action, active path, and due-return boundary |
-| `/app/path`, `/app/study`, `/app/evidence`, `/app/returns` | Learner-owned path, action brief, bounded evidence, and delayed-return work |
-| `/focus/modelshift/[sessionId]` | Exact path-backed ModelShift session |
-| `/focus/activity/[sessionId]` | Exact path-backed standard reviewed World session |
-| `/learn/force-and-motion` | Working Model World using the historical ModelShift protocol |
-| `/learn/proportional-reasoning` | Working exact-math Model World |
-| `/learn/ai-and-learning` | Working source/evidence World |
-| `/learn/primary-source-reasoning` | Working historical-literacy World using authentic archival images |
-| `/paths/source-corroboration` | Fixture-only adult presentation route; no assignment, entitlement, evidence write, or homeschool authority |
-| `/internal/pilot` | Fail-closed adult fixture review shell; unavailable by default |
-| `/author` | Fail-closed author-role boundary; no provider or publication controls rendered |
-| `POST /api/forge/plan` | Strict same-origin FORGE planner API |
-| `POST /api/forge/lesson-draft` | Strict same-origin, fixed-endpoint provider adapter for unverified drafts |
-| `POST /api/interpret` | Historical bounded physics interpretation API |
+## Deployment status
 
-## Deployment boundary
+The current Semester Desk candidate is not deployed. The existing public alias still serves the retired product.
 
-The complete application requires a Next.js/Node-compatible host because it includes server routes. Vercel is the intended deployment target for this foundation; a static-site host can publish design or research artifacts but cannot replace the planner and interpretation APIs without a separate backend.
+Use [Deployment](docs/DEPLOYMENT.md) for the current Vercel path and external gates. Use the [Current Public Release Record](docs/operations/CURRENT_RELEASE.md) as the canonical deployed-state record.
 
-This refoundation candidate is local and has not been deployed. The existing
-public tuple remains historical release evidence only and is unchanged by a
-local build or commit. Its unresolved Git/provider provenance gates remain
-blocked. See the [canonical record](docs/operations/CURRENT_RELEASE.md) for the
-exact deployed tuple, evidence ceiling, repair gate, and non-mutating rollback
-procedure.
+Do not use a Vercel CLI upload for the release candidate. The release verifier requires a Vercel Git deployment with provider-owned repository and source metadata.
 
-## What is not yet claimed
+## Product and design contracts
 
-- FORGE is not a complete cross-domain curriculum or a replacement for school, teachers, guardians, peers, care, safeguarding, disability services, or public institutions.
-- It is not yet a homeschool solution, accredited pathway, credential, or jurisdiction-specific compliance system.
-- It is not a minor operational release and has no verified guardian service, adult entitlement service, or operational safeguarding proof.
-- There is no live Supabase project, verified-age or guardian onboarding, cloud evidence sync, people network, storage pipeline, privacy worker, or abuse-control service connected to this app.
-- The current four Worlds do not establish breadth across everything someone may want to learn.
-- Fixture/local contracts and previews exist for capability maps, governed resource candidates, a disabled YouTube metadata adapter, representations, and practical project/practice packets. They are not connected or enabled as an integrated reviewed learner path; the educator review port remains unimplemented.
-- Provider adapters and structured parsing are tested with mocks, not live provider credentials; generated drafts are not source-reviewed curriculum.
-- No representative learner, educator, minor-safety, external accessibility, assessment-validity, delayed-retention, efficacy, equity, workload, or scale result has been established for broad FORGE.
-- One immediate transfer result is bounded evidence from one task, not mastery, intelligence, retention, or a permanent learner label.
-- A successful build or browser run demonstrates engineering behavior, not educational effectiveness or child safety.
+- [Semester Desk v2 native contract](docs/product/FORGE_SEMESTER_DESK_V2_NATIVE_CONTRACT.md)
+- [FORGE design system](docs/design/FORGE_DESIGN_SYSTEM.md)
+- [Visual direction decision](docs/design/FORGE_VISUAL_DIRECTION_DECISION.md)
+- [Release operations runbook](docs/operations/RELEASE_OPERATIONS_RUNBOOK.md)
 
-## Governing documentation
+## Legal status
 
-- [FORGE Product Specification](FORGE_PRODUCT_SPEC.md)
-- [FORGE Architecture](docs/FORGE_ARCHITECTURE.md)
-- [Research-to-System Traceability](docs/FORGE_RESEARCH_TO_SYSTEM.md)
-- [Delivery Gates and Honest Claim Protocol](docs/FORGE_DELIVERY_GATES.md)
-- [Design System](docs/FORGE_DESIGN_SYSTEM.md)
-- [Control Room](docs/FORGE_CONTROL_ROOM.md)
-- [Database Architecture](docs/FORGE_DATABASE.md)
-- [AI-era Strategy and Scenario Thesis](docs/program/AI_ERA_LEARNING_THESIS.md)
-- [Proposed Wave 6 Practical Learning Plan](docs/program/WAVE_6_PLAN.md)
-- [Founder Idea Log](docs/program/FOUNDER_IDEA_LOG.md)
+The `/terms` page is a draft. It requires legal review before public launch.
 
-## Historical ModelShift v1 artifacts
-
-FORGE preserves the narrow ModelShift experiment as one useful World and as build history. These documents remain historical; they do not govern or validate broad FORGE. The demo/submission package and deadline checklist are explicitly retired: FORGE has no active hackathon, demo-video, judging, YouTube, or Devpost deliverable.
-
-- [ModelShift v1 Final Product Specification](FINAL_PRODUCT_SPEC.md)
-- [ModelShift v1 Architecture](docs/ARCHITECTURE.md)
-- [ModelShift v1 Evaluation](docs/EVALUATION.md)
-- [Retired ModelShift v1 Demo and Submission](DEMO_AND_SUBMISSION.md)
-- [Retired ModelShift v1 Build Checklist](BUILD_CHECKLIST.md)
-- [Pre-existing Work Boundary](docs/PREEXISTING_WORK.md)
+The current `/support` page is self-service only. The product does not claim a monitored support channel.
 
 ## License
 
-Code and repository-authored materials are licensed under the [MIT License](LICENSE).
+Repository-authored code and materials use the [MIT License](LICENSE).

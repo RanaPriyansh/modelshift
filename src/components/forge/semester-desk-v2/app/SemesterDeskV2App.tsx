@@ -27,6 +27,7 @@ import {
   normalizeSemesterDeskProfileIdentifier,
   semesterDeskActiveProfileStorageKey,
   semesterDeskStorageKey,
+  type SemesterDeskExportResult,
   type SemesterDeskPersistence,
   type SemesterDeskPersistenceRead,
   type SemesterDeskPersistenceResult,
@@ -111,6 +112,12 @@ type PlanItemDraft = {
   readonly minutes: string;
 };
 
+type SemesterDeskCommandHandler = (
+  command: SemesterDeskCommand,
+  successMessage: string,
+  onSaved?: () => void,
+) => void;
+
 const emptyOnboardingDraft: OnboardingDraft = {
   semesterTitle: "",
   courseCode: "",
@@ -168,6 +175,11 @@ const progressOutcomeLabels = {
 } as const;
 
 const semesterDeskMainAnchor = "semester-desk-main";
+const localReadFailureMessage = "FORGE could not read local data on this device. Try again.";
+const localSaveFailureMessage = "FORGE could not save local data on this device. Try the action again.";
+const localResetFailureMessage = "FORGE could not remove local data on this device. Try again.";
+const localExportFailureMessage = "FORGE could not prepare the local data download. Try again.";
+const malformedLocalDataMessage = "The saved local data needs review before FORGE can use it.";
 
 export type SemesterDeskV2AppProps = {
   readonly persistence?: SemesterDeskPersistence;
@@ -250,7 +262,7 @@ function writeActiveProfileReference(storage: Storage, profileId: string | null)
     const normalized = normalizeSemesterDeskProfileIdentifier(profileId);
     if (!normalized) return false;
     storage.setItem(semesterDeskActiveProfileStorageKey, normalized);
-    return true;
+    return storage.getItem(semesterDeskActiveProfileStorageKey) === normalized;
   } catch {
     return false;
   }
@@ -730,7 +742,7 @@ function CourseLedger({
   now,
 }: {
   readonly desk: SemesterDeskState;
-  readonly onCommand: (command: SemesterDeskCommand, successMessage: string) => boolean;
+  readonly onCommand: SemesterDeskCommandHandler;
   readonly now: () => string;
 }) {
   const [courseDraft, setCourseDraft] = useState<CourseDraft>(emptyCourseDraft);
@@ -842,7 +854,7 @@ function CourseLedger({
                   onSubmit={(event) => {
                     event.preventDefault();
                     const factDraft = factDraftFor(course.id);
-                    const saved = onCommand({
+                    onCommand({
                       kind: "add-course-fact",
                       profileId: desk.profileId,
                       courseId: course.id,
@@ -851,8 +863,9 @@ function CourseLedger({
                       status: factDraft.status,
                       sourceLabel: factDraft.sourceLabel,
                       ...(factDraft.status === "checked" ? { checkedAt: now() } : {}),
-                    }, `A new detail was added to ${course.title}.`);
-                    if (saved) updateFactDraft(course.id, emptyCourseFactDraft);
+                    }, `A new detail was added to ${course.title}.`, () => {
+                      updateFactDraft(course.id, emptyCourseFactDraft);
+                    });
                   }}
                 >
                   <label>
@@ -916,14 +929,15 @@ function CourseLedger({
                     onSubmit={(event) => {
                       event.preventDefault();
                       const conflictDraft = conflictDraftFor(course.id);
-                      const saved = onCommand({
+                      onCommand({
                         kind: "record-source-conflict",
                         profileId: desk.profileId,
                         courseId: course.id,
                         factIds: conflictDraft.factIds,
                         summary: conflictDraft.summary,
-                      }, `That conflict is recorded for ${course.title}.`);
-                      if (saved) updateConflictDraft(course.id, emptyConflictDraft);
+                      }, `That conflict is recorded for ${course.title}.`, () => {
+                        updateConflictDraft(course.id, emptyConflictDraft);
+                      });
                     }}
                   >
                     <fieldset>
@@ -979,13 +993,14 @@ function CourseLedger({
         className={styles.addCourseForm}
         onSubmit={(event) => {
           event.preventDefault();
-          const saved = onCommand({
+          onCommand({
             kind: "add-course",
             profileId: desk.profileId,
             code: courseDraft.code,
             title: courseDraft.title,
-          }, `Added ${courseDraft.title} to this Semester Desk.`);
-          if (saved) setCourseDraft(emptyCourseDraft);
+          }, `Added ${courseDraft.title} to this Semester Desk.`, () => {
+            setCourseDraft(emptyCourseDraft);
+          });
         }}
       >
         <p className={styles.sectionMarker}>ADD A COURSE</p>
@@ -1020,7 +1035,7 @@ function CapacitySection({
   readonly desk: SemesterDeskState;
   readonly minutes: string;
   readonly onMinutesChange: (value: string) => void;
-  readonly onCommand: (command: SemesterDeskCommand, successMessage: string) => boolean;
+  readonly onCommand: SemesterDeskCommandHandler;
 }) {
   function draftCapacity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1269,7 +1284,7 @@ function LearningLoop({
   readonly onReturnDraftChange: (value: string) => void;
   readonly onDelayedReturnDateChange: (value: string) => void;
   readonly onFocusItem: (planItemId: string) => void;
-  readonly onCommand: (command: SemesterDeskCommand, successMessage: string) => boolean;
+  readonly onCommand: SemesterDeskCommandHandler;
 }) {
   const [planItemDraft, setPlanItemDraft] = useState<PlanItemDraft>(emptyPlanItemDraft);
   const [proofError, setProofError] = useState<FocusedResponseError | null>(null);
@@ -1290,6 +1305,8 @@ function LearningLoop({
   const returnErrorMessage = returnError && focusedItem?.id === returnError.planItemId
     ? returnError.message
     : null;
+  const recoveryOpen = desk.recoveryDraft !== null;
+  const capacityConfirmationOpen = desk.capacityDraft !== null;
 
   function submitIndependentProof(outcome: "demonstrated" | "needs-return") {
     if (!focusedItem) return;
@@ -1300,13 +1317,14 @@ function LearningLoop({
       });
       return;
     }
-    const saved = onCommand({
+    onCommand({
       kind: "submit-independent-proof",
       profileId: desk.profileId,
       planItemId: focusedItem.id,
       outcome,
-    }, "Your independent check is complete. Your response stayed only on this screen.");
-    if (saved) setProofError(null);
+    }, "Your independent check is complete. Your response stayed only on this screen.", () => {
+      setProofError(null);
+    });
   }
 
   function completeDelayedReturn(outcome: "retained" | "needs-more-work") {
@@ -1318,13 +1336,14 @@ function LearningLoop({
       });
       return;
     }
-    const saved = onCommand({
+    onCommand({
       kind: "complete-delayed-return",
       profileId: desk.profileId,
       delayedReturnId: focusedReturn.id,
       outcome,
-    }, "Your return is recorded. Your fresh explanation stayed only on this screen.");
-    if (saved) setReturnError(null);
+    }, "Your return is recorded. Your fresh explanation stayed only on this screen.", () => {
+      setReturnError(null);
+    });
   }
 
   return (
@@ -1357,14 +1376,20 @@ function LearningLoop({
                   <button
                     className={selectedItem ? styles.selectedAction : styles.secondaryAction}
                     type="button"
-                    disabled={blocked}
+                    disabled={blocked || recoveryOpen}
                     onClick={() => onCommand({
                       kind: "choose-next-action",
                       profileId: desk.profileId,
                       planItemId: item.id,
                     }, `${item.title} is your next action.`)}
                   >
-                    {selectedItem ? "Your next action" : blocked ? "Check course details first" : "Choose this work"}
+                    {recoveryOpen
+                      ? "Confirm recovery first"
+                      : selectedItem
+                        ? "Your next action"
+                        : blocked
+                          ? "Check course details first"
+                          : "Choose this work"}
                   </button>
                 ) : item.status === "deferred" ? (
                   <button
@@ -1397,15 +1422,16 @@ function LearningLoop({
         className={styles.addPlanItemForm}
         onSubmit={(event) => {
           event.preventDefault();
-          const saved = onCommand({
+          onCommand({
             kind: "add-plan-item",
             profileId: desk.profileId,
             courseId: planItemDraft.courseId,
             title: planItemDraft.title,
             date: planItemDraft.date,
             minutes: Number(planItemDraft.minutes),
-          }, `Added ${planItemDraft.title} to this Semester Desk.`);
-          if (saved) setPlanItemDraft(emptyPlanItemDraft);
+          }, `Added ${planItemDraft.title} to this Semester Desk.`, () => {
+            setPlanItemDraft(emptyPlanItemDraft);
+          });
         }}
       >
         <p className={styles.sectionMarker}>ADD A PIECE OF WORK</p>
@@ -1459,18 +1485,24 @@ function LearningLoop({
           <p className={styles.sectionMarker}>FOCUSED STUDY</p>
           <h3 id="study-start-title">{selected.title}</h3>
           <p>Set aside {minutesLabel(selected.currentMinutes)}. Work from your own material before you write anything here.</p>
-          <button
-            className={styles.commitAction}
-            type="button"
-            onClick={() => onCommand({
-              kind: "start-protected-study",
-              profileId: desk.profileId,
-              planItemId: selected.id,
-            }, "Your protected study session has started.")}
-          >
-            Start protected study
-            <ArrowIcon />
-          </button>
+          {recoveryOpen ? (
+            <p role="status">Confirm the open recovery plan before you start protected study.</p>
+          ) : capacityConfirmationOpen ? (
+            <p role="status">Confirm your available time before you start protected study.</p>
+          ) : (
+            <button
+              className={styles.commitAction}
+              type="button"
+              onClick={() => onCommand({
+                kind: "start-protected-study",
+                profileId: desk.profileId,
+                planItemId: selected.id,
+              }, "Your protected study session has started.")}
+            >
+              Start protected study
+              <ArrowIcon />
+            </button>
+          )}
         </div>
       ) : null}
 
@@ -1795,7 +1827,7 @@ function SemesterDeskReady({
   onReturnDraftChange,
   onDelayedReturnDateChange,
   onFocusItem,
-  onRetrySave,
+  onDismissSaveError,
   onDownload,
   onOpenReset,
   onCancelReset,
@@ -1816,7 +1848,7 @@ function SemesterDeskReady({
   readonly delayedReturnDate: string;
   readonly focusedItemId: string | null;
   readonly resetOpen: boolean;
-  readonly onCommand: (command: SemesterDeskCommand, successMessage: string) => boolean;
+  readonly onCommand: SemesterDeskCommandHandler;
   readonly onCapacityMinutesChange: (value: string) => void;
   readonly onRecoveryChoiceChange: (planItemId: string, choice: RecoveryChoice) => void;
   readonly onPrepareRecovery: () => void;
@@ -1826,7 +1858,7 @@ function SemesterDeskReady({
   readonly onReturnDraftChange: (value: string) => void;
   readonly onDelayedReturnDateChange: (value: string) => void;
   readonly onFocusItem: (planItemId: string) => void;
-  readonly onRetrySave: () => void;
+  readonly onDismissSaveError: () => void;
   readonly onDownload: () => void;
   readonly onOpenReset: () => void;
   readonly onCancelReset: () => void;
@@ -1841,7 +1873,7 @@ function SemesterDeskReady({
         {saveError ? (
           <section className={styles.saveError} role="alert" aria-label="Local save problem">
             <p>{saveError}</p>
-            <button className={styles.secondaryAction} type="button" onClick={onRetrySave}>Try save again</button>
+            <button className={styles.secondaryAction} type="button" onClick={onDismissSaveError}>Dismiss message</button>
           </section>
         ) : null}
         <CourseLedger desk={desk} onCommand={onCommand} now={now} />
@@ -2043,7 +2075,7 @@ export function SemesterDeskV2App({
       setDesk(null);
       setScreen("malformed");
       setNotice("FORGE did not change local data that needs review.");
-      setSaveError(read.message);
+      setSaveError(malformedLocalDataMessage);
       return;
     }
     deskRef.current = read.state;
@@ -2163,11 +2195,8 @@ export function SemesterDeskV2App({
         showLocalStorageUnavailable();
         return;
       }
-      const detail = error instanceof Error && error.message.trim().length > 0
-        ? ` ${error.message.trim()}`
-        : "";
       showBlockedReference(
-        `FORGE could not read local data on this device.${detail}`,
+        localReadFailureMessage,
         usesBrowserStorage ? profileId : null,
       );
     });
@@ -2248,73 +2277,84 @@ export function SemesterDeskV2App({
     document.getElementById(semesterDeskMainAnchor)?.focus({ preventScroll: true });
   }, [screen]);
 
-  function persist(next: SemesterDeskState): Promise<void> {
-    const activePersistence = persistenceRef.current;
-    if (!activePersistence) return Promise.resolve();
-    pendingSaveCountRef.current += 1;
-    setSaveStatus("saving");
-    return enqueueStorage(() => activePersistence.save(next))
-      .then((result) => {
-        if (!mountedRef.current) return;
-        if (!result.ok) {
-          if (pendingSaveCountRef.current === 1) {
-            setSaveStatus("error");
-            setSaveError(result.message);
-            setNotice("Your changes remain open in this screen. They did not save.");
-          }
-          return;
-        }
-        if (pendingSaveCountRef.current === 1) {
-          setSaveStatus("saved");
-          setSaveError(null);
-        }
-      })
-      .catch((error) => {
-        if (!mountedRef.current || pendingSaveCountRef.current !== 1) return;
-        const message = error instanceof Error && error.message.trim().length > 0
-          ? `FORGE could not save local data on this device. ${error.message.trim()}`
-          : "FORGE could not save local data on this device.";
-        setSaveStatus("error");
-        setSaveError(message);
-        setNotice("Your changes remain open in this screen. They did not save.");
-      })
-      .finally(() => {
-        pendingSaveCountRef.current = Math.max(0, pendingSaveCountRef.current - 1);
-      });
-  }
-
-  function applyCommand(command: SemesterDeskCommand, successMessage: string): boolean {
+  function applyCommand(
+    command: SemesterDeskCommand,
+    successMessage: string,
+    onSaved?: () => void,
+  ): void {
+    if (pendingSaveCountRef.current > 0) {
+      setNotice("Wait for the current change to save before you make another change.");
+      return;
+    }
     const current = deskRef.current;
-    if (!current) return false;
+    if (!current) return;
     const result = transitionSemesterDesk(current, command, runtime());
     if (!result.ok) {
       setNotice(messageForError(result));
-      return false;
+      return;
     }
-    deskRef.current = result.value;
-    setDesk(result.value);
-    setCapacityMinutes(String(result.value.capacityDraft?.availableMinutes ?? result.value.capacity?.availableMinutes ?? capacityMinutes));
-    if (command.kind === "choose-next-action" || command.kind === "start-protected-study") {
-      focusLearningItem(command.planItemId);
+    const activePersistence = persistenceRef.current;
+    if (!activePersistence) {
+      setSaveStatus("error");
+      setSaveError(localSaveFailureMessage);
+      setNotice("The saved desk did not change.");
+      return;
     }
-    if (command.kind === "complete-practice") {
-      const session = current.protectedStudySessions.find((entry) => entry.id === command.studySessionId);
-      if (command.outcome === "completed") {
-        setPracticeDraft("");
-        if (session) focusLearningItem(session.planItemId);
-      }
-    }
-    if (command.kind === "submit-independent-proof" || command.kind === "schedule-delayed-return") {
-      focusLearningItem(command.planItemId);
-    }
-    if (command.kind === "complete-delayed-return") focusLearningItem(null);
-    if (command.kind === "submit-independent-proof") setProofDraft("");
-    if (command.kind === "complete-delayed-return") setReturnDraft("");
-    if (command.kind === "schedule-delayed-return") setDelayedReturnDate("");
-    if (command.kind === "prepare-recovery") setRecoveryValidationErrors({});
-    setNotice(successMessage);
-    void persist(result.value);
-    return true;
+
+    pendingSaveCountRef.current = 1;
+    setSaveStatus("saving");
+    setSaveError(null);
+    void enqueueStorage(() => activePersistence.save(result.value))
+      .then((saved) => {
+        if (!mountedRef.current) return;
+        pendingSaveCountRef.current = 0;
+        if (!saved.ok) {
+          setSaveStatus("error");
+          setSaveError(localSaveFailureMessage);
+          setNotice("The saved desk did not change. Your entries remain on this screen.");
+          return;
+        }
+
+        deskRef.current = result.value;
+        setDesk(result.value);
+        setCapacityMinutes(String(
+          result.value.capacityDraft?.availableMinutes
+          ?? result.value.capacity?.availableMinutes
+          ?? capacityMinutes,
+        ));
+        if (command.kind === "choose-next-action" || command.kind === "start-protected-study") {
+          focusLearningItem(command.planItemId);
+        }
+        if (command.kind === "complete-practice") {
+          const session = current.protectedStudySessions.find((entry) => entry.id === command.studySessionId);
+          if (command.outcome === "completed") {
+            setPracticeDraft("");
+            if (session) focusLearningItem(session.planItemId);
+          }
+        }
+        if (command.kind === "submit-independent-proof" || command.kind === "schedule-delayed-return") {
+          focusLearningItem(command.planItemId);
+        }
+        if (command.kind === "complete-delayed-return") focusLearningItem(null);
+        if (command.kind === "submit-independent-proof") setProofDraft("");
+        if (command.kind === "complete-delayed-return") setReturnDraft("");
+        if (command.kind === "schedule-delayed-return") setDelayedReturnDate("");
+        if (command.kind === "prepare-recovery") setRecoveryValidationErrors({});
+        setSaveStatus("saved");
+        setSaveError(null);
+        setNotice(successMessage);
+        onSaved?.();
+      })
+      .catch(() => {
+        if (!mountedRef.current) return;
+        pendingSaveCountRef.current = 0;
+        setSaveStatus("error");
+        setSaveError(localSaveFailureMessage);
+        setNotice("The saved desk did not change. Your entries remain on this screen.");
+      })
+      .finally(() => {
+        pendingSaveCountRef.current = 0;
+      });
   }
 
   async function submitOnboarding(event: FormEvent<HTMLFormElement>) {
@@ -2385,29 +2425,58 @@ export function SemesterDeskV2App({
     let saved: SemesterDeskPersistenceResult;
     try {
       saved = await enqueueStorage(() => activePersistence.save(completed.value));
-    } catch (error) {
-      const detail = error instanceof Error && error.message.trim().length > 0
-        ? ` ${error.message.trim()}`
-        : "";
-      saved = { ok: false, message: `FORGE could not save local data on this device.${detail}` };
+    } catch {
+      saved = { ok: false, message: localSaveFailureMessage };
     }
 
-    if (!saved.ok || !mountedRef.current) {
+    if (!mountedRef.current) return;
+    if (!saved.ok) {
       let resetResult: SemesterDeskPersistenceResult = { ok: true };
       try {
         resetResult = await enqueueStorage(() => activePersistence.reset(profileId));
-      } catch (error) {
-        const detail = error instanceof Error && error.message.trim().length > 0
-          ? ` ${error.message.trim()}`
-          : "";
-        resetResult = { ok: false, message: `FORGE could not remove incomplete local data.${detail}` };
+      } catch {
+        resetResult = { ok: false, message: localResetFailureMessage };
       }
       if (!mountedRef.current) return;
       setSaveStatus("error");
-      const cleanupMessage = resetResult.ok ? "" : ` ${resetResult.message}`;
-      const errorMessage = `${saved.ok ? "FORGE could not finish opening this desk." : saved.message} Your desk did not open.${cleanupMessage}`;
+      const cleanupMessage = resetResult.ok
+        ? ""
+        : " FORGE could not verify removal of incomplete local data.";
+      const errorMessage = `${localSaveFailureMessage} Your desk did not open.${cleanupMessage}`;
       setOnboardingError(errorMessage);
       setNotice(errorMessage);
+      return;
+    }
+
+    const browserStorage = persistence === undefined ? browserStorageRef.current : null;
+    const savedReturnReference = persistence !== undefined
+      || (browserStorage !== null && writeActiveProfileReference(browserStorage, profileId));
+    if (!savedReturnReference) {
+      let resetResult: SemesterDeskPersistenceResult;
+      try {
+        resetResult = await enqueueStorage(() => activePersistence.reset(profileId));
+      } catch {
+        resetResult = { ok: false, message: localResetFailureMessage };
+      }
+      if (!mountedRef.current) return;
+      if (resetResult.ok) {
+        const errorMessage = "FORGE could not save the local return reference. Your desk did not open. Try again.";
+        setSaveStatus("error");
+        setOnboardingError(errorMessage);
+        setNotice(errorMessage);
+        return;
+      }
+
+      profileIdRef.current = profileId;
+      deskRef.current = completed.value;
+      setDesk(completed.value);
+      setCapacityMinutes("");
+      setScreen("ready");
+      writeProfileIdToLocation(profileId, "overview");
+      const recoveryMessage = "FORGE saved this desk, but it could not save its local return reference. Keep this page address, or download or remove the local desk before you leave.";
+      setSaveStatus("error");
+      setSaveError(recoveryMessage);
+      setNotice(recoveryMessage);
       return;
     }
 
@@ -2417,12 +2486,9 @@ export function SemesterDeskV2App({
     setOnboardingDraft(emptyOnboardingDraft);
     setCapacityMinutes("");
     setScreen("ready");
-    const savedReturnReference = persistence === undefined
-      ? browserStorageRef.current !== null && writeActiveProfileReference(browserStorageRef.current, profileId)
-      : true;
-    setNotice(savedReturnReference
-      ? "Your Semester Desk is open."
-      : "Your Semester Desk is open. FORGE could not save its local return reference.");
+    setSaveStatus("saved");
+    setSaveError(null);
+    setNotice("Your Semester Desk is open.");
     writeProfileIdToLocation(profileId, "overview");
   }
 
@@ -2473,10 +2539,17 @@ export function SemesterDeskV2App({
     const activePersistence = persistenceRef.current;
     const profileId = profileIdRef.current;
     if (!activePersistence || !profileId) return;
-    const result = await enqueueStorage(() => activePersistence.exportRaw(profileId));
+    let result: SemesterDeskExportResult;
+    try {
+      result = await enqueueStorage(() => activePersistence.exportRaw(profileId));
+    } catch {
+      setSaveError(localExportFailureMessage);
+      setNotice(localExportFailureMessage);
+      return;
+    }
     if (!result.ok) {
-      setSaveError(result.message);
-      setNotice(result.message);
+      setSaveError(localExportFailureMessage);
+      setNotice(localExportFailureMessage);
       return;
     }
     const blob = new Blob([result.raw], { type: "application/json" });
@@ -2494,11 +2567,16 @@ export function SemesterDeskV2App({
     const profileId = profileIdRef.current;
     if (!activePersistence || !profileId) return;
     setSaveStatus("saving");
-    const result = await enqueueStorage(() => activePersistence.reset(profileId));
+    let result: SemesterDeskPersistenceResult;
+    try {
+      result = await enqueueStorage(() => activePersistence.reset(profileId));
+    } catch {
+      result = { ok: false, message: localResetFailureMessage };
+    }
     if (!result.ok) {
       setSaveStatus("error");
-      setSaveError(result.message);
-      setNotice(result.message);
+      setSaveError(localResetFailureMessage);
+      setNotice(localResetFailureMessage);
       return;
     }
     const clearedReturnReference = persistence === undefined
@@ -2639,8 +2717,10 @@ export function SemesterDeskV2App({
       onReturnDraftChange={setReturnDraft}
       onDelayedReturnDateChange={setDelayedReturnDate}
       onFocusItem={focusLearningItem}
-      onRetrySave={() => {
-        if (deskRef.current) void persist(deskRef.current);
+      onDismissSaveError={() => {
+        setSaveError(null);
+        setSaveStatus("saved");
+        setNotice("The saved desk did not change. You can try the action again.");
       }}
       onDownload={() => { void downloadLocalData(); }}
       onOpenReset={openResetDialog}

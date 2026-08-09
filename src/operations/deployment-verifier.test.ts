@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { createServer, request as httpRequest } from "node:http";
 import type { AddressInfo, LookupFunction } from "node:net";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
-import { CANONICAL_DEPLOYMENT_ROUTES, createPinnedLookup, IANA_IPV6_GLOBAL_UNICAST_POLICY_VERSION, IANA_SPECIAL_PURPOSE_POLICY_VERSION, INITIAL_HTML_CLIENT_ASSET_BUDGET, validateTargetUrl, verifyDeployment, type DeploymentVerificationReport } from "../../scripts/ops/deployment-verifier";
+import { CANONICAL_DEPLOYMENT_ROUTES, createPinnedLookup, IANA_IPV6_GLOBAL_UNICAST_POLICY_VERSION, IANA_SPECIAL_PURPOSE_POLICY_VERSION, INITIAL_HTML_CLIENT_ASSET_BUDGET, RETIRED_DEPLOYMENT_ROUTES, validateTargetUrl, verifyDeployment, type DeploymentVerificationReport } from "../../scripts/ops/deployment-verifier";
+import { SemesterDeskV2App } from "../components/forge/semester-desk-v2/app/SemesterDeskV2App";
 import { matchesImmutableDeploymentTarget, resolveDeploymentTarget } from "../../scripts/ops/deployment-target-policy";
 import { productionBuildId } from "../../scripts/ops/build-source-identity";
 import { PUBLIC_BUILD_ARTIFACT_MARKER_SCHEMA_VERSION } from "../../scripts/ops/public-build-boundary-receipt";
@@ -73,38 +76,34 @@ const PROVIDER_RECEIPT = {
   },
 } as const;
 const pages: Record<string, string> = {
-  "/": "FORGE",
-  "/start": "Turn a goal into a credible first path",
-  "/paths": "Learn toward something you want to do. No complete broad path is published yet.",
-  "/how-forge-works": "A path is credible when every move earns its place.",
-  "/app": "Reading learner-owned device continuity",
-  "/app/path": "Reading path history",
-  "/app/study": "Preparing action brief",
-  "/app/evidence": "Proof should say exactly what happened",
-  "/trust": "FORGE should be inspectable before it is impressive",
-  "/learn/force-and-motion": "Force & motion",
-  "/learn/ai-and-learning": "AI & learning",
-  "/learn/proportional-reasoning": "Proportional reasoning",
-  "/learn/primary-source-reasoning": "Primary source reasoning",
-  "/paths/source-corroboration": "Verify before you trust",
-  "/coverage": "What FORGE can—and cannot—offer today. Availability map only",
-  "/author": "The author workspace is not available. Author role required",
-  "/sign-in": "device profile Cloud identity · structurally disabled",
-  "/account": "device evidence No cloud account active",
-  "/internal/pilot": "This route is not available in this deployment",
+  "/": "Rebuild from today.",
+  "/app": "Opening your Semester Desk…",
+  "/how-forge-works": "Make the semester visible before you make a plan.",
+  "/university": "A private desk for the work of a real degree.",
+  "/privacy": "Your study plan is not a profile.",
+  "/terms": "Use FORGE to support your work.",
+  "/support": "Return to the next honest action.",
 };
 function scriptTag(url: string): string { return `<script nonce=\"testnonce\" src=\"${url}\"></script>`; }
-function mockFetch(asset = "self.__next_f=[]", defaultAssets: readonly string[] = ["/_next/static/app.js"], routeAssets: Readonly<Record<string, readonly string[]>> = {}, releaseManifest: unknown = RELEASE_MANIFEST, healthBuildTime = "2026-07-22T00:00:00.000Z") {
+function mockFetch(asset = "self.__next_f=[]", defaultAssets: readonly string[] = ["/_next/static/app.js"], routeAssets: Readonly<Record<string, readonly string[]>> = {}, releaseManifest: unknown = RELEASE_MANIFEST, healthBuildTime = "2026-07-22T00:00:00.000Z", retiredPageMarker = "This page is not here.") {
   return async (input: string | URL | Request): Promise<Response> => {
     const url = new URL(input instanceof Request ? input.url : input.toString());
     if (url.pathname === "/api/health") return Response.json({ schema_version: "1.0", status: "ok", service: "forge-learning-os", app_name: "FORGE", release_sha: SHA, build_source_sha: SHA, build_time: healthBuildTime, runtime_mode: "fallback_only", cloud_accounts_enabled: false, cloud_auth_configured: false, device_profiles: "device_only", learner_evidence_sync: "disabled", dependency_lock_digest: DIGEST, content_package_manifest_digest: DIGEST, evaluator_baseline_digest: DIGEST, database_migration_identity: "not_configured", managed_surface_flags: { lesson_studio: false, interpretation: false, planner: false }, managed_provider_flags: { openai: false, anthropic: false, gemini: false, openrouter: false }, provider_mode: "disabled", release_manifest: releaseManifest }, { headers: { "cache-control": "no-store", "x-forge-release-sha": SHA, "x-forge-build-source-sha": SHA } });
     if (url.pathname.startsWith("/_next/static/")) return new Response(asset, { headers: { "content-type": "application/javascript" } });
     const scripts = routeAssets[url.pathname] ?? defaultAssets;
-    return new Response(`<html><body>${pages[url.pathname] ?? ""}${scripts.map(scriptTag).join("")}</body></html>`, { headers: { "content-type": "text/html; charset=utf-8", "content-security-policy": CSP, "x-content-type-options": "nosniff", "x-frame-options": "DENY", "strict-transport-security": "max-age=31536000", "referrer-policy": "strict-origin-when-cross-origin", "permissions-policy": "camera=(), microphone=(), geolocation=()" } });
+    const retired = RETIRED_DEPLOYMENT_ROUTES.some((route) => route.path === url.pathname);
+    const status = retired ? 404 : 200;
+    const pageMarker = retired ? retiredPageMarker : (pages[url.pathname] ?? "");
+    return new Response(`<html><body>${pageMarker}${scripts.map(scriptTag).join("")}</body></html>`, { status, headers: { "content-type": "text/html; charset=utf-8", "content-security-policy": CSP, "x-content-type-options": "nosniff", "x-frame-options": "DENY", "strict-transport-security": "max-age=31536000", "referrer-policy": "strict-origin-when-cross-origin", "permissions-policy": "camera=(), microphone=(), geolocation=()", ...(retired ? { "cache-control": "no-store", "x-robots-tag": "noindex, nofollow" } : {}) } });
   };
 }
 async function run(fetchImpl = mockFetch(), externalProviderReceipt?: unknown): Promise<DeploymentVerificationReport> { return verifyDeployment({ baseUrl: "https://forge.example", expectedSha: SHA, expectedSourceTree: TREE, expectedPublicDirectoryIdentity: { publicDirectoryDigest: `sha256:${DIGEST}`, publicDirectoryFileCount: 5 }, expectedRuntimeConfigurationIdentity: { runtimeConfigurationDigest: `sha256:${DIGEST}`, runtimeConfigurationFileCount: 4 }, allowedHosts: ["forge.example"], fetchImpl: fetchImpl as typeof fetch, generatedAt: "2026-07-22T00:00:03.000Z", expectedLockfileDigest: DIGEST, externalProviderReceipt, expectedContentManifestDigest: DIGEST, expectedEvaluatorBaselineDigest: DIGEST, expectedDatabaseMigrationIdentity: "not_configured", deploymentTarget: TEST_DEPLOYMENT_TARGET, resolveHostname: async () => ["8.8.8.8"] }); }
 describe("deployment verifier", () => {
+  it("uses a Semester Desk marker that exists in the server-rendered app shell", () => {
+    const route = CANONICAL_DEPLOYMENT_ROUTES.find((entry) => entry.path === "/app");
+    expect(route).toBeDefined();
+    expect(route?.marker.test(renderToStaticMarkup(createElement(SemesterDeskV2App)))).toBe(true);
+  });
   it("uses the Node all-address lookup shape while pinning the validated address", async () => {
     const server = createServer((_request, response) => response.end("pinned"));
     await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
@@ -133,28 +132,25 @@ describe("deployment verifier", () => {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     }
   });
-  it("checks canonical public/app routes, all four Worlds, the internal pilot denial, CSP nonce, and disabled state without promoting a plain receipt", async () => { const report = await run(); expect(report.status).toBe("fail"); expect(report.observed_release_sha).toBe(SHA); expect(report.request_policy.methods).toEqual(["GET"]); expect(report.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED"); expect(report.release_identity.source_sha).toBe(SHA); expect(report.release_identity.tested_sha).toBe(SHA); expect(report.release_identity.database).toEqual({ status: "not_configured" }); expect(report.alias_verified_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/); expect(report.checks.some((item) => item.id === "path_start.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "public_paths.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "how_forge_works.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "learner_today.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "world_primary_source_reasoning.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "source_corroboration_path.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "pathway_availability.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "author_gate.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "device_profile_sign_in.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "internal_pilot_denial.marker" && item.status === "pass")).toBe(true); expect(report.checks.find((item) => item.id === "provider_receipt.authority")?.status).toBe("fail"); });
-  it("keeps the refoundation journey and source-corroboration route in the exact canonical verifier route set", () => {
+  it("checks the final Semester Desk routes and retired-route boundary without promoting a plain receipt", async () => { const report = await run(); expect(report.status).toBe("fail"); expect(report.observed_release_sha).toBe(SHA); expect(report.request_policy.methods).toEqual(["GET"]); expect(report.release_identity.candidate_state).toBe("DEPLOYMENT_BLOCKED"); expect(report.release_identity.source_sha).toBe(SHA); expect(report.release_identity.tested_sha).toBe(SHA); expect(report.release_identity.database).toEqual({ status: "not_configured" }); expect(report.alias_verified_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/); expect(report.checks.some((item) => item.id === "home.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "semester_desk.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "how_forge_works.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "university.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "privacy.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "terms.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "support.marker" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "retired_lesson_studio.status" && item.status === "pass")).toBe(true); expect(report.checks.some((item) => item.id === "retired_lesson_studio.marker" && item.status === "pass")).toBe(true); expect(report.checks.find((item) => item.id === "provider_receipt.authority")?.status).toBe("fail"); });
+  it("rejects a generic platform 404 for a retired route", async () => {
+    const report = await run(mockFetch(undefined, undefined, undefined, undefined, undefined, ""));
+    expect(report.checks.find((item) => item.id === "retired_lesson_studio.marker")?.status).toBe("fail");
+  });
+  it("keeps the exact Semester Desk route set in the deployment verifier", () => {
     expect(CANONICAL_DEPLOYMENT_ROUTES.map((route) => route.path)).toEqual([
       "/",
-      "/start",
-      "/paths",
-      "/how-forge-works",
       "/app",
-      "/app/path",
-      "/app/study",
-      "/app/evidence",
-      "/trust",
-      "/learn/force-and-motion",
-      "/learn/ai-and-learning",
-      "/learn/proportional-reasoning",
-      "/learn/primary-source-reasoning",
-      "/paths/source-corroboration",
-      "/coverage",
-      "/author",
-      "/sign-in",
-      "/account",
-      "/internal/pilot",
+      "/how-forge-works",
+      "/university",
+      "/privacy",
+      "/terms",
+      "/support",
+    ]);
+    expect(RETIRED_DEPLOYMENT_ROUTES.map((route) => route.path)).toEqual([
+      "/lesson-studio",
+      "/university/semester-desk",
+      "/api/forge/private-state",
     ]);
   });
   it("fails closed for zero and over-budget initial asset unions, but scans every asset at the exact budget", async () => {

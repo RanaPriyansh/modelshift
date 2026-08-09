@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   SEMESTER_DESK_RELEASE_BUDGETS,
+  verifyRetiredPublicAssetBoundary,
   verifySemesterDeskV2ReleaseBudgets,
-  verifyVercelReleaseAssetExclusions,
 } from "./verify-semester-desk-v2-release-budgets";
 
 const roots: string[] = [];
@@ -17,14 +17,14 @@ async function fixtureRoot(): Promise<string> {
   roots.push(root);
   await Promise.all([
     mkdir(resolve(root, "app"), { recursive: true }),
+    mkdir(resolve(root, "docs/archive/retired-public-assets/forge"), { recursive: true }),
+    mkdir(resolve(root, "docs/archive/retired-public-assets/worlds/primary-source-reasoning"), { recursive: true }),
     mkdir(resolve(root, "src/components/forge/semester-desk-v2"), { recursive: true }),
-    mkdir(resolve(root, "public/forge"), { recursive: true }),
-    mkdir(resolve(root, "public/worlds/primary-source-reasoning"), { recursive: true }),
+    mkdir(resolve(root, "public"), { recursive: true }),
   ]);
   await Promise.all([
-    writeFile(resolve(root, ".vercelignore"), "public/forge/through-the-door.png\npublic/worlds/primary-source-reasoning\n"),
-    writeFile(resolve(root, "public/forge/through-the-door.png"), "retired"),
-    writeFile(resolve(root, "public/worlds/primary-source-reasoning/provenance.json"), "{}"),
+    writeFile(resolve(root, "docs/archive/retired-public-assets/forge/through-the-door.png"), "retired"),
+    writeFile(resolve(root, "docs/archive/retired-public-assets/worlds/primary-source-reasoning/provenance.json"), "{}"),
     writeFile(resolve(root, "app/page.release.tsx"), "export default function Page() { return null; }"),
   ]);
   return root;
@@ -66,23 +66,31 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
-describe("Semester Desk Vercel public asset exclusions", () => {
-  it("allows only the two retired public asset exclusions", async () => {
+describe("Semester Desk retired public asset boundary", () => {
+  it("accepts archived assets without a Vercel exclusion", async () => {
     const root = await fixtureRoot();
 
-    expect(() => verifyVercelReleaseAssetExclusions(root)).not.toThrow();
+    expect(() => verifyRetiredPublicAssetBoundary(root)).not.toThrow();
   });
 
-  it("rejects a broad Vercel exclusion or a release source reference", async () => {
+  it("rejects both retired paths under public", async () => {
     const root = await fixtureRoot();
-    await writeFile(resolve(root, ".vercelignore"), "public/**\n");
+    await mkdir(resolve(root, "public/forge"), { recursive: true });
+    await writeFile(resolve(root, "public/forge/through-the-door.png"), "retired");
 
-    expect(() => verifyVercelReleaseAssetExclusions(root)).toThrow(/must contain only/i);
+    expect(() => verifyRetiredPublicAssetBoundary(root)).toThrow(/must not remain under public/i);
 
-    await writeFile(resolve(root, ".vercelignore"), "public/forge/through-the-door.png\npublic/worlds/primary-source-reasoning\n");
+    await rm(resolve(root, "public/forge"), { recursive: true });
+    await mkdir(resolve(root, "public/worlds/primary-source-reasoning"), { recursive: true });
+
+    expect(() => verifyRetiredPublicAssetBoundary(root)).toThrow(/must not remain under public/i);
+  });
+
+  it("rejects a release source reference to an archived asset", async () => {
+    const root = await fixtureRoot();
     await writeFile(resolve(root, "app/page.release.tsx"), "const retired = \"/forge/through-the-door.png\";");
 
-    expect(() => verifyVercelReleaseAssetExclusions(root)).toThrow(/referenced by release source/i);
+    expect(() => verifyRetiredPublicAssetBoundary(root)).toThrow(/referenced by release source/i);
   });
 
   it("runs after a Next build and fails closed for a budget excess", async () => {
@@ -103,5 +111,16 @@ describe("Semester Desk Vercel public asset exclusions", () => {
 
     await writeBuildFixture(root, SEMESTER_DESK_RELEASE_BUDGETS.maximumInitialJavaScriptBytes + 1);
     expect(() => verifySemesterDeskV2ReleaseBudgets(root)).toThrow(/Initial JavaScript budget exceeded/i);
+  });
+
+  it("counts every public image against the release budget", async () => {
+    const root = await fixtureRoot();
+    await writeBuildFixture(root);
+    await writeFile(
+      resolve(root, "public/current-release.png"),
+      Buffer.alloc(SEMESTER_DESK_RELEASE_BUDGETS.maximumDeployablePublicImageBytes + 1),
+    );
+
+    expect(() => verifySemesterDeskV2ReleaseBudgets(root)).toThrow(/public image budget exceeded/i);
   });
 });

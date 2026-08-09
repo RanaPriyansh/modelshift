@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import provenance from "../../../public/worlds/primary-source-reasoning/provenance.json";
+import provenance from "../../../docs/archive/retired-public-assets/worlds/primary-source-reasoning/provenance.json";
 import {
   EVIDENCE_CATEGORIES,
   PHILADELPHIA_CATALOG,
@@ -100,7 +100,11 @@ describe("primary-source content and provenance", () => {
   it("pins the exact bytes of both self-hosted LOC service JPEGs", () => {
     for (const asset of provenance.assets) {
       const bytes = readFileSync(
-        join(process.cwd(), "public/worlds/primary-source-reasoning", asset.file),
+        join(
+          process.cwd(),
+          "docs/archive/retired-public-assets/worlds/primary-source-reasoning",
+          asset.file,
+        ),
       );
       expect(bytes.byteLength).toBe(asset.bytes);
       expect(createHash("sha256").update(bytes).digest("hex")).toBe(asset.sha256);

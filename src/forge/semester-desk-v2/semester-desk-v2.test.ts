@@ -509,6 +509,81 @@ describe("Semester Desk v2 domain engine", () => {
     });
   });
 
+  it("keeps recovery ahead of choosing or starting protected study", () => {
+    const controlled = runtimeAt();
+    const base = withCourseAndPlan(controlled.runtime);
+    let state = command(base.state, {
+      kind: "choose-next-action",
+      profileId: PROFILE_ID,
+      planItemId: base.planItemId,
+    }, controlled.runtime);
+    state = command(state, {
+      kind: "prepare-recovery",
+      profileId: PROFILE_ID,
+      summary: "The week changed.",
+      decisions: [{
+        planItemId: base.planItemId,
+        outcome: "kept",
+        reason: "This work still fits.",
+      }],
+    }, controlled.runtime);
+
+    expect(transitionSemesterDesk(state, {
+      kind: "choose-next-action",
+      profileId: PROFILE_ID,
+      planItemId: base.planItemId,
+    }, controlled.runtime)).toMatchObject({
+      ok: false,
+      error: { code: "invalid-transition", message: expect.stringContaining("recovery") },
+    });
+    expect(transitionSemesterDesk(state, {
+      kind: "start-protected-study",
+      profileId: PROFILE_ID,
+      planItemId: base.planItemId,
+    }, controlled.runtime)).toMatchObject({
+      ok: false,
+      error: { code: "invalid-transition", message: expect.stringContaining("recovery") },
+    });
+
+    state = command(state, { kind: "confirm-recovery", profileId: PROFILE_ID }, controlled.runtime);
+    expect(transitionSemesterDesk(state, {
+      kind: "start-protected-study",
+      profileId: PROFILE_ID,
+      planItemId: base.planItemId,
+    }, controlled.runtime)).toMatchObject({ ok: true });
+  });
+
+  it("does not start protected study while newer capacity is unconfirmed", () => {
+    const controlled = runtimeAt();
+    const base = withCourseAndPlan(controlled.runtime);
+    let state = command(base.state, {
+      kind: "choose-next-action",
+      profileId: PROFILE_ID,
+      planItemId: base.planItemId,
+    }, controlled.runtime);
+    state = command(state, {
+      kind: "draft-capacity",
+      profileId: PROFILE_ID,
+      availableMinutes: 90,
+    }, controlled.runtime);
+
+    expect(transitionSemesterDesk(state, {
+      kind: "start-protected-study",
+      profileId: PROFILE_ID,
+      planItemId: base.planItemId,
+    }, controlled.runtime)).toMatchObject({
+      ok: false,
+      error: { code: "invalid-transition", message: expect.stringContaining("available time") },
+    });
+
+    state = command(state, { kind: "confirm-capacity", profileId: PROFILE_ID }, controlled.runtime);
+    expect(transitionSemesterDesk(state, {
+      kind: "start-protected-study",
+      profileId: PROFILE_ID,
+      planItemId: base.planItemId,
+    }, controlled.runtime)).toMatchObject({ ok: true });
+  });
+
   it("blocks independent proof until protected practice completes", () => {
     const controlled = runtimeAt();
     const base = withCourseAndPlan(controlled.runtime);

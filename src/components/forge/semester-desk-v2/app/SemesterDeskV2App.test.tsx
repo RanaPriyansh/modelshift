@@ -366,6 +366,36 @@ describe("SemesterDeskV2App", () => {
     expect(window.location.hash).toBe("");
   });
 
+  it("removes a new browser profile when its active return reference cannot save", async () => {
+    const values = new Map<string, string>();
+    const rawBrowserMessage = "RAW_BROWSER_QUOTA_DETAIL";
+    const storage: Storage = {
+      get length() { return values.size; },
+      clear() { values.clear(); },
+      getItem(key) { return values.get(key) ?? null; },
+      key(index) { return [...values.keys()][index] ?? null; },
+      removeItem(key) { values.delete(key); },
+      setItem(key, value) {
+        if (key === semesterDeskActiveProfileStorageKey) {
+          throw new DOMException(rawBrowserMessage, "QuotaExceededError");
+        }
+        values.set(key, value);
+      },
+    };
+    vi.spyOn(window, "localStorage", "get").mockReturnValue(storage);
+    renderBrowserApp();
+
+    await screen.findByRole("heading", { name: "Start with what is real." });
+    fillOnboarding();
+    fireEvent.click(screen.getByRole("button", { name: "Open your Semester Desk" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your desk did not open.");
+    expect(screen.getByRole("heading", { name: "Start with what is real." })).toBeInTheDocument();
+    expect([...values.keys()].filter((key) => key !== semesterDeskActiveProfileStorageKey)).toEqual([]);
+    expect(document.body).not.toHaveTextContent(rawBrowserMessage);
+    expect(window.location.hash).toBe("");
+  });
+
   it("keeps a local profile isolated and fails closed for malformed storage", async () => {
     const malformed = new MemoryPersistence(null, "{not-valid-json");
     renderApp(malformed);
@@ -469,7 +499,7 @@ describe("SemesterDeskV2App", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Choose this work" }));
     fireEvent.click(await screen.findByRole("button", { name: "Start protected study" }));
-    fireEvent.click(screen.getByRole("button", { name: "Finish practice" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Finish practice" }));
     const proof = await screen.findByLabelText("Your active-recall response");
     fireEvent.change(proof, { target: { value: "Keep this active-recall response." } });
     fireEvent.click(screen.getByRole("link", { name: "Skip to main content" }));
@@ -484,7 +514,7 @@ describe("SemesterDeskV2App", () => {
     fireEvent.change(returnDate, { target: { value: "2026-08-10T09:00" } });
     fireEvent.submit(returnDate.closest("form")!);
     currentTime = "2026-08-11T09:00:00.000Z";
-    fireEvent.click(screen.getByRole("button", { name: "Open return" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Open return" }));
     const explanation = await screen.findByLabelText("Your fresh explanation");
     fireEvent.change(explanation, { target: { value: "Keep this fresh explanation." } });
     fireEvent.click(screen.getByRole("link", { name: "Skip to main content" }));
@@ -770,6 +800,36 @@ describe("SemesterDeskV2App", () => {
       .toHaveTextContent("This work still fits today.");
   });
 
+  it("keeps an open recovery plan ahead of choosing or starting protected study", async () => {
+    let state = makeDesk();
+    const planItemId = state.planItems[0]?.id;
+    if (!planItemId) throw new Error("Expected plan item.");
+    state = command(state, {
+      kind: "choose-next-action",
+      profileId: PROFILE_ID,
+      planItemId,
+    });
+    state = command(state, {
+      kind: "prepare-recovery",
+      profileId: PROFILE_ID,
+      summary: "The week changed.",
+      decisions: [{
+        planItemId,
+        outcome: "kept",
+        reason: "This work still fits.",
+      }],
+    });
+    const persistence = new MemoryPersistence(state);
+    renderApp(persistence);
+
+    expect(await screen.findByRole("button", { name: "Confirm recovery first" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Start protected study" })).not.toBeInTheDocument();
+    expect(screen.getByText("Confirm the open recovery plan before you start protected study.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirm these changes" }));
+    expect(await screen.findByRole("button", { name: "Start protected study" })).toBeEnabled();
+  });
+
   it("shows an honest resume action for deferred work", async () => {
     const persistence = new MemoryPersistence(makeDeferredDesk());
     renderApp(persistence);
@@ -831,7 +891,7 @@ describe("SemesterDeskV2App", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Choose this work" }));
     fireEvent.click(await screen.findByRole("button", { name: "Start protected study" }));
-    fireEvent.click(screen.getByRole("button", { name: "Finish practice" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Finish practice" }));
 
     const response = await screen.findByLabelText("Your active-recall response");
     fireEvent.change(response, { target: { value: "   " } });
@@ -856,7 +916,7 @@ describe("SemesterDeskV2App", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Choose this work" }));
     fireEvent.click(await screen.findByRole("button", { name: "Start protected study" }));
-    fireEvent.click(screen.getByRole("button", { name: "Finish practice" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Finish practice" }));
     fireEvent.change(await screen.findByLabelText("Your active-recall response"), { target: { value: "A local response." } });
     fireEvent.click(screen.getByRole("button", { name: "I showed my understanding" }));
     const returnDate = await screen.findByLabelText("Return date and time");
@@ -864,7 +924,7 @@ describe("SemesterDeskV2App", () => {
     fireEvent.submit(returnDate.closest("form")!);
 
     currentTime = "2026-08-11T09:00:00.000Z";
-    fireEvent.click(screen.getByRole("button", { name: "Open return" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Open return" }));
     const explanation = await screen.findByLabelText("Your fresh explanation");
     fireEvent.change(explanation, { target: { value: "   " } });
     fireEvent.click(screen.getByRole("button", { name: "I need more work" }));
@@ -970,12 +1030,43 @@ describe("SemesterDeskV2App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Set this time" }));
     expect(await screen.findByRole("alert", { name: "Local save problem" })).toHaveTextContent("could not save");
     expect(minutes).toHaveValue(90);
+    expect(screen.queryByRole("button", { name: "Confirm 1 hr 30 min" })).not.toBeInTheDocument();
+    expect(persistence.storedState?.capacityDraft).toBeNull();
+
+    persistence.failSave = false;
+    fireEvent.click(screen.getByRole("button", { name: "Set this time" }));
+    expect(await screen.findByRole("button", { name: "Confirm 1 hr 30 min" })).toBeInTheDocument();
+    expect(persistence.storedState?.capacityDraft?.availableMinutes).toBe(90);
 
     fireEvent.click(screen.getByRole("button", { name: "Reset this device" }));
     expect(await screen.findByRole("alertdialog", { name: "Remove this local desk?" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Remove local desk" }));
     expect(await screen.findByRole("heading", { name: "Start with what is real." })).toBeInTheDocument();
     expect(persistence.resets).toEqual([PROFILE_ID]);
+  });
+
+  it("does not expose rejected browser exception text in local save copy", async () => {
+    const state = makeDesk();
+    const rawBrowserMessage = "RAW_BROWSER_SECURITY_DETAIL";
+    const persistence: SemesterDeskPersistence = {
+      read: async () => ({ kind: "loaded", state, raw: JSON.stringify(state) }),
+      save: async () => {
+        throw new DOMException(rawBrowserMessage, "SecurityError");
+      },
+      exportRaw: async () => ({ ok: true, raw: JSON.stringify(state) }),
+      reset: async () => ({ ok: true }),
+    };
+    renderApp(persistence);
+
+    fireEvent.change(await screen.findByLabelText("Available minutes this week"), {
+      target: { value: "90" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Set this time" }));
+
+    expect(await screen.findByRole("alert", { name: "Local save problem" }))
+      .toHaveTextContent("FORGE could not save local data on this device. Try the action again.");
+    expect(document.body).not.toHaveTextContent(rawBrowserMessage);
+    expect(screen.queryByRole("button", { name: "Confirm 1 hr 30 min" })).not.toBeInTheDocument();
   });
 
   it("keeps focus in the reset dialog and returns it after Escape", async () => {

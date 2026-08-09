@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 import {
   SEMESTER_DESK_MAX_CONFLICT_FACT_IDS,
   SEMESTER_DESK_MAX_CONFLICTS_PER_COURSE,
@@ -15,7 +13,6 @@ import {
   SEMESTER_DESK_MAX_RECOVERY_DECISIONS,
   SEMESTER_DESK_MAX_STUDY_SESSIONS,
   SEMESTER_DESK_MAX_TEXT_UTF8_BYTES,
-  SEMESTER_DESK_V2_SCHEMA_VERSION,
   semesterDeskUtf8ByteLength,
   type SemesterDeskState,
   validateSemesterDeskState,
@@ -32,6 +29,7 @@ export const semesterDeskActiveProfileStorageKey =
 
 /** Normalize one profile identifier before it reaches a local storage key. */
 export function normalizeSemesterDeskProfileIdentifier(value: string): string | null {
+  if (!value.isWellFormed()) return null;
   const normalized = value.trim();
   if (normalized.length === 0) return null;
   return semesterDeskUtf8ByteLength(normalized) <= SEMESTER_DESK_MAX_IDENTIFIER_UTF8_BYTES
@@ -44,168 +42,138 @@ function boundedProfileIdentifier(value: string): string | null {
   return normalized === value ? normalized : null;
 }
 
-function boundedString(maximumBytes: number) {
-  return z.string().refine(
-    (value) => semesterDeskUtf8ByteLength(value) <= maximumBytes,
-  ).trim().min(1);
+const maximumSemesterDeskArrayLength = Math.max(
+  SEMESTER_DESK_MAX_CONFLICT_FACT_IDS,
+  SEMESTER_DESK_MAX_CONFLICTS_PER_COURSE,
+  SEMESTER_DESK_MAX_COURSES,
+  SEMESTER_DESK_MAX_DELAYED_RETURNS,
+  SEMESTER_DESK_MAX_FACTS_PER_COURSE,
+  SEMESTER_DESK_MAX_PLAN_ITEMS,
+  SEMESTER_DESK_MAX_PROOFS,
+  SEMESTER_DESK_MAX_PROGRESS_EVIDENCE,
+  SEMESTER_DESK_MAX_RECOVERY_CHANGES,
+  SEMESTER_DESK_MAX_RECOVERY_DECISIONS,
+  SEMESTER_DESK_MAX_STUDY_SESSIONS,
+);
+const maximumSemesterDeskObjectKeys = 32;
+const maximumSemesterDeskDepth = 8;
+const arrayIndex = /^(0|[1-9]\d*)$/;
+
+/**
+ * Detach one in-memory state before the canonical validator reads it.
+ * Caller getters never run. Repeated references and non-JSON values fail closed.
+ */
+function snapshotSemesterDeskState(value: unknown): unknown {
+  const visited = new WeakSet<object>();
+  let nodes = 0;
+
+  function visit(candidate: unknown, depth: number): unknown {
+    nodes += 1;
+    if (nodes > SEMESTER_DESK_MAX_RAW_JSON_UTF8_BYTES || depth > maximumSemesterDeskDepth) {
+      throw new TypeError("The local state exceeds its structural boundary.");
+    }
+    if (candidate === null || typeof candidate === "boolean") return candidate;
+    if (typeof candidate === "string") {
+      if (semesterDeskUtf8ByteLength(candidate) > SEMESTER_DESK_MAX_TEXT_UTF8_BYTES) {
+        throw new TypeError("The local state contains oversized text.");
+      }
+      return candidate;
+    }
+    if (typeof candidate === "number") {
+      if (!Number.isFinite(candidate)) {
+        throw new TypeError("The local state contains a non-finite number.");
+      }
+      return candidate;
+    }
+    if (typeof candidate !== "object") {
+      throw new TypeError("The local state is not JSON data.");
+    }
+    if (visited.has(candidate)) {
+      throw new TypeError("The local state contains a repeated reference.");
+    }
+    visited.add(candidate);
+
+    if (Array.isArray(candidate)) {
+      const lengthDescriptor = Object.getOwnPropertyDescriptor(candidate, "length");
+      if (
+        !lengthDescriptor
+        || !("value" in lengthDescriptor)
+        || typeof lengthDescriptor.value !== "number"
+        || !Number.isSafeInteger(lengthDescriptor.value)
+        || lengthDescriptor.value < 0
+        || lengthDescriptor.value > maximumSemesterDeskArrayLength
+      ) {
+        throw new TypeError("The local state contains an invalid array.");
+      }
+      const length = lengthDescriptor.value;
+      const keys = Reflect.ownKeys(candidate);
+      if (
+        keys.length !== length + 1
+        || !keys.includes("length")
+        || keys.some((key) => (
+          key !== "length"
+          && (typeof key !== "string" || !arrayIndex.test(key) || Number(key) >= length)
+        ))
+      ) {
+        throw new TypeError("The local state contains a sparse or decorated array.");
+      }
+
+      const output: unknown[] = [];
+      for (let index = 0; index < length; index += 1) {
+        const descriptor = Object.getOwnPropertyDescriptor(candidate, String(index));
+        if (
+          !descriptor
+          || !descriptor.enumerable
+          || !("value" in descriptor)
+          || descriptor.get
+          || descriptor.set
+        ) {
+          throw new TypeError("The local state contains an invalid array item.");
+        }
+        output.push(visit(descriptor.value, depth + 1));
+      }
+      return output;
+    }
+
+    const prototype = Object.getPrototypeOf(candidate);
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new TypeError("The local state contains an invalid object.");
+    }
+    const keys = Reflect.ownKeys(candidate);
+    if (
+      keys.length > maximumSemesterDeskObjectKeys
+      || keys.some((key) => (
+        typeof key !== "string"
+        || semesterDeskUtf8ByteLength(key) > SEMESTER_DESK_MAX_TEXT_UTF8_BYTES
+      ))
+    ) {
+      throw new TypeError("The local state contains invalid object keys.");
+    }
+
+    const output: Record<string, unknown> = {};
+    for (const key of keys as string[]) {
+      const descriptor = Object.getOwnPropertyDescriptor(candidate, key);
+      if (
+        !descriptor
+        || !descriptor.enumerable
+        || !("value" in descriptor)
+        || descriptor.get
+        || descriptor.set
+      ) {
+        throw new TypeError("The local state contains an accessor.");
+      }
+      Object.defineProperty(output, key, {
+        configurable: true,
+        enumerable: true,
+        value: visit(descriptor.value, depth + 1),
+        writable: true,
+      });
+    }
+    return output;
+  }
+
+  return visit(value, 0);
 }
-
-const identifierSchema = boundedString(SEMESTER_DESK_MAX_IDENTIFIER_UTF8_BYTES);
-const textSchema = boundedString(SEMESTER_DESK_MAX_TEXT_UTF8_BYTES);
-const dateSchema = z.string().max(10).regex(/^\d{4}-\d{2}-\d{2}$/);
-const timestampSchema = z.string().regex(
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
-).max(24);
-const courseFactStatusSchema = z.enum([
-  "checked",
-  "needs-review",
-  "not-confirmed",
-  "changed-since-last-check",
-]);
-const recoveryOutcomeSchema = z.enum(["moved", "reduced", "kept", "deferred"]);
-
-const courseFactSchema = z.object({
-  id: identifierSchema,
-  label: textSchema,
-  value: textSchema,
-  status: courseFactStatusSchema,
-  sourceLabel: textSchema,
-  checkedAt: timestampSchema.nullable(),
-}).strict();
-
-const sourceConflictSchema = z.object({
-  id: identifierSchema,
-  factIds: z.array(identifierSchema).min(2).max(SEMESTER_DESK_MAX_CONFLICT_FACT_IDS),
-  summary: textSchema,
-  status: z.enum(["open", "reviewed"]),
-  detectedAt: timestampSchema,
-  reviewedAt: timestampSchema.nullable(),
-}).strict();
-
-const courseSchema = z.object({
-  id: identifierSchema,
-  code: textSchema,
-  title: textSchema,
-  facts: z.array(courseFactSchema).max(SEMESTER_DESK_MAX_FACTS_PER_COURSE),
-  sourceConflicts: z.array(sourceConflictSchema).max(SEMESTER_DESK_MAX_CONFLICTS_PER_COURSE),
-}).strict();
-
-const planItemSchema = z.object({
-  id: identifierSchema,
-  courseId: identifierSchema,
-  title: textSchema,
-  originalDate: dateSchema,
-  currentDate: dateSchema,
-  originalMinutes: z.number().int().positive(),
-  currentMinutes: z.number().int().positive(),
-  status: z.enum([
-    "planned",
-    "deferred",
-    "in-progress",
-    "practice-complete",
-    "proof-complete",
-    "return-complete",
-  ]),
-}).strict();
-
-const recoveryDecisionSchema = z.object({
-  planItemId: identifierSchema,
-  outcome: recoveryOutcomeSchema,
-  nextDate: dateSchema.nullable(),
-  nextMinutes: z.number().int().positive().nullable(),
-  reason: textSchema,
-}).strict();
-
-const recoveryDraftSchema = z.object({
-  id: identifierSchema,
-  summary: textSchema,
-  createdAt: timestampSchema,
-  decisions: z.array(recoveryDecisionSchema).max(SEMESTER_DESK_MAX_RECOVERY_DECISIONS),
-}).strict();
-
-const recoveryChangeSchema = z.object({
-  id: identifierSchema,
-  recoveryDraftId: identifierSchema,
-  planItemId: identifierSchema,
-  outcome: recoveryOutcomeSchema,
-  reason: textSchema,
-  previousDate: dateSchema,
-  currentDate: dateSchema,
-  previousMinutes: z.number().int().positive(),
-  currentMinutes: z.number().int().positive(),
-  recordedAt: timestampSchema,
-}).strict();
-
-const protectedStudySessionSchema = z.object({
-  id: identifierSchema,
-  planItemId: identifierSchema,
-  status: z.enum(["active", "practice-complete"]),
-  startedAt: timestampSchema,
-  practiceCompletedAt: timestampSchema.nullable(),
-  practiceOutcome: z.enum(["completed", "needs-more-work"]).nullable(),
-}).strict();
-
-const independentProofSchema = z.object({
-  id: identifierSchema,
-  planItemId: identifierSchema,
-  outcome: z.enum(["demonstrated", "needs-return"]),
-  completedAt: timestampSchema,
-}).strict();
-
-const delayedReturnSchema = z.object({
-  id: identifierSchema,
-  planItemId: identifierSchema,
-  dueAt: timestampSchema,
-  status: z.enum(["due", "open", "completed"]),
-  openedAt: timestampSchema.nullable(),
-  completedAt: timestampSchema.nullable(),
-  retentionOutcome: z.enum(["retained", "needs-more-work"]).nullable(),
-}).strict();
-
-const progressEvidenceSchema = z.object({
-  id: identifierSchema,
-  planItemId: identifierSchema,
-  kind: z.enum([
-    "practice-completed",
-    "independent-proof-completed",
-    "delayed-return-completed",
-  ]),
-  outcome: z.enum([
-    "completed",
-    "needs-more-work",
-    "demonstrated",
-    "needs-return",
-    "retained",
-  ]),
-  occurredAt: timestampSchema,
-}).strict();
-
-export const semesterDeskStateSchema = z.object({
-  schemaVersion: z.literal(SEMESTER_DESK_V2_SCHEMA_VERSION),
-  id: identifierSchema,
-  profileId: identifierSchema,
-  title: textSchema,
-  createdAt: timestampSchema,
-  updatedAt: timestampSchema,
-  courses: z.array(courseSchema).max(SEMESTER_DESK_MAX_COURSES),
-  capacity: z.object({
-    availableMinutes: z.number().int().nonnegative(),
-    declaredAt: timestampSchema,
-  }).strict().nullable(),
-  capacityDraft: z.object({
-    id: identifierSchema,
-    availableMinutes: z.number().int().nonnegative(),
-    draftedAt: timestampSchema,
-  }).strict().nullable(),
-  planItems: z.array(planItemSchema).max(SEMESTER_DESK_MAX_PLAN_ITEMS),
-  recoveryDraft: recoveryDraftSchema.nullable(),
-  recoveryChanges: z.array(recoveryChangeSchema).max(SEMESTER_DESK_MAX_RECOVERY_CHANGES),
-  selectedNextActionId: identifierSchema.nullable(),
-  protectedStudySessions: z.array(protectedStudySessionSchema).max(SEMESTER_DESK_MAX_STUDY_SESSIONS),
-  independentProofs: z.array(independentProofSchema).max(SEMESTER_DESK_MAX_PROOFS),
-  delayedReturns: z.array(delayedReturnSchema).max(SEMESTER_DESK_MAX_DELAYED_RETURNS),
-  progressEvidence: z.array(progressEvidenceSchema).max(SEMESTER_DESK_MAX_PROGRESS_EVIDENCE),
-}).strict();
 
 export type SemesterDeskPersistenceRead =
   | { readonly kind: "missing" }
@@ -234,14 +202,15 @@ export interface SemesterDeskPersistence {
 }
 
 export function semesterDeskStorageKey(profileId: string): string {
-  return `${storagePrefix}.${encodeURIComponent(profileId)}`;
+  const boundedProfileId = boundedProfileIdentifier(profileId);
+  if (!boundedProfileId) {
+    throw new TypeError("The profile identifier is invalid.");
+  }
+  return `${storagePrefix}.${encodeURIComponent(boundedProfileId)}`;
 }
 
-function storageFailure(error: unknown, action: string): SemesterDeskPersistenceFailure {
-  const detail = error instanceof Error && error.message.trim().length > 0
-    ? ` ${error.message.trim()}`
-    : "";
-  return { ok: false, message: `FORGE could not ${action} on this device.${detail}` };
+function storageFailure(action: string): SemesterDeskPersistenceFailure {
+  return { ok: false, message: `FORGE could not ${action} on this device.` };
 }
 
 function malformed(raw: string, message: string): SemesterDeskPersistenceRead {
@@ -263,8 +232,8 @@ export class BrowserSemesterDeskPersistence implements SemesterDeskPersistence {
     let raw: string | null;
     try {
       raw = this.storage.getItem(semesterDeskStorageKey(boundedProfileId));
-    } catch (error) {
-      return malformed("", storageFailure(error, "read local data").message);
+    } catch {
+      return malformed("", storageFailure("read local data").message);
     }
 
     if (raw === null) return { kind: "missing" };
@@ -279,16 +248,12 @@ export class BrowserSemesterDeskPersistence implements SemesterDeskPersistence {
       return malformed(raw, "The local data is not valid JSON.");
     }
 
-    const checked = semesterDeskStateSchema.safeParse(parsed);
-    if (!checked.success) {
-      return malformed(raw, "The local data does not match this Semester Desk version.");
-    }
-    if (checked.data.profileId !== boundedProfileId) {
-      return malformed(raw, "The local data belongs to a different profile.");
-    }
-    const validated = validateSemesterDeskState(checked.data);
+    const validated = validateSemesterDeskState(parsed);
     if (!validated.ok) {
       return malformed(raw, "The local data does not match this Semester Desk version.");
+    }
+    if (validated.value.profileId !== boundedProfileId) {
+      return malformed(raw, "The local data belongs to a different profile.");
     }
 
     return {
@@ -299,12 +264,18 @@ export class BrowserSemesterDeskPersistence implements SemesterDeskPersistence {
   }
 
   async save(state: SemesterDeskState): Promise<SemesterDeskPersistenceResult> {
-    const checked = semesterDeskStateSchema.safeParse(state);
-    if (!checked.success) {
+    let snapshot: unknown;
+    try {
+      snapshot = snapshotSemesterDeskState(state);
+    } catch {
       return { ok: false, message: "FORGE could not save data that did not pass its local check." };
     }
-    const validated = validateSemesterDeskState(checked.data);
+    const validated = validateSemesterDeskState(snapshot);
     if (!validated.ok) {
+      return { ok: false, message: "FORGE could not save data that did not pass its local check." };
+    }
+    const boundedProfileId = boundedProfileIdentifier(validated.value.profileId);
+    if (!boundedProfileId) {
       return { ok: false, message: "FORGE could not save data that did not pass its local check." };
     }
 
@@ -320,12 +291,12 @@ export class BrowserSemesterDeskPersistence implements SemesterDeskPersistence {
 
     try {
       this.storage.setItem(
-        semesterDeskStorageKey(validated.value.profileId),
+        semesterDeskStorageKey(boundedProfileId),
         raw,
       );
       return { ok: true };
-    } catch (error) {
-      return storageFailure(error, "save local data");
+    } catch {
+      return storageFailure("save local data");
     }
   }
 
@@ -343,8 +314,8 @@ export class BrowserSemesterDeskPersistence implements SemesterDeskPersistence {
         return { ok: false, message: "There is no saved local data to download." };
       }
       return { ok: true, raw };
-    } catch (error) {
-      return { ok: false, message: storageFailure(error, "read local data").message };
+    } catch {
+      return { ok: false, message: storageFailure("read local data").message };
     }
   }
 
@@ -366,8 +337,8 @@ export class BrowserSemesterDeskPersistence implements SemesterDeskPersistence {
         };
       }
       return { ok: true };
-    } catch (error) {
-      return storageFailure(error, "remove local data");
+    } catch {
+      return storageFailure("remove local data");
     }
   }
 }

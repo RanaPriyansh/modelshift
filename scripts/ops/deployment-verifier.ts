@@ -36,33 +36,40 @@ import {
   readProductionPublicDirectoryIdentity,
   readProductionRuntimeConfigurationIdentity,
 } from "./production-build-receipt";
+import {
+  FORGE_CANONICAL_ROUTE_PATHNAMES,
+} from "../../src/operations/forge-release-route-policy";
 
-export const DEPLOYMENT_VERIFIER_VERSION = "2.6.0";
+export const DEPLOYMENT_VERIFIER_VERSION = "3.1.0";
 export const WORKER_CANDIDATE_STATES = ["BUILT_LOCAL", "PUSHED", "DEPLOYMENT_BLOCKED", "DEPLOYED_CANDIDATE"] as const;
 const SHA = /^[0-9a-f]{40}$/i;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 export const CANONICAL_DEPLOYMENT_ROUTES = [
-  { id: "home", path: "/", marker: /FORGE|What do you want to understand/i },
-  { id: "path_start", path: "/start", marker: /Turn a goal into a credible first path/i },
-  { id: "public_paths", path: "/paths", marker: /Learn toward something you want to do|No complete broad path is published yet/i },
-  { id: "how_forge_works", path: "/how-forge-works", marker: /A path is credible when every move earns its place|Goal(?: |&rarr;|→)path(?: |&rarr;|→)action/i },
-  { id: "learner_today", path: "/app", marker: /Reading learner-owned device continuity|Begin with something you want to do/i },
-  { id: "learner_paths", path: "/app/path", marker: /Reading path history|Inspect what you accepted/i },
-  { id: "learner_study", path: "/app/study", marker: /Preparing action brief|There is no reviewed next action to open/i },
-  { id: "learner_evidence", path: "/app/evidence", marker: /Proof should say exactly what happened/i },
-  { id: "trust", path: "/trust", marker: /FORGE should be inspectable before it is impressive/i },
-  { id: "world_force_motion", path: "/learn/force-and-motion", marker: /Force & motion|force-and-motion/i },
-  { id: "world_ai_learning", path: "/learn/ai-and-learning", marker: /AI & learning|ai-and-learning/i },
-  { id: "world_proportional_reasoning", path: "/learn/proportional-reasoning", marker: /Proportional|proportional-reasoning/i },
-  { id: "world_primary_source_reasoning", path: "/learn/primary-source-reasoning", marker: /Primary source|primary-source-reasoning/i },
-  { id: "source_corroboration_path", path: "/paths/source-corroboration", marker: /Verify before you trust|source-corroboration/i },
-  { id: "pathway_availability", path: "/coverage", marker: /What FORGE can(?:—|&mdash;|&#x2014;)and cannot(?:—|&mdash;|&#x2014;)offer today|Availability map only/i },
-  { id: "author_gate", path: "/author", marker: /author workspace is not available|Author role required/i },
-  { id: "device_profile_sign_in", path: "/sign-in", marker: /device profile|Cloud identity · structurally disabled|Pick where your learning trail lives/i },
-  { id: "device_profile_account", path: "/account", marker: /device evidence|No cloud account active|Your access/i },
-  { id: "internal_pilot_denial", path: "/internal/pilot", marker: /This route is not available in this deployment/i },
+  { id: "home", path: "/", marker: /Rebuild from today\./i },
+  { id: "semester_desk", path: "/app", marker: /Opening your Semester Desk/i },
+  { id: "how_forge_works", path: "/how-forge-works", marker: /Make the semester visible before you make a plan\./i },
+  { id: "university", path: "/university", marker: /A private desk for the work of a real degree\./i },
+  { id: "privacy", path: "/privacy", marker: /Your study plan is not a profile\./i },
+  { id: "terms", path: "/terms", marker: /Use FORGE to support your work\./i },
+  { id: "support", path: "/support", marker: /Return to the next honest action\./i },
 ] as const;
+export const RETIRED_DEPLOYMENT_ROUTES = [
+  { id: "retired_lesson_studio", path: "/lesson-studio", marker: /This page is not here\./i },
+  { id: "retired_university_semester_desk", path: "/university/semester-desk", marker: /This page is not here\./i },
+  { id: "retired_private_state_api", path: "/api/forge/private-state", marker: /This page is not here\./i },
+] as const;
+const expectedDeploymentPaths = FORGE_CANONICAL_ROUTE_PATHNAMES.filter(
+  (path) => path !== "/api/health",
+);
+if (
+  expectedDeploymentPaths.length !== CANONICAL_DEPLOYMENT_ROUTES.length
+  || expectedDeploymentPaths.some(
+    (path, index) => CANONICAL_DEPLOYMENT_ROUTES[index]?.path !== path,
+  )
+) {
+  throw new Error("deployment verifier routes differ from the release route policy");
+}
 const FORBIDDEN_CLIENT_PATTERNS = [
   { id: "openai_secret_name", pattern: /OPENAI_API_KEY/i },
   { id: "database_credential_name", pattern: /DATABASE_URL/i },
@@ -597,6 +604,23 @@ async function verifyDeploymentWithCapability(
       record(checks, `${route.id}.marker`, route.marker.test(html), `${route.path} contains its allowlisted application marker`);
       const leaks = forbidden(html); record(checks, `${route.id}.secret_scan`, leaks.length === 0, leaks.length === 0 ? "no forbidden secret pattern appears in HTML" : `forbidden pattern categories detected: ${leaks.join(", ")}`);
       const found = scripts(html, origin); record(checks, `${route.id}.script_origins`, found.rejected === 0, "client scripts are same-origin versioned Next.js assets"); for (const url of found.urls) assets.set(url.href, url);
+    } catch { record(checks, `${route.id}.request`, false, `${route.path} failed or exceeded a verification bound`); }
+  }
+  for (const route of RETIRED_DEPLOYMENT_ROUTES) {
+    try {
+      const response = await get(fetchImpl, new URL(route.path, origin), timeoutMs, targetAddresses, resolver, fetchImpl === fetch, MAX_HTML);
+      record(checks, `${route.id}.status`, response.status === 404, `${route.path} stays outside the release route boundary`);
+      record(checks, `${route.id}.content_type`, response.headers.get("content-type")?.toLowerCase().includes("text/html") === true, `${route.path} returns the bounded HTML recovery page`);
+      record(checks, `${route.id}.cache_control`, response.headers.get("cache-control")?.toLowerCase().includes("no-store") === true, `${route.path} cannot be stored as current product content`);
+      record(checks, `${route.id}.robots`, response.headers.get("x-robots-tag")?.toLowerCase().includes("noindex") === true, `${route.path} cannot be indexed`);
+      const html = await readBounded(response, MAX_HTML);
+      headerChecks(checks, response, route.id, html, origin);
+      record(checks, `${route.id}.marker`, route.marker.test(html), `${route.path} returns the FORGE recovery page`);
+      const leaks = forbidden(html);
+      record(checks, `${route.id}.secret_scan`, leaks.length === 0, leaks.length === 0 ? "no forbidden secret pattern appears in retired-route HTML" : `forbidden pattern categories detected: ${leaks.join(", ")}`);
+      const found = scripts(html, origin);
+      record(checks, `${route.id}.script_origins`, found.rejected === 0, "retired-route scripts are same-origin versioned Next.js assets");
+      for (const url of found.urls) assets.set(url.href, url);
     } catch { record(checks, `${route.id}.request`, false, `${route.path} failed or exceeded a verification bound`); }
   }
   record(checks, "client_assets.bounded_count", assets.size > 0 && assets.size <= INITIAL_HTML_CLIENT_ASSET_BUDGET, `initial HTML client asset set contains ${assets.size} distinct assets and is non-empty and no larger than ${INITIAL_HTML_CLIENT_ASSET_BUDGET}`);

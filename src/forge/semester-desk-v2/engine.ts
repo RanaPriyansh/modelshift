@@ -1231,6 +1231,9 @@ function transitionSemesterDeskUnchecked(
       });
     }
     case "choose-next-action": {
+      if (state.recoveryDraft) {
+        return failure("invalid-transition", "Confirm the open recovery plan before you choose work.");
+      }
       const item = planItemFor(state, command.planItemId);
       if (!item.ok) return item;
       const actionable = canActOnItem(state, item.value);
@@ -1246,6 +1249,12 @@ function transitionSemesterDeskUnchecked(
       return success(replacePlanItem(state, { ...item.value, status: "planned" }, now.value));
     }
     case "start-protected-study": {
+      if (state.recoveryDraft) {
+        return failure("invalid-transition", "Confirm the open recovery plan before protected study.");
+      }
+      if (state.capacityDraft) {
+        return failure("invalid-transition", "Confirm the available time before protected study.");
+      }
       if (state.selectedNextActionId !== command.planItemId) {
         return failure("next-action-required", "Choose this item as the next action before protected study.");
       }

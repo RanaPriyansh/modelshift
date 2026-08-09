@@ -12,11 +12,6 @@ const RELEASE_PAGE_ROUTES = [
   "/support",
 ] as const;
 
-const REQUIRED_VERCEL_IGNORE_LINES = [
-  "public/forge/through-the-door.png",
-  "public/worlds/primary-source-reasoning",
-] as const;
-
 const RETIRED_PUBLIC_ASSET_PATHS = [
   "public/forge/through-the-door.png",
   "public/worlds/primary-source-reasoning",
@@ -179,19 +174,12 @@ function sizedCssForRoute(root: string, route: string): SizedPath[] {
   });
 }
 
-function hasRetiredPublicAssetPath(path: string): boolean {
-  return path === "forge/through-the-door.png"
-    || path === "worlds/primary-source-reasoning"
-    || path.startsWith("worlds/primary-source-reasoning/");
-}
-
 function deployablePublicImages(root: string): SizedPath[] {
   const publicDirectory = resolve(root, "public");
   requireDirectory(publicDirectory, "public asset directory");
   return filesUnder(publicDirectory)
     .map((path) => ({ path: relativePath(publicDirectory, path), bytes: statSync(path).size }))
-    .filter((entry) => PUBLIC_IMAGE_EXTENSION.test(entry.path))
-    .filter((entry) => !hasRetiredPublicAssetPath(entry.path));
+    .filter((entry) => PUBLIC_IMAGE_EXTENSION.test(entry.path));
 }
 
 function releaseSourceFiles(root: string): string[] {
@@ -247,27 +235,14 @@ function assertNoRetiredReleaseArtifactReferences(root: string): void {
   }
 }
 
-export function verifyVercelReleaseAssetExclusions(root = process.cwd()): void {
-  const ignorePath = resolve(root, ".vercelignore");
-  if (!existsSync(ignorePath)) {
-    throw new Error("Missing .vercelignore for retired public release assets.");
-  }
-  const actualLines = readFileSync(ignorePath, "utf8")
-    .split(/\r?\n/)
-    .filter((line) => line.length > 0);
-  if (
-    actualLines.length !== REQUIRED_VERCEL_IGNORE_LINES.length
-    || actualLines.some((line, index) => line !== REQUIRED_VERCEL_IGNORE_LINES[index])
-  ) {
+export function verifyRetiredPublicAssetBoundary(root = process.cwd()): void {
+  const retainedPaths = RETIRED_PUBLIC_ASSET_PATHS.filter((assetPath) => (
+    existsSync(resolve(root, assetPath))
+  ));
+  if (retainedPaths.length > 0) {
     throw new Error(
-      `The Vercel exclusion must contain only:\n${REQUIRED_VERCEL_IGNORE_LINES.join("\n")}`,
+      `Retired assets must not remain under public:\n${retainedPaths.join("\n")}`,
     );
-  }
-
-  for (const assetPath of RETIRED_PUBLIC_ASSET_PATHS) {
-    if (!existsSync(resolve(root, assetPath))) {
-      throw new Error(`Missing retired authored asset that the Vercel exclusion protects: ${assetPath}.`);
-    }
   }
   assertNoRetiredReleaseSourceReferences(root);
 }
@@ -275,7 +250,7 @@ export function verifyVercelReleaseAssetExclusions(root = process.cwd()): void {
 export function verifySemesterDeskV2ReleaseBudgets(root = process.cwd()): void {
   const nextDirectory = resolve(root, ".next");
   requireDirectory(nextDirectory, "Next production output directory");
-  verifyVercelReleaseAssetExclusions(root);
+  verifyRetiredPublicAssetBoundary(root);
 
   const routeStatistics = routeBundleStatistics(root)
     .filter((entry) => RELEASE_PAGE_ROUTES.includes(entry.route as (typeof RELEASE_PAGE_ROUTES)[number]));
