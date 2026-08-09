@@ -22,8 +22,8 @@ This candidate is not a production release. The open gates in this file remain r
 | GitHub repository | `https://github.com/RanaPriyansh/modelshift` | Confirmed |
 | Canonical worktree | `/Users/Priyansh/Documents/codex-buildweek/worktrees/forge-university-foundation-20260730` | Confirmed |
 | Canonical branch | `agent/forge-semester-desk-v2-release-20260802` | Pushed |
-| Canonical integrated product SHA | `34ae73d684eba9f47bd128055b39daee742eceb9` | Pushed |
-| Canonical integrated product tree | `a2aa4fc0a62545a7174719071b48441400c3d318` | Confirmed |
+| Canonical integrated product and transfer SHA | `c8032a73140a336067e6f45894187d36aa42657f` | Local clean checkpoint; push pending in this ledger update |
+| Canonical integrated product and transfer tree | `b0c287dc063c216c023524da1f779f54dd4130b7` | Confirmed |
 | Web safety checkpoint | `28921bb` on the canonical branch | Pushed |
 | iOS safety checkpoint | `9c8be28` on `agent/forge-ios-foundation-20260801` | Pushed |
 | Research safety checkpoint | `af648e6` on `agent/forge-local-refoundation-snapshot` | Pushed |
@@ -71,9 +71,11 @@ The site does not claim pricing, efficacy, university integration, user counts, 
 Current release limits:
 
 - The final screenshots are not bound to the integrated SHA.
-- Pull request `#5` failed because five locked transitive dependencies had high-severity advisories.
-- The candidate now locks patched versions. A new exact-SHA GitHub check remains required.
+- Pull request `#5` passed its tests at `ab020fe`, then failed because a clean Git checkout omits an empty `public/` directory.
+- Checkpoint `c8032a7` contains a tested clean-checkout repair and two ChatGPT Work transfer packages.
+- A new exact-SHA GitHub check remains required after push.
 - The current public alias is not proof of a Semester Desk v2 deployment.
+- No ChatGPT Sites website was created or deployed in this transfer task.
 
 ## Web application
 
@@ -102,10 +104,25 @@ The production browser bundle no longer includes Zod. The measured `/app` initia
 
 Current release limits:
 
-- The exact integrated SHA has not completed the full production browser gate.
+- A clean local production build passed at `c8032a7`; exact GitHub browser evidence remains open.
 - Cloud account and sync need product implementation before provider configuration.
 - Production persistence also needs an approved provider and credentials.
 - Final browser screenshots must come from a production build without the Next.js development badge.
+
+## ChatGPT Work transfer packages
+
+The repository contains two separate transfer packages. No Sites implementation is accepted from this task.
+
+| Product | State handoff | Ready-to-paste prompt |
+|---|---|---|
+| Public website | `docs/handoffs/FORGE_PUBLIC_WEBSITE_CHATGPT_WORK_HANDOFF.md` | `docs/prompts/FORGE_PUBLIC_WEBSITE_CHATGPT_WORK_PROMPT.md` |
+| Semester Desk web application | `docs/handoffs/FORGE_WEBAPP_CHATGPT_WORK_HANDOFF.md` | `docs/prompts/FORGE_WEBAPP_CHATGPT_WORK_PROMPT.md` |
+
+The prompts require separate private Sites projects, live `main` verification, requirements traceability, bounded research, rendered QA, and revision-bound evidence.
+
+The web application transfer stays device-local. It does not add authentication, D1, R2, cloud sync, or a cross-origin import path.
+
+The public website transfer stays private until legal, support, domain, indexing, and public-access decisions are complete.
 
 ## Native iOS application
 
@@ -217,23 +234,21 @@ Verified after the dependency repair:
 - The dependency repair also updated `postcss` to 8.5.26.
 - `pnpm audit signatures` verified 576 packages.
 - Web lint and typecheck passed.
-- The web test gate passed 1,836 tests in 191 files.
+- The web test gate passed 1,838 tests in 191 files after the clean-checkout regression coverage was added.
 - The evaluation test gate passed 13 tests in two files.
-- A clean committed production build passed with 14 release routes and two framework routes.
+- A clean committed production build passed at `c8032a7` with 14 release routes and two framework routes.
 - The build excluded 73 retired route modules and passed the release budgets.
-- These local results still require GitHub verification on the pushed SHA.
+- The production build receipt recorded tree `b0c287dc063c216c023524da1f779f54dd4130b7` and artifact digest `sha256:e2a5f1479653c1a81fa9d22039382ad2c48919ba2b08e5a6614f64a06ec00352`.
+- These local results still require GitHub verification on the final pushed SHA.
 
 Evidence limits:
 
-- These results came from repair checkpoints before the final integration commit.
-- The repository has no committed run receipt for these local pass counts.
-- The full exact-SHA web and iOS gates remain open.
-- Pull request `#5` has not yet verified the dependency repair on the new exact SHA.
-- The failed workflow stopped at dependency audit. It did not run later build or browser gates.
-- Two iOS GitHub runs failed before job creation because job-level `env` used the unavailable `runner` context.
-- The workflow now configures evidence paths through `RUNNER_TEMP`. Actionlint 1.7.12 passes locally.
-- A new exact-SHA GitHub iOS run remains required.
-- The focused iOS UI run remains one pass and one failure.
+- The full exact-SHA web and iOS GitHub gates remain open.
+- The `ab020fe` web run reached the production build after all tests passed.
+- That run exposed the absent-empty-directory defect before browser verification.
+- Checkpoint `c8032a7` repairs that defect, but GitHub has not tested it yet.
+- The `ab020fe` iOS GitHub runs were still in progress when this ledger was updated.
+- The focused iOS UI run remains one pass and one failure in retained local evidence.
 
 ## Open issues
 
@@ -243,13 +258,13 @@ No P0 was found in this bounded review. Full exact-SHA testing remains open.
 
 ### P1
 
-1. Require a green `deterministic-quality` check for the patched dependency lock.
+1. Require a green `deterministic-quality` check for the final pushed handoff checkpoint.
 2. Repair the iOS QuickPath UI automation blocker.
 3. Run the full exact-SHA web release gate.
 4. Run the full exact-SHA iOS build and test gate.
 5. Capture production-build web screenshots and SHA-bound iOS screenshots.
 6. Complete the final accessibility and cross-platform review.
-7. Require a job-backed iOS GitHub workflow run on the pushed repair.
+7. Require a job-backed iOS GitHub workflow run on the final pushed revision.
 
 ### P2
 
@@ -263,7 +278,9 @@ No P0 was found in this bounded review. Full exact-SHA testing remains open.
 |---|---|---|
 | GitHub source | Pushed | None |
 | Pull request | Draft pull request `#5` is open | Review and merge authority |
-| Web production deployment | Not completed | Authorize the Vercel GitHub App, connect `RanaPriyansh/modelshift` to `forge-learning-os`, expose system variables, and create a Git-source deployment |
+| Web production deployment | Not completed | Choose and authorize the final host after the separate ChatGPT Work builds are reviewed |
+| ChatGPT Sites website | Not created by this task | Run the public website transfer prompt in ChatGPT Work |
+| ChatGPT Sites web application | Not created by this task | Run the web-application transfer prompt in ChatGPT Work |
 | Web cloud persistence | Not configured | Approved provider project and credentials |
 | iOS signing | Not completed | Apple Developer Team, certificates, `com.forgelearning.app`, `com.forgelearning.app.widgets`, App Group `group.com.forgelearning.shared`, and provisioning profiles |
 | App Store submission | Not completed | App Store Connect access, metadata, privacy declarations, public support and privacy URLs, and submission authority |
@@ -278,7 +295,7 @@ Accepted work:
 - The web checkpoint at `28921bb`.
 - The reviewed iOS checkpoint at `9c8be28`.
 - The university research checkpoint at `af648e6`.
-- The integrated canonical candidate at `34ae73d`.
+- The integrated product and ChatGPT Work transfer checkpoint at `c8032a7`.
 
 Rejected or excluded work:
 
@@ -290,4 +307,4 @@ Rejected or excluded work:
 
 ## Next internally executable action
 
-Require one clean exact-SHA web and iOS release gate on the canonical branch.
+Push the ledger update, require clean exact-SHA web and iOS gates, and merge pull request `#5` only after those gates pass.
