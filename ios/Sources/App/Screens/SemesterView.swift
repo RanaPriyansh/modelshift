@@ -265,7 +265,9 @@ struct SemesterView: View {
           .changeFactStatus(courseID: courseID, factID: fact.id)
         )
       }
-      .frame(minHeight: 44, alignment: .leading)
+      .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+      .contentShape(Rectangle())
+      .buttonStyle(.borderless)
       .disabled(model.isSemesterDeskOperationRunning)
       .accessibilityHint("Changes the visible review status for \(fact.label).")
       .accessibilityIdentifier("semester.change-fact-status.\(fact.id)")
@@ -297,7 +299,9 @@ struct SemesterView: View {
         Button("Mark conflict as resolved") {
           resolve(conflictID: conflict.id, courseID: courseID)
         }
-        .frame(minHeight: 44, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .contentShape(Rectangle())
+        .buttonStyle(.borderless)
         .disabled(model.isSemesterDeskOperationRunning)
         .accessibilityHint("Saves this fact conflict as resolved.")
         .accessibilityIdentifier("semester.resolve-conflict.\(conflict.id)")
@@ -402,7 +406,9 @@ struct SemesterView: View {
         Button("Resume deferred work") {
           resume(item)
         }
-        .frame(minHeight: 44, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .contentShape(Rectangle())
+        .buttonStyle(.borderless)
         .disabled(model.isSemesterDeskOperationRunning)
         .accessibilityHint("Returns this item to planned work.")
         .accessibilityIdentifier("semester.resume.\(item.id)")
@@ -412,7 +418,9 @@ struct SemesterView: View {
         Button("Choose as next action") {
           choose(item)
         }
-        .frame(minHeight: 44, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .contentShape(Rectangle())
+        .buttonStyle(.borderless)
         .disabled(model.isSemesterDeskOperationRunning)
         .accessibilityHint("Selects this planned item. FORGE does not select work for you.")
         .accessibilityIdentifier("semester.choose.\(item.id)")

@@ -77,8 +77,25 @@ struct PrivateStateStoreTests {
       receipt.files
         == expectedFileRecords(disposition: .alreadyAbsent)
     )
-    #expect(try fileNames(in: fixture.directoryURL) == entriesBefore)
+    let intent = try #require(try await fixture.store.pendingResetIntent())
+    #expect(intent.resetEpoch == 1)
+    #expect(
+      try fileNames(in: fixture.directoryURL)
+        == (entriesBefore + [PrivateStateStore.resetIntentFileName]).sorted()
+    )
     #expect(!FileManager.default.fileExists(atPath: fixture.fileURL.path))
+    #expect(
+      await storeError { _ = try await fixture.store.load() }
+        == .resetIntentPresent
+    )
+
+    #expect(
+      try await fixture.store.completeReset(resetEpoch: intent.resetEpoch)
+        == .completed(namespace: .changed(.synchronized))
+    )
+    #expect(try await fixture.store.pendingResetIntent() == nil)
+    #expect(try fileNames(in: fixture.directoryURL) == entriesBefore)
+    #expect(try await fixture.store.load() == nil)
   }
 
   @Test("Protected-data denial preserves private bytes")
@@ -413,6 +430,239 @@ struct PrivateStateStoreTests {
     }
     #expect(try recognizedStageURLs(in: fixture).isEmpty)
     #expect(try Data(contentsOf: unrelatedURL) == Data("keep-this-file".utf8))
+    let intent = try #require(try await fixture.store.pendingResetIntent())
+    #expect(
+      FileManager.default.fileExists(atPath: fixture.resetIntentURL.path)
+    )
+    #expect(
+      await storeError { _ = try await fixture.store.load() }
+        == .resetIntentPresent
+    )
+    #expect(
+      try await fixture.store.completeReset(resetEpoch: intent.resetEpoch)
+        == .completed(namespace: .changed(.synchronized))
+    )
+    #expect(
+      !FileManager.default.fileExists(atPath: fixture.resetIntentURL.path)
+    )
+  }
+
+  @Test("A new store replays a durable reset intent with the same epoch")
+  func newStoreReplaysDurableResetIntent() async throws {
+    let fixture = try makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.directoryURL) }
+    _ = try await fixture.store.save(try makeState())
+    let clear = try await fixture.store.clear(resetEpoch: 31)
+    guard case .completed(let initialReceipt) = clear else {
+      Issue.record("Expected a completed initial clear.")
+      return
+    }
+
+    #expect(initialReceipt.isComplete)
+    #expect(
+      FileManager.default.fileExists(atPath: fixture.resetIntentURL.path)
+    )
+    #expect(
+      await storeError { _ = try await fixture.store.load() }
+        == .resetIntentPresent
+    )
+
+    let replayStore = PrivateStateStore(
+      fileURL: fixture.fileURL,
+      protectedDataAvailability: AvailableProtectedDataAvailability()
+    )
+    let intent = try #require(try await replayStore.pendingResetIntent())
+    #expect(intent.resetEpoch == 31)
+    let replay = try await replayStore.clear(resetEpoch: intent.resetEpoch)
+    guard case .completed(let replayReceipt) = replay else {
+      Issue.record("Expected a completed replay clear.")
+      return
+    }
+
+    #expect(replayReceipt.isComplete)
+    #expect(replayReceipt.namespace == .notRequired)
+    #expect(
+      try await replayStore.pendingResetIntent()
+        == PrivateStateResetIntent(resetEpoch: 31)
+    )
+    #expect(
+      try await replayStore.completeReset(resetEpoch: intent.resetEpoch)
+        == .completed(namespace: .changed(.synchronized))
+    )
+    #expect(try await replayStore.pendingResetIntent() == nil)
+    #expect(try await replayStore.load() == nil)
+  }
+
+  @Test("A confirmed clear replaces a corrupt regular reset marker")
+  func confirmedClearReplacesCorruptResetMarker() async throws {
+    let fixture = try makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.directoryURL) }
+    _ = try await fixture.store.save(try makeState())
+    try Data("not-an-epoch".utf8).write(to: fixture.resetIntentURL)
+
+    #expect(
+      await storeError { _ = try await fixture.store.pendingResetIntent() }
+        == .resetIntentMismatch
+    )
+
+    let result = try await fixture.store.clear(resetEpoch: 1)
+    guard case .completed(let receipt) = result else {
+      Issue.record("Expected a completed confirmed clear.")
+      return
+    }
+
+    #expect(receipt.isComplete)
+    #expect(
+      try await fixture.store.pendingResetIntent()
+        == PrivateStateResetIntent(resetEpoch: 1)
+    )
+    #expect(
+      try await fixture.store.completeReset(resetEpoch: 1)
+        == .completed(namespace: .changed(.synchronized))
+    )
+    #expect(try await fixture.store.load() == nil)
+  }
+
+  @Test(
+    "Reset marker uncertainty prevents private deletion",
+    arguments: [
+      PrivateStateStoreFailurePoint.resetIntentFileSynchronization,
+      .resetIntentNamespaceSynchronization,
+    ]
+  )
+  func resetMarkerUncertaintyPreventsPrivateDeletion(
+    _ failurePoint: PrivateStateStoreFailurePoint
+  ) async throws {
+    let fixture = try makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.directoryURL) }
+    _ = try await fixture.store.save(try makeState())
+    let currentData = try Data(contentsOf: fixture.fileURL)
+    let legacyData = Data("retained-private-v5".utf8)
+    try legacyData.write(to: fixture.v5FileURL)
+    let stageURL = fixture.directoryURL.appendingPathComponent(
+      PrivateStateStore.stageFileNamePrefix + "retained"
+    )
+    let stageData = Data("retained-private-stage".utf8)
+    try stageData.write(to: stageURL)
+    let failingStore = PrivateStateStore(
+      fileURL: fixture.fileURL,
+      protectedDataAvailability: AvailableProtectedDataAvailability(),
+      failureInjector: TestPrivateStateStoreFailureInjector(
+        failurePoint: failurePoint
+      )
+    )
+
+    let error = await storeError {
+      _ = try await failingStore.clear(resetEpoch: 41)
+    }
+    guard case .clearVerification(receipt: let receipt)? = error else {
+      Issue.record("Expected a receipt-bearing marker synchronization error.")
+      return
+    }
+
+    #expect(receipt.namespace == .changed(.synchronizationUncertain))
+    #expect(
+      disposition(in: receipt.files, named: PrivateStateStore.stateFileName)
+        == .retained
+    )
+    #expect(
+      disposition(in: receipt.files, named: PrivateStateStore.v5StateFileName)
+        == .retained
+    )
+    #expect(
+      disposition(in: receipt.stages, named: stageURL.lastPathComponent)
+        == .retained
+    )
+    #expect(try Data(contentsOf: fixture.fileURL) == currentData)
+    #expect(try Data(contentsOf: fixture.v5FileURL) == legacyData)
+    #expect(try Data(contentsOf: stageURL) == stageData)
+    #expect(
+      FileManager.default.fileExists(atPath: fixture.resetIntentURL.path)
+    )
+    let intent = try #require(try await failingStore.pendingResetIntent())
+    #expect(intent.resetEpoch == 41)
+    #expect(
+      await storeError { _ = try await failingStore.load() }
+        == .resetIntentPresent
+    )
+
+    let replayStore = PrivateStateStore(
+      fileURL: fixture.fileURL,
+      protectedDataAvailability: AvailableProtectedDataAvailability()
+    )
+    let replay = try await replayStore.clear(resetEpoch: intent.resetEpoch)
+    guard case .completed(let replayReceipt) = replay else {
+      Issue.record("Expected a completed marker replay.")
+      return
+    }
+    #expect(replayReceipt.isComplete)
+    #expect(!FileManager.default.fileExists(atPath: fixture.fileURL.path))
+    #expect(!FileManager.default.fileExists(atPath: fixture.v5FileURL.path))
+    #expect(!FileManager.default.fileExists(atPath: stageURL.path))
+    #expect(
+      try await replayStore.pendingResetIntent()
+        == PrivateStateResetIntent(resetEpoch: 41)
+    )
+    #expect(
+      try await replayStore.completeReset(resetEpoch: intent.resetEpoch)
+        == .completed(namespace: .changed(.synchronized))
+    )
+    #expect(try await replayStore.pendingResetIntent() == nil)
+  }
+
+  @Test("Reset completion uncertainty restores the marker for retry")
+  func resetCompletionUncertaintyRestoresMarker() async throws {
+    let fixture = try makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.directoryURL) }
+    _ = try await fixture.store.save(try makeState())
+    let clear = try await fixture.store.clear(resetEpoch: 51)
+    guard case .completed(let receipt) = clear else {
+      Issue.record("Expected a completed clear.")
+      return
+    }
+    #expect(receipt.isComplete)
+    #expect(
+      try await fixture.store.pendingResetIntent()
+        == PrivateStateResetIntent(resetEpoch: 51)
+    )
+
+    let failingStore = PrivateStateStore(
+      fileURL: fixture.fileURL,
+      protectedDataAvailability: AvailableProtectedDataAvailability(),
+      failureInjector: TestPrivateStateStoreFailureInjector(
+        failurePoint: .resetIntentRemovalSynchronization
+      )
+    )
+    #expect(
+      await storeError {
+        _ = try await failingStore.completeReset(resetEpoch: 51)
+      } == .resetIntentSynchronizationUncertain
+    )
+    #expect(
+      FileManager.default.fileExists(atPath: fixture.resetIntentURL.path)
+    )
+    #expect(
+      try await failingStore.pendingResetIntent()
+        == PrivateStateResetIntent(resetEpoch: 51)
+    )
+    #expect(
+      await storeError { _ = try await failingStore.load() }
+        == .resetIntentPresent
+    )
+
+    let retryStore = PrivateStateStore(
+      fileURL: fixture.fileURL,
+      protectedDataAvailability: AvailableProtectedDataAvailability()
+    )
+    #expect(
+      try await retryStore.completeReset(resetEpoch: 51)
+        == .completed(namespace: .changed(.synchronized))
+    )
+    #expect(
+      !FileManager.default.fileExists(atPath: fixture.resetIntentURL.path)
+    )
+    #expect(try await retryStore.pendingResetIntent() == nil)
+    #expect(try await retryStore.load() == nil)
   }
 
   @Test("A partial clear returns sorted named retained records")
@@ -646,6 +896,14 @@ struct PrivateStateStoreTests {
     }
     #expect(receipt.isComplete)
     #expect(save == .superseded)
+    #expect(
+      await storeError { _ = try await fixture.store.load() }
+        == .resetIntentPresent
+    )
+    #expect(
+      try await fixture.store.completeReset(resetEpoch: 1)
+        == .completed(namespace: .changed(.synchronized))
+    )
     #expect(try await fixture.store.load() == nil)
   }
 
@@ -728,6 +986,7 @@ struct PrivateStateStoreTests {
   private struct Fixture {
     let directoryURL: URL
     let fileURL: URL
+    let resetIntentURL: URL
     let v5FileURL: URL
     let v4FileURL: URL
     let v3FileURL: URL
@@ -791,6 +1050,9 @@ struct PrivateStateStoreTests {
     return Fixture(
       directoryURL: directoryURL,
       fileURL: fileURL,
+      resetIntentURL: directoryURL.appendingPathComponent(
+        PrivateStateStore.resetIntentFileName
+      ),
       v5FileURL: directoryURL.appendingPathComponent(PrivateStateStore.v5StateFileName),
       v4FileURL: directoryURL.appendingPathComponent(PrivateStateStore.v4StateFileName),
       v3FileURL: directoryURL.appendingPathComponent(PrivateStateStore.v3StateFileName),

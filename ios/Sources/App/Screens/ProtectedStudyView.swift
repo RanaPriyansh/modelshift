@@ -6,9 +6,11 @@ struct ProtectedStudyView: View {
   @Environment(AppModel.self) private var model
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @Environment(\.scenePhase) private var scenePhase
   @State private var minimumReturnDate: Date?
   @State private var selectedReturnDate: Date?
   @State private var isCloseConfirmationPresented = false
+  @FocusState private var focusedStudyField: StudyDraftField?
   @AccessibilityFocusState private var statusIsFocused: Bool
 
   var body: some View {
@@ -179,6 +181,7 @@ struct ProtectedStudyView: View {
       stageHeading("Practice", detail: "Use private working notes while you complete the work.")
 
       TextEditor(text: studyDraftBinding(for: item.id, field: .practice))
+        .focused($focusedStudyField, equals: .practice)
         .frame(minHeight: 220)
         .padding(ForgeDesign.Spacing.small)
         .scrollContentBackground(.hidden)
@@ -191,6 +194,7 @@ struct ProtectedStudyView: View {
         .accessibilityLabel("Private practice notes")
         .accessibilityHint("FORGE keeps this text only in process memory.")
         .accessibilityIdentifier("study.practice-text")
+        .accessibilityHidden(scenePhase != .active)
 
       Text("Choose the result. FORGE does not inspect or save these notes.")
         .font(.subheadline)
@@ -232,6 +236,7 @@ struct ProtectedStudyView: View {
         .fixedSize(horizontal: false, vertical: true)
 
       TextEditor(text: studyDraftBinding(for: item.id, field: .independentCheck))
+        .focused($focusedStudyField, equals: .independentCheck)
         .frame(minHeight: 220)
         .padding(ForgeDesign.Spacing.small)
         .scrollContentBackground(.hidden)
@@ -244,6 +249,7 @@ struct ProtectedStudyView: View {
         .accessibilityLabel("Private independent explanation")
         .accessibilityHint("FORGE keeps this text only in process memory.")
         .accessibilityIdentifier("study.independent-text")
+        .accessibilityHidden(scenePhase != .active)
 
       SemesterDeskPrimaryButton(
         title: "I can explain this",
@@ -329,6 +335,7 @@ struct ProtectedStudyView: View {
       )
 
       TextEditor(text: studyDraftBinding(for: item.id, field: .delayedReturn))
+        .focused($focusedStudyField, equals: .delayedReturn)
         .frame(minHeight: 220)
         .padding(ForgeDesign.Spacing.small)
         .scrollContentBackground(.hidden)
@@ -341,6 +348,7 @@ struct ProtectedStudyView: View {
         .accessibilityLabel("Private delayed-return explanation")
         .accessibilityHint("FORGE keeps this text only in process memory.")
         .accessibilityIdentifier("study.delayed-return-text")
+        .accessibilityHidden(scenePhase != .active)
 
       SemesterDeskPrimaryButton(
         title: "I retained this",
@@ -492,12 +500,14 @@ struct ProtectedStudyView: View {
   }
 
   private func completePractice(_ outcome: UniversitySemesterDeskPracticeOutcome) {
+    focusedStudyField = nil
     Task { @MainActor in
       _ = await model.completeProtectedPractice(outcome: outcome)
     }
   }
 
   private func submitIndependentCheck(_ outcome: UniversitySemesterDeskProofOutcome) {
+    focusedStudyField = nil
     Task { @MainActor in
       _ = await model.submitProtectedIndependentCheck(outcome: outcome)
     }
@@ -517,6 +527,7 @@ struct ProtectedStudyView: View {
   }
 
   private func completeDelayedReturn(_ outcome: UniversitySemesterDeskRetentionOutcome) {
+    focusedStudyField = nil
     Task { @MainActor in
       _ = await model.completeProtectedDelayedReturn(outcome: outcome)
     }
@@ -527,10 +538,18 @@ struct ProtectedStudyView: View {
       return
     }
 
-    if hasStudyDraft {
-      isCloseConfirmationPresented = true
-    } else {
+    guard hasStudyDraft else {
       model.dismissProtectedStudy()
+      return
+    }
+
+    focusedStudyField = nil
+    Task { @MainActor in
+      await Task.yield()
+      guard hasStudyDraft, !model.isSemesterDeskOperationRunning else {
+        return
+      }
+      isCloseConfirmationPresented = true
     }
   }
 
@@ -570,7 +589,7 @@ private enum StudyStage: CaseIterable, Equatable {
   }
 }
 
-private enum StudyDraftField: Equatable {
+private enum StudyDraftField: Hashable {
   case practice
   case independentCheck
   case delayedReturn

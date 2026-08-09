@@ -23,6 +23,59 @@ public enum ForgeSharedStateStoreError: Error, Equatable, Sendable {
   case oversizedProjection, removalVerificationFailed, writeVerificationFailed
 }
 
+public enum ForgeSharedStateMutation: Equatable, Sendable {
+  case unchanged
+  case changed
+}
+
+public enum ForgeSharedStateNamespaceSynchronization: Equatable, Sendable {
+  case notRequired
+  case synchronized
+  case synchronizationUncertain
+}
+
+public struct ForgeSharedStateMutationReceipt: Equatable, Sendable {
+  public let mutation: ForgeSharedStateMutation
+  public let namespace: ForgeSharedStateNamespaceSynchronization
+
+  public init(
+    mutation: ForgeSharedStateMutation,
+    namespace: ForgeSharedStateNamespaceSynchronization
+  ) {
+    self.mutation = mutation
+    self.namespace = namespace
+  }
+}
+
+public struct ForgeSharedStateClearReceipt: Equatable, Sendable {
+  public let mutation: ForgeSharedStateMutation
+  public let projectionMutation: ForgeSharedStateMutation
+  public let namespace: ForgeSharedStateNamespaceSynchronization
+
+  public init(
+    mutation: ForgeSharedStateMutation,
+    projectionMutation: ForgeSharedStateMutation,
+    namespace: ForgeSharedStateNamespaceSynchronization
+  ) {
+    self.mutation = mutation
+    self.projectionMutation = projectionMutation
+    self.namespace = namespace
+  }
+}
+
+public struct ForgePendingDestinationConsumption: Equatable, Sendable {
+  public let destination: ForgeDestination?
+  public let namespace: ForgeSharedStateNamespaceSynchronization
+
+  public init(
+    destination: ForgeDestination?,
+    namespace: ForgeSharedStateNamespaceSynchronization
+  ) {
+    self.destination = destination
+    self.namespace = namespace
+  }
+}
+
 public enum ForgeSemesterDeskProjectionStatus: String, Codable, Equatable, Sendable {
   case needsReview = "needs-review"
   case readyToWork = "ready-to-work"
@@ -301,6 +354,10 @@ public struct ForgeSharedStateStore {
     case oversized
   }
   private enum RemovalResult { case absent, removed, failed }
+  private struct RemovalReceipt {
+    let removedNames: Set<String>
+    let namespace: ForgeSharedStateNamespaceSynchronization
+  }
 
   private struct FileIdentity: Equatable {
     let device: dev_t
@@ -375,7 +432,10 @@ public struct ForgeSharedStateStore {
     self.testHooks = testHooks
   }
 
-  public func saveProjection(_ projection: ForgeSemesterDeskProjection) throws {
+  @discardableResult
+  public func saveProjection(
+    _ projection: ForgeSemesterDeskProjection
+  ) throws -> ForgeSharedStateMutationReceipt {
     try projection.validate()
     let data: Data
     do { data = try JSONEncoder().encode(projection) } catch {
@@ -384,7 +444,9 @@ public struct ForgeSharedStateStore {
     guard data.count <= Self.maximumProjectionByteCount else {
       throw ForgeSharedStateStoreError.oversizedProjection
     }
-    try withExclusiveLock { try replace(data, for: .projection, in: $0) }
+    return try withExclusiveLock {
+      try replace(data, for: .projection, in: $0)
+    }
   }
 
   public func loadProjection() throws -> ForgeSemesterDeskProjection? {
@@ -394,21 +456,24 @@ public struct ForgeSharedStateStore {
       case .absent:
         return nil
       case .oversized:
-        try removeStateFiles(for: .projection, in: directory)
+        _ = try removeStateFiles(for: .projection, in: directory)
         throw ForgeSharedStateStoreError.oversizedProjection
       case .data(let data):
         do {
           return try ForgeSemesterDeskProjectionDecoder.decode(data)
         } catch {
-          try removeStateFiles(for: .projection, in: directory)
+          _ = try removeStateFiles(for: .projection, in: directory)
           throw ForgeSharedStateStoreError.corruptProjection
         }
       }
     }
   }
 
-  public func clearProjection() throws {
-    try withExclusiveLock { try removeStateFiles(for: .projection, in: $0) }
+  @discardableResult
+  public func clearProjection() throws -> ForgeSharedStateMutationReceipt {
+    try withExclusiveLock {
+      try removeStateFiles(for: .projection, in: $0)
+    }
   }
 
   public func setPendingDestination(_ destination: ForgeDestination) throws {
@@ -417,11 +482,11 @@ public struct ForgeSharedStateStore {
       throw ForgeSharedStateStoreError.corruptPendingDestination
     }
     try withExclusiveLock {
-      try replace(data, for: .pendingDestination, in: $0)
+      _ = try replace(data, for: .pendingDestination, in: $0)
     }
   }
 
-  public func consumePendingDestination() throws -> ForgeDestination? {
+  public func consumePendingDestination() throws -> ForgePendingDestinationConsumption {
     try withExclusiveLock { directory in
       switch try read(
         .pendingDestination,
@@ -429,20 +494,32 @@ public struct ForgeSharedStateStore {
         in: directory
       ) {
       case .absent:
-        return nil
+        return ForgePendingDestinationConsumption(
+          destination: nil,
+          namespace: .notRequired
+        )
       case .oversized:
-        try removeStateFiles(for: .pendingDestination, in: directory)
+        _ = try removeStateFiles(for: .pendingDestination, in: directory)
         throw ForgeSharedStateStoreError.corruptPendingDestination
       case .data(let data):
         guard
           let value = String(data: data, encoding: .utf8),
           let destination = ForgeDestination(rawValue: value)
         else {
-          try removeStateFiles(for: .pendingDestination, in: directory)
+          _ = try removeStateFiles(for: .pendingDestination, in: directory)
           throw ForgeSharedStateStoreError.corruptPendingDestination
         }
-        try removeStateFiles(for: .pendingDestination, in: directory)
-        return destination
+        let receipt = try removeStateFiles(
+          for: .pendingDestination,
+          in: directory
+        )
+        guard receipt.mutation == .changed else {
+          throw ForgeSharedStateStoreError.removalVerificationFailed
+        }
+        return ForgePendingDestinationConsumption(
+          destination: destination,
+          namespace: receipt.namespace
+        )
       }
     }
   }
@@ -454,15 +531,25 @@ public struct ForgeSharedStateStore {
     }
   }
 
-  public func clearAll() throws {
+  @discardableResult
+  public func clearAll() throws -> ForgeSharedStateClearReceipt {
     try withExclusiveLock { directory in
-      let stateFilesRemoved = removeFiles(
+      let receipt = try removeFilesWithReceipt(
         allStateFileNames + Self.obsoleteStateFileNames,
         in: directory
       )
-      guard stateFilesRemoved else {
-        throw ForgeSharedStateStoreError.removalVerificationFailed
-      }
+      let projectionNames = Set([
+        StateFile.projection.name,
+        StateFile.projection.stagingName,
+      ])
+      return ForgeSharedStateClearReceipt(
+        mutation: receipt.removedNames.isEmpty ? .unchanged : .changed,
+        projectionMutation:
+          receipt.removedNames.isDisjoint(with: projectionNames)
+          ? .unchanged
+          : .changed,
+        namespace: receipt.namespace
+      )
     }
   }
 
@@ -470,8 +557,11 @@ public struct ForgeSharedStateStore {
     StateFile.allCases.flatMap { [$0.name, $0.stagingName] }
   }
 
-  private func replace(_ data: Data, for stateFile: StateFile, in directory: LockedDirectory) throws
-  {
+  private func replace(
+    _ data: Data,
+    for stateFile: StateFile,
+    in directory: LockedDirectory
+  ) throws -> ForgeSharedStateMutationReceipt {
     guard removeFiles([stateFile.stagingName], in: directory) else {
       throw ForgeSharedStateStoreError.writeVerificationFailed
     }
@@ -518,7 +608,7 @@ public struct ForgeSharedStateStore {
     let didClose = close(descriptor) == 0
     descriptor = -1
     let didSyncDirectory = syncDirectory(directory.descriptor)
-    guard didClose && didSyncDirectory else {
+    guard didClose else {
       throw ForgeSharedStateStoreError.writeVerificationFailed
     }
     guard case .data(let actual) = try read(stateFile, maximumByteCount: data.count, in: directory),
@@ -526,6 +616,10 @@ public struct ForgeSharedStateStore {
     else {
       throw ForgeSharedStateStoreError.writeVerificationFailed
     }
+    return ForgeSharedStateMutationReceipt(
+      mutation: .changed,
+      namespace: didSyncDirectory ? .synchronized : .synchronizationUncertain
+    )
   }
 
   private func read(
@@ -548,31 +642,82 @@ public struct ForgeSharedStateStore {
     return .data(try readExactly(byteCount, from: file.descriptor))
   }
 
-  private func removeStateFiles(for stateFile: StateFile, in directory: LockedDirectory) throws {
-    guard removeFiles([stateFile.name, stateFile.stagingName], in: directory) else {
-      throw ForgeSharedStateStoreError.removalVerificationFailed
-    }
+  private func removeStateFiles(
+    for stateFile: StateFile,
+    in directory: LockedDirectory
+  ) throws -> ForgeSharedStateMutationReceipt {
+    let receipt = try removeFilesWithReceipt(
+      [stateFile.name, stateFile.stagingName],
+      in: directory
+    )
+    return ForgeSharedStateMutationReceipt(
+      mutation: receipt.removedNames.isEmpty ? .unchanged : .changed,
+      namespace: receipt.namespace
+    )
   }
 
   private func removeFiles(_ names: [String], in directory: LockedDirectory) -> Bool {
-    guard (try? requireBoundLock(directory)) != nil else { return false }
-    var changed = false
-    var succeeded = true
-    for name in names {
-      switch removeFileIfPresent(named: name, in: directory.descriptor) {
-      case .absent: break
-      case .removed: changed = true
-      case .failed: succeeded = false
-      }
+    guard let receipt = try? removeFilesWithReceipt(names, in: directory) else {
+      return false
     }
-    let didSyncDirectory = !changed || syncDirectory(directory.descriptor)
-    return succeeded && didSyncDirectory
+    return receipt.namespace != .synchronizationUncertain
   }
 
-  private func removeFileIfPresent(named name: String, in directory: Int32) -> RemovalResult {
+  private func removeFilesWithReceipt(
+    _ names: [String],
+    in directory: LockedDirectory
+  ) throws -> RemovalReceipt {
+    try requireBoundLock(directory)
+    let entries = try names.map { name -> (name: String, identity: FileIdentity?) in
+      guard let metadata = try entryMetadata(named: name, in: directory.descriptor) else {
+        return (name, nil)
+      }
+      guard isRegular(metadata) else {
+        throw ForgeSharedStateStoreError.removalVerificationFailed
+      }
+      return (name, FileIdentity(metadata))
+    }
+    var removedNames = Set<String>()
+    for entry in entries {
+      switch removePreflightedFile(
+        named: entry.name,
+        expectedIdentity: entry.identity,
+        in: directory.descriptor
+      ) {
+      case .absent:
+        break
+      case .removed:
+        removedNames.insert(entry.name)
+      case .failed:
+        throw ForgeSharedStateStoreError.removalVerificationFailed
+      }
+    }
+    let namespace: ForgeSharedStateNamespaceSynchronization
+    if removedNames.isEmpty {
+      namespace = .notRequired
+    } else {
+      namespace =
+        syncDirectory(directory.descriptor)
+        ? .synchronized
+        : .synchronizationUncertain
+    }
+    return RemovalReceipt(
+      removedNames: removedNames,
+      namespace: namespace
+    )
+  }
+
+  private func removePreflightedFile(
+    named name: String,
+    expectedIdentity: FileIdentity?,
+    in directory: Int32
+  ) -> RemovalResult {
     do {
-      guard let metadata = try entryMetadata(named: name, in: directory), isRegular(metadata) else {
-        return (try entryMetadata(named: name, in: directory)) == nil ? .absent : .failed
+      guard let expectedIdentity else {
+        return try entryMetadata(named: name, in: directory) == nil ? .absent : .failed
+      }
+      guard try entryMatches(name, identity: expectedIdentity, in: directory) else {
+        return .failed
       }
       guard unlinkEntry(named: name, in: directory) else { return .failed }
       return try entryMetadata(named: name, in: directory) == nil ? .removed : .failed

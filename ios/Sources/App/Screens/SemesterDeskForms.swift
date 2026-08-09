@@ -811,7 +811,9 @@ private struct ChooseSemesterNextActionForm: View {
             }
             .buttonStyle(.plain)
             .disabled(!model.canChooseAsNextAction(item))
-            .accessibilityLabel(item.title)
+            .accessibilityLabel(
+              "\(item.title), \(SemesterDeskDisplay.date(item.currentDate)), \(SemesterDeskDisplay.duration(item.currentMinutes))"
+            )
             .accessibilityValue(
               selectedPlanItemID == item.id ? "Selected" : "Not selected"
             )

@@ -18,8 +18,11 @@ struct SharedStateResetTests {
       )
     }
 
-    try fixture.store.clearAll()
+    let receipt = try fixture.store.clearAll()
 
+    #expect(receipt.mutation == .changed)
+    #expect(receipt.projectionMutation == .changed)
+    #expect(receipt.namespace == .synchronized)
     #expect(try fixture.store.loadProjection() == nil)
     #expect(
       !FileManager.default.fileExists(
@@ -33,6 +36,27 @@ struct SharedStateResetTests {
         )
       )
     }
+  }
+
+  @Test("Clear all separates projection mutation from other shared-state mutation")
+  func clearAllSeparatesProjectionMutation() throws {
+    let fixture = try SharedStoreTestSupport.fixture()
+    defer { SharedStoreTestSupport.clean(fixture) }
+    try fixture.store.setPendingDestination(.settings)
+    let store = SharedStoreTestSupport.storeWithDirectorySyncFailure(
+      at: fixture.root
+    )
+
+    let receipt = try store.clearAll()
+
+    #expect(receipt.mutation == .changed)
+    #expect(receipt.projectionMutation == .unchanged)
+    #expect(receipt.namespace == .synchronizationUncertain)
+    #expect(
+      !FileManager.default.fileExists(
+        atPath: fixture.pendingDestinationURL.path
+      )
+    )
   }
 
   @Test("Clear all does not remove unrelated files")
@@ -54,6 +78,8 @@ struct SharedStateResetTests {
   func clearAllRejectsManagedDirectory() throws {
     let fixture = try SharedStoreTestSupport.fixture()
     defer { SharedStoreTestSupport.clean(fixture) }
+    let projection = try SharedStoreTestSupport.projection()
+    try fixture.store.saveProjection(projection)
     let managedURL = fixture.root.appendingPathComponent(
       "forge.pending-focus.v3"
     )
@@ -73,5 +99,6 @@ struct SharedStateResetTests {
       )
     )
     #expect(isDirectory.boolValue)
+    #expect(try fixture.store.loadProjection() == projection)
   }
 }

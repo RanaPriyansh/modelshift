@@ -46,6 +46,53 @@ struct SharedProjectionStoreTests {
     }
   }
 
+  @Test(
+    "A projection save reports a confirmed mutation when namespace synchronization is uncertain")
+  func projectionSaveReportsNamespaceUncertainty() throws {
+    let fixture = try SharedStoreTestSupport.fixture()
+    defer { SharedStoreTestSupport.clean(fixture) }
+    let projection = try SharedStoreTestSupport.projection()
+    let store = SharedStoreTestSupport.storeWithDirectorySyncFailure(
+      at: fixture.root
+    )
+
+    let receipt = try store.saveProjection(projection)
+
+    #expect(receipt.mutation == .changed)
+    #expect(receipt.namespace == .synchronizationUncertain)
+    #expect(try fixture.store.loadProjection() == projection)
+    #expect(
+      !FileManager.default.fileExists(
+        atPath: fixture.projectionStagingURL.path
+      )
+    )
+  }
+
+  @Test("Projection clear reports a confirmed mutation when namespace synchronization is uncertain")
+  func projectionClearReportsNamespaceUncertainty() throws {
+    let fixture = try SharedStoreTestSupport.fixture()
+    defer { SharedStoreTestSupport.clean(fixture) }
+    try fixture.store.saveProjection(
+      SharedStoreTestSupport.projection()
+    )
+    let store = SharedStoreTestSupport.storeWithDirectorySyncFailure(
+      at: fixture.root
+    )
+
+    let receipt = try store.clearProjection()
+
+    #expect(receipt.mutation == .changed)
+    #expect(receipt.namespace == .synchronizationUncertain)
+    #expect(try fixture.store.loadProjection() == nil)
+    #expect(
+      try store.clearProjection()
+        == ForgeSharedStateMutationReceipt(
+          mutation: .unchanged,
+          namespace: .notRequired
+        )
+    )
+  }
+
   @Test("Projection states enforce action-safe fields")
   func projectionValidationFailsClosed() {
     let generatedAt = Date(timeIntervalSinceReferenceDate: 100)
@@ -92,12 +139,40 @@ struct SharedProjectionStoreTests {
 
     try fixture.store.setPendingDestination(.today)
 
-    #expect(try fixture.store.consumePendingDestination() == .today)
-    #expect(try fixture.store.consumePendingDestination() == nil)
+    #expect(try fixture.store.consumePendingDestination().destination == .today)
+    #expect(try fixture.store.consumePendingDestination().destination == nil)
     #expect(
       !FileManager.default.fileExists(
         atPath: fixture.pendingDestinationURL.path
       )
+    )
+  }
+
+  @Test(
+    "A pending destination is returned after an unlink with uncertain namespace synchronization")
+  func pendingDestinationReturnsAfterUncertainUnlink() throws {
+    let fixture = try SharedStoreTestSupport.fixture()
+    defer { SharedStoreTestSupport.clean(fixture) }
+    try fixture.store.setPendingDestination(.settings)
+    let store = SharedStoreTestSupport.storeWithDirectorySyncFailure(
+      at: fixture.root
+    )
+
+    let consumption = try store.consumePendingDestination()
+
+    #expect(consumption.destination == .settings)
+    #expect(consumption.namespace == .synchronizationUncertain)
+    #expect(
+      !FileManager.default.fileExists(
+        atPath: fixture.pendingDestinationURL.path
+      )
+    )
+    #expect(
+      try fixture.store.consumePendingDestination()
+        == ForgePendingDestinationConsumption(
+          destination: nil,
+          namespace: .notRequired
+        )
     )
   }
 
@@ -306,6 +381,17 @@ enum SharedStoreTestSupport {
       store: ForgeSharedStateStore(
         sharedRootDirectory: root
       )
+    )
+  }
+
+  static func storeWithDirectorySyncFailure(
+    at root: URL
+  ) -> ForgeSharedStateStore {
+    var hooks = ForgeSharedStateStoreTestHooks()
+    hooks.failDirectorySync = true
+    return ForgeSharedStateStore(
+      sharedRootDirectory: root,
+      testHooks: hooks
     )
   }
 

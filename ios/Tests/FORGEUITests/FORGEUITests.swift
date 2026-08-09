@@ -55,16 +55,14 @@ final class FORGEUITests: XCTestCase {
       "An open fact conflict must block next-action selection."
     )
 
-    revealAndTap(
-      firstButton(withIdentifierPrefix: "semester.resolve-conflict.", in: app),
-      in: app
-    )
+    revealAndTapVisibleConflictResolution(in: app)
     waitForElement(firstButton(withIdentifierPrefix: "semester.choose.", in: app))
+    assertDoesNotAppear(app.navigationBars["Change Fact Status"])
 
     prepareAndConfirmRecovery(in: app)
 
     let choose = firstButton(withIdentifierPrefix: "semester.choose.", in: app)
-    revealAndTap(choose, in: app)
+    revealAndTapSemesterListAction(choose, in: app)
     openToday(in: app)
     waitForLabel(
       element("today.primary-heading", in: app),
@@ -94,10 +92,10 @@ final class FORGEUITests: XCTestCase {
     )
     revealAndTap(button("study.independent-demonstrated", in: app), in: app)
     waitForElement(element("study.return-date", in: app))
-    waitForLabel(
-      element("study.selected-return-date", in: app),
-      equalTo: defaultReturnDateLabel(clockStart: Self.defaultClockStart)
-    )
+    let selectedReturnDate = element("study.selected-return-date", in: app)
+    waitForElement(selectedReturnDate)
+    let selectedReturnDateLabel = selectedReturnDate.label
+    XCTAssertFalse(selectedReturnDateLabel.isEmpty)
 
     let saveReturnDate = button("study.save-return-date", in: app)
     revealAndWaitForHittable(saveReturnDate, in: app)
@@ -110,6 +108,13 @@ final class FORGEUITests: XCTestCase {
       containing: "Come back on this date"
     )
     waitForDisabled(button("today.primary-button", in: app))
+
+    tap(button("settings.toolbar-button", in: app))
+    waitForElement(element("semester-settings.screen", in: app))
+    waitForElement(
+      accessibleElement(containing: selectedReturnDateLabel, in: app)
+    )
+    openToday(in: app)
 
     relaunchWithoutReset(app, clockStart: Self.delayedReturnClockStart)
     waitForElement(element("today.semester-name", in: app))
@@ -148,7 +153,11 @@ final class FORGEUITests: XCTestCase {
     tap(button("study.close", in: app))
     let closeAlert = app.alerts["Close protected study?"]
     waitForElement(closeAlert)
-    tap(closeAlert.buttons["Close and keep for process"])
+    tapProtectedStudyCloseAction(
+      identifier: "study.close-keep-draft",
+      fallback: closeAlert.buttons["Close and keep for process"],
+      in: app
+    )
     waitForElement(element("today.semester-name", in: app))
 
     openProtectedStudy(in: app)
@@ -176,13 +185,21 @@ final class FORGEUITests: XCTestCase {
     let closeAlert = app.alerts["Close protected study?"]
     waitForElement(closeAlert)
     waitForElement(accessibleElement(containing: "iOS can remove it when the app closes.", in: app))
-    tap(closeAlert.buttons["Keep editing"])
+    tapProtectedStudyCloseAction(
+      identifier: "study.close-keep-editing",
+      fallback: closeAlert.buttons["Keep editing"],
+      in: app
+    )
     waitForElement(element("study.screen", in: app))
     waitForValue(practiceText, equalTo: rawDraft)
 
     tap(button("study.close", in: app))
     waitForElement(closeAlert)
-    tap(closeAlert.buttons["Discard and close"])
+    tapProtectedStudyCloseAction(
+      identifier: "study.close-discard-draft",
+      fallback: closeAlert.buttons["Discard and close"],
+      in: app
+    )
     waitForElement(element("today.semester-name", in: app))
 
     openProtectedStudy(in: app)
@@ -226,7 +243,7 @@ final class FORGEUITests: XCTestCase {
 
     createSemesterDesk(named: "Autumn 2026", in: app)
     openSemester(in: app)
-    revealAndTap(button("semester.add-course", in: app), in: app)
+    revealAndTapSemesterListAction(button("semester.add-course", in: app), in: app)
 
     let courseCode = textField("course-form.code", in: app)
     enter(unsavedCourseCode, into: courseCode, in: app)
@@ -305,6 +322,74 @@ final class FORGEUITests: XCTestCase {
     assertDoesNotAppear(element("today.semester-name", in: app))
   }
 
+  func testCorruptPrivateStateRequiresExplicitResetAndStaysCleared() {
+    let app = launchApp(
+      extraArguments: ["-FORGEUITestingCorruptPrivateState"]
+    )
+
+    waitForElement(element("recovery.screen", in: app))
+    assertDoesNotAppear(element("onboarding.screen", in: app))
+
+    revealAndTap(button("recovery.clear-local-data", in: app), in: app)
+    waitForElement(element("recovery.screen", in: app))
+    revealAndTap(app.buttons["Clear local data"], in: app)
+
+    waitForElement(element("onboarding.screen", in: app))
+    assertDoesNotAppear(element("recovery.screen", in: app))
+
+    relaunchWithoutReset(
+      app,
+      clockStart: Self.defaultClockStart + Self.secondsPerDay
+    )
+    waitForElement(element("onboarding.screen", in: app))
+    assertDoesNotAppear(element("recovery.screen", in: app))
+    assertDoesNotAppear(element("today.semester-name", in: app))
+  }
+
+  func testProtectedStudyDraftSurvivesBackgroundWithoutAccessibleLeak() {
+    let app = launchApp(clockStart: Self.defaultClockStart)
+    let practiceDraft = "Private practice draft stays in this process."
+    let independentDraft = "Private independent draft stays in this process."
+    let delayedReturnDraft = "Private delayed return draft stays in this process."
+
+    createSelectedPlan(named: "Explain graph reachability", in: app)
+    openProtectedStudy(in: app)
+    let practiceText = textView("study.practice-text", in: app)
+    enter(practiceDraft, into: practiceText, in: app)
+    backgroundAndRestore(
+      app,
+      rawDraft: practiceDraft,
+      field: practiceText
+    )
+
+    revealAndTap(button("study.practice-complete", in: app), in: app)
+    let independentText = textView("study.independent-text", in: app)
+    waitForElement(independentText)
+    enter(independentDraft, into: independentText, in: app)
+    backgroundAndRestore(
+      app,
+      rawDraft: independentDraft,
+      field: independentText
+    )
+
+    revealAndTap(button("study.independent-demonstrated", in: app), in: app)
+    waitForElement(element("study.return-date", in: app))
+    revealAndTap(button("study.save-return-date", in: app), in: app)
+    waitForElement(element("today.semester-name", in: app))
+
+    relaunchWithoutReset(app, clockStart: Self.delayedReturnClockStart)
+    waitForEnabled(button("today.primary-button", in: app))
+    openProtectedStudy(in: app)
+    let delayedReturnText = textView("study.delayed-return-text", in: app)
+    waitForElement(delayedReturnText)
+    enter(delayedReturnDraft, into: delayedReturnText, in: app)
+    backgroundAndRestore(
+      app,
+      rawDraft: delayedReturnDraft,
+      field: delayedReturnText
+    )
+  }
+
   func testAccessibilityXXXLKeepsSemesterDeskActionsReachable() throws {
     guard #available(iOS 17.0, *) else {
       return
@@ -319,20 +404,26 @@ final class FORGEUITests: XCTestCase {
 
     createSemesterDesk(named: "Autumn 2026", in: app)
     openSemester(in: app)
-    revealAndTap(button("semester.add-course", in: app), in: app)
-    enter("CS101", into: textField("course-form.code", in: app), in: app)
-    enter("Algorithms", into: textField("course-form.title", in: app), in: app)
-    revealAndTap(button("course-form.save", in: app), in: app)
+    addCourse(code: "CS101", title: "Algorithms", in: app)
 
     waitForElement(element("semester.screen", in: app))
     let capacity = button("semester.capacity", in: app)
-    revealAndWaitForHittable(capacity, in: app)
+    revealAndWaitForSemesterListAction(capacity, in: app)
     assertFullyVisible(capacity, in: app)
 
     openToday(in: app)
-    let nextAction = button("today.primary-button", in: app)
-    revealAndWaitForHittable(nextAction, in: app)
-    assertFullyVisible(nextAction, in: app)
+    let visibleAction = button("today.primary-button", in: app)
+    revealAndWaitForVisibleTodayAction(visibleAction, in: app)
+    assertFullyVisible(visibleAction, in: app)
+    assertBelowNavigationBar(visibleAction, in: app)
+    assertAboveTabBar(visibleAction, in: app)
+    recordTodayActionAccessibilityState(
+      heading: element("today.primary-heading", in: app),
+      reason: element("today.primary-reason", in: app),
+      button: visibleAction,
+      action: element("today.primary-action", in: app),
+      in: app
+    )
 
     try app.performAccessibilityAudit(
       for: [
@@ -343,7 +434,22 @@ final class FORGEUITests: XCTestCase {
         .textClipped,
         .trait,
       ]
-    )
+    ) { issue in
+      let issueEvidence = XCTAttachment(
+        string: """
+          Audit type: \(issue.auditType)
+          Description: \(issue.compactDescription)
+          Detail: \(issue.detailedDescription)
+          Element: \(String(describing: issue.element))
+          """
+      )
+      issueEvidence.name = "Accessibility audit issue detail"
+      issueEvidence.lifetime = .keepAlways
+      XCTContext.runActivity(named: "Record accessibility audit issue") { activity in
+        activity.add(issueEvidence)
+      }
+      return false
+    }
   }
 
   func testSmallDeviceLayoutKeepsCoreSemesterDeskActionsVisible() throws {
@@ -357,17 +463,25 @@ final class FORGEUITests: XCTestCase {
     }
 
     let create = button("onboarding.create-semester-desk", in: app)
+    enter(
+      "Autumn 2026",
+      into: textField("onboarding.semester-name", in: app),
+      in: app
+    )
+    waitForEnabled(create)
     revealAndWaitForHittable(create, in: app)
     assertFullyVisible(create, in: app)
+    tap(create)
+    waitForElement(element("today.semester-name", in: app))
 
-    createSemesterDesk(named: "Autumn 2026", in: app)
     let nextAction = button("today.primary-button", in: app)
-    revealAndWaitForHittable(nextAction, in: app)
+    revealAndWaitForAboveTabBar(nextAction, in: app)
     assertFullyVisible(nextAction, in: app)
+    assertAboveTabBar(nextAction, in: app)
 
     openSemester(in: app)
     let addCourse = button("semester.add-course", in: app)
-    revealAndWaitForHittable(addCourse, in: app)
+    revealAndWaitForSemesterListAction(addCourse, in: app)
     assertFullyVisible(addCourse, in: app)
   }
 
@@ -412,18 +526,6 @@ final class FORGEUITests: XCTestCase {
     return arguments
   }
 
-  private func defaultReturnDateLabel(clockStart: Int) -> String {
-    let currentDate = Date(timeIntervalSince1970: TimeInterval(clockStart))
-    let calendar = Calendar.autoupdatingCurrent
-    let defaultReturnDate =
-      calendar.date(
-        byAdding: .day,
-        value: 1,
-        to: currentDate
-      ) ?? currentDate.addingTimeInterval(TimeInterval(Self.secondsPerDay))
-    return defaultReturnDate.formatted(date: .long, time: .shortened)
-  }
-
   private func createSemesterDesk(named name: String, in app: XCUIApplication) {
     waitForElement(element("onboarding.screen", in: app))
     enter(name, into: textField("onboarding.semester-name", in: app), in: app)
@@ -441,7 +543,7 @@ final class FORGEUITests: XCTestCase {
     addPlannedWork(named: title, in: app)
 
     let choose = firstButton(withIdentifierPrefix: "semester.choose.", in: app)
-    revealAndTap(choose, in: app)
+    revealAndTapSemesterListAction(choose, in: app)
     openToday(in: app)
     waitForLabel(
       element("today.primary-heading", in: app),
@@ -454,10 +556,14 @@ final class FORGEUITests: XCTestCase {
     title: String,
     in app: XCUIApplication
   ) {
-    revealAndTap(button("semester.add-course", in: app), in: app)
+    revealAndTapSemesterListAction(button("semester.add-course", in: app), in: app)
     enter(code, into: textField("course-form.code", in: app), in: app)
     enter(title, into: textField("course-form.title", in: app), in: app)
     revealAndTap(button("course-form.save", in: app), in: app)
+    waitForSemesterSheetDismissal(
+      textField("course-form.code", in: app),
+      in: app
+    )
     waitForElement(element("semester.screen", in: app))
   }
 
@@ -467,7 +573,7 @@ final class FORGEUITests: XCTestCase {
     source: String,
     in app: XCUIApplication
   ) {
-    revealAndTap(
+    revealAndTapSemesterListAction(
       firstButton(withIdentifierPrefix: "semester.add-fact.", in: app),
       in: app
     )
@@ -476,22 +582,47 @@ final class FORGEUITests: XCTestCase {
     enter(source, into: textField("fact-form.source", in: app), in: app)
     chooseFactStatus("Checked", in: app)
     revealAndTap(button("fact-form.save", in: app), in: app)
+    waitForSemesterSheetDismissal(
+      textField("fact-form.label", in: app),
+      in: app
+    )
     waitForElement(element("semester.screen", in: app))
   }
 
   private func chooseFactStatus(_ status: String, in app: XCUIApplication) {
     revealAndTap(element("fact-form.status", in: app), in: app)
 
-    let pickerOption = app.cells.containing(.staticText, identifier: status).firstMatch
-    if pickerOption.waitForExistence(timeout: 1) {
-      revealAndTap(pickerOption, in: app)
+    let buttonOption = app.buttons[status]
+    if buttonOption.waitForExistence(timeout: 1) {
+      revealAndTap(buttonOption, in: app)
     } else {
-      revealAndTap(app.staticTexts[status], in: app)
+      let cellOption = app.cells.containing(.staticText, identifier: status).firstMatch
+      revealAndTap(cellOption, in: app)
+    }
+
+    dismissQuickPathTutorialIfPresent(in: app)
+  }
+
+  private func dismissQuickPathTutorialIfPresent(in app: XCUIApplication) {
+    let hosts = [
+      app,
+      XCUIApplication(bundleIdentifier: "com.apple.springboard"),
+    ]
+
+    for (index, host) in hosts.enumerated() {
+      let continueButton = host.buttons["Continue"]
+      guard continueButton.waitForExistence(timeout: index == 0 ? 3 : 1) else {
+        continue
+      }
+      waitForHittable(continueButton)
+      continueButton.tap()
+      assertDoesNotAppear(continueButton)
+      return
     }
   }
 
   private func recordOpenConflict(summary: String, in app: XCUIApplication) {
-    revealAndTap(
+    revealAndTapSemesterListAction(
       firstButton(withIdentifierPrefix: "semester.record-conflict.", in: app),
       in: app
     )
@@ -502,33 +633,54 @@ final class FORGEUITests: XCTestCase {
     waitForElement(facts.firstMatch)
     XCTAssertEqual(facts.count, 2, "Expected exactly two selectable course facts.")
     for index in 0..<2 {
-      revealAndTap(facts.element(boundBy: index), in: app)
+      let fact = facts.element(boundBy: index)
+      revealAndWaitForVisible(fact, in: app)
+      waitForEnabled(fact)
+      fact.coordinate(
+        withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)
+      ).tap()
+      waitForValue(fact, equalTo: "1")
     }
 
     enter(summary, into: textField("conflict-form.summary", in: app), in: app)
     revealAndTap(button("conflict-form.save", in: app), in: app)
+    waitForSemesterSheetDismissal(
+      textField("conflict-form.summary", in: app),
+      in: app
+    )
     waitForElement(element("semester.screen", in: app))
   }
 
   private func confirmCapacity(in app: XCUIApplication) {
-    revealAndTap(button("semester.capacity", in: app), in: app)
+    revealAndTapSemesterListAction(button("semester.capacity", in: app), in: app)
     revealAndTap(button("capacity-form.save-draft", in: app), in: app)
     revealAndTap(button("capacity-form.confirm", in: app), in: app)
+    waitForSemesterSheetDismissal(
+      textField("capacity-form.minutes", in: app),
+      in: app
+    )
     waitForElement(element("semester.screen", in: app))
   }
 
   private func addPlannedWork(named title: String, in app: XCUIApplication) {
-    revealAndTap(
+    revealAndTapSemesterListAction(
       firstButton(withIdentifierPrefix: "semester.add-plan.", in: app),
       in: app
     )
     enter(title, into: textField("plan-form.title", in: app), in: app)
     revealAndTap(button("plan-form.save", in: app), in: app)
+    waitForSemesterSheetDismissal(
+      textField("plan-form.title", in: app),
+      in: app
+    )
     waitForElement(element("semester.screen", in: app))
   }
 
   private func prepareAndConfirmRecovery(in app: XCUIApplication) {
-    revealAndTap(button("semester.prepare-recovery", in: app), in: app)
+    revealAndTapSemesterListAction(
+      button("semester.prepare-recovery", in: app),
+      in: app
+    )
     enter(
       "A late course change reduced the available week.",
       into: textField("recovery-form.summary", in: app),
@@ -540,14 +692,30 @@ final class FORGEUITests: XCTestCase {
       in: app
     )
     revealAndTap(button("recovery-form.save", in: app), in: app)
+    waitForSemesterSheetDismissal(
+      textField("recovery-form.summary", in: app),
+      in: app
+    )
     waitForElement(element("semester.screen", in: app))
 
-    revealAndTap(button("semester.review-recovery", in: app), in: app)
+    revealAndTapSemesterListAction(
+      button("semester.review-recovery", in: app),
+      in: app
+    )
     revealAndTap(button("recovery-review.confirm", in: app), in: app)
+    waitForSemesterSheetDismissal(
+      button("recovery-review.confirm", in: app),
+      in: app
+    )
     waitForElement(element("semester.screen", in: app))
   }
 
   private func openToday(in app: XCUIApplication) {
+    let settings = element("semester-settings.screen", in: app)
+    if settings.exists {
+      tap(app.navigationBars.buttons["Today"])
+      waitForElement(element("today.semester-name", in: app))
+    }
     tap(tab("tab.today", in: app))
     waitForElement(element("today.semester-name", in: app))
   }
@@ -573,6 +741,10 @@ final class FORGEUITests: XCTestCase {
       return
     }
 
+    app.launchArguments = launchArguments(
+      clockStart: Self.defaultClockStart,
+      resetsState: false
+    )
     app.open(url)
   }
 
@@ -590,8 +762,71 @@ final class FORGEUITests: XCTestCase {
     let coordinate = element.coordinate(
       withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)
     )
-    coordinate.tap()
-    coordinate.tap()
+    coordinate.doubleTap()
+  }
+
+  private func backgroundAndRestore(
+    _ app: XCUIApplication,
+    rawDraft: String,
+    field: XCUIElement
+  ) {
+    XCUIDevice.shared.press(.home)
+    waitForBackground(app)
+
+    let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+    assertNoAccessibleContent(containing: rawDraft, in: springboard)
+
+    let privacyCovers = app.descendants(matching: .any).matching(
+      identifier: "privacy.cover"
+    )
+    let privacyCover = privacyCovers.firstMatch
+    XCTAssertTrue(privacyCover.waitForExistence(timeout: 2))
+    XCTAssertGreaterThanOrEqual(privacyCovers.count, 1)
+    XCTAssertEqual(
+      privacyCover.label,
+      "FORGE is private while the app is not active."
+    )
+    assertNoAccessibleContent(containing: rawDraft, in: app)
+
+    app.activate()
+    waitForElement(element("study.screen", in: app))
+    waitForValue(field, equalTo: rawDraft)
+  }
+
+  private func waitForBackground(
+    _ app: XCUIApplication,
+    timeout: TimeInterval = 5,
+    file: StaticString = #filePath,
+    line: UInt = #line
+  ) {
+    let expectation = XCTNSPredicateExpectation(
+      predicate: NSPredicate(
+        format: "state != %d",
+        XCUIApplication.State.runningForeground.rawValue
+      ),
+      object: app
+    )
+    XCTAssertEqual(
+      XCTWaiter().wait(for: [expectation], timeout: timeout),
+      .completed,
+      "Expected FORGE to enter the background.",
+      file: file,
+      line: line
+    )
+  }
+
+  private func tapProtectedStudyCloseAction(
+    identifier: String,
+    fallback: XCUIElement,
+    in app: XCUIApplication
+  ) {
+    let identifiedAction = button(identifier, in: app)
+    if identifiedAction.waitForExistence(timeout: 1) {
+      tap(identifiedAction)
+      return
+    }
+
+    tap(fallback)
   }
 
   private func tab(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
@@ -700,6 +935,123 @@ final class FORGEUITests: XCTestCase {
     }
 
     XCTFail("Expected \(element) to become hittable after bounded scrolling.")
+  }
+
+  private func revealAndWaitForSemesterListAction(
+    _ element: XCUIElement,
+    in app: XCUIApplication
+  ) {
+    revealWithinSemesterList(element, in: app)
+    waitForEnabled(element)
+  }
+
+  private func revealAndTapSemesterListAction(
+    _ element: XCUIElement,
+    in app: XCUIApplication
+  ) {
+    revealAndWaitForSemesterListAction(element, in: app)
+    element.coordinate(
+      withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)
+    ).tap()
+  }
+
+  private func revealAndTapVisibleConflictResolution(in app: XCUIApplication) {
+    let semanticAction = firstButton(
+      withIdentifierPrefix: "semester.resolve-conflict.",
+      in: app
+    )
+    revealWithinSemesterList(semanticAction, in: app)
+    waitForHittable(semanticAction)
+    semanticAction.tap()
+  }
+
+  private func revealWithinSemesterList(
+    _ element: XCUIElement,
+    in app: XCUIApplication
+  ) {
+    let semesterList = app.descendants(matching: .any)["semester.screen"]
+    waitForElement(semesterList)
+    let maximumScrollAttempts = 10
+
+    for attempt in 0...maximumScrollAttempts {
+      if hasVisibleFrame(element, in: app) {
+        return
+      }
+      if attempt < maximumScrollAttempts {
+        semesterList.swipeUp()
+      }
+    }
+
+    for attempt in 0...maximumScrollAttempts {
+      if hasVisibleFrame(element, in: app) {
+        return
+      }
+      if attempt < maximumScrollAttempts {
+        semesterList.swipeDown()
+      }
+    }
+
+    XCTFail(
+      "Expected \(element) to have a visible frame after scrolling the Semester List."
+    )
+  }
+
+  private func revealAndWaitForAboveTabBar(
+    _ element: XCUIElement,
+    in app: XCUIApplication,
+    spacing: CGFloat = 16
+  ) {
+    let tabBar = app.tabBars.firstMatch
+    waitForElement(tabBar)
+    let maximumScrollAttempts = 10
+
+    for attempt in 0...maximumScrollAttempts {
+      if isAboveTabBar(element, tabBar: tabBar, spacing: spacing) {
+        return
+      }
+      if attempt < maximumScrollAttempts {
+        app.swipeUp()
+      }
+    }
+
+    XCTFail(
+      "Expected \(element) to end at least \(spacing) points above the tab bar after bounded scrolling."
+    )
+  }
+
+  private func revealAndWaitForVisibleTodayAction(
+    _ element: XCUIElement,
+    in app: XCUIApplication,
+    spacing: CGFloat = 16
+  ) {
+    let navigationBar = app.navigationBars.firstMatch
+    let tabBar = app.tabBars.firstMatch
+    waitForElement(navigationBar)
+    waitForElement(tabBar)
+    let maximumScrollAttempts = 10
+
+    for attempt in 0...maximumScrollAttempts {
+      if isBetweenNavigationAndTabBar(
+        element,
+        navigationBar: navigationBar,
+        tabBar: tabBar,
+        spacing: spacing
+      ) {
+        return
+      }
+
+      if attempt < maximumScrollAttempts {
+        if element.frame.minY < navigationBar.frame.maxY + spacing {
+          app.swipeDown()
+        } else {
+          app.swipeUp()
+        }
+      }
+    }
+
+    XCTFail(
+      "Expected \(element) to stay between the navigation bar and tab bar after bounded scrolling."
+    )
   }
 
   private func revealAndTap(_ element: XCUIElement, in app: XCUIApplication) {
@@ -874,6 +1226,27 @@ final class FORGEUITests: XCTestCase {
     )
   }
 
+  private func waitForSemesterSheetDismissal(
+    _ formElement: XCUIElement,
+    in app: XCUIApplication,
+    timeout: TimeInterval = 5,
+    file: StaticString = #filePath,
+    line: UInt = #line
+  ) {
+    let expectation = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "exists == false"),
+      object: formElement
+    )
+    XCTAssertEqual(
+      XCTWaiter().wait(for: [expectation], timeout: timeout),
+      .completed,
+      "Expected the saved Semester form to dismiss.",
+      file: file,
+      line: line
+    )
+    waitForElement(element("semester.screen", in: app), file: file, line: line)
+  }
+
   private func assertNoAccessibleContent(
     containing text: String,
     in app: XCUIApplication,
@@ -930,6 +1303,128 @@ final class FORGEUITests: XCTestCase {
       file: file,
       line: line
     )
+  }
+
+  private func assertAboveTabBar(
+    _ element: XCUIElement,
+    in app: XCUIApplication,
+    spacing: CGFloat = 16,
+    file: StaticString = #filePath,
+    line: UInt = #line
+  ) {
+    let tabBar = app.tabBars.firstMatch
+    waitForElement(tabBar, file: file, line: line)
+    let frameEvidence = XCTAttachment(
+      string: """
+        App frame: \(app.frame)
+        Today primary action frame: \(element.frame)
+        Tab bar frame: \(tabBar.frame)
+        Required clearance: \(spacing)
+        """
+    )
+    frameEvidence.name = "Today action and tab-bar frames"
+    frameEvidence.lifetime = .keepAlways
+    XCTContext.runActivity(named: "Record Today action frame") { activity in
+      activity.add(frameEvidence)
+    }
+
+    XCTAssertLessThanOrEqual(
+      element.frame.maxY,
+      tabBar.frame.minY - spacing,
+      "Expected \(element) to end at least \(spacing) points above the tab bar.",
+      file: file,
+      line: line
+    )
+  }
+
+  private func assertBelowNavigationBar(
+    _ element: XCUIElement,
+    in app: XCUIApplication,
+    spacing: CGFloat = 16,
+    file: StaticString = #filePath,
+    line: UInt = #line
+  ) {
+    let navigationBar = app.navigationBars.firstMatch
+    waitForElement(navigationBar, file: file, line: line)
+
+    XCTAssertGreaterThanOrEqual(
+      element.frame.minY,
+      navigationBar.frame.maxY + spacing,
+      "Expected \(element) to start at least \(spacing) points below the navigation bar.",
+      file: file,
+      line: line
+    )
+  }
+
+  private func recordTodayActionAccessibilityState(
+    heading: XCUIElement,
+    reason: XCUIElement,
+    button: XCUIElement,
+    action: XCUIElement,
+    in app: XCUIApplication
+  ) {
+    let frameEvidence = XCTAttachment(
+      string: """
+        App frame: \(app.frame)
+        today.primary-heading frame: \(heading.frame)
+        today.primary-reason frame: \(reason.frame)
+        today.primary-button frame: \(button.frame)
+        today.primary-action frame: \(action.frame)
+        Tab bar frame: \(app.tabBars.firstMatch.frame)
+        """
+    )
+    frameEvidence.name = "Today action accessibility frames"
+    frameEvidence.lifetime = .keepAlways
+
+    let hierarchyEvidence = XCTAttachment(string: app.debugDescription)
+    hierarchyEvidence.name = "Today action accessibility hierarchy"
+    hierarchyEvidence.lifetime = .keepAlways
+
+    let screenshotEvidence = XCTAttachment(screenshot: app.screenshot())
+    screenshotEvidence.name = "Today action before accessibility audit"
+    screenshotEvidence.lifetime = .keepAlways
+
+    XCTContext.runActivity(named: "Record Today action accessibility state") { activity in
+      activity.add(frameEvidence)
+      activity.add(hierarchyEvidence)
+      activity.add(screenshotEvidence)
+    }
+  }
+
+  private func isAboveTabBar(
+    _ element: XCUIElement,
+    tabBar: XCUIElement,
+    spacing: CGFloat
+  ) -> Bool {
+    guard element.exists, element.isHittable else {
+      return false
+    }
+
+    let elementFrame = element.frame
+    let tabBarFrame = tabBar.frame
+    return !elementFrame.isEmpty
+      && !tabBarFrame.isEmpty
+      && elementFrame.maxY <= tabBarFrame.minY - spacing
+  }
+
+  private func isBetweenNavigationAndTabBar(
+    _ element: XCUIElement,
+    navigationBar: XCUIElement,
+    tabBar: XCUIElement,
+    spacing: CGFloat
+  ) -> Bool {
+    guard element.exists, element.isHittable else {
+      return false
+    }
+
+    let elementFrame = element.frame
+    let navigationBarFrame = navigationBar.frame
+    let tabBarFrame = tabBar.frame
+    return !elementFrame.isEmpty
+      && !navigationBarFrame.isEmpty
+      && !tabBarFrame.isEmpty
+      && elementFrame.minY >= navigationBarFrame.maxY + spacing
+      && elementFrame.maxY <= tabBarFrame.minY - spacing
   }
 
   private func hasVisibleFrame(

@@ -32,8 +32,8 @@ struct AppRootView: View {
                   SettingsToolbar(path: $model.todayPath)
                 }
             }
-            .accessibilityIdentifier("tab.today")
           }
+          .accessibilityIdentifier("tab.today")
 
           Tab("Semester", systemImage: "calendar", value: AppTab.semester) {
             NavigationStack(path: $model.semesterPath) {
@@ -45,8 +45,8 @@ struct AppRootView: View {
                   SettingsToolbar(path: $model.semesterPath)
                 }
             }
-            .accessibilityIdentifier("tab.semester")
           }
+          .accessibilityIdentifier("tab.semester")
 
           Tab(
             "Progress",
@@ -62,13 +62,17 @@ struct AppRootView: View {
                   SettingsToolbar(path: $model.progressPath)
                 }
             }
-            .accessibilityIdentifier("tab.progress")
           }
+          .accessibilityIdentifier("tab.progress")
         }
         .tint(ForgeDesign.tabSelection)
         .toolbarBackground(ForgeDesign.canvas, for: .tabBar)
         .toolbarBackgroundVisibility(.visible, for: .tabBar)
       }
+    }
+    .accessibilityHidden(isPrivacyCoverVisible)
+    .overlay {
+      privacyCover
     }
     .sheet(
       item: $model.activeSemesterDeskSheet,
@@ -78,6 +82,10 @@ struct AppRootView: View {
     ) { sheet in
       SemesterDeskSheetView(sheet: sheet)
         .environment(model)
+        .accessibilityHidden(isPrivacyCoverVisible)
+        .overlay {
+          privacyCover
+        }
     }
     .fullScreenCover(
       isPresented: $model.isProtectedStudyPresented,
@@ -87,6 +95,10 @@ struct AppRootView: View {
     ) {
       ProtectedStudyView()
         .environment(model)
+        .accessibilityHidden(isPrivacyCoverVisible)
+        .overlay {
+          privacyCover
+        }
     }
     .onOpenURL { url in
       model.route(url)
@@ -127,6 +139,17 @@ struct AppRootView: View {
     .environment(model)
   }
 
+  private var isPrivacyCoverVisible: Bool {
+    scenePhase != .active
+  }
+
+  @ViewBuilder
+  private var privacyCover: some View {
+    if isPrivacyCoverVisible {
+      PrivacyShieldView()
+    }
+  }
+
   @ViewBuilder
   private func destination(for route: AppRoute) -> some View {
     switch route {
@@ -135,6 +158,30 @@ struct AppRootView: View {
     case .privacySupport:
       SemesterDeskPrivacySupportView()
     }
+  }
+}
+
+private struct PrivacyShieldView: View {
+  var body: some View {
+    ZStack {
+      ForgeDesign.deepCanvas.ignoresSafeArea()
+
+      VStack(spacing: ForgeDesign.Spacing.regular) {
+        Image(systemName: "lock.fill")
+          .font(.title2.weight(.semibold))
+          .foregroundStyle(ForgeDesign.Action.commitment)
+          .accessibilityHidden(true)
+
+        Text("FORGE is private")
+          .font(.title2.weight(.semibold))
+          .foregroundStyle(ForgeDesign.text)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .padding(ForgeDesign.Spacing.large)
+    }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("FORGE is private while the app is not active.")
+    .accessibilityIdentifier("privacy.cover")
   }
 }
 

@@ -24,7 +24,9 @@ struct AppModelTests {
       await reader.launch()
 
       #expect(reader.selectedTab == .today)
-      #expect(try environment.sharedStore.consumePendingDestination() == nil)
+      #expect(
+        try environment.sharedStore.consumePendingDestination().destination == nil
+      )
     }
   }
 
@@ -41,7 +43,9 @@ struct AppModelTests {
       await settleMainActorWork()
 
       #expect(model.selectedTab == .progress)
-      #expect(try environment.sharedStore.consumePendingDestination() == nil)
+      #expect(
+        try environment.sharedStore.consumePendingDestination().destination == nil
+      )
     }
   }
 
@@ -65,7 +69,9 @@ struct AppModelTests {
 
       #expect(reader.recoveryState == nil)
       #expect(reader.selectedTab == .semester)
-      #expect(try environment.sharedStore.consumePendingDestination() == nil)
+      #expect(
+        try environment.sharedStore.consumePendingDestination().destination == nil
+      )
     }
   }
 
@@ -85,7 +91,69 @@ struct AppModelTests {
 
       await model.consumePendingSystemDestinationForTesting()
       #expect(model.selectedTab == .progress)
-      #expect(try environment.sharedStore.consumePendingDestination() == nil)
+      #expect(
+        try environment.sharedStore.consumePendingDestination().destination == nil
+      )
+    }
+  }
+
+  @Test("A confirmed route removal routes once when directory sync is uncertain")
+  func uncertainPendingDestinationRemovalRoutesOnce() async throws {
+    try await withEnvironment { environment in
+      let writer = try await environment.makeLaunchedModel()
+      #expect(await writer.createSemesterDesk(title: "Autumn 2027"))
+      try environment.sharedStore.setPendingDestination(.progress)
+
+      let uncertainStore = directorySyncFailingSharedStore(
+        at: environment.sharedRootURL
+      )
+      let reader = try environment.makeModel(
+        privateStateStore: environment.privateStore,
+        sharedStore: uncertainStore
+      )
+      reader.handleScenePhaseChange(.active)
+      await reader.launch()
+
+      #expect(reader.selectedTab == .progress)
+      #expect(
+        reader.localIntegrationStatusMessage
+          == "The device could not confirm the pending-route removal."
+      )
+
+      reader.selectedTab = .semester
+      await reader.consumePendingSystemDestinationForTesting()
+      #expect(reader.selectedTab == .semester)
+      #expect(
+        try environment.sharedStore.consumePendingDestination().destination == nil
+      )
+    }
+  }
+
+  @Test("A confirmed projection change reloads once when directory sync is uncertain")
+  func uncertainProjectionMutationReloadsOnce() async throws {
+    try await withEnvironment { environment in
+      let uncertainStore = directorySyncFailingSharedStore(
+        at: environment.sharedRootURL
+      )
+      let model = try environment.makeModel(
+        privateStateStore: environment.privateStore,
+        sharedStore: uncertainStore
+      )
+      model.handleScenePhaseChange(.active)
+      await model.launch()
+
+      _ = try await makePlan(in: model)
+      await model.waitForSharedProjectionOperationForTesting()
+      #expect(environment.widgetReloader.count == 1)
+      #expect(
+        model.localIntegrationStatusMessage
+          == "The device could not confirm the shared return-data update."
+      )
+
+      model.handleScenePhaseChange(.inactive)
+      model.handleScenePhaseChange(.active)
+      await model.waitForSharedProjectionOperationForTesting()
+      #expect(environment.widgetReloader.count == 1)
     }
   }
 
@@ -339,6 +407,40 @@ struct AppModelTests {
       #expect(model.recoveryState == nil)
       #expect(model.semesterDesk == priorDesk)
       #expect(await environment.privateStore.currentState()?.semesterDesk == priorDesk)
+    }
+  }
+
+  @Test("An installed save with uncertain sync stays in recovery until resaved")
+  func uncertainInstalledSaveRequiresSynchronizedRetry() async throws {
+    try await withEnvironment { environment in
+      let model = try await environment.makeLaunchedModel()
+      await environment.privateStore.setNextSaveResult(
+        .installed(namespace: .synchronizationUncertain)
+      )
+
+      #expect(!(await model.createSemesterDesk(title: "Autumn 2027")))
+      let installed = try #require(
+        await environment.privateStore.currentState()
+      )
+      #expect(model.semesterDesk == installed.semesterDesk)
+      guard case .saveFailed = model.recoveryState else {
+        Issue.record("An uncertain installed save must remain in recovery.")
+        return
+      }
+      #expect(
+        model.localPersistenceStatusMessage
+          == "The device could not confirm the local course data save."
+      )
+      let saveCount = await environment.privateStore.saveCount()
+
+      model.retryLocalDataLoad()
+      await model.waitForRecoveryOperationForTesting()
+
+      #expect(model.recoveryState == nil)
+      #expect(model.localPersistenceStatusMessage == nil)
+      #expect(await environment.privateStore.saveCount() == saveCount + 1)
+      #expect(await environment.privateStore.currentState() == installed)
+      #expect(model.semesterDesk == installed.semesterDesk)
     }
   }
 
@@ -819,6 +921,72 @@ struct AppModelTests {
     }
   }
 
+  @Test("A removed current file clears memory while retained legacy data keeps recovery")
+  func partialResetWithCurrentFileAbsentClearsExternalAndProcessState() async throws {
+    try await withEnvironment { environment in
+      let model = try await environment.makeLaunchedModel()
+      let planItemID = try await makePlan(in: model)
+      let priorProfileID = model.localProfileID
+      model.updateSemesterDeskStudyDraft(
+        for: planItemID,
+        practiceText: "private draft",
+        independentCheckText: "",
+        delayedReturnText: ""
+      )
+      model.selectedTab = .progress
+      model.todayPath = [.settings]
+      model.semesterPath = [.privacySupport]
+      environment.notificationCenter.seedPendingIdentifiers([
+        "forge.return-reminder"
+      ])
+      try environment.sharedStore.setPendingDestination(.semester)
+      await environment.privateStore.setClearError(
+        .clearVerification(
+          receipt: PrivateStateClearReceipt(
+            files: [
+              PrivateStateRemovalRecord(
+                name: PrivateStateStore.stateFileName,
+                disposition: .removed
+              ),
+              PrivateStateRemovalRecord(
+                name: PrivateStateStore.v5StateFileName,
+                disposition: .retained
+              ),
+            ],
+            stages: [],
+            namespace: .changed(.synchronized)
+          )
+        )
+      )
+
+      model.clearLocalData()
+      await model.waitForLocalDataResetOperationForTesting()
+
+      guard case .resetFailed = model.recoveryState else {
+        Issue.record("Retained legacy data must keep reset recovery visible.")
+        return
+      }
+      #expect(model.localProfileID != priorProfileID)
+      #expect(model.semesterDesk == nil)
+      #expect(!model.remindersEnabled)
+      #expect(model.semesterDeskStudyDraft(for: planItemID) == .empty)
+      #expect(model.selectedTab == .today)
+      #expect(model.todayPath.isEmpty)
+      #expect(model.semesterPath.isEmpty)
+      #expect(await environment.privateStore.currentState() == nil)
+      #expect(try await environment.privateStore.pendingResetIntent() != nil)
+      #expect(await environment.privateStore.resetCompletionEpochs().isEmpty)
+      #expect(
+        await environment.notificationCenter.pendingNotificationIdentifiers()
+          .isEmpty
+      )
+      #expect(
+        try environment.sharedStore.consumePendingDestination().destination == nil
+      )
+      #expect(try environment.sharedStore.loadProjection() == nil)
+    }
+  }
+
   @Test("The return reminder preference restores on relaunch")
   func returnReminderPreferenceRestoresOnRelaunch() async throws {
     try await withEnvironment { environment in
@@ -940,7 +1108,72 @@ struct AppModelTests {
       #expect(model.localProfileID != priorProfileID)
       #expect(model.semesterDeskStudyDraft(for: planItemID) == .empty)
       #expect(await environment.privateStore.currentState() == nil)
-      #expect(try environment.sharedStore.consumePendingDestination() == nil)
+      #expect(
+        try environment.sharedStore.consumePendingDestination().destination == nil
+      )
+    }
+  }
+
+  @Test("Launch replays and completes a pending reset with the same epoch")
+  func launchReplaysPendingResetWithSameEpoch() async throws {
+    try await withEnvironment { environment in
+      let writer = try await environment.makeLaunchedModel()
+      #expect(await writer.createSemesterDesk(title: "Autumn 2027"))
+      await environment.privateStore.seedResetIntent(resetEpoch: 7)
+
+      let reader = try environment.makeModel()
+      reader.handleScenePhaseChange(.active)
+      await reader.launch()
+
+      #expect(reader.launchState == .ready)
+      #expect(reader.recoveryState == nil)
+      #expect(reader.semesterDesk == nil)
+      #expect(await environment.privateStore.currentState() == nil)
+      #expect(try await environment.privateStore.pendingResetIntent() == nil)
+      #expect(await environment.privateStore.resetClearEpochs() == [7])
+      #expect(await environment.privateStore.resetCompletionEpochs() == [7])
+    }
+  }
+
+  @Test("Reset completion uncertainty keeps the marker and retries the same epoch")
+  func resetCompletionUncertaintyRetriesSameEpoch() async throws {
+    try await withEnvironment { environment in
+      let model = try await environment.makeLaunchedModel()
+      #expect(await model.createSemesterDesk(title: "Autumn 2027"))
+      await environment.privateStore.setCompleteResetError(
+        .resetIntentSynchronizationUncertain
+      )
+
+      model.clearLocalData()
+      await model.waitForLocalDataResetOperationForTesting()
+
+      guard case .resetFailed = model.recoveryState else {
+        Issue.record("Uncertain marker removal must keep reset recovery visible.")
+        return
+      }
+      let intent = try #require(
+        await environment.privateStore.pendingResetIntent()
+      )
+      #expect(await environment.privateStore.resetClearEpochs() == [intent.resetEpoch])
+      #expect(
+        await environment.privateStore.resetCompletionEpochs()
+          == [intent.resetEpoch]
+      )
+
+      await environment.privateStore.setCompleteResetError(nil)
+      model.retryLocalDataLoad()
+      await model.waitForLocalDataResetOperationForTesting()
+
+      #expect(model.recoveryState == nil)
+      #expect(try await environment.privateStore.pendingResetIntent() == nil)
+      #expect(
+        await environment.privateStore.resetClearEpochs()
+          == [intent.resetEpoch, intent.resetEpoch]
+      )
+      #expect(
+        await environment.privateStore.resetCompletionEpochs()
+          == [intent.resetEpoch, intent.resetEpoch]
+      )
     }
   }
 
@@ -1173,6 +1406,20 @@ private func releaseSharedStoreLock(_ descriptor: Int32) {
   _ = close(descriptor)
 }
 
+private func directorySyncFailingSharedStore(
+  at root: URL
+) -> ForgeSharedStateStore {
+  var hooks = ForgeSharedStateStoreTestHooks(
+    lockAcquisitionTimeoutNanoseconds: 5_000_000,
+    lockRetryIntervalNanoseconds: 500_000
+  )
+  hooks.failDirectorySync = true
+  return ForgeSharedStateStore(
+    sharedRootDirectory: root,
+    testHooks: hooks
+  )
+}
+
 private struct TestTimeBoundaryRequest: Equatable, Sendable {
   let deadline: Date
   let scheduledFrom: Date
@@ -1235,6 +1482,15 @@ private final class TestSemesterDeskIdentifierFactory:
 }
 
 @MainActor
+private final class TestWidgetReloader {
+  private(set) var count = 0
+
+  func reload() {
+    count += 1
+  }
+}
+
+@MainActor
 private final class TestEnvironment {
   let rootURL: URL
   let sharedRootURL: URL
@@ -1245,6 +1501,7 @@ private final class TestEnvironment {
   let notificationCenter: TestNotificationCenter
   let notificationCoordinator: NotificationCoordinator
   let timeBoundarySleeper: TestTimeBoundarySleeper
+  let widgetReloader: TestWidgetReloader
   let semesterDeskIdentifiers = TestSemesterDeskIdentifierFactory()
 
   private var nextProfileOrdinal = 0
@@ -1267,6 +1524,7 @@ private final class TestEnvironment {
     let privateStore = TestPrivateStateStore()
     let notificationCenter = TestNotificationCenter()
     let timeBoundarySleeper = TestTimeBoundarySleeper()
+    let widgetReloader = TestWidgetReloader()
     let notificationCoordinator = NotificationCoordinator(
       center: notificationCenter,
       calendar: calendar,
@@ -1287,6 +1545,7 @@ private final class TestEnvironment {
     self.notificationCenter = notificationCenter
     self.notificationCoordinator = notificationCoordinator
     self.timeBoundarySleeper = timeBoundarySleeper
+    self.widgetReloader = widgetReloader
   }
 
   func makeModel() throws -> AppModel {
@@ -1294,11 +1553,12 @@ private final class TestEnvironment {
   }
 
   func makeModel(
-    privateStateStore: any PrivateStateStoring
+    privateStateStore: any PrivateStateStoring,
+    sharedStore: ForgeSharedStateStore? = nil
   ) throws -> AppModel {
     try AppModel(
       privateStateStore: privateStateStore,
-      sharedStore: sharedStore,
+      sharedStore: sharedStore ?? self.sharedStore,
       notificationCoordinator: notificationCoordinator,
       timeBoundarySleeper: timeBoundarySleeper,
       now: { [clock] in clock.now() },
@@ -1310,7 +1570,9 @@ private final class TestEnvironment {
         return self.nextProfileID()
       },
       semesterDeskIdentifiers: semesterDeskIdentifiers,
-      widgetReloader: {}
+      widgetReloader: { [widgetReloader] in
+        widgetReloader.reload()
+      }
     )
   }
 
@@ -1338,11 +1600,18 @@ private struct TestPrivateStateSaveSnapshot: Sendable {
 
 private actor TestPrivateStateStore: PrivateStateStoring {
   private var state: PrivateStateEnvelope?
+  private var resetIntentEpoch: UInt64?
   private var saves: [TestPrivateStateSaveSnapshot] = []
   private var loadError: PrivateStateStoreError?
   private var saveError: PrivateStateStoreError?
+  private var clearError: PrivateStateStoreError?
+  private var pendingResetIntentError: PrivateStateStoreError?
+  private var completeResetError: PrivateStateStoreError?
   private var nextSaveResult: PrivateStateSaveResult?
   private var nextClearResult: PrivateStateClearResult?
+  private var nextCompleteResetResult: PrivateStateResetCompletionResult?
+  private var clearEpochs: [UInt64] = []
+  private var completedResetEpochs: [UInt64] = []
   private var latestResetEpoch: UInt64 = 0
   private var latestSequence: UInt64 = 0
   private var shouldBlockNextSave = false
@@ -1361,12 +1630,36 @@ private actor TestPrivateStateStore: PrivateStateStoring {
     saveError = error
   }
 
+  func setClearError(_ error: PrivateStateStoreError?) {
+    clearError = error
+  }
+
+  func setPendingResetIntentError(_ error: PrivateStateStoreError?) {
+    pendingResetIntentError = error
+  }
+
+  func setCompleteResetError(_ error: PrivateStateStoreError?) {
+    completeResetError = error
+  }
+
+  func seedResetIntent(resetEpoch: UInt64) {
+    resetIntentEpoch = resetEpoch
+    latestResetEpoch = max(latestResetEpoch, resetEpoch)
+    latestSequence = 0
+  }
+
   func setNextSaveResult(_ result: PrivateStateSaveResult?) {
     nextSaveResult = result
   }
 
   func setNextClearResult(_ result: PrivateStateClearResult?) {
     nextClearResult = result
+  }
+
+  func setNextCompleteResetResult(
+    _ result: PrivateStateResetCompletionResult?
+  ) {
+    nextCompleteResetResult = result
   }
 
   func blockNextSave(checkCancellationBeforeInstallation: Bool) {
@@ -1424,6 +1717,14 @@ private actor TestPrivateStateStore: PrivateStateStoring {
     saves.count
   }
 
+  func resetClearEpochs() -> [UInt64] {
+    clearEpochs
+  }
+
+  func resetCompletionEpochs() -> [UInt64] {
+    completedResetEpochs
+  }
+
   func encodedCurrentState() throws -> Data {
     guard let state else {
       throw PrivateStateStoreError.corruptData
@@ -1431,9 +1732,19 @@ private actor TestPrivateStateStore: PrivateStateStoring {
     return try JSONEncoder().encode(state)
   }
 
+  func pendingResetIntent() async throws -> PrivateStateResetIntent? {
+    if let pendingResetIntentError {
+      throw pendingResetIntentError
+    }
+    return resetIntentEpoch.map(PrivateStateResetIntent.init(resetEpoch:))
+  }
+
   func load() async throws -> PrivateStateEnvelope? {
     if let loadError {
       throw loadError
+    }
+    guard resetIntentEpoch == nil else {
+      throw PrivateStateStoreError.resetIntentPresent
     }
     return state
   }
@@ -1462,10 +1773,6 @@ private actor TestPrivateStateStore: PrivateStateStoring {
     if let saveError {
       throw saveError
     }
-    if let nextSaveResult {
-      self.nextSaveResult = nil
-      return nextSaveResult
-    }
 
     guard token.resetEpoch >= latestResetEpoch else {
       return .superseded
@@ -1477,7 +1784,17 @@ private actor TestPrivateStateStore: PrivateStateStoring {
     guard token.sequence > latestSequence else {
       return .superseded
     }
+    guard resetIntentEpoch == nil else {
+      throw PrivateStateStoreError.resetIntentPresent
+    }
     latestSequence = token.sequence
+    if let nextSaveResult {
+      self.nextSaveResult = nil
+      if case .installed = nextSaveResult {
+        self.state = state
+      }
+      return nextSaveResult
+    }
     self.state = state
     if shouldBlockSaveAfterInstallation {
       shouldBlockSaveAfterInstallation = false
@@ -1497,12 +1814,29 @@ private actor TestPrivateStateStore: PrivateStateStoring {
     guard resetEpoch >= latestResetEpoch else {
       return .superseded
     }
+    clearEpochs.append(resetEpoch)
     latestResetEpoch = resetEpoch
     latestSequence = 0
+    if let clearError {
+      if case .clearVerification(let receipt) = clearError {
+        resetIntentEpoch = resetEpoch
+        if receipt.removedCurrentState {
+          state = nil
+        }
+      }
+      throw clearError
+    }
     if let nextClearResult {
       self.nextClearResult = nil
+      if case .completed(let receipt) = nextClearResult {
+        resetIntentEpoch = resetEpoch
+        if receipt.removedCurrentState {
+          state = nil
+        }
+      }
       return nextClearResult
     }
+    resetIntentEpoch = resetEpoch
     let disposition: PrivateStateRemovalDisposition =
       state == nil ? .alreadyAbsent : .removed
     state = nil
@@ -1518,6 +1852,33 @@ private actor TestPrivateStateStore: PrivateStateStoring {
         namespace: disposition == .removed ? .changed(.synchronized) : .notRequired
       )
     )
+  }
+
+  func completeReset(
+    resetEpoch: UInt64
+  ) async throws -> PrivateStateResetCompletionResult {
+    completedResetEpochs.append(resetEpoch)
+    guard resetEpoch >= latestResetEpoch else {
+      return .superseded
+    }
+    if let completeResetError {
+      throw completeResetError
+    }
+    if let nextCompleteResetResult {
+      self.nextCompleteResetResult = nil
+      if case .completed = nextCompleteResetResult {
+        resetIntentEpoch = nil
+      }
+      return nextCompleteResetResult
+    }
+    guard state == nil else {
+      throw PrivateStateStoreError.resetIntentPresent
+    }
+    guard resetIntentEpoch == nil || resetIntentEpoch == resetEpoch else {
+      throw PrivateStateStoreError.resetIntentMismatch
+    }
+    resetIntentEpoch = nil
+    return .completed(namespace: .notRequired)
   }
 }
 

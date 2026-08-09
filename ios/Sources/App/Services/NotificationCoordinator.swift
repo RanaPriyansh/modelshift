@@ -502,7 +502,8 @@ final class NotificationCoordinator {
       return nil
     }
 
-    return delayedReturns
+    return
+      delayedReturns
       .filter { $0.status == .due }
       .compactMap { delayedReturn -> (id: String, date: Date)? in
         guard

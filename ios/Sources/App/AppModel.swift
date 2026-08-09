@@ -194,11 +194,6 @@ private enum AppSharedStateResult<Value: Sendable>: Sendable {
   case failure
 }
 
-private enum AppSharedProjectionMutation: Sendable {
-  case unchanged
-  case changed
-}
-
 private struct AppSharedStateStoreHandle: @unchecked Sendable {
   // ForgeSharedStateStore is immutable and locks every mutable file operation.
   // AppSharedStateService is the only in-process App user after initialization.
@@ -216,7 +211,7 @@ private actor AppSharedStateService: Sendable {
 
   func updateProjectionIfChanged(
     _ projection: ForgeSemesterDeskProjection?
-  ) -> AppSharedStateResult<AppSharedProjectionMutation> {
+  ) -> AppSharedStateResult<ForgeSharedStateMutationReceipt> {
     guard let store else {
       return .unavailable
     }
@@ -225,10 +220,14 @@ private actor AppSharedStateService: Sendable {
       let storedProjection = try store.loadProjection()
       guard let projection else {
         guard storedProjection != nil else {
-          return .success(.unchanged)
+          return .success(
+            ForgeSharedStateMutationReceipt(
+              mutation: .unchanged,
+              namespace: .notRequired
+            )
+          )
         }
-        try store.clearProjection()
-        return .success(.changed)
+        return .success(try store.clearProjection())
       }
 
       if let storedProjection,
@@ -240,24 +239,27 @@ private actor AppSharedStateService: Sendable {
             Self.projectionRefreshLeadTime
           )
       {
-        return .success(.unchanged)
+        return .success(
+          ForgeSharedStateMutationReceipt(
+            mutation: .unchanged,
+            namespace: .notRequired
+          )
+        )
       }
 
-      try store.saveProjection(projection)
-      return .success(.changed)
+      return .success(try store.saveProjection(projection))
     } catch {
       return .failure
     }
   }
 
-  func clearAll() -> AppSharedStateResult<Void> {
+  func clearAll() -> AppSharedStateResult<ForgeSharedStateClearReceipt> {
     guard let store else {
       return .unavailable
     }
 
     do {
-      try store.clearAll()
-      return .success(())
+      return .success(try store.clearAll())
     } catch {
       return .failure
     }
@@ -278,7 +280,9 @@ private actor AppSharedStateService: Sendable {
     }
   }
 
-  func consumePendingDestination() -> AppSharedStateResult<ForgeDestination?> {
+  func consumePendingDestination()
+    -> AppSharedStateResult<ForgePendingDestinationConsumption>
+  {
     guard let store else {
       return .unavailable
     }
@@ -300,9 +304,12 @@ final class AppModel {
     case projectionUpdate
     case sharedClear
     case sharedClearUnavailable
+    case sharedClearDurability
     case legacyPurge
     case legacyPurgeUnavailable
     case pendingDestinationRead
+    case pendingDestinationDurability
+    case projectionDurability
 
     var message: String {
       switch self {
@@ -312,10 +319,16 @@ final class AppModel {
         "FORGE could not clear shared return data."
       case .sharedClearUnavailable, .legacyPurgeUnavailable:
         "Shared return data is unavailable on this device."
+      case .sharedClearDurability:
+        "The device could not confirm the shared-data removal."
       case .legacyPurge:
         "FORGE could not remove legacy shared data."
       case .pendingDestinationRead:
         "FORGE could not read the pending system route."
+      case .pendingDestinationDurability:
+        "The device could not confirm the pending-route removal."
+      case .projectionDurability:
+        "The device could not confirm the shared return-data update."
       }
     }
   }
@@ -367,6 +380,7 @@ final class AppModel {
 
   private struct PrivateResetResult {
     let isComplete: Bool
+    let currentStateIsAbsent: Bool
     let protectedDataUnavailable: Bool
     let namespaceSynchronizationUncertain: Bool
   }
@@ -374,6 +388,7 @@ final class AppModel {
   private enum RecoveryOrigin: Equatable {
     case initialLoad
     case saveFailure(baseline: PrivateStateEnvelope?)
+    case saveSynchronization(candidate: PrivateStateEnvelope)
   }
 
   @ObservationIgnored private let privateStateStore: any PrivateStateStoring
@@ -398,6 +413,8 @@ final class AppModel {
   @ObservationIgnored private var recoveryOrigin: RecoveryOrigin?
   @ObservationIgnored private var localDataResetGeneration: UInt64 = 0
   @ObservationIgnored private var privateStateResetEpoch: UInt64 = 0
+  @ObservationIgnored private var pendingResetEpoch: UInt64?
+  @ObservationIgnored private var appliedResetEpoch: UInt64?
   @ObservationIgnored private var privateStateSaveSequence: UInt64 = 0
   @ObservationIgnored private var launchOperationIsRunning = false
   @ObservationIgnored private var launchGeneration: UInt64 = 0
@@ -518,6 +535,8 @@ final class AppModel {
     self.protectedStudyPlanItemID = nil
     self.lastPersistedEnvelope = nil
     self.recoveryOrigin = nil
+    self.pendingResetEpoch = nil
+    self.appliedResetEpoch = nil
     self.sharedIntegrationIssue = nil
     self.semesterDeskStudyDrafts = [:]
   }
@@ -588,6 +607,49 @@ final class AppModel {
       recoveryState = .resetFailed(
         message: "FORGE could not prepare local course data."
       )
+      launchState = .ready
+      return
+    }
+
+    guard !Task.isCancelled, generation == launchGeneration else {
+      return
+    }
+    do {
+      if let intent = try await privateStateStore.pendingResetIntent() {
+        guard
+          !Task.isCancelled,
+          generation == launchGeneration
+        else {
+          return
+        }
+        beginLocalDataReset(resuming: intent.resetEpoch)
+        await localDataResetOperation?.value
+        guard
+          !Task.isCancelled,
+          generation == launchGeneration
+        else {
+          return
+        }
+        launchState = .ready
+        return
+      }
+    } catch {
+      guard
+        !Task.isCancelled,
+        generation == launchGeneration
+      else {
+        return
+      }
+      pendingResetEpoch = privateStateResetEpoch > 0 ? privateStateResetEpoch : nil
+      if Self.isProtectedDataError(error) {
+        recoveryState = .protectedDataUnavailable(
+          message: "Local data is unavailable. Unlock the device, then retry."
+        )
+      } else {
+        recoveryState = .resetFailed(
+          message: "FORGE could not verify the local data reset."
+        )
+      }
       launchState = .ready
       return
     }
@@ -1248,9 +1310,16 @@ final class AppModel {
   }
 
   func clearLocalData() {
+    beginLocalDataReset(resuming: nil)
+  }
+
+  private func beginLocalDataReset(
+    resuming resetEpochToResume: UInt64?
+  ) {
     guard
       !isLocalDataResetRunning,
-      recoveryState?.allowsClearLocalData != false
+      resetEpochToResume != nil
+        || recoveryState?.allowsClearLocalData != false
     else {
       return
     }
@@ -1258,15 +1327,31 @@ final class AppModel {
     cancelTimeBoundaryTask()
     localDataResetGeneration += 1
     let generation = localDataResetGeneration
-    guard privateStateResetEpoch < UInt64.max else {
-      recoveryState = .resetFailed(
-        message: "FORGE could not reset local data."
-      )
-      return
+    let resetEpoch: UInt64
+    if let resetEpochToResume {
+      guard
+        resetEpochToResume > 0,
+        resetEpochToResume >= privateStateResetEpoch
+      else {
+        recoveryState = .resetFailed(
+          message: "FORGE could not resume the local data reset."
+        )
+        return
+      }
+      resetEpoch = resetEpochToResume
+      privateStateResetEpoch = resetEpochToResume
+    } else {
+      guard privateStateResetEpoch < UInt64.max else {
+        recoveryState = .resetFailed(
+          message: "FORGE could not reset local data."
+        )
+        return
+      }
+      privateStateResetEpoch += 1
+      resetEpoch = privateStateResetEpoch
     }
-    privateStateResetEpoch += 1
     privateStateSaveSequence = 0
-    let resetEpoch = privateStateResetEpoch
+    pendingResetEpoch = resetEpoch
     stateMutationGeneration &+= 1
     isSemesterDeskOperationRunning = false
     recoveryOrigin = nil
@@ -1279,58 +1364,91 @@ final class AppModel {
     let privateStateStore = privateStateStore
     let widgetReloader = widgetReloader
     localDataResetOperation = Task { @MainActor [weak self] in
-      let privateResult = await Self.clearPrivateState(
+      await self?.runLocalDataReset(
+        generation: generation,
+        resetEpoch: resetEpoch,
+        priorSharedProjectionOperation: priorSharedProjectionOperation,
         privateStateStore: privateStateStore,
-        resetEpoch: resetEpoch
-      )
-      guard
-        !Task.isCancelled,
-        let self,
-        generation == self.localDataResetGeneration,
-        resetEpoch == self.privateStateResetEpoch
-      else {
-        return
-      }
-
-      guard privateResult.isComplete else {
-        if let priorSharedProjectionOperation {
-          await priorSharedProjectionOperation.value
-        }
-        self.finishLocalDataReset(
-          Self.resetResult(
-            privateResult: privateResult,
-            externalFailures: []
-          )
-        )
-        return
-      }
-
-      self.cancelReminderOperationWithoutWaiting()
-      if let priorSharedProjectionOperation {
-        await priorSharedProjectionOperation.value
-      }
-      guard
-        !Task.isCancelled,
-        generation == self.localDataResetGeneration,
-        resetEpoch == self.privateStateResetEpoch
-      else {
-        return
-      }
-      let result = await Self.clearExternalStateAfterPrivateReset(
-        privateResult: privateResult,
         notificationCoordinator: notificationCoordinator,
         sharedStateService: sharedStateService,
         widgetReloader: widgetReloader
       )
-      guard
-        !Task.isCancelled,
-        generation == self.localDataResetGeneration,
-        resetEpoch == self.privateStateResetEpoch
-      else {
-        return
-      }
-      self.finishLocalDataReset(result)
     }
+  }
+
+  private func runLocalDataReset(
+    generation: UInt64,
+    resetEpoch: UInt64,
+    priorSharedProjectionOperation: Task<Void, Never>?,
+    privateStateStore: any PrivateStateStoring,
+    notificationCoordinator: NotificationCoordinator,
+    sharedStateService: AppSharedStateService,
+    widgetReloader: @MainActor () -> Void
+  ) async {
+    let privateResult = await Self.clearPrivateState(
+      privateStateStore: privateStateStore,
+      resetEpoch: resetEpoch
+    )
+    guard
+      !Task.isCancelled,
+      generation == localDataResetGeneration,
+      resetEpoch == privateStateResetEpoch
+    else {
+      return
+    }
+
+    guard privateResult.currentStateIsAbsent else {
+      if let priorSharedProjectionOperation {
+        await priorSharedProjectionOperation.value
+      }
+      finishLocalDataReset(
+        Self.resetResult(
+          privateResult: privateResult,
+          externalFailures: []
+        )
+      )
+      return
+    }
+
+    cancelReminderOperationWithoutWaiting()
+    if let priorSharedProjectionOperation {
+      await priorSharedProjectionOperation.value
+    }
+    guard
+      !Task.isCancelled,
+      generation == localDataResetGeneration,
+      resetEpoch == privateStateResetEpoch
+    else {
+      return
+    }
+    var result = await Self.clearExternalStateAfterPrivateReset(
+      privateResult: privateResult,
+      notificationCoordinator: notificationCoordinator,
+      sharedStateService: sharedStateService,
+      widgetReloader: widgetReloader
+    )
+    guard
+      !Task.isCancelled,
+      generation == localDataResetGeneration,
+      resetEpoch == privateStateResetEpoch
+    else {
+      return
+    }
+    if case .completed = result {
+      result = await Self.completePrivateReset(
+        privateStateStore: privateStateStore,
+        resetEpoch: resetEpoch,
+        currentStateIsAbsent: privateResult.currentStateIsAbsent
+      )
+    }
+    guard
+      !Task.isCancelled,
+      generation == localDataResetGeneration,
+      resetEpoch == privateStateResetEpoch
+    else {
+      return
+    }
+    finishLocalDataReset(result)
   }
 
   func retryLocalDataLoad() {
@@ -1342,8 +1460,21 @@ final class AppModel {
       return
     }
 
+    if let pendingResetEpoch {
+      switch recoveryState {
+      case .resetFailed, .protectedDataUnavailable:
+        beginLocalDataReset(resuming: pendingResetEpoch)
+        return
+      case .loadFailed, .saveFailed:
+        break
+      }
+    }
     if case .resetFailed = recoveryState {
       clearLocalData()
+      return
+    }
+    if case .saveSynchronization(let candidate) = recoveryOrigin {
+      retryPrivateStateSynchronization(candidate: candidate)
       return
     }
     guard let capturedNow = captureSemesterDeskNow() else {
@@ -1381,6 +1512,49 @@ final class AppModel {
         await self.consumePendingLaunchDestination()
         await self.replayInitialActiveLifecycle(at: capturedNow)
       }
+    }
+  }
+
+  private func retryPrivateStateSynchronization(
+    candidate: PrivateStateEnvelope
+  ) {
+    guard let capturedNow = captureSemesterDeskNow() else {
+      return
+    }
+    cancelReminderOperationWithoutWaiting()
+    isRecoveryOperationRunning = true
+    let resetEpoch = privateStateResetEpoch
+    recoveryOperation = Task { @MainActor [weak self] in
+      guard let self else {
+        return
+      }
+      defer {
+        if resetEpoch == self.privateStateResetEpoch {
+          self.isRecoveryOperationRunning = false
+          self.recoveryOperation = nil
+        }
+      }
+      guard
+        !Task.isCancelled,
+        resetEpoch == self.privateStateResetEpoch,
+        self.recoveryOrigin == .saveSynchronization(candidate: candidate)
+      else {
+        return
+      }
+      let didSave = await self.saveCandidate(candidate)
+      guard
+        didSave,
+        !Task.isCancelled,
+        resetEpoch == self.privateStateResetEpoch
+      else {
+        return
+      }
+      self.recoveryState = nil
+      self.recoveryOrigin = nil
+      self.localPersistenceStatusMessage = nil
+      await self.consumePendingSystemDestinationNow()
+      await self.consumePendingLaunchDestination()
+      await self.replayInitialActiveLifecycle(at: capturedNow)
     }
   }
 
@@ -1477,9 +1651,14 @@ final class AppModel {
     }
 
     switch result {
-    case .success(let destination):
+    case .success(let consumption):
       clearSharedIntegrationIssue(.pendingDestinationRead)
-      if let destination {
+      if consumption.namespace == .synchronizationUncertain {
+        setSharedIntegrationIssue(.pendingDestinationDurability)
+      } else if consumption.namespace == .synchronized {
+        clearSharedIntegrationIssue(.pendingDestinationDurability)
+      }
+      if let destination = consumption.destination {
         route(to: destination)
       }
     case .unavailable, .failure:
@@ -1774,7 +1953,10 @@ final class AppModel {
     }
 
     guard privateStateSaveSequence < UInt64.max else {
-      recoveryOrigin = .saveFailure(baseline: lastPersistedEnvelope)
+      recoveryOrigin =
+        privateNamespaceSynchronizationPending
+        ? .saveSynchronization(candidate: candidate)
+        : .saveFailure(baseline: lastPersistedEnvelope)
       recoveryState = .saveFailed(
         message: "FORGE could not save local course data."
       )
@@ -1802,13 +1984,22 @@ final class AppModel {
       case .installed(let namespace):
         lastPersistedEnvelope = candidate
         if namespace == .synchronizationUncertain {
+          if currentEnvelope != candidate {
+            apply(candidate)
+          }
           privateNamespaceSynchronizationPending = true
+          recoveryOrigin = .saveSynchronization(candidate: candidate)
+          recoveryState = .saveFailed(
+            message:
+              "The device could not confirm the local course data save. Retry the save."
+          )
           localPersistenceStatusMessage =
-            "FORGE saved local course data. The device could not confirm the save."
-        } else {
-          privateNamespaceSynchronizationPending = false
-          localPersistenceStatusMessage = nil
+            "The device could not confirm the local course data save."
+          cancelReminderOperationWithoutWaiting()
+          return false
         }
+        privateNamespaceSynchronizationPending = false
+        localPersistenceStatusMessage = nil
         return true
       case .superseded:
         return false
@@ -1830,7 +2021,11 @@ final class AppModel {
       else {
         return false
       }
-      recoveryOrigin = .saveFailure(baseline: lastPersistedEnvelope)
+      recoveryOrigin =
+        privateNamespaceSynchronizationPending
+          && lastPersistedEnvelope == candidate
+        ? .saveSynchronization(candidate: candidate)
+        : .saveFailure(baseline: lastPersistedEnvelope)
       if Self.isProtectedDataError(error) {
         recoveryState = .protectedDataUnavailable(
           message: "Local data is unavailable. Unlock the device, then retry."
@@ -2479,7 +2674,7 @@ final class AppModel {
   }
 
   private func finishSharedProjectionUpdate(
-    _ result: AppSharedStateResult<AppSharedProjectionMutation>,
+    _ result: AppSharedStateResult<ForgeSharedStateMutationReceipt>,
     generation: UInt64
   ) {
     guard generation == sharedProjectionGeneration else {
@@ -2487,11 +2682,16 @@ final class AppModel {
     }
 
     switch result {
-    case .success(let mutation):
-      if mutation == .changed {
+    case .success(let receipt):
+      if receipt.mutation == .changed {
         widgetReloader()
       }
       clearSharedIntegrationIssue(.projectionUpdate)
+      if receipt.namespace == .synchronizationUncertain {
+        setSharedIntegrationIssue(.projectionDurability)
+      } else if receipt.namespace == .synchronized {
+        clearSharedIntegrationIssue(.projectionDurability)
+      }
     case .unavailable, .failure:
       setSharedIntegrationIssue(.projectionUpdate)
     }
@@ -2513,16 +2713,22 @@ final class AppModel {
 
     let result = await sharedStateService.clearAll()
     switch result {
-    case .success:
-      widgetReloader()
+    case .success(let receipt):
+      if receipt.projectionMutation == .changed {
+        widgetReloader()
+      }
       clearSharedIntegrationIssues([
         .sharedClear,
         .sharedClearUnavailable,
       ])
+      if receipt.namespace == .synchronizationUncertain {
+        setSharedIntegrationIssue(.sharedClearDurability)
+      } else if receipt.namespace == .synchronized {
+        clearSharedIntegrationIssue(.sharedClearDurability)
+      }
     case .unavailable:
       setSharedIntegrationIssue(.sharedClearUnavailable)
     case .failure:
-      widgetReloader()
       setSharedIntegrationIssue(.sharedClear)
     }
   }
@@ -2595,6 +2801,7 @@ final class AppModel {
       case .completed(let receipt):
         return PrivateResetResult(
           isComplete: receipt.isComplete,
+          currentStateIsAbsent: receipt.removedCurrentState,
           protectedDataUnavailable: false,
           namespaceSynchronizationUncertain:
             receipt.namespaceSynchronizationUncertain
@@ -2602,13 +2809,23 @@ final class AppModel {
       case .superseded:
         return PrivateResetResult(
           isComplete: false,
+          currentStateIsAbsent: false,
           protectedDataUnavailable: false,
           namespaceSynchronizationUncertain: false
         )
       }
+    } catch PrivateStateStoreError.clearVerification(let receipt) {
+      return PrivateResetResult(
+        isComplete: false,
+        currentStateIsAbsent: receipt.removedCurrentState,
+        protectedDataUnavailable: false,
+        namespaceSynchronizationUncertain:
+          receipt.namespaceSynchronizationUncertain
+      )
     } catch {
       return PrivateResetResult(
         isComplete: false,
+        currentStateIsAbsent: false,
         protectedDataUnavailable: Self.isProtectedDataError(error),
         namespaceSynchronizationUncertain: false
       )
@@ -2628,11 +2845,15 @@ final class AppModel {
     }
 
     switch await sharedStateService.clearAll() {
-    case .success:
-      widgetReloader()
+    case .success(let receipt):
+      if receipt.projectionMutation == .changed {
+        widgetReloader()
+      }
+      if receipt.namespace == .synchronizationUncertain {
+        externalFailures.insert(.shared)
+      }
     case .failure:
       externalFailures.insert(.shared)
-      widgetReloader()
     case .unavailable:
       externalFailures.insert(.shared)
     }
@@ -2643,12 +2864,56 @@ final class AppModel {
     )
   }
 
+  private static func completePrivateReset(
+    privateStateStore: any PrivateStateStoring,
+    resetEpoch: UInt64,
+    currentStateIsAbsent: Bool
+  ) async -> ResetResult {
+    do {
+      let result = try await privateStateStore.completeReset(
+        resetEpoch: resetEpoch
+      )
+      switch result {
+      case .completed(let namespace):
+        if namespace == .changed(.synchronizationUncertain) {
+          return .failed(
+            stages: [.privateState],
+            protectedDataUnavailable: false,
+            privateStateWasCleared: currentStateIsAbsent,
+            namespaceSynchronizationUncertain: true
+          )
+        }
+        return .completed(namespaceSynchronizationUncertain: false)
+      case .superseded:
+        return .failed(
+          stages: [.privateState],
+          protectedDataUnavailable: false,
+          privateStateWasCleared: currentStateIsAbsent,
+          namespaceSynchronizationUncertain: false
+        )
+      }
+    } catch {
+      let resetIntentSynchronizationUncertain =
+        (error as? PrivateStateStoreError)
+        == .resetIntentSynchronizationUncertain
+      return .failed(
+        stages: [.privateState],
+        protectedDataUnavailable: Self.isProtectedDataError(error),
+        privateStateWasCleared: currentStateIsAbsent,
+        namespaceSynchronizationUncertain:
+          resetIntentSynchronizationUncertain
+      )
+    }
+  }
+
   private static func resetResult(
     privateResult: PrivateResetResult,
     externalFailures: Set<ResetCleanupStage>
   ) -> ResetResult {
     var failedStages = externalFailures
-    if !privateResult.isComplete {
+    if !privateResult.isComplete
+      || privateResult.namespaceSynchronizationUncertain
+    {
       failedStages.insert(.privateState)
     }
     let orderedFailures: [ResetCleanupStage] = [
@@ -2662,7 +2927,7 @@ final class AppModel {
         stages: orderedFailures,
         protectedDataUnavailable:
           privateResult.protectedDataUnavailable,
-        privateStateWasCleared: privateResult.isComplete,
+        privateStateWasCleared: privateResult.currentStateIsAbsent,
         namespaceSynchronizationUncertain:
           privateResult.namespaceSynchronizationUncertain
       )
@@ -2684,7 +2949,9 @@ final class AppModel {
       guard resetCurrentStateAfterPrivateRemoval() else {
         return
       }
+      pendingResetEpoch = nil
       recoveryState = nil
+      recoveryOrigin = nil
       if namespaceSynchronizationUncertain {
         privateNamespaceSynchronizationPending = true
         localDataResetStatusMessage =
@@ -2724,6 +2991,9 @@ final class AppModel {
   }
 
   private func resetCurrentStateAfterPrivateRemoval() -> Bool {
+    if appliedResetEpoch == privateStateResetEpoch {
+      return true
+    }
     let replacementProfileID = localProfileIDGenerator()
       .trimmingCharacters(in: .whitespacesAndNewlines)
     guard !replacementProfileID.isEmpty else {
@@ -2744,9 +3014,11 @@ final class AppModel {
     privateNamespaceSynchronizationPending = false
     stateRevision += 1
     resetNavigation()
+    pendingLaunchDestination = nil
     selectedTab = .today
     reminderStatusMessage = nil
     semesterDeskStatusMessage = nil
+    appliedResetEpoch = privateStateResetEpoch
     return true
   }
 
@@ -2798,6 +3070,7 @@ enum AppComposition {
 
 private actor InMemoryPrivateStateStore: PrivateStateStoring {
   private var envelope: PrivateStateEnvelope?
+  private var resetIntentEpoch: UInt64?
   private var latestResetEpoch: UInt64 = 0
   private var latestSequence: UInt64 = 0
 
@@ -2805,8 +3078,15 @@ private actor InMemoryPrivateStateStore: PrivateStateStoring {
     self.envelope = envelope
   }
 
+  func pendingResetIntent() async throws -> PrivateStateResetIntent? {
+    resetIntentEpoch.map(PrivateStateResetIntent.init(resetEpoch:))
+  }
+
   func load() async throws -> PrivateStateEnvelope? {
-    envelope
+    guard resetIntentEpoch == nil else {
+      throw PrivateStateStoreError.resetIntentPresent
+    }
+    return envelope
   }
 
   func save(
@@ -2823,6 +3103,9 @@ private actor InMemoryPrivateStateStore: PrivateStateStoring {
     guard token.sequence > latestSequence else {
       return .superseded
     }
+    guard resetIntentEpoch == nil else {
+      throw PrivateStateStoreError.resetIntentPresent
+    }
     latestSequence = token.sequence
     envelope = state
     return .installed(namespace: .synchronized)
@@ -2836,6 +3119,7 @@ private actor InMemoryPrivateStateStore: PrivateStateStoring {
     }
     latestResetEpoch = resetEpoch
     latestSequence = 0
+    resetIntentEpoch = resetEpoch
     let disposition: PrivateStateRemovalDisposition =
       envelope == nil ? .alreadyAbsent : .removed
     envelope = nil
@@ -2854,5 +3138,21 @@ private actor InMemoryPrivateStateStore: PrivateStateStoring {
           : .notRequired
       )
     )
+  }
+
+  func completeReset(
+    resetEpoch: UInt64
+  ) async throws -> PrivateStateResetCompletionResult {
+    guard resetEpoch >= latestResetEpoch else {
+      return .superseded
+    }
+    guard envelope == nil else {
+      throw PrivateStateStoreError.resetIntentPresent
+    }
+    guard resetIntentEpoch == nil || resetIntentEpoch == resetEpoch else {
+      throw PrivateStateStoreError.resetIntentMismatch
+    }
+    resetIntentEpoch = nil
+    return .completed(namespace: .notRequired)
   }
 }

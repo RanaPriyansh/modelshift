@@ -4,7 +4,6 @@ import SwiftUI
 struct TodayView: View {
   @Environment(AppModel.self) private var model
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @ScaledMetric(relativeTo: .body) private var bottomContentClearance: CGFloat = 88
 
   var body: some View {
     TimelineView(.periodic(from: .now, by: 60)) { _ in
@@ -19,7 +18,11 @@ struct TodayView: View {
         .padding(.vertical, ForgeDesign.Spacing.large)
         .frame(maxWidth: .infinity, alignment: .leading)
       }
-      .contentMargins(.bottom, bottomContentClearance, for: .scrollContent)
+      .safeAreaInset(edge: .bottom, spacing: 0) {
+        if let action = model.semesterDeskTodayAction {
+          primaryActionFooter(action)
+        }
+      }
       .background(ForgeDesign.canvas)
     }
     .navigationTitle("Today")
@@ -114,8 +117,6 @@ struct TodayView: View {
         .foregroundStyle(ForgeDesign.secondaryText)
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityIdentifier("today.primary-reason")
-
-      primaryAction(action)
     }
     .padding(.vertical, ForgeDesign.Spacing.large)
     .overlay(alignment: .top) {
@@ -131,6 +132,20 @@ struct TodayView: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .accessibilityElement(children: .contain)
     .accessibilityIdentifier("today.primary-action")
+  }
+
+  private func primaryActionFooter(_ action: SemesterDeskTodayAction) -> some View {
+    primaryAction(action)
+      .padding(.horizontal, ForgeDesign.Spacing.regular)
+      .padding(.top, ForgeDesign.Spacing.small)
+      .padding(.bottom, ForgeDesign.Spacing.regular)
+      .frame(maxWidth: .infinity)
+      .background(ForgeDesign.canvas)
+      .overlay(alignment: .top) {
+        Rectangle()
+          .fill(ForgeDesign.boundary)
+          .frame(height: 1)
+      }
   }
 
   @ViewBuilder

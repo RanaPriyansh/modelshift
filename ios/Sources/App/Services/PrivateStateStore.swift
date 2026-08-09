@@ -96,6 +96,10 @@ enum PrivateStateSaveResult: Equatable, Sendable {
   case superseded
 }
 
+struct PrivateStateResetIntent: Equatable, Sendable {
+  let resetEpoch: UInt64
+}
+
 enum PrivateStateRemovalDisposition: Equatable, Sendable {
   case alreadyAbsent
   case removed
@@ -149,13 +153,22 @@ enum PrivateStateClearResult: Equatable, Sendable {
   case superseded
 }
 
+enum PrivateStateResetCompletionResult: Equatable, Sendable {
+  case completed(namespace: PrivateStateClearNamespaceResult)
+  case superseded
+}
+
 protocol PrivateStateStoring: Sendable {
+  func pendingResetIntent() async throws -> PrivateStateResetIntent?
   func load() async throws -> PrivateStateEnvelope?
   func save(
     _ state: PrivateStateEnvelope,
     token: PrivateStateSaveToken
   ) async throws -> PrivateStateSaveResult
   func clear(resetEpoch: UInt64) async throws -> PrivateStateClearResult
+  func completeReset(
+    resetEpoch: UInt64
+  ) async throws -> PrivateStateResetCompletionResult
 }
 enum PrivateStateStoreFailurePoint: Sendable, Equatable {
   case namespaceLockAttempt
@@ -172,12 +185,17 @@ enum PrivateStateStoreFailurePoint: Sendable, Equatable {
   case regularFileOpen
   case clearFinalVerification
   case directorySynchronization
+  case resetIntentFileSynchronization
+  case resetIntentNamespaceSynchronization
+  case resetIntentRemovalSynchronization
 }
 
 enum PrivateStateStoreOperation: Equatable, Sendable {
+  case pendingResetIntent
   case load
   case save
   case clear
+  case completeReset
 }
 
 protocol PrivateStateStoreAdmissionControlling: Sendable {
@@ -221,6 +239,9 @@ enum PrivateStateStoreError: Error, Equatable, Sendable {
   case writeVerification
   case stageCleanupUncertain
   case namespaceLockUnavailable
+  case resetIntentPresent
+  case resetIntentMismatch
+  case resetIntentSynchronizationUncertain
   case clearVerification(receipt: PrivateStateClearReceipt)
 }
 actor PrivateStateStore: PrivateStateStoring {
@@ -228,6 +249,7 @@ actor PrivateStateStore: PrivateStateStoring {
   static let maximumJSONNestingDepth = 64
   private static let stateDirectoryName = "FORGE"
   static let stateFileName = "semester-desk-private-state-v1.json"
+  static let resetIntentFileName = ".private-state-reset-intent-v1"
   static let v5StateFileName = "private-state-v5.json"
   static let v4StateFileName = "private-state-v4.json"
   static let v3StateFileName = "private-state-v3.json"
@@ -365,6 +387,26 @@ actor PrivateStateStore: PrivateStateStoring {
       .appendingPathComponent(Self.stateDirectoryName, isDirectory: true)
       .appendingPathComponent(Self.stateFileName, isDirectory: false)
   }
+
+  nonisolated func pendingResetIntent() async throws -> PrivateStateResetIntent? {
+    await admissionController.waitBeforeAdmission(to: .pendingResetIntent)
+    try Task.checkCancellation()
+    let isProtectedDataAvailable = await protectedDataAvailability.isAvailable
+    try Task.checkCancellation()
+    do {
+      return try await pendingResetIntentTransaction(
+        isProtectedDataAvailable: isProtectedDataAvailable
+      )
+    } catch let error as CancellationError {
+      throw error
+    } catch {
+      guard await protectedDataAvailability.isAvailable else {
+        throw PrivateStateStoreError.protectedDataUnavailable
+      }
+      throw error
+    }
+  }
+
   nonisolated func load() async throws -> PrivateStateEnvelope? {
     await admissionController.waitBeforeAdmission(to: .load)
     try Task.checkCancellation()
@@ -417,6 +459,28 @@ actor PrivateStateStore: PrivateStateStoring {
     try Task.checkCancellation()
     do {
       return try await clearTransaction(
+        resetEpoch: resetEpoch,
+        isProtectedDataAvailable: isProtectedDataAvailable
+      )
+    } catch let error as CancellationError {
+      throw error
+    } catch {
+      guard await protectedDataAvailability.isAvailable else {
+        throw PrivateStateStoreError.protectedDataUnavailable
+      }
+      throw error
+    }
+  }
+
+  nonisolated func completeReset(
+    resetEpoch: UInt64
+  ) async throws -> PrivateStateResetCompletionResult {
+    await admissionController.waitBeforeAdmission(to: .completeReset)
+    try Task.checkCancellation()
+    let isProtectedDataAvailable = await protectedDataAvailability.isAvailable
+    try Task.checkCancellation()
+    do {
+      return try await completeResetTransaction(
         resetEpoch: resetEpoch,
         isProtectedDataAvailable: isProtectedDataAvailable
       )
@@ -533,6 +597,20 @@ actor PrivateStateStore: PrivateStateStoring {
     }
   #endif
 
+  private func pendingResetIntentTransaction(
+    isProtectedDataAvailable: Bool
+  ) throws -> PrivateStateResetIntent? {
+    try Task.checkCancellation()
+    let intent = try withProtectedDataSnapshot(isProtectedDataAvailable) {
+      try pendingResetIntentSynchronous()
+    }
+    if let intent, intent.resetEpoch > latestResetEpoch {
+      latestResetEpoch = intent.resetEpoch
+      highestObservedSaveSequence = 0
+    }
+    return intent
+  }
+
   private func loadTransaction(
     isProtectedDataAvailable: Bool
   ) throws -> PrivateStateEnvelope? {
@@ -559,6 +637,9 @@ actor PrivateStateStore: PrivateStateStoring {
       in: parentDirectory,
       at: fileURL.deletingLastPathComponent()
     ) {
+      guard try readResetIntent(in: parentDirectory) == nil else {
+        throw PrivateStateStoreError.resetIntentPresent
+      }
       let fileName = try fileName(for: fileURL)
       try preflightNoStalePrivateState(
         in: parentDirectory,
@@ -632,6 +713,9 @@ actor PrivateStateStore: PrivateStateStoring {
       in: parentDirectory,
       at: fileURL.deletingLastPathComponent()
     ) {
+      guard try readResetIntent(in: parentDirectory) == nil else {
+        throw PrivateStateStoreError.resetIntentPresent
+      }
       try preflightNoStalePrivateState(
         in: parentDirectory,
         currentFileName: fileName
@@ -696,6 +780,9 @@ actor PrivateStateStore: PrivateStateStoring {
 
     private func seedCorruptStateForUITestingSynchronous() throws {
       try requireProtectedData()
+      if let intent = try pendingResetIntentSynchronous() {
+        _ = try completeResetSynchronous(resetEpoch: intent.resetEpoch)
+      }
       let fileURL = try validatedFileURL()
       let fileName = try fileName(for: fileURL)
       let parentDirectory = try prepareParentDirectory(for: fileURL)
@@ -770,10 +857,17 @@ actor PrivateStateStore: PrivateStateStoring {
     isProtectedDataAvailable: Bool
   ) throws -> PrivateStateClearResult {
     try Task.checkCancellation()
-    guard
-      resetEpoch >= latestResetEpoch,
-      resetEpoch > highestObservedClearEpoch
-    else {
+    guard resetEpoch >= latestResetEpoch else {
+      return .superseded
+    }
+    if resetEpoch == highestObservedClearEpoch {
+      let intent = try withProtectedDataSnapshot(isProtectedDataAvailable) {
+        try pendingResetIntentSynchronous()
+      }
+      guard intent?.resetEpoch == resetEpoch else {
+        return .superseded
+      }
+    } else if resetEpoch < highestObservedClearEpoch {
       return .superseded
     }
     latestResetEpoch = resetEpoch
@@ -782,23 +876,38 @@ actor PrivateStateStore: PrivateStateStoring {
     let result: PrivateStateClearResult = try withProtectedDataSnapshot(
       isProtectedDataAvailable
     ) {
-      PrivateStateClearResult.completed(try clearSynchronous())
+      PrivateStateClearResult.completed(
+        try clearSynchronous(resetEpoch: resetEpoch)
+      )
     }
     highestObservedClearEpoch = resetEpoch
     return result
   }
 
-  private func clearSynchronous() throws -> PrivateStateClearReceipt {
+  private func completeResetTransaction(
+    resetEpoch: UInt64,
+    isProtectedDataAvailable: Bool
+  ) throws -> PrivateStateResetCompletionResult {
+    try Task.checkCancellation()
+    guard resetEpoch >= latestResetEpoch else {
+      return .superseded
+    }
+    latestResetEpoch = resetEpoch
+    highestObservedSaveSequence = 0
+    let namespace = try withProtectedDataSnapshot(
+      isProtectedDataAvailable
+    ) {
+      try completeResetSynchronous(resetEpoch: resetEpoch)
+    }
+    return .completed(namespace: namespace)
+  }
+
+  private func clearSynchronous(
+    resetEpoch: UInt64
+  ) throws -> PrivateStateClearReceipt {
     try requireProtectedData()
     let fileURL = try validatedFileURL()
-    guard
-      let parentDirectory = try openParentDirectory(
-        for: fileURL,
-        createIfMissing: false
-      )
-    else {
-      return emptyClearReceipt(currentFileName: try fileName(for: fileURL))
-    }
+    let parentDirectory = try prepareParentDirectory(for: fileURL)
     defer { closeDescriptor(parentDirectory) }
     return try withNamespaceLock(
       in: parentDirectory,
@@ -806,14 +915,16 @@ actor PrivateStateStore: PrivateStateStoring {
     ) {
       try clearLocked(
         in: parentDirectory,
-        fileURL: fileURL
+        fileURL: fileURL,
+        resetEpoch: resetEpoch
       )
     }
   }
 
   private func clearLocked(
     in parentDirectory: Int32,
-    fileURL: URL
+    fileURL: URL,
+    resetEpoch: UInt64
   ) throws -> PrivateStateClearReceipt {
     let fileName = try fileName(for: fileURL)
     let fileNames = recognizedStateFileNames(currentFileName: fileName)
@@ -835,7 +946,27 @@ actor PrivateStateStore: PrivateStateStoring {
         )
       }
     )
-    var stageDispositions = [String: PrivateStateRemovalDisposition]()
+    var stageDispositions: [String: PrivateStateRemovalDisposition] = Dictionary(
+      uniqueKeysWithValues: initialStageEntries.map {
+        ($0.name, PrivateStateRemovalDisposition.retained)
+      }
+    )
+
+    do {
+      try ensureResetIntent(
+        resetEpoch: resetEpoch,
+        in: parentDirectory,
+        parentURL: fileURL.deletingLastPathComponent()
+      )
+    } catch PrivateStateStoreError.resetIntentSynchronizationUncertain {
+      throw PrivateStateStoreError.clearVerification(
+        receipt: makeClearReceipt(
+          fileDispositions: fileDispositions,
+          stageDispositions: stageDispositions,
+          namespace: .changed(.synchronizationUncertain)
+        )
+      )
+    }
 
     for (name, metadata) in initialFileEntries {
       fileDispositions[name] = removePreflightedEntry(
@@ -917,6 +1048,306 @@ actor PrivateStateStore: PrivateStateStoring {
       throw PrivateStateStoreError.clearVerification(receipt: receipt)
     }
     return receipt
+  }
+
+  private func pendingResetIntentSynchronous() throws
+    -> PrivateStateResetIntent?
+  {
+    try requireProtectedData()
+    let fileURL = try validatedFileURL()
+    guard
+      let parentDirectory = try openParentDirectory(
+        for: fileURL,
+        createIfMissing: false
+      )
+    else {
+      return nil
+    }
+    defer { closeDescriptor(parentDirectory) }
+    return try withNamespaceLock(
+      in: parentDirectory,
+      at: fileURL.deletingLastPathComponent()
+    ) {
+      try readResetIntent(in: parentDirectory)
+    }
+  }
+
+  private func completeResetSynchronous(
+    resetEpoch: UInt64
+  ) throws -> PrivateStateClearNamespaceResult {
+    try requireProtectedData()
+    let fileURL = try validatedFileURL()
+    guard
+      let parentDirectory = try openParentDirectory(
+        for: fileURL,
+        createIfMissing: false
+      )
+    else {
+      return .notRequired
+    }
+    defer { closeDescriptor(parentDirectory) }
+    return try withNamespaceLock(
+      in: parentDirectory,
+      at: fileURL.deletingLastPathComponent()
+    ) {
+      let fileName = try fileName(for: fileURL)
+      let fileRecords = try recognizedStateFileNames(
+        currentFileName: fileName
+      ).map { name in
+        PrivateStateRemovalRecord(
+          name: name,
+          disposition:
+            try preflightClearEntry(in: parentDirectory, named: name) == nil
+            ? .alreadyAbsent
+            : .retained
+        )
+      }
+      let stageRecords = try preflightStages(
+        in: parentDirectory,
+        matching: Self.recognizedStageFileNamePrefixes
+      ).map {
+        PrivateStateRemovalRecord(
+          name: $0.name,
+          disposition: .retained
+        )
+      }
+      let cleanupReceipt = PrivateStateClearReceipt(
+        files: fileRecords,
+        stages: stageRecords,
+        namespace: .notRequired
+      )
+      guard cleanupReceipt.isComplete else {
+        throw PrivateStateStoreError.clearVerification(
+          receipt: cleanupReceipt
+        )
+      }
+      guard let intent = try readResetIntent(in: parentDirectory) else {
+        return .notRequired
+      }
+      guard intent.resetEpoch == resetEpoch else {
+        throw PrivateStateStoreError.resetIntentMismatch
+      }
+      guard
+        let marker = try preflightClearEntry(
+          in: parentDirectory,
+          named: Self.resetIntentFileName
+        )
+      else {
+        throw PrivateStateStoreError.resetIntentMismatch
+      }
+      try removeRegularEntry(
+        in: parentDirectory,
+        named: Self.resetIntentFileName,
+        expectedIdentity: marker.identity,
+        failure: .writeVerification
+      )
+      guard
+        try entryMetadata(
+          in: parentDirectory,
+          named: Self.resetIntentFileName
+        ) == nil
+      else {
+        throw PrivateStateStoreError.resetIntentSynchronizationUncertain
+      }
+      let namespace = synchronizeNamespace(
+        parentDirectory,
+        at: .resetIntentRemovalSynchronization
+      )
+      guard namespace == .synchronized else {
+        try? ensureResetIntent(
+          resetEpoch: resetEpoch,
+          in: parentDirectory,
+          parentURL: fileURL.deletingLastPathComponent()
+        )
+        throw PrivateStateStoreError.resetIntentSynchronizationUncertain
+      }
+      return .changed(.synchronized)
+    }
+  }
+
+  private func readResetIntent(
+    in parentDirectory: Int32
+  ) throws -> PrivateStateResetIntent? {
+    guard
+      let entry = try entryMetadata(
+        in: parentDirectory,
+        named: Self.resetIntentFileName
+      )
+    else {
+      return nil
+    }
+    try requireExclusiveRegularFile(entry)
+    let data = try boundedRead(
+      in: parentDirectory,
+      named: Self.resetIntentFileName,
+      expectedIdentity: entry.identity
+    )
+    guard
+      let value = String(data: data, encoding: .utf8),
+      let resetEpoch = UInt64(value),
+      resetEpoch > 0,
+      value == String(resetEpoch)
+    else {
+      throw PrivateStateStoreError.resetIntentMismatch
+    }
+    try verifyExpectedEntry(
+      in: parentDirectory,
+      named: Self.resetIntentFileName,
+      expectedIdentity: entry.identity
+    )
+    return PrivateStateResetIntent(resetEpoch: resetEpoch)
+  }
+
+  private func ensureResetIntent(
+    resetEpoch: UInt64,
+    in parentDirectory: Int32,
+    parentURL: URL
+  ) throws {
+    guard resetEpoch > 0 else {
+      throw PrivateStateStoreError.resetIntentMismatch
+    }
+    let existingIntent: PrivateStateResetIntent?
+    do {
+      existingIntent = try readResetIntent(in: parentDirectory)
+    } catch PrivateStateStoreError.resetIntentMismatch {
+      guard
+        let corruptMarker = try preflightClearEntry(
+          in: parentDirectory,
+          named: Self.resetIntentFileName
+        )
+      else {
+        throw PrivateStateStoreError.resetIntentMismatch
+      }
+      try removeRegularEntry(
+        in: parentDirectory,
+        named: Self.resetIntentFileName,
+        expectedIdentity: corruptMarker.identity,
+        failure: .writeVerification
+      )
+      guard
+        try entryMetadata(
+          in: parentDirectory,
+          named: Self.resetIntentFileName
+        ) == nil
+      else {
+        throw PrivateStateStoreError.resetIntentSynchronizationUncertain
+      }
+      existingIntent = nil
+    }
+    if let intent = existingIntent {
+      guard intent.resetEpoch == resetEpoch else {
+        throw PrivateStateStoreError.resetIntentMismatch
+      }
+      guard
+        let marker = try preflightClearEntry(
+          in: parentDirectory,
+          named: Self.resetIntentFileName
+        )
+      else {
+        throw PrivateStateStoreError.resetIntentMismatch
+      }
+      let markerDescriptor = try openRegularFile(
+        in: parentDirectory,
+        named: Self.resetIntentFileName,
+        expectedIdentity: marker.identity
+      )
+      defer { closeDescriptor(markerDescriptor) }
+      do {
+        try synchronize(
+          markerDescriptor,
+          at: .resetIntentFileSynchronization
+        )
+        try verifyExpectedEntry(
+          in: parentDirectory,
+          named: Self.resetIntentFileName,
+          expectedIdentity: marker.identity
+        )
+        guard
+          synchronizeNamespace(
+            parentDirectory,
+            at: .resetIntentNamespaceSynchronization
+          ) == .synchronized
+        else {
+          throw PrivateStateStoreError.resetIntentSynchronizationUncertain
+        }
+      } catch PrivateStateStoreError.protectedDataUnavailable {
+        throw PrivateStateStoreError.protectedDataUnavailable
+      } catch {
+        throw PrivateStateStoreError.resetIntentSynchronizationUncertain
+      }
+      return
+    }
+    try requireProtectedData()
+    #if canImport(Darwin)
+      var markerDescriptor = Self.resetIntentFileName.withCString {
+        Darwin.openat(
+          parentDirectory,
+          $0,
+          O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW,
+          0o600
+        )
+      }
+      guard markerDescriptor >= 0 else {
+        throw protectedDataError(or: .writeVerification)
+      }
+      let markerURL = parentURL.appendingPathComponent(
+        Self.resetIntentFileName,
+        isDirectory: false
+      )
+      do {
+        let metadata = try fileMetadata(for: markerDescriptor)
+        try requireExclusiveRegularFile(metadata)
+        try applyPrivateAttributes(
+          to: markerDescriptor,
+          at: markerURL,
+          failure: .writeVerification,
+          expectedIdentity: metadata.identity
+        )
+        let data = Data(String(resetEpoch).utf8)
+        try writeData(data, to: markerDescriptor)
+        try synchronize(
+          markerDescriptor,
+          at: .resetIntentFileSynchronization
+        )
+        let storedData = try boundedRead(
+          from: markerDescriptor,
+          expectedIdentity: metadata.identity
+        )
+        guard storedData == data else {
+          throw PrivateStateStoreError.writeVerification
+        }
+        try verifyExpectedEntry(
+          in: parentDirectory,
+          named: Self.resetIntentFileName,
+          expectedIdentity: metadata.identity
+        )
+        closeDescriptor(markerDescriptor)
+        markerDescriptor = -1
+        guard
+          synchronizeNamespace(
+            parentDirectory,
+            at: .resetIntentNamespaceSynchronization
+          ) == .synchronized
+        else {
+          throw PrivateStateStoreError.resetIntentSynchronizationUncertain
+        }
+      } catch let error as PrivateStateStoreError {
+        if markerDescriptor >= 0 {
+          closeDescriptor(markerDescriptor)
+        }
+        if error == .protectedDataUnavailable {
+          throw error
+        }
+        throw PrivateStateStoreError.resetIntentSynchronizationUncertain
+      } catch {
+        if markerDescriptor >= 0 {
+          closeDescriptor(markerDescriptor)
+        }
+        throw PrivateStateStoreError.resetIntentSynchronizationUncertain
+      }
+    #else
+      throw protectedDataError(or: .unsafePath)
+    #endif
   }
 
   private func recognizedStateFileNames(
@@ -2203,10 +2634,11 @@ actor PrivateStateStore: PrivateStateStoring {
   }
 
   private func synchronizeNamespace(
-    _ parentDirectory: Int32
+    _ parentDirectory: Int32,
+    at failurePoint: PrivateStateStoreFailurePoint = .directorySynchronization
   ) -> PrivateStateNamespaceSynchronization {
     do {
-      try synchronize(parentDirectory, at: .directorySynchronization)
+      try synchronize(parentDirectory, at: failurePoint)
       return .synchronized
     } catch {
       return .synchronizationUncertain

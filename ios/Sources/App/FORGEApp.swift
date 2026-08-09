@@ -3,7 +3,6 @@ import SwiftUI
 #if DEBUG
   import ForgeCore
   import Foundation
-  import UserNotifications
 #endif
 
 @main
@@ -74,7 +73,13 @@ struct FORGEApp: App {
     private static func resetUITestState(
       privateStateStore: PrivateStateStore
     ) async throws -> UInt64 {
-      let resetEpoch: UInt64 = 1
+      let resetEpoch: UInt64
+      do {
+        resetEpoch =
+          try await privateStateStore.pendingResetIntent()?.resetEpoch ?? 1
+      } catch PrivateStateStoreError.resetIntentMismatch {
+        resetEpoch = 1
+      }
       let result = try await privateStateStore.clear(
         resetEpoch: resetEpoch
       )
@@ -87,11 +92,26 @@ struct FORGEApp: App {
         throw PrivateStateStoreError.writeVerification
       }
 
-      try ForgeSharedStateStore().clearAll()
+      let sharedReceipt = try ForgeSharedStateStore().clearAll()
+      guard sharedReceipt.namespace != .synchronizationUncertain else {
+        throw PrivateStateStoreError.writeVerification
+      }
 
-      let notificationCenter = UNUserNotificationCenter.current()
-      notificationCenter.removeAllPendingNotificationRequests()
-      notificationCenter.removeAllDeliveredNotifications()
+      guard await NotificationCoordinator().disableReminders() else {
+        throw PrivateStateStoreError.writeVerification
+      }
+
+      switch try await privateStateStore.completeReset(
+        resetEpoch: resetEpoch
+      ) {
+      case .completed(let namespace):
+        guard namespace != .changed(.synchronizationUncertain) else {
+          throw PrivateStateStoreError.resetIntentSynchronizationUncertain
+        }
+      case .superseded:
+        throw PrivateStateStoreError.writeVerification
+      }
+
       return resetEpoch
     }
 

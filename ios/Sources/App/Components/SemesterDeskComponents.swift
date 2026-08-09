@@ -167,6 +167,17 @@ struct SemesterDeskOperationStatus: View {
           .accessibilityIdentifier("semester-desk.status")
       }
 
+      if let message = model.localIntegrationStatusMessage,
+        !message.isEmpty,
+        message != model.semesterDeskStatusMessage
+      {
+        Label(message, systemImage: "exclamationmark.triangle")
+          .font(.subheadline)
+          .fixedSize(horizontal: false, vertical: true)
+          .accessibilityElement(children: .combine)
+          .accessibilityIdentifier("semester-desk.integration-status")
+      }
+
       Label(
         "This Semester Desk stays on this iPhone. Web and iPhone data do not sync.",
         systemImage: "iphone"

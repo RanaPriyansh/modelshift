@@ -22,7 +22,7 @@ struct ReleaseSourceBoundaryTests {
     }
   }
 
-  @Test("Keeps UI test clock and notification reset in DEBUG source")
+  @Test("Keeps UI test clock and verified reminder reset in DEBUG source")
   func uiTestClockAndNotificationResetRequireDebug() throws {
     let source = try SourceFile.forgeApp.read()
     let monotonicClockDeclarations = source.lines.filter { line in
@@ -41,26 +41,22 @@ struct ReleaseSourceBoundaryTests {
       in: SourceFile.forgeApp
     )
 
-    for notificationReset in [
-      "removeAllPendingNotificationRequests",
-      "removeAllDeliveredNotifications",
-    ] {
-      let matches = source.lines(containing: notificationReset)
-      #expect(
-        !matches.isEmpty,
-        "Expected \(notificationReset) in \(SourceFile.forgeApp.relativePath)."
-      )
-      expectDebugBoundary(for: matches, in: SourceFile.forgeApp)
-    }
+    let verifiedReminderReset = "NotificationCoordinator().disableReminders"
+    let matches = source.lines(containing: verifiedReminderReset)
+    #expect(
+      !matches.isEmpty,
+      "Expected \(verifiedReminderReset) in \(SourceFile.forgeApp.relativePath)."
+    )
+    expectDebugBoundary(for: matches, in: SourceFile.forgeApp)
   }
 
   @Test("Requires signed Simulator test evidence")
   func simulatorTestEvidenceRequiresSignedBuildProducts() throws {
     let script = try SourceFile.verificationScript.readRawText()
     let branchStartMarker =
-      "  1)\n    step \"Build deterministic iOS Simulator test products\""
+      "if [[ \"$require_simulator_tests\" == \"1\" ]]; then"
     let branchEndMarker =
-      "\n  *)\n    printf 'FORGE_REQUIRE_SIMULATOR_TESTS must be 0 or 1."
+      "\nfi\n\nif [[ \"$require_unsigned_archive\" == \"1\" ]]; then"
     let branchStart = try #require(script.range(of: branchStartMarker))
     let branchEnd = try #require(
       script.range(
