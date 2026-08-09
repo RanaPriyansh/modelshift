@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "topic": "FORGE AI model architecture open model and organic GTM 2026",
+  "created_at": "2026-07-31T12:37:12.583Z",
+  "questions": [
+    {
+      "question": "What AI workflows exist or are planned in FORGE, and which must remain deterministic or human-reviewed?",
+      "status": "resolved"
+    },
+    {
+      "question": "Which current API models offer the best quality, latency, and cost for each safe workflow?",
+      "status": "resolved"
+    },
+    {
+      "question": "At what sustained traffic does self-hosting beat API economics and operational risk?",
+      "status": "resolved"
+    },
+    {
+      "question": "Which open model, license, data, post-training, evaluation, and release plan is viable for public local learning use?",
+      "status": "resolved"
+    },
+    {
+      "question": "What organic GTM wedge, distribution loops, metrics, experiments, and launch gates fit FORGE?",
+      "status": "resolved"
+    }
+  ],
+  "sources": [
+    {
+      "claim": "OpenAI GPT-5.6 Luna standard pricing is $0.20 per million input tokens and $1.20 per million output tokens; Tier 1 permits 500 RPM and 500k TPM.",
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.6-luna",
+      "confidence": "High",
+      "note": "Current official model page accessed 2026-07-31.",
+      "accessed_at": "2026-07-31T13:55:17.809Z"
+    },
+    {
+      "claim": "OpenAI current standard prices are Luna $0.20/$1.20, Terra $2/$12, and Sol $5/$30 per million input/output tokens; batch prices are half.",
+      "url": "https://developers.openai.com/api/docs/pricing",
+      "confidence": "High",
+      "note": "Current official pricing page accessed 2026-07-31; supersedes launch-era prices.",
+      "accessed_at": "2026-07-31T13:55:17.918Z"
+    },
+    {
+      "claim": "Mistral lists Mistral Small 4 at $0.15 input and $0.60 output per million tokens, OCR 4 at $4 per 1,000 pages, Voxtral transcription at $0.003 per minute, and Mistral Embed at $0.10 per million tokens.",
+      "url": "https://mistral.ai/pricing/api/",
+      "confidence": "High",
+      "note": "Official Mistral pricing accessed 2026-07-31.",
+      "accessed_at": "2026-07-31T13:55:18.037Z"
+    },
+    {
+      "claim": "Gemini 3.6 Flash is $1.50 input and $7.50 output per million tokens, while 3.5 Flash-Lite is $0.30/$2.50.",
+      "url": "https://ai.google.dev/gemini-api/docs/latest-model",
+      "confidence": "High",
+      "note": "Official current Gemini model guide.",
+      "accessed_at": "2026-07-31T13:55:18.141Z"
+    },
+    {
+      "claim": "Gemini Developer API clients may not be directed toward or likely accessed by anyone under 18.",
+      "url": "https://ai.google.dev/gemini-api/terms",
+      "confidence": "High",
+      "note": "Official additional terms; decisive for FORGE minor-facing routes.",
+      "accessed_at": "2026-07-31T13:55:18.250Z"
+    },
+    {
+      "claim": "Claude Sonnet 5 is $2/$10 per million input/output tokens through August 31 2026, then $3/$15; batch is half.",
+      "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "confidence": "High",
+      "note": "Official Anthropic pricing accessed 2026-07-31.",
+      "accessed_at": "2026-07-31T13:55:18.358Z"
+    },
+    {
+      "claim": "OpenAI text-embedding-3-small costs $0.02 per million input tokens.",
+      "url": "https://developers.openai.com/api/docs/models/text-embedding-3-small",
+      "confidence": "High",
+      "note": "Official model page.",
+      "accessed_at": "2026-07-31T13:55:18.464Z"
+    },
+    {
+      "claim": "Runpod lists L4 pods at $0.39 per hour and RTX 4090 pods at $0.69 per hour as of July 27 2026.",
+      "url": "https://www.runpod.io/pricing",
+      "confidence": "High",
+      "note": "Official current GPU pricing used for an illustrative raw-cost break-even.",
+      "accessed_at": "2026-07-31T13:55:18.571Z"
+    },
+    {
+      "claim": "llama.cpp server supports parallel decoding, multi-user service, continuous batching, quantized models, schema-constrained JSON, and OpenAI-compatible endpoints.",
+      "url": "https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md",
+      "confidence": "High",
+      "note": "Primary project documentation; shows 4-6 requests are a batching problem rather than one-model-per-user.",
+      "accessed_at": "2026-07-31T13:55:18.674Z"
+    },
+    {
+      "claim": "OLMo 3 7B Instruct is Apache 2.0 and releases code, checkpoints, logs and training details plus SFT, DPO and RLVR stages.",
+      "url": "https://huggingface.co/allenai/Olmo-3-7B-Instruct",
+      "confidence": "High",
+      "note": "Official Ai2 model card; strongest fully open research baseline.",
+      "accessed_at": "2026-07-31T13:55:18.782Z"
+    },
+    {
+      "claim": "Qwen3.5 9B is an Apache 2.0 multimodal post-trained model compatible with vLLM and SGLang.",
+      "url": "https://huggingface.co/Qwen/Qwen3.5-9B",
+      "confidence": "High",
+      "note": "Official Qwen model card; practical local-quality candidate.",
+      "accessed_at": "2026-07-31T13:55:18.887Z"
+    },
+    {
+      "claim": "Ministral 3 8B is edge-optimized, multilingual, vision-capable, JSON/function capable, and Apache 2.0.",
+      "url": "https://huggingface.co/docs/transformers/model_doc/ministral3",
+      "confidence": "Medium",
+      "note": "Transformers documentation summarizing the official model family.",
+      "accessed_at": "2026-07-31T13:55:18.997Z"
+    },
+    {
+      "claim": "OpenAI API data is not used to train models by default; default abuse-monitoring logs may be retained up to 30 days, with stricter controls subject to eligibility.",
+      "url": "https://developers.openai.com/api/docs/guides/your-data",
+      "confidence": "High",
+      "note": "Official provider data-control documentation accessed 2026-07-31.",
+      "accessed_at": "2026-07-31T14:01:58.695Z"
+    },
+    {
+      "claim": "The IES practice guide supports spacing, active retrieval, delayed judgments of learning, and explanatory questioning, but does not establish FORGE-specific efficacy.",
+      "url": "https://ies.ed.gov/ncee/wwc/PracticeGuide/1",
+      "confidence": "High",
+      "note": "Official evidence-practice guide; used only for mechanism rationale.",
+      "accessed_at": "2026-07-31T14:01:58.813Z"
+    },
+    {
+      "claim": "The 2026 HEPI survey reports very high undergraduate AI use alongside concerns about dependence, skill erosion, unfairness, and isolation.",
+      "url": "https://www.hepi.ac.uk/reports/student-generative-ai-survey-2026/",
+      "confidence": "Medium",
+      "note": "Current independent student survey; supports the anti-answer-engine positioning, not demand or efficacy proof.",
+      "accessed_at": "2026-07-31T14:01:58.936Z"
+    },
+    {
+      "claim": "The Open Source AI Definition distinguishes open-source AI systems from weights-only releases based on access to preferred forms for modification, data information, code, and parameters.",
+      "url": "https://opensource.org/ai/open-source-ai-definition",
+      "confidence": "High",
+      "note": "Primary OSI definition; use precise release language.",
+      "accessed_at": "2026-07-31T14:01:59.045Z"
+    },
+    {
+      "claim": "Hugging Face model cards are designed to disclose intended uses, limitations, training information, evaluation results, and ethical considerations.",
+      "url": "https://huggingface.co/docs/hub/en/model-cards",
+      "confidence": "High",
+      "note": "Primary platform guidance for the public model release package.",
+      "accessed_at": "2026-07-31T14:01:59.164Z"
+    },
+    {
+      "claim": "Show HN expects something people can run or try and discourages landing pages, sign-up pages, and coordinated voting.",
+      "url": "https://news.ycombinator.com/showhn.html",
+      "confidence": "High",
+      "note": "Primary launch-channel guidance; use only after a runnable public artifact exists.",
+      "accessed_at": "2026-07-31T14:01:59.287Z"
+    },
+    {
+      "claim": "Qwen3-4B is Apache 2.0, text-only, supports many languages, and has an official approximately 2.5GB Q4_K_M GGUF release, making it the most accessible practical v0 candidate.",
+      "url": "https://huggingface.co/Qwen/Qwen3-4B",
+      "confidence": "High",
+      "note": "Official model card; open-weight rather than fully reproducible because the training corpus is not released.",
+      "accessed_at": "2026-07-31T14:04:32.213Z"
+    },
+    {
+      "claim": "Qwen3-Embedding-0.6B is Apache 2.0, multilingual, supports long inputs, and has official GGUF artifacts suitable for local retrieval.",
+      "url": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B",
+      "confidence": "High",
+      "note": "Official model card; proposed local RAG component.",
+      "accessed_at": "2026-07-31T14:04:32.355Z"
+    },
+    {
+      "claim": "OpenStax current textbook licensing guidance requires version-specific review and generally uses noncommercial and share-alike terms that should not be assumed suitable for commercial model training.",
+      "url": "https://openstax.org/blog/openstax-licensing",
+      "confidence": "High",
+      "note": "Primary licensing update; supports a per-item source and rights ledger.",
+      "accessed_at": "2026-07-31T14:04:32.487Z"
+    }
+  ]
+}
