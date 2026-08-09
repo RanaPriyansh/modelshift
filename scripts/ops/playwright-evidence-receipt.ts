@@ -241,7 +241,12 @@ async function prepareReceiptOutput(
   rootDirectory: string,
   target: PlaywrightEvidenceTarget,
   writerError = false,
-): Promise<{ root: string; output: string; parentStat: Pick<Stats, "dev" | "ino"> }> {
+): Promise<{
+  root: string;
+  output: string;
+  parentStat: Pick<Stats, "dev" | "ino">;
+  pinnedDirectory: FileHandle;
+}> {
   const root = await trustedRepositoryRoot(rootDirectory);
   const targetDefinition = PLAYWRIGHT_EVIDENCE_TARGETS[target];
   const outputFile = writerError
@@ -253,15 +258,36 @@ async function prepareReceiptOutput(
     throw new ReceiptOutputError("receipt output is outside test-results/release-ops");
   }
   await ensureTrustedDirectory(root, releaseOps);
-  const parentStat = await revalidateReceiptParent(root, output);
-  const outputStat = await lstatIfPresent(output);
-  if (outputStat?.isSymbolicLink()) {
-    throw new ReceiptOutputError("receipt output must not be a symlink");
+  if (typeof constants.O_DIRECTORY !== "number" || typeof constants.O_NOFOLLOW !== "number") {
+    throw new ReceiptOutputError("required directory descriptor support is unavailable");
   }
-  if (outputStat) {
-    throw new ReceiptOutputError("receipt output already exists");
+  let directory: FileHandle;
+  try {
+    directory = await open(
+      releaseOps,
+      constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
+    );
+  } catch {
+    throw new ReceiptOutputError("trusted receipt directory could not be opened");
   }
-  return { root, output, parentStat };
+  try {
+    // Pin this inode until the receipt operation ends so a replacement cannot reuse its identity.
+    const parentStat = await directory.stat();
+    assertDirectoryDescriptor(parentStat, parentStat);
+    await revalidateReceiptParent(root, output, parentStat);
+    const outputStat = await lstatIfPresent(output);
+    if (outputStat?.isSymbolicLink()) {
+      throw new ReceiptOutputError("receipt output must not be a symlink");
+    }
+    if (outputStat) {
+      throw new ReceiptOutputError("receipt output already exists");
+    }
+    await revalidateReceiptParent(root, output, parentStat);
+    return { root, output, parentStat, pinnedDirectory: directory };
+  } catch (error: unknown) {
+    await directory.close();
+    throw error;
+  }
 }
 
 function asObject(value: unknown, description: string): JsonObject {
@@ -1529,25 +1555,29 @@ async function writeWriterErrorReceipt(options: {
   testedSha: string;
 }): Promise<void> {
   const prepared = await prepareReceiptOutput(options.rootDirectory, options.target, true);
-  const receipt = buildPlaywrightEvidenceReceipt({
-    target: options.target,
-    testedSha: options.testedSha,
-    inputStatus: "writer_error",
-    requestedStatus: "fail",
-  });
-  const helperSource = await readTrustedHelperSource(
-    RECEIPT_HELPER,
-    {},
-    PLAYWRIGHT_RECEIPT_HELPER_SOURCE_SHA256,
-  );
-  await writeExclusiveReceipt(
-    prepared.root,
-    prepared.output,
-    prepared.parentStat,
-    receipt,
-    {},
-    { helperSource, helperTimeoutMs: MAX_HELPER_DURATION_MS },
-  );
+  try {
+    const receipt = buildPlaywrightEvidenceReceipt({
+      target: options.target,
+      testedSha: options.testedSha,
+      inputStatus: "writer_error",
+      requestedStatus: "fail",
+    });
+    const helperSource = await readTrustedHelperSource(
+      RECEIPT_HELPER,
+      {},
+      PLAYWRIGHT_RECEIPT_HELPER_SOURCE_SHA256,
+    );
+    await writeExclusiveReceipt(
+      prepared.root,
+      prepared.output,
+      prepared.parentStat,
+      receipt,
+      {},
+      { helperSource, helperTimeoutMs: MAX_HELPER_DURATION_MS },
+    );
+  } finally {
+    await prepared.pinnedDirectory.close();
+  }
 }
 
 export async function writePlaywrightEvidenceReceipt(options: {
@@ -1559,8 +1589,9 @@ export async function writePlaywrightEvidenceReceipt(options: {
   requestedStatus?: PlaywrightEvidenceStatus;
   hooks?: PlaywrightEvidenceTestHooks;
 }): Promise<{ receipt: PlaywrightEvidenceReceipt; outputPath: string; receiptSha256: string }> {
+  let prepared: Awaited<ReturnType<typeof prepareReceiptOutput>> | undefined;
   try {
-    const prepared = await prepareReceiptOutput(options.rootDirectory, options.target);
+    prepared = await prepareReceiptOutput(options.rootDirectory, options.target);
     let summary: PlaywrightJsonReportSummary | undefined;
     let inputStatus: PlaywrightEvidenceInputStatus = "valid";
     try {
@@ -1605,8 +1636,19 @@ export async function writePlaywrightEvidenceReceipt(options: {
     if (options.githubOutput !== undefined) {
       await writeGitHubReceiptDigest(options.githubOutput, receiptSha256);
     }
-    return { receipt, outputPath: prepared.output, receiptSha256 };
+    const result = { receipt, outputPath: prepared.output, receiptSha256 };
+    await prepared.pinnedDirectory.close();
+    prepared = undefined;
+    return result;
   } catch (error: unknown) {
+    if (prepared) {
+      try {
+        await prepared.pinnedDirectory.close();
+      } catch {
+        // The operation already failed closed. Preserve its original error and fallback attempt.
+      }
+      prepared = undefined;
+    }
     try {
       await writeWriterErrorReceipt({
         rootDirectory: options.rootDirectory,
