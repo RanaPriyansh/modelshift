@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -176,10 +176,37 @@ function sizedCssForRoute(root: string, route: string): SizedPath[] {
 
 function deployablePublicImages(root: string): SizedPath[] {
   const publicDirectory = resolve(root, "public");
-  requireDirectory(publicDirectory, "public asset directory");
-  return filesUnder(publicDirectory)
-    .map((path) => ({ path: relativePath(publicDirectory, path), bytes: statSync(path).size }))
-    .filter((entry) => PUBLIC_IMAGE_EXTENSION.test(entry.path));
+  let publicDirectoryStatus;
+  try {
+    publicDirectoryStatus = lstatSync(publicDirectory);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
+  if (publicDirectoryStatus.isSymbolicLink() || !publicDirectoryStatus.isDirectory()) {
+    throw new Error(`Rejected an unsafe public asset directory: ${publicDirectory}.`);
+  }
+
+  const imagesUnder = (directory: string): SizedPath[] => readdirSync(
+    directory,
+    { withFileTypes: true },
+  ).flatMap((entry) => {
+    const path = resolve(directory, entry.name);
+    const status = lstatSync(path);
+    if (status.isSymbolicLink()) {
+      throw new Error(`Rejected a symbolic link under the public asset directory: ${path}.`);
+    }
+    if (status.isDirectory()) return imagesUnder(path);
+    if (!status.isFile()) {
+      throw new Error(`Rejected an unsafe entry under the public asset directory: ${path}.`);
+    }
+    const assetPath = relativePath(publicDirectory, path);
+    return PUBLIC_IMAGE_EXTENSION.test(assetPath)
+      ? [{ path: assetPath, bytes: status.size }]
+      : [];
+  });
+
+  return imagesUnder(publicDirectory);
 }
 
 function releaseSourceFiles(root: string): string[] {

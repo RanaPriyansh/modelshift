@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -122,5 +122,35 @@ describe("Semester Desk retired public asset boundary", () => {
     );
 
     expect(() => verifySemesterDeskV2ReleaseBudgets(root)).toThrow(/public image budget exceeded/i);
+  });
+
+  it("counts an absent public asset directory as zero deployable images", async () => {
+    const root = await fixtureRoot();
+    await writeBuildFixture(root);
+    await rm(resolve(root, "public"), { recursive: true });
+
+    expect(() => verifySemesterDeskV2ReleaseBudgets(root)).not.toThrow();
+  });
+
+  it("rejects unsafe public asset paths", async () => {
+    const root = await fixtureRoot();
+    await writeBuildFixture(root);
+    await rm(resolve(root, "public"), { recursive: true });
+    await writeFile(resolve(root, "public"), "not a directory");
+
+    expect(() => verifySemesterDeskV2ReleaseBudgets(root)).toThrow(/unsafe public asset directory/i);
+
+    await rm(resolve(root, "public"));
+    await mkdir(resolve(root, "outside-public"));
+    await symlink(resolve(root, "outside-public"), resolve(root, "public"));
+
+    expect(() => verifySemesterDeskV2ReleaseBudgets(root)).toThrow(/unsafe public asset directory/i);
+
+    await rm(resolve(root, "public"));
+    await mkdir(resolve(root, "public"));
+    await writeFile(resolve(root, "outside.png"), "outside");
+    await symlink(resolve(root, "outside.png"), resolve(root, "public/linked.png"));
+
+    expect(() => verifySemesterDeskV2ReleaseBudgets(root)).toThrow(/symbolic link under the public asset directory/i);
   });
 });
