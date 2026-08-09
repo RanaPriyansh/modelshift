@@ -1,0 +1,138 @@
+name: FORGE
+
+options:
+  bundleIdPrefix: com.forgelearning
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+
+packages:
+  ForgeCore:
+    path: Packages/ForgeCore
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: true
+    SWIFT_STRICT_CONCURRENCY: complete
+
+targets:
+  FORGE:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/App
+      - path: Sources/SystemIntegration
+      - path: Resources
+        excludes:
+          - Brand
+    info:
+      path: Config/FORGE-Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleURLTypes:
+          - CFBundleURLName: com.forgelearning.app
+            CFBundleURLSchemes:
+              - forge
+        FORGEPrivacyPolicyURL: "$(FORGE_PRIVACY_POLICY_URL)"
+        FORGESupportURL: "$(FORGE_SUPPORT_URL)"
+        ITSAppUsesNonExemptEncryption: false
+        LSApplicationCategoryType: public.app-category.education
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchMark
+          UIImageRespectsSafeAreaInsets: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    entitlements:
+      path: Config/FORGE.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.forgelearning.shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.forgelearning.app
+        PRODUCT_NAME: FORGE
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    dependencies:
+      - package: ForgeCore
+      - target: FORGEWidgets
+        embed: true
+
+  FORGEWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Sources/Widgets
+      - path: Resources/PrivacyInfo.xcprivacy
+        buildPhase: resources
+    info:
+      path: Config/FORGEWidgets-Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Config/FORGEWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.forgelearning.shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.forgelearning.app.widgets
+        PRODUCT_NAME: FORGEWidgets
+        APPLICATION_EXTENSION_API_ONLY: true
+        SKIP_INSTALL: true
+    dependencies:
+      - package: ForgeCore
+
+  FORGEUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/FORGEUITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.forgelearning.app.uitests
+        PRODUCT_NAME: FORGEUITests
+        GENERATE_INFOPLIST_FILE: true
+    dependencies:
+      - target: FORGE
+
+  FORGEAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/FORGEAppTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.forgelearning.app.tests
+        PRODUCT_NAME: FORGEAppTests
+        GENERATE_INFOPLIST_FILE: true
+    dependencies:
+      - package: ForgeCore
+      - target: FORGE
+
+schemes:
+  FORGE:
+    build:
+      targets:
+        FORGE: all
+        FORGEWidgets: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - FORGEAppTests
+        - FORGEUITests
+    archive:
+      config: Release
