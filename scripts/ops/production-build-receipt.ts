@@ -37,6 +37,8 @@ const EXCLUDED_FILES = new Set([
   "trace",
   "trace-build",
 ]);
+const PRODUCTION_PUBLIC_DIRECTORY_DIGEST_DOMAIN =
+  "forge-production-public-directory.v1";
 
 export type ProductionBuildSource = Readonly<{
   sourceCommit: string | "unknown";
@@ -219,6 +221,27 @@ function regularFiles(
   });
 }
 
+function isMissingPathError(error: unknown): boolean {
+  return error instanceof Error
+    && "code" in error
+    && error.code === "ENOENT";
+}
+
+function productionPublicDirectoryIdentity(
+  entries: readonly Readonly<{ path: string; bytes: Buffer }>[],
+): Readonly<{
+  publicDirectoryDigest: string;
+  publicDirectoryFileCount: number;
+}> {
+  return Object.freeze({
+    publicDirectoryDigest: `sha256:${framedFileTreeDigest(
+      PRODUCTION_PUBLIC_DIRECTORY_DIGEST_DOMAIN,
+      entries,
+    )}`,
+    publicDirectoryFileCount: entries.length,
+  });
+}
+
 export function readProductionArtifactIdentity(
   root: string = process.cwd(),
 ): Readonly<{ artifactDigest: string; artifactFileCount: number }> {
@@ -251,7 +274,15 @@ export function readProductionPublicDirectoryIdentity(
   root: string = process.cwd(),
 ): Readonly<{ publicDirectoryDigest: string; publicDirectoryFileCount: number }> {
   const publicDirectory = resolve(root, "public");
-  const publicStat = lstatSync(publicDirectory);
+  let publicStat: ReturnType<typeof lstatSync>;
+  try {
+    publicStat = lstatSync(publicDirectory);
+  } catch (error) {
+    if (isMissingPathError(error)) {
+      return productionPublicDirectoryIdentity([]);
+    }
+    throw error;
+  }
   if (publicStat.isSymbolicLink() || !publicStat.isDirectory()) {
     throw new Error(
       "Production public-directory identity requires a real public directory.",
@@ -259,16 +290,10 @@ export function readProductionPublicDirectoryIdentity(
   }
   const realPublicDirectory = realpathSync(publicDirectory);
   const files = regularFiles(publicDirectory, realPublicDirectory).sort();
-  return Object.freeze({
-    publicDirectoryDigest: `sha256:${framedFileTreeDigest(
-      "forge-production-public-directory.v1",
-      files.map((file) => ({
-        path: relative(realPublicDirectory, file).split(sep).join("/"),
-        bytes: readStableRegularFile(file),
-      })),
-    )}`,
-    publicDirectoryFileCount: files.length,
-  });
+  return productionPublicDirectoryIdentity(files.map((file) => ({
+    path: relative(realPublicDirectory, file).split(sep).join("/"),
+    bytes: readStableRegularFile(file),
+  })));
 }
 
 export function readProductionRuntimeConfigurationIdentity(

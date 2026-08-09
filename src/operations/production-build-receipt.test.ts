@@ -23,6 +23,7 @@ import {
   clearProductionRuntimeCache,
   parseProductionBuildReceipt,
   readProductionArtifactIdentity,
+  readProductionPublicDirectoryIdentity,
   writeProductionBuildReceipt,
 } from "../../scripts/ops/production-build-receipt";
 import {
@@ -56,11 +57,16 @@ function root(): string {
   return directory;
 }
 
-function initializedReceiptRoot(): Readonly<{
+function initializedReceiptRoot(
+  options: Readonly<{ withPublicDirectory?: boolean }> = {},
+): Readonly<{
   directory: string;
   sourceCommit: string;
 }> {
   const directory = root();
+  if (options.withPublicDirectory === false) {
+    rmSync(resolve(directory, "public"), { recursive: true });
+  }
   rmSync(resolve(directory, ".next/cache"), { recursive: true });
   writeFileSync(
     resolve(directory, ".gitignore"),
@@ -84,20 +90,18 @@ function initializedReceiptRoot(): Readonly<{
   execFileSync("git", ["config", "user.name", "FORGE receipt test"], {
     cwd: directory,
   });
-  execFileSync(
-    "git",
-    [
-      "add",
-      ".gitignore",
-      "source.txt",
-      "public",
-      "package.json",
-      "next.config.ts",
-      "tsconfig.json",
-      "scripts/ops/build-source-identity.ts",
-    ],
-    { cwd: directory },
-  );
+  const trackedSourcePaths = [
+    ".gitignore",
+    "source.txt",
+    "package.json",
+    "next.config.ts",
+    "tsconfig.json",
+    "scripts/ops/build-source-identity.ts",
+  ];
+  if (options.withPublicDirectory !== false) {
+    trackedSourcePaths.push("public");
+  }
+  execFileSync("git", ["add", ...trackedSourcePaths], { cwd: directory });
   execFileSync("git", ["commit", "--quiet", "-m", "source one"], {
     cwd: directory,
   });
@@ -207,6 +211,38 @@ describe("production build receipt", () => {
       .toBe(rightIdentity.artifactFileCount);
     expect(leftIdentity.artifactDigest)
       .not.toBe(rightIdentity.artifactDigest);
+  });
+
+  it("gives an absent public directory the canonical empty identity and snapshots it as a real empty directory", () => {
+    const { directory, sourceCommit } = initializedReceiptRoot({
+      withPublicDirectory: false,
+    });
+    const absentIdentity = readProductionPublicDirectoryIdentity(directory);
+
+    mkdirSync(resolve(directory, "public"));
+    const emptyIdentity = readProductionPublicDirectoryIdentity(directory);
+    expect(absentIdentity).toEqual(emptyIdentity);
+    expect(absentIdentity.publicDirectoryFileCount).toBe(0);
+    rmSync(resolve(directory, "public"), { recursive: true });
+
+    const receipt = writeProductionBuildReceipt(directory);
+    expect(receipt.publicDirectoryDigest)
+      .toBe(absentIdentity.publicDirectoryDigest);
+    expect(receipt.publicDirectoryFileCount).toBe(0);
+
+    const snapshot = createProductionRuntimeSnapshot(
+      sourceCommit,
+      directory,
+    );
+    try {
+      const snapshotPublic = resolve(snapshot.root, "public");
+      expect(lstatSync(snapshotPublic).isDirectory()).toBe(true);
+      expect(readProductionPublicDirectoryIdentity(snapshot.root))
+        .toEqual(absentIdentity);
+      expect(() => assertProductionRuntimeSnapshot(snapshot)).not.toThrow();
+    } finally {
+      removeProductionRuntimeSnapshot(snapshot);
+    }
   });
 
   it("binds receipt creation to the build marker and publishes only once without following a symlink", () => {

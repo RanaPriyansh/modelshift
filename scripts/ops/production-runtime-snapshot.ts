@@ -113,6 +113,26 @@ function copyVerifiedTree(
   }
 }
 
+function isMissingPathError(error: unknown): boolean {
+  return error instanceof Error
+    && "code" in error
+    && error.code === "ENOENT";
+}
+
+function copyPublicTreeOrCreateEmpty(
+  source: string,
+  destination: string,
+): void {
+  try {
+    lstatSync(source);
+  } catch (error) {
+    if (!isMissingPathError(error)) throw error;
+    mkdirSync(destination, { recursive: false, mode: 0o700 });
+    return;
+  }
+  copyVerifiedTree(source, destination);
+}
+
 function sealDirectories(directory: string): void {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
@@ -190,7 +210,10 @@ export function createProductionRuntimeSnapshot(
       excludeTopLevel: EXCLUDED_NEXT_TOP_LEVEL,
       excludeRootFiles: EXCLUDED_NEXT_FILES,
     });
-    copyVerifiedTree(resolve(root, "public"), resolve(snapshotRoot, "public"));
+    copyPublicTreeOrCreateEmpty(
+      resolve(root, "public"),
+      resolve(snapshotRoot, "public"),
+    );
     for (const file of PRODUCTION_RUNTIME_CONFIGURATION_FILES) {
       writeExclusiveRegularFile(
         resolve(snapshotRoot, file),
