@@ -34,7 +34,6 @@ jobs:
     env:
       XCODEGEN_VERSION: "2.45.4"
       XCODEGEN_ARCHIVE_SHA256: "090ec29491aad50aec10631bf6e62253fed733c50f3aab0f5ffc86bc170bdbef"
-      FORGE_IOS_EVIDENCE_DIR: ${{ runner.temp }}/forge-ios-candidate-evidence
 
     steps:
       - name: Check out the candidate source
@@ -42,6 +41,10 @@ jobs:
         timeout-minutes: 5
         with:
           persist-credentials: false
+
+      - name: Configure the iOS evidence path
+        shell: bash
+        run: printf 'FORGE_IOS_EVIDENCE_DIR=%s\n' "$RUNNER_TEMP/forge-ios-candidate-evidence" >> "$GITHUB_ENV"
 
       - name: Record the exact candidate identity
         shell: bash
@@ -267,7 +270,6 @@ jobs:
     env:
       XCODEGEN_VERSION: "2.45.4"
       XCODEGEN_ARCHIVE_SHA256: "090ec29491aad50aec10631bf6e62253fed733c50f3aab0f5ffc86bc170bdbef"
-      FORGE_IOS_METADATA_EVIDENCE_DIR: ${{ runner.temp }}/forge-ios-release-candidate-metadata
 
     steps:
       - name: Check out the candidate source
@@ -275,6 +277,10 @@ jobs:
         timeout-minutes: 5
         with:
           persist-credentials: false
+
+      - name: Configure the metadata evidence path
+        shell: bash
+        run: printf 'FORGE_IOS_METADATA_EVIDENCE_DIR=%s\n' "$RUNNER_TEMP/forge-ios-release-candidate-metadata" >> "$GITHUB_ENV"
 
       - name: Record the exact release-candidate identity
         shell: bash
