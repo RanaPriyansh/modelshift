@@ -65,3 +65,20 @@ Production is a separate gate: one frozen pushed SHA, immutable READY deployment
 ## Historical ModelShift contract
 
 `FINAL_PRODUCT_SPEC.md` remains unchanged as the record of the original Build Week wedge. Its deterministic physics, language-interpretation, assistance-governor, cold-transfer, and bounded-evidence requirements continue to govern the force-and-motion World. Its former exclusions of other subjects, accounts, databases, curricula, and broader FORGE architecture are historical scope cuts, not current repository-wide prohibitions.
+
+
+## Implementation principles
+
+- Do not preserve backward compatibility. Remove obsolete paths instead of adding compatibility layers, fallbacks, or migrations.
+
+- Choose the simplest implementation that fully meets the current requirements. Avoid speculative abstractions, configuration, and indirection.
+
+- Grow the system in layers. Start from the smallest version that works end to end, and add each new capability on top of a product that already works. Never trade a working product for unfinished complexity.
+
+- Keep components modular and concerns clearly separated.
+
+- Prefer established, well-maintained libraries when they reduce overall complexity or improve reliability. Do not reimplement common functionality without a clear reason.
+
+- Lean on the dependencies already in the project before writing your own implementation or adding packages. Do not assume a library lacks a capability without checking its documentation and types.
+
+- Make architectural decisions for the long term. Do not accept a stopgap that only works for now and is meant to be replaced later.
